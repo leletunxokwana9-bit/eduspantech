@@ -1,7 +1,6 @@
-// Service layer with mock data for development
-// ALWAYS uses mock data - no API calls
+// src/services/homeService.js
+// NO API CALLS - ONLY MOCK DATA
 
-// ===== MOCK DATA =====
 const MOCK_DATA = {
   hero: {
     badge: 'Global Mathematics Education',
@@ -181,11 +180,10 @@ const MOCK_DATA = {
   }
 };
 
-// ===== SERVICE EXPORTS - ALWAYS RETURNS MOCK DATA =====
 export const homeService = {
+  // ALWAYS RETURNS MOCK DATA - NO API CALLS
   getHomeData: async () => {
     console.log('📦 Using mock data');
-    // Simulate network delay
     await new Promise(resolve => setTimeout(resolve, 300));
     return MOCK_DATA;
   },

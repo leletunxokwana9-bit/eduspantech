@@ -15,27 +15,17 @@ const SearchResults = () => {
     curriculum: []
   });
 
-  useEffect(() => {
-    const params = new URLSearchParams(location.search);
-    const q = params.get('q') || '';
-    setQuery(q);
-    
-    if (q && data) {
-      performSearch(q);
-    }
-  }, [location, data]);
-
   const performSearch = (searchTerm) => {
     const term = searchTerm.toLowerCase().trim();
     
-    const subjects = data.subjects?.items?.filter(subject =>
+    const subjects = data?.subjects?.items?.filter(subject =>
       subject.name.toLowerCase().includes(term) ||
       subject.description.toLowerCase().includes(term) ||
-      subject.topics?.some(t => t.name.toLowerCase().includes(term))
+      subject.topics?.some(t => t.name?.toLowerCase().includes(term))
     ) || [];
 
     const tutors = [];
-    data.tutors?.shifts?.forEach(shift => {
+    data?.tutors?.shifts?.forEach(shift => {
       shift.tutors?.forEach(tutor => {
         if (
           tutor.name.toLowerCase().includes(term) ||
@@ -47,13 +37,13 @@ const SearchResults = () => {
       });
     });
 
-    const resources = data.resources?.vaults?.filter(vault =>
+    const resources = data?.resources?.vaults?.filter(vault =>
       vault.name.toLowerCase().includes(term) ||
       vault.description.toLowerCase().includes(term) ||
       vault.topics?.some(t => t.toLowerCase().includes(term))
     ) || [];
 
-    const curriculum = data.curriculum?.items?.filter(country =>
+    const curriculum = data?.curriculum?.items?.filter(country =>
       country.country.toLowerCase().includes(term) ||
       country.subjects?.some(s => s.toLowerCase().includes(term)) ||
       country.levels?.some(l => l.toLowerCase().includes(term))
@@ -61,6 +51,17 @@ const SearchResults = () => {
 
     setResults({ subjects, tutors, resources, curriculum });
   };
+
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    const q = params.get('q') || '';
+    setQuery(q);
+    
+    if (q && data) {
+      performSearch(q);
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [location, data]);
 
   if (loading) return <div className="search-loading">Searching...</div>;
   if (error) return <div className="search-error">Error: {error}</div>;

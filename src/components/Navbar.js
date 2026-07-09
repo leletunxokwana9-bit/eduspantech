@@ -90,19 +90,6 @@ function Navbar() {
     setIsMenuOpen(false);
   }, [location]);
 
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      if (searchQuery.trim().length >= 2) {
-        performSearch(searchQuery);
-        setShowSuggestions(true);
-      } else {
-        setSearchResults([]);
-        setShowSuggestions(false);
-      }
-    }, 300);
-    return () => clearTimeout(timer);
-  }, [searchQuery]);
-
   const performSearch = (query) => {
     const term = query.toLowerCase().trim();
     const results = [];
@@ -181,6 +168,19 @@ function Navbar() {
 
     setSearchResults(results.slice(0, 6));
   };
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      if (searchQuery.trim().length >= 2) {
+        performSearch(searchQuery);
+        setShowSuggestions(true);
+      } else {
+        setSearchResults([]);
+        setShowSuggestions(false);
+      }
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [searchQuery, performSearch]); // ← ADDED performSearch HERE
 
   const handleSearch = (e) => {
     e.preventDefault();
@@ -417,7 +417,7 @@ function Navbar() {
             <Link to="/login" className="mobile-login" onClick={closeMenu}>
               {t('nav.login')}
             </Link>
-            <Link to="/register" className="signup-button">
+            <Link to="/register" className="signup-button" onClick={closeMenu}>
               {t('nav.register')}
             </Link>
           </div>

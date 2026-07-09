@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { useParams, useNavigate, useLocation } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import './TutorSession.css';
 
 // ===== SOUND GENERATOR =====
@@ -106,13 +106,11 @@ const getCurrentTime = () => {
 };
 
 const TutorSession = () => {
-  const { sessionId } = useParams();
   const navigate = useNavigate();
   const location = useLocation();
   const tutor = location.state?.tutor;
 
   // ===== STATE =====
-  const [isConnected, setIsConnected] = useState(true);
   const [isMuted, setIsMuted] = useState(false);
   const [isVideoOff, setIsVideoOff] = useState(false);
   const [isRecording, setIsRecording] = useState(false);
@@ -122,9 +120,8 @@ const TutorSession = () => {
   const [newMessage, setNewMessage] = useState('');
   const [isTyping, setIsTyping] = useState(false);
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
-  const [isFullscreen, setIsFullscreen] = useState(false);
   const [isHandRaised, setIsHandRaised] = useState(false);
-  const [participants, setParticipants] = useState([
+  const [participants] = useState([
     { id: 'tutor', name: tutor?.name || 'Tutor', role: 'tutor', online: true },
     { id: 'student', name: 'You', role: 'student', online: true },
   ]);
@@ -156,6 +153,7 @@ const TutorSession = () => {
       setTimeElapsed(prev => prev + 1);
     }, 1000);
     return () => clearInterval(interval);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [tutor]);
 
   // Auto-scroll to bottom when messages change
@@ -364,7 +362,6 @@ const TutorSession = () => {
 
   const endSession = () => {
     if (window.confirm('Are you sure you want to end this session?')) {
-      setIsConnected(false);
       navigate('/dashboard');
     }
   };

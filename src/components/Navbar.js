@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, useCallback } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import {
   FiSearch,
@@ -90,7 +90,7 @@ function Navbar() {
     setIsMenuOpen(false);
   }, [location]);
 
-  const performSearch = (query) => {
+  const performSearch = useCallback((query) => {
     const term = query.toLowerCase().trim();
     const results = [];
     if (!data) return;
@@ -167,7 +167,7 @@ function Navbar() {
     }
 
     setSearchResults(results.slice(0, 6));
-  };
+  }, [data]);
 
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -180,7 +180,7 @@ function Navbar() {
       }
     }, 300);
     return () => clearTimeout(timer);
-  }, [searchQuery, performSearch]); // ← ADDED performSearch HERE
+  }, [searchQuery, performSearch]);
 
   const handleSearch = (e) => {
     e.preventDefault();

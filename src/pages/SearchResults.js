@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useHomeData } from '../hooks/useHomeData';
 import './SearchResults.css';
@@ -15,7 +15,7 @@ const SearchResults = () => {
     curriculum: []
   });
 
-  const performSearch = (searchTerm) => {
+  const performSearch = useCallback((searchTerm) => {
     const term = searchTerm.toLowerCase().trim();
     
     const subjects = data?.subjects?.items?.filter(subject =>
@@ -50,7 +50,7 @@ const SearchResults = () => {
     ) || [];
 
     setResults({ subjects, tutors, resources, curriculum });
-  };
+  }, [data]);
 
   useEffect(() => {
     const params = new URLSearchParams(location.search);
@@ -60,8 +60,7 @@ const SearchResults = () => {
     if (q && data) {
       performSearch(q);
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [location, data]);
+  }, [location, data, performSearch]);
 
   if (loading) return <div className="search-loading">Searching...</div>;
   if (error) return <div className="search-error">Error: {error}</div>;

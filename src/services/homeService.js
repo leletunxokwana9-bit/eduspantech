@@ -210,53 +210,24 @@ const MOCK_DATA = {
 // ===== SERVICE EXPORTS =====
 export const homeService = {
   getHomeData: async () => {
-    if (IS_DEVELOPMENT) {
-      console.log('📦 Using mock data (development mode)');
-      await new Promise(resolve => setTimeout(resolve, 300));
-      return MOCK_DATA;
-    }
-
-    try {
-      const response = await fetch(`${API_BASE_URL}/home`);
-      if (!response.ok) throw new Error('Failed to fetch');
-      return response.json();
-    } catch (error) {
-      console.error('Failed to fetch home data:', error);
-      throw error;
-    }
+    // Always return mock data for now since there's no backend
+    console.log('📦 Using mock data');
+    await new Promise(resolve => setTimeout(resolve, 300));
+    return MOCK_DATA;
   },
 
   getDashboardData: async (userId) => {
-    if (IS_DEVELOPMENT) {
-      await new Promise(resolve => setTimeout(resolve, 300));
-      return MOCK_DATA.dashboard;
-    }
-
-    const response = await fetch(`${API_BASE_URL}/dashboard/${userId}`);
-    if (!response.ok) throw new Error('Failed to fetch');
-    return response.json();
+    await new Promise(resolve => setTimeout(resolve, 300));
+    return MOCK_DATA.dashboard;
   },
 
   getUserProgress: async (userId) => {
-    if (IS_DEVELOPMENT) {
-      await new Promise(resolve => setTimeout(resolve, 300));
-      return MOCK_DATA.dashboard.progress;
-    }
-
-    const response = await fetch(`${API_BASE_URL}/users/${userId}/progress`);
-    if (!response.ok) throw new Error('Failed to fetch');
-    return response.json();
+    await new Promise(resolve => setTimeout(resolve, 300));
+    return MOCK_DATA.dashboard.progress;
   },
 
   getCourses: async (filters) => {
-    if (IS_DEVELOPMENT) {
-      await new Promise(resolve => setTimeout(resolve, 300));
-      return MOCK_DATA.subjects.items;
-    }
-
-    const params = new URLSearchParams(filters);
-    const response = await fetch(`${API_BASE_URL}/courses?${params}`);
-    if (!response.ok) throw new Error('Failed to fetch');
-    return response.json();
+    await new Promise(resolve => setTimeout(resolve, 300));
+    return MOCK_DATA.subjects.items;
   }
 };

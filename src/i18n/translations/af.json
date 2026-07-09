@@ -1,0 +1,51 @@
+{
+  "app": {
+    "title": "EduSpantech",
+    "subtitle": "Globale Wiskunde Platform",
+    "tagline": "Onderwys vir die liefde van jou lewe ❤️"
+  },
+  "nav": {
+    "home": "Tuis",
+    "subjects": "Vakke",
+    "curriculum": "Kurrikulum",
+    "tutors": "Tutore",
+    "pricing": "Pryse",
+    "resources": "Hulpbronne",
+    "login": "Teken In",
+    "register": "Begin Nou",
+    "search": "Soek vakke, tutore..."
+  },
+  "hero": {
+    "badge": "Globale Wiskunde Onderwys",
+    "title": "Onderwys vir die",
+    "highlight": "liefde van jou lewe",
+    "description": "Wêreldklas wiskunde onderrig vir Graad 8 tot 2de-Jaar Tersiêre studente.",
+    "cta_primary": "Begin Gratis",
+    "cta_secondary": "Teken In",
+    "trust_1": "Geen kredietkaart nodig nie",
+    "trust_2": "24/7 Toegang",
+    "trust_3": "Kanselleer enige tyd"
+  },
+  "features": {
+    "title": "Interaktiewe Leer by jou Vingers",
+    "subtitle": "Alles wat jy nodig het om wiskunde te bemeester"
+  },
+  "footer": {
+    "company": "Maatskappy",
+    "resources": "Hulpbronne",
+    "legal": "Regs",
+    "about": "Oor Ons",
+    "careers": "Loopbane",
+    "blog": "Blog",
+    "press": "Pers",
+    "documentation": "Dokumentasie",
+    "community": "Gemeenskap",
+    "support": "Ondersteuning",
+    "status": "Status",
+    "privacy": "Privaatheid",
+    "terms": "Terme",
+    "security": "Sekuriteit",
+    "cookies": "Koekies",
+    "copyright": "Alle regte voorbehou."
+  }
+}

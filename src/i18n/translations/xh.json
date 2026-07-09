@@ -1,0 +1,51 @@
+{
+  "app": {
+    "title": "EduSpantech",
+    "subtitle": "Iqonga Lezibalo Lehlabathi",
+    "tagline": "Imfundo yothando lobomi bakho ❤️"
+  },
+  "nav": {
+    "home": "Ikhaya",
+    "subjects": "Izifundo",
+    "curriculum": "Ikharityhulam",
+    "tutors": "Abahlohi",
+    "pricing": "Amaxabiso",
+    "resources": "Izibonelelo",
+    "login": "Ngena",
+    "register": "Qalisa",
+    "search": "Khangela izifundo, abahlohi..."
+  },
+  "hero": {
+    "badge": "Imfundo YeZibalo YeHlabathi",
+    "title": "Imfundo yothando",
+    "highlight": "lobomi bakho",
+    "description": "Ukufundiswa kwezibalo okukwinqanaba eliphezulu kubafundi bebanga lesi-8 ukuya kowe-2nd-Year Tertiary.",
+    "cta_primary": "Qalisa Simahla",
+    "cta_secondary": "Ngena",
+    "trust_1": "Akukho mali efunekayo",
+    "trust_2": "24/7 Ukufikelela",
+    "trust_3": "Rhoxisa nanini na"
+  },
+  "features": {
+    "title": "Ukufunda Okusebenzayo Esandleni Sakho",
+    "subtitle": "Yonke into oyifunayo ukuphumelela izibalo"
+  },
+  "footer": {
+    "company": "Inkampani",
+    "resources": "Izibonelelo",
+    "legal": "Ezasemthethweni",
+    "about": "Ngathi",
+    "careers": "Imisebenzi",
+    "blog": "Ibhlogi",
+    "press": "Amaphephandaba",
+    "documentation": "Amaxwebhu",
+    "community": "Uluntu",
+    "support": "Inkxaso",
+    "status": "Isimo",
+    "privacy": "Ubucala",
+    "terms": "Imigaqo",
+    "security": "Ukhuseleko",
+    "cookies": "Iicookies",
+    "copyright": "Onke amalungelo agciniwe."
+  }
+}

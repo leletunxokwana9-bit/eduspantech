@@ -1,0 +1,16 @@
+{ 
+  "nav": { 
+    "home": "Home", 
+    "subjects": "Subjects", 
+    "curriculum": "Curriculum", 
+    "tutors": "Tutors", 
+    "pricing": "Pricing", 
+    "resources": "Resources", 
+    "login": "Login", 
+    "register": "Register", 
+    "search": "Search..." 
+  }, 
+  "app": { 
+    "subtitle": "Global Mathematics Platform" 
+  } 
+} 

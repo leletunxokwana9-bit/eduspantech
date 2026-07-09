@@ -1,0 +1,51 @@
+{
+  "app": {
+    "title": "EduSpantech",
+    "subtitle": "Inkundla Yezibalo Zomhlaba Wonke",
+    "tagline": "Imfundo yothando lwempilo yakho ❤️"
+  },
+  "nav": {
+    "home": "Ikhaya",
+    "subjects": "Izifundo",
+    "curriculum": "Uhlelo Lwezifundo",
+    "tutors": "Abafundisi",
+    "pricing": "Amanani",
+    "resources": "Izinsiza",
+    "login": "Ngena",
+    "register": "Qala Manje",
+    "search": "Sesha izifundo, abafundisi..."
+  },
+  "hero": {
+    "badge": "Imfundo Yezibalo Yomhlaba Wonke",
+    "title": "Imfundo yothando",
+    "highlight": "lwempilo yakho",
+    "description": "Ukufundiswa kwezibalo okusezingeni eliphezulu kubafundi bebanga lesi-8 kuya kowe-2nd-Year Tertiary.",
+    "cta_primary": "Qala Mahhala",
+    "cta_secondary": "Ngena",
+    "trust_1": "Akukho mali edingekayo",
+    "trust_2": "24/7 Ukufinyelela",
+    "trust_3": "Khansela noma nini"
+  },
+  "features": {
+    "title": "Ukufunda Okuhlangene Esandleni Sakho",
+    "subtitle": "Konke okudingayo ukuphumelela izibalo"
+  },
+  "footer": {
+    "company": "Inkampani",
+    "resources": "Izinsiza",
+    "legal": "Ezomthetho",
+    "about": "Mayelana Nathi",
+    "careers": "Imisebenzi",
+    "blog": "Ibhulogi",
+    "press": "Abezindaba",
+    "documentation": "Imibhalo",
+    "community": "Umphakathi",
+    "support": "Ukusekela",
+    "status": "Isimo",
+    "privacy": "Ubumfihlo",
+    "terms": "Imigomo",
+    "security": "Ukuvikeleka",
+    "cookies": "Amakhukhi",
+    "copyright": "Wonke amalungelo agodliwe."
+  }
+}

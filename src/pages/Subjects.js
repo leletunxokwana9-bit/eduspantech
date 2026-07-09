@@ -13,7 +13,7 @@ const Subjects = () => {
 
   const subjects = data.subjects?.items || [];
 
-  const handleSubjectClick = (subject) => {
+  const handleViewSubject = (subject) => {
     const slug = subject.name.toLowerCase().replace(/\s+/g, '-');
     navigate(`/subjects/${slug}`);
   };
@@ -29,25 +29,16 @@ const Subjects = () => {
         {subjects.map((subject) => (
           <div 
             key={subject.id} 
-            className="subject-page-card"
-            onClick={() => handleSubjectClick(subject)}
-            style={{ cursor: 'pointer' }}
+            className="subjects-page-card"
+            onClick={() => handleViewSubject(subject)}
+            style={{ '--subject-color': subject.color }}
           >
-            <div className="subject-page-icon-wrapper" style={{ background: subject.color || '#4f46e5' }}>
-              <div className="subject-page-icon">{subject.icon}</div>
+            <div className="subjects-page-icon" style={{ background: `${subject.color}20`, color: subject.color }}>
+              {subject.icon}
             </div>
             <h3>{subject.name}</h3>
-            <p>{subject.description || 'Explore this subject'}</p>
-            <div className="subject-page-tags">
-              <span>{subject.topics?.length || 0} Topics</span>
-              <span>{subject.resources?.length || 0} Resources</span>
-            </div>
-            <button 
-              className="subject-page-btn"
-              style={{ backgroundColor: subject.color || '#4f46e5' }}
-            >
-              Explore →
-            </button>
+            <p>{subject.description}</p>
+            <div className="subjects-page-arrow">→</div>
           </div>
         ))}
       </div>

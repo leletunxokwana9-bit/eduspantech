@@ -13,7 +13,6 @@ const Curriculum = () => {
 
   const curriculum = data.curriculum?.items || [];
 
-  // Country code mapping for flagcdn
   const getCountryCode = (countryName) => {
     const countryMap = {
       'South Africa': 'za',
@@ -59,7 +58,6 @@ const Curriculum = () => {
                 alt={`${country.country} flag`}
                 className="curriculum-page-flag-image"
                 onError={(e) => {
-                  // Fallback to emoji if image fails
                   e.target.style.display = 'none';
                   const parent = e.target.parentNode;
                   const fallback = document.createElement('div');

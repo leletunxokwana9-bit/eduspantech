@@ -1,0 +1,465 @@
+/* ===== SETTINGS OVERLAY - DROPDOWN FROM ICON ===== */
+.session-settings-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 1000;
+  display: flex;
+  align-items: flex-start;
+  justify-content: flex-end;
+  padding: 60px 20px 20px 20px;
+  animation: overlayFade 0.25s ease;
+}
+
+@keyframes overlayFade {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+/* ===== SETTINGS PANEL - DROPDOWN STYLE ===== */
+.session-settings-panel {
+  background: #1a1a2e;
+  border-radius: 16px;
+  width: 380px;
+  max-width: 90vw;
+  max-height: 80vh;
+  overflow: hidden;
+  box-shadow: 
+    0 20px 60px rgba(0, 0, 0, 0.5),
+    0 0 0 1px rgba(255, 255, 255, 0.06);
+  animation: panelDrop 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
+  transform-origin: top right;
+  position: relative;
+}
+
+@keyframes panelDrop {
+  from {
+    opacity: 0;
+    transform: translateY(-10px) scale(0.96);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+/* ===== PANEL HEADER ===== */
+.session-settings-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 18px 24px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+  background: rgba(255, 255, 255, 0.02);
+}
+
+.session-settings-header h3 {
+  font-size: 16px;
+  font-weight: 700;
+  color: #ffffff;
+  margin: 0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  letter-spacing: -0.01em;
+}
+
+
+
+.settings-close {
+  background: rgba(255, 255, 255, 0.06);
+  border: none;
+  color: #94a3b8;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  font-size: 16px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.settings-close:hover {
+  background: rgba(255, 255, 255, 0.12);
+  color: #ffffff;
+  transform: rotate(90deg);
+}
+
+/* ===== PANEL BODY ===== */
+.session-settings-body {
+  padding: 8px 8px 8px 24px;
+  max-height: 400px;
+  overflow-y: auto;
+}
+
+.session-settings-body::-webkit-scrollbar {
+  width: 4px;
+}
+
+.session-settings-body::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.session-settings-body::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.15);
+  border-radius: 2px;
+}
+
+/* ===== SETTING ITEMS ===== */
+.setting-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 14px 16px 14px 0;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+  transition: background 0.2s ease;
+  border-radius: 8px;
+  cursor: default;
+}
+
+.setting-item:hover {
+  background: rgba(255, 255, 255, 0.02);
+}
+
+.setting-item:last-child {
+  border-bottom: none;
+}
+
+.setting-info {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  flex: 1;
+}
+
+.setting-icon {
+  font-size: 18px;
+  width: 36px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(255, 255, 255, 0.04);
+  border-radius: 8px;
+  flex-shrink: 0;
+}
+
+.setting-text {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.setting-label {
+  font-size: 14px;
+  font-weight: 600;
+  color: #ffffff;
+  line-height: 1.3;
+}
+
+.setting-description {
+  font-size: 12px;
+  color: #94a3b8;
+  line-height: 1.3;
+}
+
+/* ===== TOGGLE SWITCH - PREMIUM ===== */
+.toggle-switch {
+  width: 44px;
+  height: 26px;
+  border-radius: 13px;
+  border: none;
+  background: #2d2d4a;
+  cursor: pointer;
+  position: relative;
+  transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+  flex-shrink: 0;
+  box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.3);
+}
+
+.toggle-switch .toggle-slider {
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: #6b7280;
+  transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+}
+
+/* Toggle ON state */
+.toggle-switch.on {
+  background: #4f46e5;
+}
+
+.toggle-switch.on .toggle-slider {
+  left: 20px;
+  background: #ffffff;
+}
+
+/* Toggle Dark theme state */
+.toggle-switch.dark {
+  background: #4f46e5;
+}
+
+.toggle-switch.dark .toggle-slider {
+  left: 20px;
+  background: #ffffff;
+}
+
+/* Toggle Light theme state */
+.toggle-switch.light {
+  background: #f59e0b;
+}
+
+.toggle-switch.light .toggle-slider {
+  left: 2px;
+  background: #ffffff;
+}
+
+/* Toggle OFF state */
+.toggle-switch.off {
+  background: #2d2d4a;
+}
+
+.toggle-switch.off .toggle-slider {
+  left: 2px;
+  background: #6b7280;
+}
+
+/* Toggle hover effect */
+.toggle-switch:hover {
+  transform: scale(1.04);
+}
+
+.toggle-switch:active .toggle-slider {
+  transform: scale(0.92);
+}
+
+/* ===== PANEL FOOTER ===== */
+.session-settings-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 14px 24px;
+  border-top: 1px solid rgba(255, 255, 255, 0.04);
+  background: rgba(255, 255, 255, 0.02);
+}
+
+.settings-version {
+  font-size: 11px;
+  color: #6b7280;
+  letter-spacing: 0.02em;
+}
+
+.settings-version span {
+  background: rgba(255, 255, 255, 0.04);
+  padding: 2px 8px;
+  border-radius: 4px;
+}
+
+.settings-done {
+  padding: 8px 28px;
+  background: #4f46e5;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.25s ease;
+  letter-spacing: 0.01em;
+}
+
+.settings-done:hover {
+  background: #4338ca;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 16px rgba(79, 70, 229, 0.3);
+}
+
+.settings-done:active {
+  transform: scale(0.97);
+}
+
+/* ===== LIGHT THEME OVERRIDES ===== */
+.session-settings-panel.light {
+  background: #ffffff;
+  box-shadow: 
+    0 20px 60px rgba(0, 0, 0, 0.15),
+    0 0 0 1px rgba(0, 0, 0, 0.04);
+}
+
+.session-settings-panel.light .session-settings-header {
+  border-color: #f1f3f5;
+  background: rgba(0, 0, 0, 0.01);
+}
+
+.session-settings-panel.light .session-settings-header h3 {
+  color: #1a1a2e;
+}
+
+.session-settings-panel.light .settings-close {
+  background: rgba(0, 0, 0, 0.04);
+  color: #6b7280;
+}
+
+.session-settings-panel.light .settings-close:hover {
+  background: rgba(0, 0, 0, 0.08);
+  color: #1a1a2e;
+}
+
+.session-settings-panel.light .setting-item {
+  border-color: #f1f3f5;
+}
+
+.session-settings-panel.light .setting-item:hover {
+  background: rgba(0, 0, 0, 0.01);
+}
+
+.session-settings-panel.light .setting-icon {
+  background: rgba(0, 0, 0, 0.04);
+}
+
+.session-settings-panel.light .setting-label {
+  color: #1a1a2e;
+}
+
+.session-settings-panel.light .setting-description {
+  color: #6b7280;
+}
+
+.session-settings-panel.light .session-settings-footer {
+  border-color: #f1f3f5;
+  background: rgba(0, 0, 0, 0.01);
+}
+
+.session-settings-panel.light .settings-version {
+  color: #9ca3af;
+}
+
+.session-settings-panel.light .settings-version span {
+  background: rgba(0, 0, 0, 0.04);
+}
+
+.session-settings-panel.light .toggle-switch.off {
+  background: #e5e7eb;
+}
+
+.session-settings-panel.light .toggle-switch.off .toggle-slider {
+  background: #9ca3af;
+}
+
+/* ===== RESPONSIVE ===== */
+@media (max-width: 640px) {
+  .session-settings-overlay {
+    padding: 10px;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .session-settings-panel {
+    width: 100%;
+    max-width: 100%;
+    max-height: 90vh;
+    border-radius: 12px;
+    animation: panelDropMobile 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
+  }
+
+  @keyframes panelDropMobile {
+    from {
+      opacity: 0;
+      transform: translateY(20px) scale(0.95);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0) scale(1);
+    }
+  }
+
+  .setting-item {
+    padding: 12px 12px 12px 0;
+  }
+
+  .setting-icon {
+    width: 32px;
+    height: 32px;
+    font-size: 16px;
+  }
+
+  .setting-label {
+    font-size: 13px;
+  }
+
+  .setting-description {
+    font-size: 11px;
+  }
+
+  .toggle-switch {
+    width: 40px;
+    height: 24px;
+  }
+
+  .toggle-switch .toggle-slider {
+    width: 20px;
+    height: 20px;
+  }
+
+  .toggle-switch.on .toggle-slider,
+  .toggle-switch.dark .toggle-slider {
+    left: 18px;
+  }
+}
+
+@media (max-width: 400px) {
+  .session-settings-overlay {
+    padding: 6px;
+  }
+
+  .session-settings-panel {
+    border-radius: 10px;
+  }
+
+  .session-settings-header {
+    padding: 14px 16px;
+  }
+
+  .session-settings-header h3 {
+    font-size: 15px;
+  }
+
+  .session-settings-body {
+    padding: 4px 4px 4px 16px;
+  }
+
+  .setting-item {
+    padding: 10px 10px 10px 0;
+  }
+
+  .session-settings-footer {
+    padding: 12px 16px;
+  }
+}
+
+/* ===== DARK THEME SCROLLBAR ===== */
+.session-settings-panel:not(.light) .session-settings-body::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.12);
+}
+
+.session-settings-panel:not(.light) .session-settings-body::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.2);
+}
+
+/* ===== LIGHT THEME SCROLLBAR ===== */
+.session-settings-panel.light .session-settings-body::-webkit-scrollbar-thumb {
+  background: rgba(0, 0, 0, 0.12);
+}
+
+.session-settings-panel.light .session-settings-body::-webkit-scrollbar-thumb:hover {
+  background: rgba(0, 0, 0, 0.2);
+}

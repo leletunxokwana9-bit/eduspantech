@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useHomeData } from '../hooks/useHomeData';
 import './Curriculum.css';
@@ -6,6 +6,7 @@ import './Curriculum.css';
 const Curriculum = () => {
   const navigate = useNavigate();
   const { data, loading, error } = useHomeData();
+  const [failedFlags, setFailedFlags] = useState({});
 
   if (loading) return <div className="curriculum-page-loading">Loading curriculum...</div>;
   if (error) return <div className="curriculum-page-error">Error loading curriculum</div>;
@@ -39,6 +40,10 @@ const Curriculum = () => {
     navigate(`/curriculum/${slug}`);
   };
 
+  const handleFlagError = (countryId) => {
+    setFailedFlags(prev => ({ ...prev, [countryId]: true }));
+  };
+
   return (
     <div className="curriculum-page">
       <div className="curriculum-page-header">
@@ -50,22 +55,23 @@ const Curriculum = () => {
         {curriculum.map((country) => {
           const countryCode = getCountryCode(country.country);
           const flagUrl = `https://flagcdn.com/w80/${countryCode}.png`;
+          const showFallback = failedFlags[country.id];
           
           return (
             <div key={country.id} className="curriculum-page-card">
-              <img 
-                src={flagUrl}
-                alt={`${country.country} flag`}
-                className="curriculum-page-flag-image"
-                onError={(e) => {
-                  e.target.style.display = 'none';
-                  const parent = e.target.parentNode;
-                  const fallback = document.createElement('div');
-                  fallback.className = 'curriculum-page-flag';
-                  fallback.textContent = country.flag || '🌍';
-                  parent.insertBefore(fallback, e.target);
-                }}
-              />
+              {!showFallback ? (
+                <img 
+                  src={flagUrl}
+                  alt={`${country.country} flag`}
+                  className="curriculum-page-flag-image"
+                  onError={() => handleFlagError(country.id)}
+                  loading="lazy"
+                />
+              ) : (
+                <div className="curriculum-page-flag">
+                  {country.flag || '🌍'}
+                </div>
+              )}
               <h3>{country.country}</h3>
               <p className="curriculum-page-description">{country.description}</p>
               <div className="curriculum-page-levels">

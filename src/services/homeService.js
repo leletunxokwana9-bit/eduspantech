@@ -1,10 +1,7 @@
 // Service layer with mock data for development
-// Replace with real API calls when backend is ready
+// ALWAYS uses mock data - no API calls
 
-const API_BASE_URL = process.env.REACT_APP_API_URL || '/api';
-const IS_DEVELOPMENT = process.env.NODE_ENV === 'development';
-
-// ===== MOCK DATA - Only used in development =====
+// ===== MOCK DATA =====
 const MOCK_DATA = {
   hero: {
     badge: 'Global Mathematics Education',
@@ -173,29 +170,6 @@ const MOCK_DATA = {
     secondaryText: 'View Plans',
     note: 'No credit card required. Cancel anytime.'
   },
-  dashboard: {
-    user: { name: 'Alex Johnson', grade: 'Grade 12', country: 'South Africa', avatar: '👤' },
-    stats: { courses: 4, hours: 24, badges: 7 },
-    continueLearning: { title: 'Algebra Fundamentals', chapter: 'Chapter 3: Linear Equations', progress: 70 },
-    recentActivity: [
-      { id: 1, type: 'completed', title: 'Quadratic Equations Quiz', time: '2 hours ago' },
-      { id: 2, type: 'watched', title: 'Functions & Graphs Lesson', time: '4 hours ago' },
-      { id: 3, type: 'earned', title: 'Math Wizard Badge', time: '1 day ago' }
-    ],
-    progress: [
-      { subject: 'Algebra', percentage: 70, color: '#4f46e5' },
-      { subject: 'Geometry', percentage: 60, color: '#7c3aed' },
-      { subject: 'Calculus', percentage: 45, color: '#ec4899' },
-      { subject: 'Statistics', percentage: 80, color: '#06b6d4' }
-    ]
-  },
-  navigation: [
-    { id: 1, label: 'Dashboard', icon: '📊', path: '/dashboard' },
-    { id: 2, label: 'My Courses', icon: '📚', path: '/courses' },
-    { id: 3, label: 'Progress', icon: '📈', path: '/progress' },
-    { id: 4, label: 'Whiteboard', icon: '✏️', path: '/whiteboard' },
-    { id: 5, label: 'Settings', icon: '⚙️', path: '/settings' }
-  ],
   footer: {
     columns: [
       { title: 'Company', links: ['About', 'Careers', 'Blog', 'Press'] },
@@ -207,23 +181,43 @@ const MOCK_DATA = {
   }
 };
 
-// ===== SERVICE EXPORTS =====
+// ===== SERVICE EXPORTS - ALWAYS RETURNS MOCK DATA =====
 export const homeService = {
   getHomeData: async () => {
-    // Always return mock data for now since there's no backend
     console.log('📦 Using mock data');
+    // Simulate network delay
     await new Promise(resolve => setTimeout(resolve, 300));
     return MOCK_DATA;
   },
 
   getDashboardData: async (userId) => {
     await new Promise(resolve => setTimeout(resolve, 300));
-    return MOCK_DATA.dashboard;
+    return {
+      user: { name: 'Alex Johnson', grade: 'Grade 12', country: 'South Africa', avatar: '👤' },
+      stats: { courses: 4, hours: 24, badges: 7 },
+      continueLearning: { title: 'Algebra Fundamentals', chapter: 'Chapter 3: Linear Equations', progress: 70 },
+      recentActivity: [
+        { id: 1, type: 'completed', title: 'Quadratic Equations Quiz', time: '2 hours ago' },
+        { id: 2, type: 'watched', title: 'Functions & Graphs Lesson', time: '4 hours ago' },
+        { id: 3, type: 'earned', title: 'Math Wizard Badge', time: '1 day ago' }
+      ],
+      progress: [
+        { subject: 'Algebra', percentage: 70, color: '#4f46e5' },
+        { subject: 'Geometry', percentage: 60, color: '#7c3aed' },
+        { subject: 'Calculus', percentage: 45, color: '#ec4899' },
+        { subject: 'Statistics', percentage: 80, color: '#06b6d4' }
+      ]
+    };
   },
 
   getUserProgress: async (userId) => {
     await new Promise(resolve => setTimeout(resolve, 300));
-    return MOCK_DATA.dashboard.progress;
+    return [
+      { subject: 'Algebra', percentage: 70, color: '#4f46e5' },
+      { subject: 'Geometry', percentage: 60, color: '#7c3aed' },
+      { subject: 'Calculus', percentage: 45, color: '#ec4899' },
+      { subject: 'Statistics', percentage: 80, color: '#06b6d4' }
+    ];
   },
 
   getCourses: async (filters) => {
@@ -231,3 +225,5 @@ export const homeService = {
     return MOCK_DATA.subjects.items;
   }
 };
+
+export default homeService;

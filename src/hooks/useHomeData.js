@@ -12,29 +12,18 @@ export const useHomeData = () => {
       try {
         setLoading(true);
         const result = await homeService.getHomeData();
+        console.log('📦 useHomeData - result:', result);
+        console.log('📦 useHomeData - result.subjects:', result?.subjects);
         
-        // ✅ FIXED: Ensure subjects is always an array
-        if (result && typeof result === 'object') {
-          // If result.subjects is not an array, set it to empty array
-          if (!Array.isArray(result.subjects)) {
-            result.subjects = [];
-          }
-          // If result.subjects.items exists and is an array, use it
-          if (result.subjects && Array.isArray(result.subjects.items)) {
+        // ✅ If subjects is not an array but has items, fix it
+        if (result && result.subjects && !Array.isArray(result.subjects)) {
+          if (Array.isArray(result.subjects.items)) {
             result.subjects = result.subjects.items;
-          }
-          // If result has items but not subjects, map it
-          if (!result.subjects && Array.isArray(result.items)) {
-            result.subjects = result.items;
-          }
-          // Ensure subjects is always an array
-          if (!Array.isArray(result.subjects)) {
+          } else if (Array.isArray(result.subjects)) {
+            // already an array
+          } else {
             result.subjects = [];
           }
-        } else {
-          // If result is not an object, set default
-          setData({ subjects: [] });
-          return;
         }
         
         setData(result);
@@ -42,8 +31,6 @@ export const useHomeData = () => {
       } catch (err) {
         setError(err.message);
         console.error('Failed to fetch home data:', err);
-        // ✅ Set default data on error
-        setData({ subjects: [] });
       } finally {
         setLoading(false);
       }

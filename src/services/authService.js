@@ -196,9 +196,12 @@ export const authService = {
         return { success: true, accessToken: data.accessToken };
       }
 
+      // ✅ If refresh fails, clear tokens and redirect
+      authService.logout();
       return { success: false, error: data.error || 'Refresh failed' };
     } catch (error) {
       console.error('❌ Refresh error:', error);
+      authService.logout();
       return { success: false, error: 'Network error' };
     }
   },

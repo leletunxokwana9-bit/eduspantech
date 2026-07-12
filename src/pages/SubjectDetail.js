@@ -18,9 +18,12 @@ const SubjectDetail = () => {
   const [subscription, setSubscription] = useState(null);
   const [isCheckingAuth, setIsCheckingAuth] = useState(true);
 
-  // ✅ FIXED: Find subject from data.subjects (not data.subjects.items)
-  const subject = data?.subjects?.find(
-    (item) => item.name.toLowerCase().replace(/\s+/g, '-') === subjectName
+  // ✅ FIXED: Make sure subjects is always an array
+  const subjects = Array.isArray(data?.subjects) ? data.subjects : [];
+  
+  // ✅ FIXED: Find subject safely
+  const subject = subjects.find(
+    (item) => item.name?.toLowerCase().replace(/\s+/g, '-') === subjectName
   );
 
   // Check authentication status on mount
@@ -32,21 +35,37 @@ const SubjectDetail = () => {
 
       if (isAuthenticated) {
         try {
-          const userData = await authService.getCurrentUser();
+          // ✅ Get fresh user data with token refresh handling
+          const userData = await authService.getCurrentUserWithSubscription();
           if (userData) {
             setUser(userData);
-            try {
-              const response = await fetch(`${API_BASE_URL}/subscription/me`, {
-                headers: {
-                  'Authorization': `Bearer ${localStorage.getItem('accessToken')}`
+            // ✅ Get subscription from the merged data
+            if (userData.subscription) {
+              setSubscription(userData.subscription);
+            } else {
+              // Fallback: fetch subscription separately
+              try {
+                const token = localStorage.getItem('accessToken');
+                if (token) {
+                  const response = await fetch(`${API_BASE_URL}/subscription/me`, {
+                    headers: {
+                      'Authorization': `Bearer ${token}`
+                    }
+                  });
+                  if (response.ok) {
+                    const data = await response.json();
+                    setSubscription(data.subscription);
+                  }
                 }
-              });
-              if (response.ok) {
-                const data = await response.json();
-                setSubscription(data.subscription);
+              } catch (error) {
+                console.error('Failed to get subscription:', error);
               }
-            } catch (error) {
-              console.error('Failed to get subscription:', error);
+            }
+          } else {
+            // Try fallback
+            const fallbackUser = await authService.getCurrentUser();
+            if (fallbackUser) {
+              setUser(fallbackUser);
             }
           }
         } catch (error) {
@@ -66,11 +85,14 @@ const SubjectDetail = () => {
     if (user) {
       const checkShift = async () => {
         try {
+          const token = localStorage.getItem('accessToken');
+          if (!token) return;
+          
           const response = await fetch(`${API_BASE_URL}/auth/shift/check`, {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',
-              'Authorization': `Bearer ${localStorage.getItem('accessToken')}`
+              'Authorization': `Bearer ${token}`
             },
             body: JSON.stringify({ countryCode: user.country || 'ZA' })
           });
@@ -163,14 +185,17 @@ const SubjectDetail = () => {
 
       let subscription = null;
       try {
-        const subResponse = await fetch(`${API_BASE_URL}/subscription/me`, {
-          headers: {
-            'Authorization': `Bearer ${localStorage.getItem('accessToken')}`
+        const token = localStorage.getItem('accessToken');
+        if (token) {
+          const subResponse = await fetch(`${API_BASE_URL}/subscription/me`, {
+            headers: {
+              'Authorization': `Bearer ${token}`
+            }
+          });
+          if (subResponse.ok) {
+            const data = await subResponse.json();
+            subscription = data.subscription;
           }
-        });
-        if (subResponse.ok) {
-          const data = await subResponse.json();
-          subscription = data.subscription;
         }
       } catch (error) {
         console.error('Failed to check subscription:', error);
@@ -196,23 +221,26 @@ const SubjectDetail = () => {
 
       if (subscription.tier !== 'Tier_Silver') {
         try {
-          const shiftResponse = await fetch(`${API_BASE_URL}/auth/shift/check`, {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              'Authorization': `Bearer ${localStorage.getItem('accessToken')}`
-            },
-            body: JSON.stringify({ countryCode: user?.country || 'ZA' })
-          });
+          const token = localStorage.getItem('accessToken');
+          if (token) {
+            const shiftResponse = await fetch(`${API_BASE_URL}/auth/shift/check`, {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`
+              },
+              body: JSON.stringify({ countryCode: user?.country || 'ZA' })
+            });
 
-          if (shiftResponse.ok) {
-            const shiftData = await shiftResponse.json();
-            if (!shiftData.authorized) {
-              setEnrollmentStatus({
-                type: 'warning',
-                message: `No active shift. Sessions available 16:00-23:00 Local Time. Current shift: ${shiftData.shiftName}`,
-                action: 'schedule'
-              });
+            if (shiftResponse.ok) {
+              const shiftData = await shiftResponse.json();
+              if (!shiftData.authorized) {
+                setEnrollmentStatus({
+                  type: 'warning',
+                  message: `No active shift. Sessions available 16:00-23:00 Local Time. Current shift: ${shiftData.shiftName}`,
+                  action: 'schedule'
+                });
+              }
             }
           }
         } catch (error) {
@@ -220,11 +248,22 @@ const SubjectDetail = () => {
         }
       }
 
+      const token = localStorage.getItem('accessToken');
+      if (!token) {
+        setEnrollmentStatus({
+          type: 'error',
+          message: 'Please login again to enroll.',
+          action: 'login'
+        });
+        setIsEnrolling(false);
+        return;
+      }
+
       const enrollmentResponse = await fetch(`${API_BASE_URL}/content/subjects/${subjectId}/enroll`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('accessToken')}`
+          'Authorization': `Bearer ${token}`
         }
       });
 

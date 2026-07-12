@@ -39,9 +39,14 @@ function Navbar() {
       if (accessToken) {
         setIsAuthenticated(true);
         try {
-          const userData = await authService.getCurrentUser();
+          const userData = await authService.getCurrentUserWithSubscription();
           if (userData) {
             setUser(userData);
+          } else {
+            const fallbackUser = await authService.getCurrentUser();
+            if (fallbackUser) {
+              setUser(fallbackUser);
+            }
           }
         } catch (error) {
           console.error('Failed to get user:', error);
@@ -398,7 +403,7 @@ function Navbar() {
             </div>
           </div>
 
-          {/* ✅ FIXED: Changed /dashboard to /profile */}
+          {/* ✅ FIXED: User menu - Profile icon goes to /profile */}
           {isAuthenticated ? (
             <div className="user-menu">
               <Link to="/profile" className="user-profile-btn">
@@ -474,7 +479,6 @@ function Navbar() {
           <div className="mobile-actions">
             {isAuthenticated ? (
               <>
-                {/* ✅ Already fixed to /profile */}
                 <Link to="/profile" className="mobile-profile" onClick={closeMenu}>
                   <FiUser /> {getUserName()}
                 </Link>

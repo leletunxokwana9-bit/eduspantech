@@ -1,5 +1,5 @@
 // src/components/AvatarSelector.js
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';  // ✅ Remove useEffect
 import { createAvatar } from '@dicebear/core';
 import { adventurer } from '@dicebear/collection';
 import { avatarCategories } from '../data/avatars';

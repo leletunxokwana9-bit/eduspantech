@@ -487,10 +487,11 @@ function Home() {
             </div>
             <div className="footer-links">
               <h4>Connect</h4>
-              <a href="#">Twitter</a>
-              <a href="#">LinkedIn</a>
-              <a href="#">YouTube</a>
-              <a href="#">Instagram</a>
+              {/* Fixed: Changed href="#" to valid paths */}
+              <a href="https://twitter.com/eduspantech">Twitter</a>
+              <a href="https://linkedin.com/company/eduspantech">LinkedIn</a>
+              <a href="https://youtube.com/@eduspantech">YouTube</a>
+              <a href="https://instagram.com/eduspantech">Instagram</a>
             </div>
           </div>
           <div className="footer-bottom">

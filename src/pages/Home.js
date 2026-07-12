@@ -8,6 +8,7 @@ function Home() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [failedFlags, setFailedFlags] = useState({});
 
   // Check authentication status on mount - WITH SUBSCRIPTION
   useEffect(() => {
@@ -16,12 +17,10 @@ function Home() {
       if (accessToken) {
         setIsAuthenticated(true);
         try {
-          // ✅ Fetch user WITH subscription data
           const userData = await authService.getCurrentUserWithSubscription();
           if (userData) {
             setUser(userData);
           } else {
-            // Fallback to regular user data
             const fallbackUser = await authService.getCurrentUser();
             if (fallbackUser) {
               setUser(fallbackUser);
@@ -51,11 +50,60 @@ function Home() {
 
   const getUserTier = () => {
     if (!user) return 'Silver';
-    // ✅ Check multiple possible locations for tier
     if (user.tier) return user.tier;
     if (user.subscriptionTier) return user.subscriptionTier;
     if (user.subscription?.tier) return user.subscription.tier;
     return 'Silver';
+  };
+
+  // ✅ Country list with flagCDN URLs (same pattern as Curriculum page)
+  const countries = [
+    { 
+      id: 'za',
+      code: 'ZA', 
+      name: 'South Africa', 
+      description: 'CAPS & IEB (Grades 8–12)',
+      levels: ['Grade 8-12', 'Matric', 'University Prep']
+    },
+    { 
+      id: 'us',
+      code: 'US', 
+      name: 'United States', 
+      description: 'Algebra 1/2, Geometry, Pre-Calculus, AP Calculus',
+      levels: ['Middle School', 'High School', 'AP']
+    },
+    { 
+      id: 'gb',
+      code: 'GB', 
+      name: 'United Kingdom', 
+      description: 'GCSE & A-Level Mathematics',
+      levels: ['Key Stage 4', 'Key Stage 5', 'University Prep']
+    },
+    { 
+      id: 'au',
+      code: 'AU', 
+      name: 'Australia', 
+      description: 'Mathematical Methods & Specialist',
+      levels: ['Years 7-10', 'Years 11-12', 'Tertiary Prep']
+    },
+    { 
+      id: 'sg',
+      code: 'SG', 
+      name: 'Singapore', 
+      description: 'GCE O-Level & Junior College H2',
+      levels: ['Secondary 1-4', 'Junior College', 'University Prep']
+    },
+    { 
+      id: 'jp',
+      code: 'JP', 
+      name: 'Japan', 
+      description: 'Senior High Mathematics & Vectors',
+      levels: ['Junior High', 'Senior High', 'University Prep']
+    }
+  ];
+
+  const handleFlagError = (countryId) => {
+    setFailedFlags(prev => ({ ...prev, [countryId]: true }));
   };
 
   if (loading) {
@@ -73,7 +121,6 @@ function Home() {
         <div className="hero-content">
           <div className="hero-badge">🌍 Global Mathematics Platform</div>
           
-          {/* Personalized greeting for authenticated users */}
           {isAuthenticated ? (
             <>
               <h1 className="hero-title">
@@ -132,7 +179,6 @@ function Home() {
             )}
           </div>
 
-          {/* Hero Stats - Always visible but different content - ALL WHITE TEXT */}
           <div className="hero-stats">
             {isAuthenticated ? (
               <>
@@ -184,7 +230,7 @@ function Home() {
         </div>
       </section>
 
-      {/* Features Section - Shows different content based on auth */}
+      {/* Features Section */}
       <section className="features-section">
         <div className="container">
           <div className="section-header">
@@ -371,7 +417,7 @@ function Home() {
         </section>
       )}
 
-      {/* Curriculum Section - Visible to everyone */}
+      {/* ===== CURRICULUM SECTION WITH FLAGCDN (Same as Curriculum page) ===== */}
       <section className="curriculum-section">
         <div className="container">
           <div className="section-header">
@@ -380,36 +426,33 @@ function Home() {
             <p>Our South African tutors are trained to teach multiple international curricula seamlessly.</p>
           </div>
           <div className="curriculum-grid">
-            <div className="curriculum-item">
-              <span className="curriculum-flag">🇿🇦</span>
-              <h4>South Africa</h4>
-              <p>CAPS &amp; IEB (Grades 8–12)</p>
-            </div>
-            <div className="curriculum-item">
-              <span className="curriculum-flag">🇺🇸</span>
-              <h4>United States</h4>
-              <p>Algebra 1/2, Geometry, Pre-Calculus, AP Calculus</p>
-            </div>
-            <div className="curriculum-item">
-              <span className="curriculum-flag">🇬🇧</span>
-              <h4>United Kingdom</h4>
-              <p>GCSE &amp; A-Level Mathematics</p>
-            </div>
-            <div className="curriculum-item">
-              <span className="curriculum-flag">🇦🇺</span>
-              <h4>Australia</h4>
-              <p>Mathematical Methods &amp; Specialist</p>
-            </div>
-            <div className="curriculum-item">
-              <span className="curriculum-flag">🇸🇬</span>
-              <h4>Singapore</h4>
-              <p>GCE O-Level &amp; Junior College H2</p>
-            </div>
-            <div className="curriculum-item">
-              <span className="curriculum-flag">🇯🇵</span>
-              <h4>Japan</h4>
-              <p>Senior High Mathematics &amp; Vectors</p>
-            </div>
+            {countries.map((country) => {
+              const flagUrl = `https://flagcdn.com/w80/${country.id}.png`;
+              const showFallback = failedFlags[country.id];
+              
+              return (
+                <div key={country.id} className="curriculum-item">
+                  {!showFallback ? (
+                    <img 
+                      src={flagUrl}
+                      alt={`${country.name} flag`}
+                      className="curriculum-flag-img"
+                      onError={() => handleFlagError(country.id)}
+                      loading="lazy"
+                    />
+                  ) : (
+                    <div className="curriculum-flag-fallback">{country.code}</div>
+                  )}
+                  <h4>{country.name}</h4>
+                  <p>{country.description}</p>
+                  <div className="curriculum-levels">
+                    {country.levels?.map((level, idx) => (
+                      <span key={idx} className="level-tag">{level}</span>
+                    ))}
+                  </div>
+                </div>
+              );
+            })}
           </div>
         </div>
       </section>

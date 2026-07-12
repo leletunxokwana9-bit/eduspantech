@@ -1,12 +1,12 @@
 // src/services/homeService.js
-const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000/api/v1';
+const API_URL = 'https://eduspantech-backend.onrender.com';
 
 export const homeService = {
   getHomeData: async () => {
     try {
-      console.log('🌐 Fetching subjects from API:', `${API_BASE_URL}/content/subjects`);
+      console.log('🌐 Fetching subjects from API:', `${API_URL}/api/v1/content/subjects`);
       
-      const response = await fetch(`${API_BASE_URL}/content/subjects`);
+      const response = await fetch(`${API_URL}/api/v1/content/subjects`);
       if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
       
       const data = await response.json();
@@ -66,7 +66,6 @@ export const homeService = {
             longDescription: subject.longDescription || subject.description || '',
             color: subject.color || '#4f46e5',
             topics: subject.topics || [],
-            // ✅ FIX: Resources use FRONTEND navigation paths, not API URLs
             resources: [
               { 
                 id: 1, 
@@ -288,7 +287,7 @@ export const homeService = {
 
   getDashboardData: async (userId) => {
     try {
-      const response = await fetch(`${API_BASE_URL}/dashboard/${userId}`);
+      const response = await fetch(`${API_URL}/api/v1/dashboard/${userId}`);
       if (!response.ok) throw new Error('Failed to fetch dashboard');
       return response.json();
     } catch (error) {
@@ -299,7 +298,7 @@ export const homeService = {
 
   getUserProgress: async (userId) => {
     try {
-      const response = await fetch(`${API_BASE_URL}/users/${userId}/progress`);
+      const response = await fetch(`${API_URL}/api/v1/users/${userId}/progress`);
       if (!response.ok) throw new Error('Failed to fetch progress');
       return response.json();
     } catch (error) {
@@ -311,7 +310,7 @@ export const homeService = {
   getCourses: async (filters) => {
     try {
       const params = new URLSearchParams(filters);
-      const response = await fetch(`${API_BASE_URL}/courses?${params}`);
+      const response = await fetch(`${API_URL}/api/v1/courses?${params}`);
       if (!response.ok) throw new Error('Failed to fetch courses');
       return response.json();
     } catch (error) {

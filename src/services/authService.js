@@ -1,10 +1,10 @@
-const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000/api/v1';
+const API_URL = 'https://eduspantech-backend.onrender.com';
 
 export const authService = {
   // ===== LOGIN =====
   login: async (email, password) => {
     try {
-      const url = `${API_BASE_URL}/auth/login`;
+      const url = `${API_URL}/api/v1/auth/login`;  // ← FIXED: API_URL not API_BASE_URL
       console.log('📤 Sending login to:', url);
 
       const response = await fetch(url, {
@@ -68,7 +68,7 @@ export const authService = {
   // ===== REGISTER - Accepts an object =====
   register: async (userData) => {
     try {
-      const url = `${API_BASE_URL}/auth/register`;
+      const url = `${API_URL}/api/v1/auth/register`;  // ← FIXED: API_URL not API_BASE_URL
       console.log('📤 Sending register to:', url);
       console.log('📦 Registration data:', userData);
 
@@ -169,6 +169,35 @@ export const authService = {
   // ===== GET TOKEN =====
   getToken: () => {
     return localStorage.getItem('accessToken');
+  },
+
+  // ===== REFRESH TOKEN =====
+  refreshToken: async () => {
+    try {
+      const refreshToken = localStorage.getItem('refreshToken');
+      if (!refreshToken) {
+        return { success: false, error: 'No refresh token' };
+      }
+
+      const response = await fetch(`${API_URL}/api/v1/auth/refresh-token`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ refreshToken })
+      });
+
+      const data = await response.json();
+      
+      if (data.success && data.accessToken) {
+        localStorage.setItem('accessToken', data.accessToken);
+        return { success: true, accessToken: data.accessToken };
+      }
+
+      return { success: false, error: data.error || 'Refresh failed' };
+    } catch (error) {
+      return { success: false, error: 'Network error' };
+    }
   }
 };
 

@@ -32,7 +32,9 @@ const Profile = () => {
     completionRate: 0
   });
 
-  // ✅ Fetch user stats - defined inside useEffect
+  // API Base URL
+  const API_URL = 'https://eduspantech-backend.onrender.com';
+
   useEffect(() => {
     const fetchUserData = async () => {
       try {
@@ -53,7 +55,6 @@ const Profile = () => {
             grade: userData.grade || ''
           });
           
-          // ✅ Fetch stats here
           await fetchUserStats();
         } else {
           navigate('/login');
@@ -66,7 +67,6 @@ const Profile = () => {
       }
     };
 
-    // ✅ Define fetchUserStats inside the useEffect
     const fetchUserStats = async () => {
       try {
         const token = localStorage.getItem('accessToken');
@@ -76,7 +76,7 @@ const Profile = () => {
           return;
         }
 
-        const enrollResponse = await fetch('http://localhost:5000/api/v1/content/my/subjects', {
+        const enrollResponse = await fetch(`${API_URL}/api/v1/content/my/subjects`, {
           headers: {
             'Authorization': `Bearer ${token}`,
             'Content-Type': 'application/json'
@@ -111,7 +111,6 @@ const Profile = () => {
     };
 
     fetchUserData();
-    // ✅ Empty dependency array - runs once on mount
   }, [navigate]);
 
   const handleEditToggle = () => {
@@ -143,7 +142,7 @@ const Profile = () => {
         return;
       }
 
-      const response = await fetch('http://localhost:5000/api/v1/auth/update-profile', {
+      const response = await fetch(`${API_URL}/api/v1/auth/update-profile`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
@@ -210,7 +209,7 @@ const Profile = () => {
         return;
       }
 
-      const response = await fetch('http://localhost:5000/api/v1/auth/change-password', {
+      const response = await fetch(`${API_URL}/api/v1/auth/change-password`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -268,7 +267,7 @@ const Profile = () => {
         return;
       }
 
-      const response = await fetch('http://localhost:5000/api/v1/auth/delete-account', {
+      const response = await fetch(`${API_URL}/api/v1/auth/delete-account`, {
         method: 'DELETE',
         headers: {
           'Authorization': `Bearer ${token}`

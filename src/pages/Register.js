@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import { authService } from '../services/authService';
 import TermsOfService from './Terms';
 import PrivacyPolicy from './Privacy';
@@ -22,6 +22,8 @@ const Register = () => {
   const [step, setStep] = useState(1);
   const [showTermsModal, setShowTermsModal] = useState(false);
   const [showPrivacyModal, setShowPrivacyModal] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
   // Check if user is already logged in
   useEffect(() => {
@@ -38,7 +40,6 @@ const Register = () => {
           localStorage.removeItem('accessToken');
           localStorage.removeItem('refreshToken');
           localStorage.removeItem('user');
-          console.log('Token invalid, staying on register page');
         }
       }
     };
@@ -95,14 +96,12 @@ const Register = () => {
         cohort_flag: formData.cohort === 'HighSchool' ? 'HighSchool' : 'UniversityFirstYear'
       };
 
-      console.log('Registration Data:', registrationData);
       const response = await authService.register(registrationData);
-      console.log('Registration response:', response);
       
       if (response.success) {
         navigate('/dashboard');
       } else {
-        setError('Registration failed. Please try again.');
+        setError(response.error || 'Registration failed. Please try again.');
       }
     } catch (err) {
       setError(err.message || 'Registration failed. Please try again.');
@@ -117,85 +116,29 @@ const Register = () => {
 
     return (
       <div 
-        style={{
-          position: 'fixed',
-          top: 0,
-          left: 0,
-          right: 0,
-          bottom: 0,
-          background: 'rgba(0,0,0,0.5)',
-          backdropFilter: 'blur(4px)',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          zIndex: 9999
-        }}
+        className="register-modal-overlay"
         onClick={onClose}
       >
         <div 
-          style={{
-            background: 'white',
-            borderRadius: '16px',
-            maxWidth: '700px',
-            width: '90%',
-            maxHeight: '85vh',
-            display: 'flex',
-            flexDirection: 'column',
-            boxShadow: '0 20px 60px rgba(0,0,0,0.2)',
-            overflow: 'hidden'
-          }}
+          className="register-modal"
           onClick={(e) => e.stopPropagation()}
         >
-          <div style={{
-            display: 'flex',
-            justifyContent: 'space-between',
-            alignItems: 'center',
-            padding: '20px 24px',
-            borderBottom: '1px solid #f1f3f5',
-            flexShrink: 0
-          }}>
-            <h2 style={{ fontSize: '20px', fontWeight: 700, margin: 0, color: '#1a1a2e' }}>{title}</h2>
+          <div className="register-modal-header">
+            <h2>{title}</h2>
             <button 
               onClick={onClose}
-              style={{
-                background: '#f3f4f6',
-                border: 'none',
-                width: '36px',
-                height: '36px',
-                borderRadius: '50%',
-                fontSize: '24px',
-                cursor: 'pointer',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                color: '#6b7280'
-              }}
+              className="register-modal-close"
             >
               ×
             </button>
           </div>
-          <div style={{ padding: '24px', overflowY: 'auto', flex: 1 }}>
+          <div className="register-modal-body">
             {children}
           </div>
-          <div style={{
-            padding: '16px 24px',
-            borderTop: '1px solid #f1f3f5',
-            display: 'flex',
-            justifyContent: 'flex-end',
-            flexShrink: 0
-          }}>
+          <div className="register-modal-footer">
             <button 
               onClick={onClose}
-              style={{
-                padding: '10px 28px',
-                background: '#4f46e5',
-                color: 'white',
-                border: 'none',
-                borderRadius: '8px',
-                fontSize: '14px',
-                fontWeight: 600,
-                cursor: 'pointer'
-              }}
+              className="register-modal-btn"
             >
               Close
             </button>
@@ -211,34 +154,14 @@ const Register = () => {
     
     return (
       <div>
-        <div style={{ 
-          fontSize: '13px', 
-          color: '#6b7280', 
-          marginBottom: '20px', 
-          paddingBottom: '12px', 
-          borderBottom: '1px solid #f3f4f6' 
-        }}>
+        <div className="register-modal-date">
           Last Updated: {TermsOfService.effectiveDate}
         </div>
         {terms.map((section) => (
-          <div key={section.id} style={{ marginBottom: '24px' }}>
-            <h2 style={{ 
-              fontSize: '18px', 
-              fontWeight: 700, 
-              color: '#1a1a2e', 
-              margin: '0 0 10px 0' 
-            }}>
-              {section.title}
-            </h2>
+          <div key={section.id} className="register-modal-section">
+            <h3>{section.title}</h3>
             {section.content.map((paragraph, index) => (
-              <p key={index} style={{ 
-                fontSize: '14px', 
-                lineHeight: '1.7', 
-                color: '#374151', 
-                marginBottom: '8px' 
-              }}>
-                {paragraph}
-              </p>
+              <p key={index}>{paragraph}</p>
             ))}
           </div>
         ))}
@@ -252,34 +175,14 @@ const Register = () => {
     
     return (
       <div>
-        <div style={{ 
-          fontSize: '13px', 
-          color: '#6b7280', 
-          marginBottom: '20px', 
-          paddingBottom: '12px', 
-          borderBottom: '1px solid #f3f4f6' 
-        }}>
+        <div className="register-modal-date">
           Last Updated: {PrivacyPolicy.effectiveDate}
         </div>
         {privacy.map((section) => (
-          <div key={section.id} style={{ marginBottom: '24px' }}>
-            <h2 style={{ 
-              fontSize: '18px', 
-              fontWeight: 700, 
-              color: '#1a1a2e', 
-              margin: '0 0 10px 0' 
-            }}>
-              {section.title}
-            </h2>
+          <div key={section.id} className="register-modal-section">
+            <h3>{section.title}</h3>
             {section.content.map((paragraph, index) => (
-              <p key={index} style={{ 
-                fontSize: '14px', 
-                lineHeight: '1.7', 
-                color: '#374151', 
-                marginBottom: '8px' 
-              }}>
-                {paragraph}
-              </p>
+              <p key={index}>{paragraph}</p>
             ))}
           </div>
         ))}
@@ -288,204 +191,282 @@ const Register = () => {
   };
 
   return (
-    <div className="register-container">
-      <div className="register-card">
-        <div className="register-header">
-          <h2>📝 Create Account</h2>
-          <p className="register-subtitle">
-            Join EduSpantech and start your mathematics journey
-          </p>
-          <div className="register-steps">
-            <span className={`step-indicator ${step >= 1 ? 'active' : ''}`}>1</span>
-            <span className="step-line"></span>
-            <span className={`step-indicator ${step >= 2 ? 'active' : ''}`}>2</span>
+    <div className="register-wrapper">
+      {/* Background with mathematical elements */}
+      <div className="register-bg">
+        <div className="math-symbols">
+          <span className="math-symbol">∫</span>
+          <span className="math-symbol">∑</span>
+          <span className="math-symbol">π</span>
+          <span className="math-symbol">√</span>
+          <span className="math-symbol">∞</span>
+          <span className="math-symbol">∂</span>
+          <span className="math-symbol">Δ</span>
+          <span className="math-symbol">θ</span>
+        </div>
+        <div className="gradient-orb orb-1"></div>
+        <div className="gradient-orb orb-2"></div>
+        <div className="gradient-orb orb-3"></div>
+      </div>
+
+      <div className="register-container">
+        {/* Left Panel - Brand Story */}
+        <div className="register-left">
+          <div className="brand-content">
+            <div className="brand-logo">
+              <span className="logo-symbol">∑</span>
+              <span className="logo-text">EduSpantech</span>
+            </div>
+            <h1 className="brand-headline">
+              Education for the<br />
+              <span className="highlight">love of your life</span>
+            </h1>
+            <p className="brand-description">
+              From Grade 8 to 2nd-Year Tertiary — world-class mathematics tutoring,
+              powered by a 24/7 global infrastructure across 9 AWS regions.
+            </p>
+            <div className="brand-stats">
+              <div className="stat">
+                <span className="stat-number">9</span>
+                <span className="stat-label">Global Regions</span>
+              </div>
+              <div className="stat-divider"></div>
+              <div className="stat">
+                <span className="stat-number">24/7</span>
+                <span className="stat-label">Tutor Availability</span>
+              </div>
+              <div className="stat-divider"></div>
+              <div className="stat">
+                <span className="stat-number">12</span>
+                <span className="stat-label">Expert Tutors</span>
+              </div>
+            </div>
           </div>
         </div>
 
-        {error && <div className="register-error">{error}</div>}
-
-        <form onSubmit={handleSubmit}>
-          {step === 1 && (
-            <div className="register-step">
-              <div className="form-group">
-                <label>Full Name *</label>
-                <input
-                  type="text"
-                  name="fullName"
-                  value={formData.fullName}
-                  onChange={handleChange}
-                  placeholder="e.g. John Doe"
-                  required
-                  disabled={loading}
-                />
-              </div>
-
-              <div className="form-group">
-                <label>Email Address *</label>
-                <input
-                  type="email"
-                  name="email"
-                  value={formData.email}
-                  onChange={handleChange}
-                  placeholder="your@email.com"
-                  required
-                  disabled={loading}
-                />
-              </div>
-
-              <div className="form-group">
-                <label>Student Level *</label>
-                <select
-                  name="cohort"
-                  value={formData.cohort}
-                  onChange={handleChange}
-                  disabled={loading}
-                >
-                  <option value="HighSchool">High School (Grades 8-12)</option>
-                  <option value="UniversityFirstYear">University (1st-2nd Year)</option>
-                </select>
-                <small className="form-hint">
-                  {formData.cohort === 'HighSchool' 
-                    ? 'For students in Grade 8 through Matric' 
-                    : 'For first and second year university students'}
-                </small>
-              </div>
-
-              <div className="form-group">
-                <label>Country *</label>
-                <select
-                  name="country"
-                  value={formData.country}
-                  onChange={handleChange}
-                  disabled={loading}
-                >
-                  <option value="ZA">South Africa 🇿🇦</option>
-                  <option value="US">USA 🇺🇸</option>
-                  <option value="GB">UK 🇬🇧</option>
-                  <option value="AU">Australia 🇦🇺</option>
-                  <option value="SG">Singapore 🇸🇬</option>
-                  <option value="JP">Japan 🇯🇵</option>
-                  <option value="BR">Brazil 🇧🇷</option>
-                  <option value="Other">Other</option>
-                </select>
-              </div>
-
-              <div className="form-group">
-                <label>Grade/Year *</label>
-                <select
-                  name="grade"
-                  value={formData.grade}
-                  onChange={handleChange}
-                  required
-                  disabled={loading}
-                >
-                  <option value="">Select your grade</option>
-                  {getGradeOptions().map((g) => (
-                    <option key={g} value={g}>{g}</option>
-                  ))}
-                </select>
-              </div>
-
-              <button
-                type="button"
-                className="register-next-btn"
-                onClick={() => setStep(2)}
-                disabled={!formData.fullName || !formData.email || !formData.grade}
-              >
-                Next →
-              </button>
+        {/* Right Panel - Registration Form */}
+        <div className="register-right">
+          <div className="register-card">
+            <div className="register-header">
+              <h2>Create Account</h2>
+              <p>Join EduSpantech and start your mathematics journey</p>
             </div>
-          )}
 
-          {step === 2 && (
-            <div className="register-step">
-              <div className="form-group">
-                <label>Password *</label>
-                <input
-                  type="password"
-                  name="password"
-                  value={formData.password}
-                  onChange={handleChange}
-                  placeholder="Min 8 characters"
-                  required
-                  disabled={loading}
-                />
-                <small className="form-hint">
-                  Must be at least 8 characters with letters and numbers
-                </small>
+            {error && (
+              <div className="register-error">
+                <span className="error-icon">✕</span>
+                {error}
               </div>
+            )}
 
-              <div className="form-group">
-                <label>Confirm Password *</label>
-                <input
-                  type="password"
-                  name="confirmPassword"
-                  value={formData.confirmPassword}
-                  onChange={handleChange}
-                  placeholder="Confirm your password"
-                  required
-                  disabled={loading}
-                />
-              </div>
+            <form onSubmit={handleSubmit} className="register-form">
+              {step === 1 && (
+                <div className="register-step">
+                  <div className="form-group">
+                    <label>Full Name</label>
+                    <input
+                      type="text"
+                      name="fullName"
+                      value={formData.fullName}
+                      onChange={handleChange}
+                      placeholder="John Doe"
+                      required
+                      disabled={loading}
+                    />
+                  </div>
 
-              <div className="form-group checkbox-group">
-                <label className="checkbox-label">
-                  <input
-                    type="checkbox"
-                    name="agreeToTerms"
-                    checked={formData.agreeToTerms}
-                    onChange={handleChange}
-                    disabled={loading}
-                  />
-                  <span>
-                    I agree to the{' '}
-                    <span
-                      className="terms-link"
-                      onClick={(e) => {
-                        e.preventDefault();
-                        setShowTermsModal(true);
-                      }}
+                  <div className="form-group">
+                    <label>Email Address</label>
+                    <input
+                      type="email"
+                      name="email"
+                      value={formData.email}
+                      onChange={handleChange}
+                      placeholder="name@email.com"
+                      required
+                      disabled={loading}
+                    />
+                  </div>
+
+                  <div className="form-group">
+                    <label>Student Level</label>
+                    <select
+                      name="cohort"
+                      value={formData.cohort}
+                      onChange={handleChange}
+                      disabled={loading}
                     >
-                      Terms of Service
-                    </span>
-                    {' '}and{' '}
-                    <span
-                      className="terms-link"
-                      onClick={(e) => {
-                        e.preventDefault();
-                        setShowPrivacyModal(true);
-                      }}
-                    >
-                      Privacy Policy
-                    </span>
-                  </span>
-                </label>
-              </div>
+                      <option value="HighSchool">High School (Grades 8-12)</option>
+                      <option value="UniversityFirstYear">University (1st-2nd Year)</option>
+                    </select>
+                  </div>
 
-              <div className="register-actions">
-                <button
-                  type="button"
-                  className="register-back-btn"
-                  onClick={() => setStep(1)}
-                  disabled={loading}
-                >
-                  ← Back
-                </button>
-                <button
-                  type="submit"
-                  className="register-submit-btn"
-                  disabled={loading || !formData.agreeToTerms}
-                >
-                  {loading ? 'Creating Account...' : 'Create Account →'}
-                </button>
-              </div>
+                  <div className="form-group">
+                    <label>Country</label>
+                    <select
+                      name="country"
+                      value={formData.country}
+                      onChange={handleChange}
+                      disabled={loading}
+                    >
+                      <option value="ZA">South Africa 🇿🇦</option>
+                      <option value="US">United States 🇺🇸</option>
+                      <option value="GB">United Kingdom 🇬🇧</option>
+                      <option value="AU">Australia 🇦🇺</option>
+                      <option value="SG">Singapore 🇸🇬</option>
+                      <option value="JP">Japan 🇯🇵</option>
+                      <option value="BR">Brazil 🇧🇷</option>
+                      <option value="CA">Canada 🇨🇦</option>
+                      <option value="NG">Nigeria 🇳🇬</option>
+                    </select>
+                  </div>
+
+                  <div className="form-group">
+                    <label>Grade / Year</label>
+                    <select
+                      name="grade"
+                      value={formData.grade}
+                      onChange={handleChange}
+                      required
+                      disabled={loading}
+                    >
+                      <option value="">Select your grade</option>
+                      {getGradeOptions().map((g) => (
+                        <option key={g} value={g}>{g}</option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <button
+                    type="button"
+                    className="register-next-btn"
+                    onClick={() => setStep(2)}
+                    disabled={!formData.fullName || !formData.email || !formData.grade}
+                  >
+                    Next Step →
+                  </button>
+                </div>
+              )}
+
+              {step === 2 && (
+                <div className="register-step">
+                  <div className="form-group">
+                    <label>Password</label>
+                    <div className="password-field">
+                      <input
+                        type={showPassword ? 'text' : 'password'}
+                        name="password"
+                        value={formData.password}
+                        onChange={handleChange}
+                        placeholder="Min 8 characters"
+                        required
+                        disabled={loading}
+                      />
+                      <button
+                        type="button"
+                        className="toggle-password"
+                        onClick={() => setShowPassword(!showPassword)}
+                      >
+                        {showPassword ? '🙈' : '👁️'}
+                      </button>
+                    </div>
+                    <small className="form-hint">
+                      Must be at least 8 characters with letters and numbers
+                    </small>
+                  </div>
+
+                  <div className="form-group">
+                    <label>Confirm Password</label>
+                    <div className="password-field">
+                      <input
+                        type={showConfirmPassword ? 'text' : 'password'}
+                        name="confirmPassword"
+                        value={formData.confirmPassword}
+                        onChange={handleChange}
+                        placeholder="Confirm your password"
+                        required
+                        disabled={loading}
+                      />
+                      <button
+                        type="button"
+                        className="toggle-password"
+                        onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                      >
+                        {showConfirmPassword ? '🙈' : '👁️'}
+                      </button>
+                    </div>
+                  </div>
+
+                  <div className="form-group checkbox-group">
+                    <label className="checkbox-label">
+                      <input
+                        type="checkbox"
+                        name="agreeToTerms"
+                        checked={formData.agreeToTerms}
+                        onChange={handleChange}
+                        disabled={loading}
+                      />
+                      <span className="checkmark"></span>
+                      <span>
+                        I agree to the{' '}
+                        <span
+                          className="terms-link"
+                          onClick={(e) => {
+                            e.preventDefault();
+                            setShowTermsModal(true);
+                          }}
+                        >
+                          Terms of Service
+                        </span>
+                        {' '}and{' '}
+                        <span
+                          className="terms-link"
+                          onClick={(e) => {
+                            e.preventDefault();
+                            setShowPrivacyModal(true);
+                          }}
+                        >
+                          Privacy Policy
+                        </span>
+                      </span>
+                    </label>
+                  </div>
+
+                  <div className="register-actions">
+                    <button
+                      type="button"
+                      className="register-back-btn"
+                      onClick={() => setStep(1)}
+                      disabled={loading}
+                    >
+                      ← Back
+                    </button>
+                    <button
+                      type="submit"
+                      className="register-submit-btn"
+                      disabled={loading || !formData.agreeToTerms}
+                    >
+                      {loading ? (
+                        <>
+                          <span className="spinner"></span>
+                          Creating Account...
+                        </>
+                      ) : (
+                        'Create Account →'
+                      )}
+                    </button>
+                  </div>
+                </div>
+              )}
+            </form>
+
+            <div className="register-footer">
+              <p>
+                Already have an account? <Link to="/login">Sign in</Link>
+              </p>
             </div>
-          )}
-        </form>
-
-        <p className="register-login-link">
-          Already have an account? <a href="/login">Login here</a>
-        </p>
+          </div>
+        </div>
       </div>
 
       <Modal

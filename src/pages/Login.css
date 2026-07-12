@@ -310,7 +310,7 @@
   margin-top: 4px;
 }
 
-/* ===== FORM ===== */
+/* ===== FORM - FIXED CONTRAST ===== */
 .login-form {
   display: flex;
   flex-direction: column;
@@ -326,30 +326,32 @@
 .form-group label {
   font-size: 13px;
   font-weight: 500;
-  color: rgba(255, 255, 255, 0.6);
+  color: rgba(255, 255, 255, 0.7);
   letter-spacing: 0.3px;
 }
 
+/* ✅ FIX: Input fields with proper dark background and white text */
 .form-group input {
   width: 100%;
   padding: 14px 16px;
-  background: rgba(255, 255, 255, 0.05);
-  border: 2px solid rgba(255, 255, 255, 0.06);
+  background: rgba(255, 255, 255, 0.08);
+  border: 2px solid rgba(255, 255, 255, 0.1);
   border-radius: 12px;
-  color: #ffffff;
+  color: #ffffff !important;
   font-size: 15px;
   transition: all 0.3s ease;
   outline: none;
 }
 
+/* ✅ FIX: Placeholder text */
 .form-group input::placeholder {
-  color: rgba(255, 255, 255, 0.2);
+  color: rgba(255, 255, 255, 0.35);
 }
 
 .form-group input:focus {
   border-color: #4f46e5;
-  background: rgba(255, 255, 255, 0.08);
-  box-shadow: 0 0 0 4px rgba(79, 70, 229, 0.12);
+  background: rgba(255, 255, 255, 0.12);
+  box-shadow: 0 0 0 4px rgba(79, 70, 229, 0.15);
 }
 
 .form-group input:disabled {
@@ -374,13 +376,13 @@
   border: none;
   font-size: 20px;
   cursor: pointer;
-  color: rgba(255, 255, 255, 0.25);
+  color: rgba(255, 255, 255, 0.3);
   padding: 4px;
   transition: color 0.3s ease;
 }
 
 .toggle-password:hover {
-  color: rgba(255, 255, 255, 0.5);
+  color: rgba(255, 255, 255, 0.6);
 }
 
 /* ===== FORM OPTIONS ===== */

@@ -5,10 +5,13 @@ import {
   FiGlobe,
   FiChevronDown,
   FiMenu,
-  FiX
+  FiX,
+  FiUser,
+  FiLogOut
 } from "react-icons/fi";
 import { useHomeData } from "../hooks/useHomeData";
 import { useLanguage } from "../context/LanguageContext";
+import { authService } from "../services/authService";
 import "./Navbar.css";
 
 function Navbar() {
@@ -18,6 +21,8 @@ function Navbar() {
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState([]);
   const [showSuggestions, setShowSuggestions] = useState(false);
+  const [user, setUser] = useState(null);
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
   const location = useLocation();
   const navigate = useNavigate();
   const menuRef = useRef(null);
@@ -26,6 +31,40 @@ function Navbar() {
   const searchInputRef = useRef(null);
   const { data, loading } = useHomeData();
   const { currentLanguage, changeLanguage, t, languages } = useLanguage();
+
+  // Check authentication status on mount and when location changes
+  useEffect(() => {
+    const checkAuth = async () => {
+      const accessToken = localStorage.getItem('accessToken');
+      if (accessToken) {
+        setIsAuthenticated(true);
+        try {
+          const userData = await authService.getCurrentUser();
+          if (userData) {
+            setUser(userData);
+          }
+        } catch (error) {
+          console.error('Failed to get user:', error);
+          localStorage.removeItem('accessToken');
+          localStorage.removeItem('refreshToken');
+          localStorage.removeItem('user');
+          setIsAuthenticated(false);
+          setUser(null);
+        }
+      } else {
+        setIsAuthenticated(false);
+        setUser(null);
+      }
+    };
+    checkAuth();
+  }, [location]);
+
+  const handleLogout = () => {
+    authService.logout();
+    setIsAuthenticated(false);
+    setUser(null);
+    navigate('/');
+  };
 
   const toggleMenu = () => {
     setIsMenuOpen(!isMenuOpen);
@@ -220,6 +259,11 @@ function Navbar() {
     return labels[type] || '';
   };
 
+  const getUserName = () => {
+    if (!user) return 'User';
+    return user.name?.split(' ')[0] || user.name || 'User';
+  };
+
   if (loading) {
     return (
       <header className="navbar" ref={menuRef}>
@@ -354,13 +398,27 @@ function Navbar() {
             </div>
           </div>
 
-          <Link to="/login" className="login-button">
-            {t('nav.login')}
-          </Link>
-
-          <Link to="/register" className="signup-button">
-            {t('nav.register')}
-          </Link>
+          {/* ✅ FIXED: Changed /dashboard to /profile */}
+          {isAuthenticated ? (
+            <div className="user-menu">
+              <Link to="/profile" className="user-profile-btn">
+                <FiUser className="user-icon" />
+                <span className="user-name">{getUserName()}</span>
+              </Link>
+              <button className="logout-btn" onClick={handleLogout} title="Logout">
+                <FiLogOut />
+              </button>
+            </div>
+          ) : (
+            <>
+              <Link to="/login" className="login-button">
+                {t('nav.login')}
+              </Link>
+              <Link to="/register" className="signup-button">
+                {t('nav.register')}
+              </Link>
+            </>
+          )}
 
           <button className="mobile-menu" onClick={toggleMenu} aria-label="Toggle menu">
             {isMenuOpen ? <FiX /> : <FiMenu />}
@@ -414,12 +472,26 @@ function Navbar() {
           </div>
           
           <div className="mobile-actions">
-            <Link to="/login" className="mobile-login" onClick={closeMenu}>
-              {t('nav.login')}
-            </Link>
-            <Link to="/register" className="signup-button" onClick={closeMenu}>
-              {t('nav.register')}
-            </Link>
+            {isAuthenticated ? (
+              <>
+                {/* ✅ Already fixed to /profile */}
+                <Link to="/profile" className="mobile-profile" onClick={closeMenu}>
+                  <FiUser /> {getUserName()}
+                </Link>
+                <button className="mobile-logout" onClick={handleLogout}>
+                  <FiLogOut /> Logout
+                </button>
+              </>
+            ) : (
+              <>
+                <Link to="/login" className="mobile-login" onClick={closeMenu}>
+                  {t('nav.login')}
+                </Link>
+                <Link to="/register" className="mobile-signup" onClick={closeMenu}>
+                  {t('nav.register')}
+                </Link>
+              </>
+            )}
           </div>
         </nav>
       </div>

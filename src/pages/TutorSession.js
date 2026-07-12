@@ -22,9 +22,7 @@ const SoundGenerator = {
       gainNode.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.04);
       oscillator.start(audioCtx.currentTime);
       oscillator.stop(audioCtx.currentTime + 0.04);
-    } catch (error) {
-      // Silently fail
-    }
+    } catch (error) {}
   },
 
   generateMessageSound: () => {
@@ -57,9 +55,7 @@ const SoundGenerator = {
           osc2.stop(audioCtx.currentTime + 0.1);
         } catch (e) {}
       }, 120);
-    } catch (error) {
-      // Silently fail
-    }
+    } catch (error) {}
   },
 
   generateRaiseHandSound: () => {
@@ -93,9 +89,7 @@ const SoundGenerator = {
           osc2.stop(audioCtx.currentTime + 0.25);
         } catch (e) {}
       }, 150);
-    } catch (error) {
-      // Silently fail
-    }
+    } catch (error) {}
   },
   generateTokenLowSound: () => {
     try {
@@ -117,8 +111,13 @@ const SoundGenerator = {
   }
 };
 
-// ===== EMOJI DATA =====
-const EMOJIS = ['😀', '😁', '😂', '🤣', '😃', '😄', '😅', '😆', '😉', '😊', '😋', '😎', '😍', '🥰', '😘', '😗', '😙', '😚', '🙂', '🤗', '🤩', '🤔', '🤨', '😐', '😑', '😶', '🙄', '😏', '😣', '😥', '😮', '🤐', '😯', '😪', '😫', '😴', '😌', '😛', '😜', '😝', '🤤', '😒', '😓', '😔', '😕', '🙃', '🤑', '😲', '☹️', '🙁', '😖', '😞', '😟', '😤', '😢', '😭', '😦', '😧', '😨', '😩', '🤯', '😬', '😰', '😱', '🥵', '🥶', '😳', '🤪', '😵', '😡', '😠', '🤬', '👍', '👎', '👊', '✊', '🤛', '🤜', '👏', '🙌', '👐', '🤲', '🤝', '🙏', '✌️', '🤟', '🤘', '👌', '🤌', '🤞', '🖕', '🖐️', '✋', '👋', '🤙', '💪', '🦾', '🖖', '👆', '👇', '👉', '👈', '🙋', '🙇', '💁', '🙅', '🙆', '🙎', '🙍', '❤️', '🧡', '💛', '💚', '💙', '💜', '🖤', '🤍', '🤎', '💔', '❤️‍🔥', '❤️‍🩹', '💕', '💞', '💓', '💗', '💖', '💘', '💝', '💟', '📚', '📖', '📕', '📗', '📘', '📙', '📓', '📒', '📃', '📜', '📄', '📰', '📑', '🔖', '🏷️', '💰', '💵', '💴', '💶', '💷', '🪙', '💳', '🧾', '💎', '⚖️', '🪝', '🔧', '🔩', '⚙️', '🗜️', '⚗️', '🧪', '🧫', '🧬', '🔬', '🔭', '📡', '💉', '🩸', '💊', '🩹', '🩺', '🧴', '🧵', '🧶', '🪡', '🧥', '🥼', '🦺', '👔', '👕', '👖', '🧣', '🧤', '🧥', '🧦', '👗', '👘', '🥻', '🩱', '🩲', '🩳', '👙', '👚', '👛', '👜', '👝', '🎒', '👞', '👟', '🥾', '🥿', '👠', '👡', '🩰', '👢', '👑', '👒', '🎩', '🎓', '🧢', '⛑️', '📿', '💄', '💍', '💎'];
+// ===== EMOJI DATA (DEDUPLICATED) =====
+const EMOJIS = [
+  '😀', '😁', '😂', '🤣', '😃', '😄', '😅', '😆', '😉', '😊', '😋', '😎', '😍', '🥰', '😘', '😗', '😙', '😚', '🙂', '🤗', '🤩', '🤔', '🤨', '😐', '😑', '😶', '🙄', '😏', '😣', '😥', '😮', '🤐', '😯', '😪', '😫', '😴', '😌', '😛', '😜', '😝', '🤤', '😒', '😓', '😔', '😕', '🙃', '🤑', '😲', '☹️', '🙁', '😖', '😞', '😟', '😤', '😢', '😭', '😦', '😧', '😨', '😩', '🤯', '😬', '😰', '😱', '🥵', '🥶', '😳', '🤪', '😵', '😡', '😠', '🤬',
+  '👍', '👎', '👊', '✊', '🤛', '🤜', '👏', '🙌', '👐', '🤲', '🤝', '🙏', '✌️', '🤟', '🤘', '👌', '🤌', '🤞', '🖕', '🖐️', '✋', '👋', '🤙', '💪', '🦾', '🖖', '👆', '👇', '👉', '👈', '🙋', '🙇', '💁', '🙅', '🙆', '🙎', '🙍',
+  '❤️', '🧡', '💛', '💚', '💙', '💜', '🖤', '🤍', '🤎', '💔', '❤️‍🔥', '❤️‍🩹', '💕', '💞', '💓', '💗', '💖', '💘', '💝', '💟',
+  '📚', '📖', '📕', '📗', '📘', '📙', '📓', '📒', '📃', '📜', '📄', '📰', '📑', '🔖', '🏷️', '💰', '💵', '💴', '💶', '💷', '🪙', '💳', '🧾', '💎', '⚖️', '🪝', '🔧', '🔩', '⚙️', '🗜️', '⚗️', '🧪', '🧫', '🧬', '🔬', '🔭', '📡', '💉', '🩸', '💊', '🩹', '🩺', '🧴', '🧵', '🧶', '🪡', '🧥', '🥼', '🦺', '👔', '👕', '👖', '🧣', '🧤', '🧦', '👗', '👘', '🥻', '🩱', '🩲', '🩳', '👙', '👚', '👛', '👜', '👝', '🎒', '👞', '👟', '🥾', '🥿', '👠', '👡', '🩰', '👢', '👑', '👒', '🎩', '🎓', '🧢', '⛑️', '📿', '💄', '💍'
+];
 
 // ===== HELPER: GET CURRENT TIME =====
 const getCurrentTime = () => {
@@ -134,14 +133,22 @@ const generateUUID = () => {
   });
 };
 
-// ===== HELPER: GET PUBLIC IP =====
+// ===== HELPER: GET PUBLIC IP (FIXED - CORS-friendly) =====
 const getPublicIP = async () => {
   try {
-    const response = await fetch('https://api.ipify.org?format=json');
+    // Use ipapi.co which supports CORS
+    const response = await fetch('https://ipapi.co/json/');
     const data = await response.json();
-    return data.ip;
+    return data.ip || '127.0.0.1';
   } catch {
-    return '127.0.0.1';
+    try {
+      // Fallback to ipify
+      const response = await fetch('https://api.ipify.org?format=json');
+      const data = await response.json();
+      return data.ip || '127.0.0.1';
+    } catch {
+      return '127.0.0.1';
+    }
   }
 };
 
@@ -188,17 +195,14 @@ const TutorSession = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const tutor = location.state?.tutor;
-  // eslint-disable-next-line no-unused-vars
-  const { theme, isDark } = useSessionSettings();
+  const { isDark } = useSessionSettings();
   const [showSettings, setShowSettings] = useState(false);
 
   // ===== FEATURE 1: WebGL Watermark =====
   const [watermark, setWatermark] = useState({ text: '', position: { x: 10, y: 30 } });
-  // eslint-disable-next-line no-unused-vars
   const [userUUID, setUserUUID] = useState('');
   const [publicIP, setPublicIP] = useState('127.0.0.1');
-  // eslint-disable-next-line no-unused-vars
-  const [watermarkVisible, setWatermarkVisible] = useState(true);
+  const [watermarkVisible] = useState(true);
 
   // ===== FEATURE 3: Token Bucket Rate Limiting =====
   const [tokens, setTokens] = useState(15);
@@ -208,8 +212,6 @@ const TutorSession = () => {
 
   // ===== FEATURE 4: Shift Overlap Timer =====
   const [shiftInfo, setShiftInfo] = useState(getShiftInfo());
-  // eslint-disable-next-line no-unused-vars
-  const [shiftTimeRemaining, setShiftTimeRemaining] = useState(0);
   const [isShiftOverlapping, setIsShiftOverlapping] = useState(false);
 
   // ===== FEATURE 5: Connection Quality =====
@@ -244,13 +246,10 @@ const TutorSession = () => {
 
   // ===== FEATURE 10: Recording Indicator =====
   const [isRecording, setIsRecording] = useState(false);
-  // eslint-disable-next-line no-unused-vars
   const [recordingTime, setRecordingTime] = useState(0);
 
   // ===== STATE =====
   const [isMuted, setIsMuted] = useState(false);
-  // eslint-disable-next-line no-unused-vars
-  const [isVideoOff, setIsVideoOff] = useState(false);
   const [isScreenSharing, setIsScreenSharing] = useState(false);
   const [timeElapsed, setTimeElapsed] = useState(0);
   const [messages, setMessages] = useState([]);
@@ -276,6 +275,8 @@ const TutorSession = () => {
   const tokenIntervalRef = useRef(null);
   const recordingIntervalRef = useRef(null);
   const shiftIntervalRef = useRef(null);
+  const canvasDataRef = useRef(null);
+  const resizeTimeoutRef = useRef(null);
 
   // ===== DRAW WATERMARK ON CANVAS =====
   const drawWatermark = useCallback(() => {
@@ -285,13 +286,41 @@ const TutorSession = () => {
     
     if (watermarkVisible) {
       ctx.save();
-      ctx.globalAlpha = 0.3;
-      ctx.font = '12px monospace';
-      ctx.fillStyle = '#666666';
+      ctx.globalAlpha = 0.25;
+      ctx.font = '13px monospace';
+      ctx.fillStyle = '#888888';
+      ctx.shadowColor = 'rgba(255,255,255,0.5)';
+      ctx.shadowBlur = 2;
       const { x, y } = watermark.position;
       ctx.fillText(watermark.text, x, y);
       ctx.restore();
     }
+    
+    canvasDataRef.current = ctx.getImageData(0, 0, canvas.width, canvas.height);
+  }, [watermark, watermarkVisible]);
+
+  const restoreCanvasWithWatermark = useCallback((dataUrl) => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    const img = new Image();
+    img.onload = () => {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      ctx.drawImage(img, 0, 0);
+      if (watermarkVisible) {
+        ctx.save();
+        ctx.globalAlpha = 0.25;
+        ctx.font = '13px monospace';
+        ctx.fillStyle = '#888888';
+        ctx.shadowColor = 'rgba(255,255,255,0.5)';
+        ctx.shadowBlur = 2;
+        const { x, y } = watermark.position;
+        ctx.fillText(watermark.text, x, y);
+        ctx.restore();
+      }
+      canvasDataRef.current = ctx.getImageData(0, 0, canvas.width, canvas.height);
+    };
+    img.src = dataUrl;
   }, [watermark, watermarkVisible]);
 
   // ===== INIT: Setup UUID, IP, Watermark =====
@@ -318,16 +347,19 @@ const TutorSession = () => {
       const canvas = canvasRef.current;
       if (canvas) {
         const rect = canvas.getBoundingClientRect();
-        const maxX = rect.width - 200;
-        const maxY = rect.height - 40;
-        setWatermark(prev => ({
-          ...prev,
-          position: {
+        const maxX = Math.max(10, rect.width - 200);
+        const maxY = Math.max(30, rect.height - 40);
+        setWatermark(prev => {
+          const newPos = {
             x: 10 + Math.random() * maxX,
             y: 30 + Math.random() * maxY
-          }
-        }));
-        drawWatermark();
+          };
+          return {
+            ...prev,
+            position: newPos
+          };
+        });
+        setTimeout(() => drawWatermark(), 50);
       }
     }, 60000);
 
@@ -337,7 +369,7 @@ const TutorSession = () => {
       }
     };
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [drawWatermark, publicIP]);
+  }, [drawWatermark]);
 
   // ===== TOKEN BUCKET SYSTEM =====
   useEffect(() => {
@@ -373,7 +405,6 @@ const TutorSession = () => {
         const hours = sastTime.getHours() + sastTime.getMinutes() / 60;
         const end = shift.end;
         const remaining = Math.max(0, (end - hours) * 60);
-        setShiftTimeRemaining(Math.round(remaining));
         
         if (remaining < 30 && remaining > 0) {
           setIsShiftOverlapping(true);
@@ -381,7 +412,6 @@ const TutorSession = () => {
           setIsShiftOverlapping(false);
         }
       } else {
-        setShiftTimeRemaining(0);
         setIsShiftOverlapping(false);
       }
     };
@@ -473,9 +503,11 @@ const TutorSession = () => {
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
+  // Canvas setup - FIXED: No infinite loop
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
+    
     const ctx = canvas.getContext('2d');
     ctx.lineWidth = strokeWidth;
     ctx.lineCap = 'round';
@@ -483,14 +515,43 @@ const TutorSession = () => {
     ctx.strokeStyle = selectedColor;
 
     const resizeCanvas = () => {
-      const rect = canvas.parentElement.getBoundingClientRect();
-      canvas.width = rect.width - 32;
-      canvas.height = 200;
-      drawWatermark();
+      const rect = canvas.parentElement?.getBoundingClientRect();
+      if (!rect) return;
+      const dpr = window.devicePixelRatio || 1;
+      const newWidth = rect.width;
+      const newHeight = rect.height;
+      
+      if (canvas.width !== newWidth * dpr || canvas.height !== newHeight * dpr) {
+        canvas.width = newWidth * dpr;
+        canvas.height = newHeight * dpr;
+        canvas.style.width = newWidth + 'px';
+        canvas.style.height = newHeight + 'px';
+        ctx.scale(dpr, dpr);
+        
+        if (canvasDataRef.current) {
+          ctx.putImageData(canvasDataRef.current, 0, 0);
+        } else {
+          drawWatermark();
+        }
+      }
     };
+    
+    const handleResize = () => {
+      if (resizeTimeoutRef.current) {
+        cancelAnimationFrame(resizeTimeoutRef.current);
+      }
+      resizeTimeoutRef.current = requestAnimationFrame(resizeCanvas);
+    };
+    
     resizeCanvas();
-    window.addEventListener('resize', resizeCanvas);
-    return () => window.removeEventListener('resize', resizeCanvas);
+    window.addEventListener('resize', handleResize);
+    return () => {
+      window.removeEventListener('resize', handleResize);
+      if (resizeTimeoutRef.current) {
+        cancelAnimationFrame(resizeTimeoutRef.current);
+        resizeTimeoutRef.current = null;
+      }
+    };
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [strokeWidth, selectedColor, drawWatermark]);
 
@@ -525,7 +586,7 @@ const TutorSession = () => {
     setHistoryIndex(newHistory.length - 1);
   }, [canvasHistory, historyIndex, maxHistory]);
 
-  // ===== WHITEBOARD FUNCTIONS WITH TOKEN BUCKET =====
+  // ===== WHITEBOARD FUNCTIONS =====
   const startDrawing = (e) => {
     if (tokens < 1) {
       alert('Rate limit exceeded. Please wait a moment.');
@@ -572,6 +633,7 @@ const TutorSession = () => {
     const canvas = canvasRef.current;
     const ctx = canvas.getContext('2d');
     ctx.clearRect(0, 0, canvas.width, canvas.height);
+    drawWatermark();
     saveCanvasState();
   };
 
@@ -580,7 +642,7 @@ const TutorSession = () => {
     if (historyIndex > 0) {
       const newIndex = historyIndex - 1;
       setHistoryIndex(newIndex);
-      restoreCanvas(canvasHistory[newIndex]);
+      restoreCanvasWithWatermark(canvasHistory[newIndex]);
     }
   };
 
@@ -588,21 +650,8 @@ const TutorSession = () => {
     if (historyIndex < canvasHistory.length - 1) {
       const newIndex = historyIndex + 1;
       setHistoryIndex(newIndex);
-      restoreCanvas(canvasHistory[newIndex]);
+      restoreCanvasWithWatermark(canvasHistory[newIndex]);
     }
-  };
-
-  const restoreCanvas = (dataUrl) => {
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-    const ctx = canvas.getContext('2d');
-    const img = new Image();
-    img.onload = () => {
-      ctx.clearRect(0, 0, canvas.width, canvas.height);
-      ctx.drawImage(img, 0, 0);
-      drawWatermark();
-    };
-    img.src = dataUrl;
   };
 
   // ===== KEYBOARD SHORTCUTS =====
@@ -620,7 +669,7 @@ const TutorSession = () => {
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [historyIndex, canvasHistory, undo, redo]);
+  }, [historyIndex, canvasHistory]);
 
   // ===== CHAT FUNCTIONS =====
   const sendMessage = (e) => {
@@ -758,7 +807,7 @@ const TutorSession = () => {
     return `${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
   };
 
-  // ===== END SESSION WITH SUMMARY =====
+  // ===== END SESSION =====
   const endSession = () => {
     const duration = Math.floor((Date.now() - sessionStats.startTime) / 1000);
     setSessionStats(prev => ({ ...prev, duration }));
@@ -784,7 +833,6 @@ const TutorSession = () => {
 
   return (
     <div className={`session-container ${isDark ? 'dark' : 'light'}`}>
-      {/* Header - UNCHANGED */}
       <header className="session-header">
         <div className="session-header-left">
           <button className="btn-back" onClick={() => navigate('/tutors')}>← Back</button>
@@ -822,12 +870,10 @@ const TutorSession = () => {
         </div>
       </header>
 
-      {/* Main Grid */}
       <div className={`session-grid ${showChat ? 'chat-open' : ''}`}>
-        {/* Main Content - Whiteboard with floating tutor card */}
         <div className="session-main" style={{ position: 'relative' }}>
           
-          {/* ===== FLOATING TUTOR CARD - SHRUNK VERSION OF THE ORIGINAL VIDEO AREA ===== */}
+          {/* Floating Tutor Card */}
           <div className="floating-tutor-card">
             <div className="tutor-avatar-small">
               {tutor.image ? (
@@ -851,19 +897,19 @@ const TutorSession = () => {
             </div>
           </div>
 
-          {/* Video-Free Badge Overlay - UNCHANGED */}
+          {/* Video-Free Badge Overlay */}
           <div className="video-free-overlay">
             <span>🎧 Audio Only</span>
             <span className="video-free-sub">15MB/hr • Ultra-Low Bandwidth</span>
           </div>
 
-          {/* Token Indicator - UNCHANGED */}
+          {/* Token Indicator */}
           <div className="token-indicator-float" title={`${tokens} tokens remaining`}>
             <span className={`token-dot ${tokens < 3 ? 'low' : tokens < 8 ? 'medium' : 'high'}`}></span>
             <span className="token-count">{tokens}</span>
           </div>
 
-          {/* ===== WHITEBOARD - NOW TAKES FULL SPACE ===== */}
+          {/* Whiteboard */}
           <div className="whiteboard-area" style={{ height: '100%' }}>
             <div className="whiteboard-header">
               <h4>✏️ Interactive Whiteboard</h4>
@@ -900,7 +946,7 @@ const TutorSession = () => {
             </div>
           </div>
 
-          {/* Bottom Control Dock - UNCHANGED */}
+          {/* Bottom Control Dock */}
           <div className="bottom-control-dock">
             <button className={`dock-btn ${isMuted ? 'active' : ''}`} onClick={() => setIsMuted(!isMuted)} title="Mute">
               {isMuted ? '🔇' : '🔊'}
@@ -918,7 +964,7 @@ const TutorSession = () => {
           </div>
         </div>
 
-        {/* Sidebar - Chat - UNCHANGED */}
+        {/* Sidebar - Chat */}
         <div className={`session-sidebar ${isMobile ? 'mobile-sidebar' : ''} ${showChat ? 'mobile-open' : ''}`}>
           <div className="participants-list">
             <h4>👥 Participants</h4>

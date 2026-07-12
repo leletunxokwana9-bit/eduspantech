@@ -1,5 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { authService } from '../services/authService';
 import TermsOfService from './Terms';
 import PrivacyPolicy from './Privacy';
 import './Register.css';
@@ -12,7 +13,7 @@ const Register = () => {
     password: '',
     confirmPassword: '',
     cohort: 'HighSchool',
-    country: 'South Africa',
+    country: 'ZA',
     grade: '',
     agreeToTerms: false
   });
@@ -21,6 +22,28 @@ const Register = () => {
   const [step, setStep] = useState(1);
   const [showTermsModal, setShowTermsModal] = useState(false);
   const [showPrivacyModal, setShowPrivacyModal] = useState(false);
+
+  // Check if user is already logged in
+  useEffect(() => {
+    const checkAuth = async () => {
+      const accessToken = localStorage.getItem('accessToken');
+      if (accessToken) {
+        try {
+          const user = await authService.getCurrentUser();
+          if (user) {
+            navigate('/dashboard');
+            return;
+          }
+        } catch (err) {
+          localStorage.removeItem('accessToken');
+          localStorage.removeItem('refreshToken');
+          localStorage.removeItem('user');
+          console.log('Token invalid, staying on register page');
+        }
+      }
+    };
+    checkAuth();
+  }, [navigate]);
 
   const getGradeOptions = () => {
     if (formData.cohort === 'HighSchool') {
@@ -73,10 +96,16 @@ const Register = () => {
       };
 
       console.log('Registration Data:', registrationData);
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      navigate('/dashboard');
+      const response = await authService.register(registrationData);
+      console.log('Registration response:', response);
+      
+      if (response.success) {
+        navigate('/dashboard');
+      } else {
+        setError('Registration failed. Please try again.');
+      }
     } catch (err) {
-      setError('Registration failed. Please try again.');
+      setError(err.message || 'Registration failed. Please try again.');
     } finally {
       setLoading(false);
     }
@@ -330,13 +359,13 @@ const Register = () => {
                   onChange={handleChange}
                   disabled={loading}
                 >
-                  <option value="South Africa">South Africa 🇿🇦</option>
-                  <option value="USA">USA 🇺🇸</option>
-                  <option value="UK">UK 🇬🇧</option>
-                  <option value="Australia">Australia 🇦🇺</option>
-                  <option value="Singapore">Singapore 🇸🇬</option>
-                  <option value="Japan">Japan 🇯🇵</option>
-                  <option value="Brazil">Brazil 🇧🇷</option>
+                  <option value="ZA">South Africa 🇿🇦</option>
+                  <option value="US">USA 🇺🇸</option>
+                  <option value="GB">UK 🇬🇧</option>
+                  <option value="AU">Australia 🇦🇺</option>
+                  <option value="SG">Singapore 🇸🇬</option>
+                  <option value="JP">Japan 🇯🇵</option>
+                  <option value="BR">Brazil 🇧🇷</option>
                   <option value="Other">Other</option>
                 </select>
               </div>

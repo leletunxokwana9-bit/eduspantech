@@ -1,0 +1,628 @@
+import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { authService } from '../services/authService';
+import './Profile.css';
+
+const Profile = () => {
+  const navigate = useNavigate();
+  const [user, setUser] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+  const [success, setSuccess] = useState('');
+  const [isEditing, setIsEditing] = useState(false);
+  const [editForm, setEditForm] = useState({
+    name: '',
+    email: '',
+    country: '',
+    timezone: '',
+    grade: ''
+  });
+  const [passwordData, setPasswordData] = useState({
+    currentPassword: '',
+    newPassword: '',
+    confirmPassword: ''
+  });
+  const [showPasswordModal, setShowPasswordModal] = useState(false);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [enrollments, setEnrollments] = useState([]);
+  const [stats, setStats] = useState({
+    coursesEnrolled: 0,
+    hoursSpent: 0,
+    badgesEarned: 0,
+    completionRate: 0
+  });
+
+  // ✅ Fetch user stats - defined inside useEffect
+  useEffect(() => {
+    const fetchUserData = async () => {
+      try {
+        const token = localStorage.getItem('accessToken');
+        if (!token) {
+          navigate('/login');
+          return;
+        }
+
+        const userData = await authService.getCurrentUser();
+        if (userData) {
+          setUser(userData);
+          setEditForm({
+            name: userData.name || '',
+            email: userData.email || '',
+            country: userData.country || 'ZA',
+            timezone: userData.timezone || 'Africa/Johannesburg',
+            grade: userData.grade || ''
+          });
+          
+          // ✅ Fetch stats here
+          await fetchUserStats();
+        } else {
+          navigate('/login');
+        }
+      } catch (err) {
+        setError('Failed to load profile data');
+        navigate('/login');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    // ✅ Define fetchUserStats inside the useEffect
+    const fetchUserStats = async () => {
+      try {
+        const token = localStorage.getItem('accessToken');
+        
+        if (!token) {
+          console.log('No token found');
+          return;
+        }
+
+        const enrollResponse = await fetch('http://localhost:5000/api/v1/content/my/subjects', {
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          }
+        });
+        
+        if (enrollResponse.status === 401) {
+          console.log('Token expired');
+          localStorage.removeItem('accessToken');
+          localStorage.removeItem('refreshToken');
+          localStorage.removeItem('user');
+          navigate('/login');
+          return;
+        }
+        
+        if (enrollResponse.ok) {
+          const data = await enrollResponse.json();
+          if (data.success) {
+            const subjects = data.subjects || [];
+            setEnrollments(subjects);
+            setStats({
+              coursesEnrolled: subjects.length,
+              hoursSpent: 0,
+              badgesEarned: 0,
+              completionRate: subjects.length > 0 ? Math.min(subjects.length * 20, 100) : 0
+            });
+          }
+        }
+      } catch (error) {
+        console.error('Failed to fetch stats:', error);
+      }
+    };
+
+    fetchUserData();
+    // ✅ Empty dependency array - runs once on mount
+  }, [navigate]);
+
+  const handleEditToggle = () => {
+    setIsEditing(!isEditing);
+    setError('');
+    setSuccess('');
+  };
+
+  const handleInputChange = (e) => {
+    const { name, value } = e.target;
+    setEditForm(prev => ({
+      ...prev,
+      [name]: value
+    }));
+  };
+
+  const handleSaveProfile = async (e) => {
+    e.preventDefault();
+    setLoading(true);
+    setError('');
+    setSuccess('');
+
+    try {
+      const token = localStorage.getItem('accessToken');
+      
+      if (!token) {
+        setError('Session expired. Please login again.');
+        navigate('/login');
+        return;
+      }
+
+      const response = await fetch('http://localhost:5000/api/v1/auth/update-profile', {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify(editForm)
+      });
+
+      if (response.status === 401) {
+        localStorage.removeItem('accessToken');
+        localStorage.removeItem('refreshToken');
+        localStorage.removeItem('user');
+        setError('Session expired. Please login again.');
+        setTimeout(() => navigate('/login'), 2000);
+        return;
+      }
+
+      if (response.ok) {
+        const data = await response.json();
+        if (data.success) {
+          const updatedUser = { ...user, ...editForm };
+          setUser(updatedUser);
+          localStorage.setItem('user', JSON.stringify(updatedUser));
+          setSuccess('Profile updated successfully!');
+          setIsEditing(false);
+        } else {
+          setError(data.error || 'Failed to update profile');
+        }
+      } else {
+        setError('Failed to update profile');
+      }
+    } catch (error) {
+      setError('Failed to update profile');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handlePasswordChange = async (e) => {
+    e.preventDefault();
+    setLoading(true);
+    setError('');
+    setSuccess('');
+
+    if (passwordData.newPassword !== passwordData.confirmPassword) {
+      setError('New passwords do not match');
+      setLoading(false);
+      return;
+    }
+
+    if (passwordData.newPassword.length < 8) {
+      setError('Password must be at least 8 characters');
+      setLoading(false);
+      return;
+    }
+
+    try {
+      const token = localStorage.getItem('accessToken');
+      
+      if (!token) {
+        setError('Session expired. Please login again.');
+        setTimeout(() => navigate('/login'), 2000);
+        setLoading(false);
+        return;
+      }
+
+      const response = await fetch('http://localhost:5000/api/v1/auth/change-password', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          currentPassword: passwordData.currentPassword,
+          newPassword: passwordData.newPassword
+        })
+      });
+
+      if (response.status === 401) {
+        localStorage.removeItem('accessToken');
+        localStorage.removeItem('refreshToken');
+        localStorage.removeItem('user');
+        setError('Session expired. Please login again.');
+        setTimeout(() => navigate('/login'), 2000);
+        setLoading(false);
+        return;
+      }
+
+      const data = await response.json();
+
+      if (response.ok && data.success) {
+        setSuccess('✅ Password changed successfully! Please login again.');
+        setShowPasswordModal(false);
+        setPasswordData({
+          currentPassword: '',
+          newPassword: '',
+          confirmPassword: ''
+        });
+        
+        setTimeout(() => {
+          authService.logout();
+          navigate('/login');
+        }, 2500);
+      } else {
+        setError(data.error || 'Failed to change password');
+      }
+    } catch (error) {
+      setError('Network error. Please try again.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleDeleteAccount = async () => {
+    setLoading(true);
+    try {
+      const token = localStorage.getItem('accessToken');
+      
+      if (!token) {
+        setError('Session expired. Please login again.');
+        navigate('/login');
+        return;
+      }
+
+      const response = await fetch('http://localhost:5000/api/v1/auth/delete-account', {
+        method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+
+      if (response.status === 401) {
+        localStorage.removeItem('accessToken');
+        localStorage.removeItem('refreshToken');
+        localStorage.removeItem('user');
+        setError('Session expired. Please login again.');
+        setTimeout(() => navigate('/login'), 2000);
+        return;
+      }
+
+      if (response.ok) {
+        authService.logout();
+        navigate('/login');
+      } else {
+        const data = await response.json();
+        setError(data.error || 'Failed to delete account');
+      }
+    } catch (error) {
+      setError('Failed to delete account');
+    } finally {
+      setLoading(false);
+      setShowDeleteModal(false);
+    }
+  };
+
+  if (loading) return <div className="profile-loading">Loading profile...</div>;
+
+  return (
+    <div className="profile-container">
+      {/* Header */}
+      <div className="profile-header">
+        <div className="profile-avatar">
+          <span className="profile-avatar-emoji">👤</span>
+        </div>
+        <div className="profile-header-info">
+          <h1>{user?.name || 'User'}</h1>
+          <p className="profile-header-subtitle">
+            {user?.cohort === 'HighSchool' ? 'High School Student' : 'University Student'} • {user?.country || 'South Africa'}
+          </p>
+          <div className="profile-status">
+            <span className="status-dot"></span>
+            Active Member
+          </div>
+        </div>
+        <button className="profile-edit-btn" onClick={handleEditToggle}>
+          {isEditing ? 'Cancel' : '✏️ Edit Profile'}
+        </button>
+      </div>
+
+      {error && <div className="profile-error">{error}</div>}
+      {success && <div className="profile-success">{success}</div>}
+
+      {/* Stats */}
+      <div className="profile-stats">
+        <div className="profile-stat-card">
+          <span className="stat-number">{stats.coursesEnrolled}</span>
+          <span className="stat-label">Courses Enrolled</span>
+        </div>
+        <div className="profile-stat-card">
+          <span className="stat-number">{stats.hoursSpent}</span>
+          <span className="stat-label">Hours Spent</span>
+        </div>
+        <div className="profile-stat-card">
+          <span className="stat-number">{stats.badgesEarned}</span>
+          <span className="stat-label">Badges Earned</span>
+        </div>
+        <div className="profile-stat-card">
+          <span className="stat-number">{stats.completionRate}%</span>
+          <span className="stat-label">Completion Rate</span>
+        </div>
+      </div>
+
+      {/* Profile Grid */}
+      <div className="profile-grid">
+        {/* Personal Information */}
+        <div className="profile-card">
+          <h3>📋 Personal Information</h3>
+          <div className="profile-info-group">
+            <div className="profile-info-item">
+              <span className="info-label">Full Name</span>
+              {isEditing ? (
+                <input
+                  type="text"
+                  name="name"
+                  value={editForm.name}
+                  onChange={handleInputChange}
+                  className="profile-input"
+                />
+              ) : (
+                <span className="info-value">{user?.name || 'Not set'}</span>
+              )}
+            </div>
+            <div className="profile-info-item">
+              <span className="info-label">Email Address</span>
+              {isEditing ? (
+                <input
+                  type="email"
+                  name="email"
+                  value={editForm.email}
+                  onChange={handleInputChange}
+                  className="profile-input"
+                />
+              ) : (
+                <span className="info-value">{user?.email || 'Not set'}</span>
+              )}
+            </div>
+            <div className="profile-info-item">
+              <span className="info-label">Country</span>
+              {isEditing ? (
+                <select
+                  name="country"
+                  value={editForm.country}
+                  onChange={handleInputChange}
+                  className="profile-select"
+                >
+                  <option value="ZA">South Africa 🇿🇦</option>
+                  <option value="US">United States 🇺🇸</option>
+                  <option value="GB">United Kingdom 🇬🇧</option>
+                  <option value="AU">Australia 🇦🇺</option>
+                  <option value="CA">Canada 🇨🇦</option>
+                  <option value="NG">Nigeria 🇳🇬</option>
+                  <option value="KE">Kenya 🇰🇪</option>
+                  <option value="IN">India 🇮🇳</option>
+                  <option value="SG">Singapore 🇸🇬</option>
+                </select>
+              ) : (
+                <span className="info-value">{user?.country || 'Not set'}</span>
+              )}
+            </div>
+            <div className="profile-info-item">
+              <span className="info-label">Grade / Year</span>
+              {isEditing ? (
+                <select
+                  name="grade"
+                  value={editForm.grade}
+                  onChange={handleInputChange}
+                  className="profile-select"
+                >
+                  <option value="">Select Grade</option>
+                  <option value="Grade 8">Grade 8</option>
+                  <option value="Grade 9">Grade 9</option>
+                  <option value="Grade 10">Grade 10</option>
+                  <option value="Grade 11">Grade 11</option>
+                  <option value="Grade 12">Grade 12</option>
+                  <option value="1st Year">1st Year</option>
+                  <option value="2nd Year">2nd Year</option>
+                </select>
+              ) : (
+                <span className="info-value">{user?.grade || 'Not set'}</span>
+              )}
+            </div>
+            <div className="profile-info-item">
+              <span className="info-label">Cohort</span>
+              <span className="info-value">
+                {user?.cohort === 'HighSchool' ? 'High School' : 'University First Year'}
+              </span>
+            </div>
+          </div>
+
+          {isEditing && (
+            <div className="profile-actions">
+              <button 
+                className="profile-save-btn" 
+                onClick={handleSaveProfile}
+                disabled={loading}
+              >
+                {loading ? 'Saving...' : '💾 Save Changes'}
+              </button>
+            </div>
+          )}
+        </div>
+
+        {/* Account Settings */}
+        <div className="profile-card">
+          <h3>🔒 Account Settings</h3>
+          
+          <div className="profile-settings-list">
+            <div className="profile-setting-item">
+              <div className="setting-info">
+                <span className="setting-icon">🔑</span>
+                <div>
+                  <h4>Change Password</h4>
+                  <p>Update your password regularly for security</p>
+                </div>
+              </div>
+              <button 
+                className="setting-action-btn"
+                onClick={() => setShowPasswordModal(true)}
+              >
+                Update
+              </button>
+            </div>
+
+            <div className="profile-setting-item">
+              <div className="setting-info">
+                <span className="setting-icon">🕐</span>
+                <div>
+                  <h4>Timezone</h4>
+                  <p>{user?.timezone || 'Africa/Johannesburg'}</p>
+                </div>
+              </div>
+              <button className="setting-action-btn">Change</button>
+            </div>
+
+            <div className="profile-setting-item danger">
+              <div className="setting-info">
+                <span className="setting-icon">⚠️</span>
+                <div>
+                  <h4>Delete Account</h4>
+                  <p>Permanently delete your account and all data</p>
+                </div>
+              </div>
+              <button 
+                className="setting-action-btn danger"
+                onClick={() => setShowDeleteModal(true)}
+              >
+                Delete
+              </button>
+            </div>
+          </div>
+        </div>
+
+        {/* Enrolled Courses */}
+        <div className="profile-card full-width">
+          <h3>📚 My Courses</h3>
+          {enrollments.length > 0 ? (
+            <div className="profile-courses-grid">
+              {enrollments.map((course) => (
+                <div 
+                  key={course.id} 
+                  className="profile-course-card"
+                  onClick={() => navigate(`/subjects/${course.name.toLowerCase()}`)}
+                >
+                  <span className="course-icon">{course.icon || '📘'}</span>
+                  <div className="course-info">
+                    <h4>{course.name}</h4>
+                    <span className="course-tier">{course.tier || 'Tier 1'}</span>
+                  </div>
+                  <div className="course-progress">
+                    <div className="progress-bar">
+                      <div 
+                        className="progress-fill" 
+                        style={{ width: `${Math.random() * 60 + 20}%` }}
+                      ></div>
+                    </div>
+                    <span className="progress-text">
+                      {Math.floor(Math.random() * 60 + 20)}%
+                    </span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="profile-empty-state">
+              <p>No courses enrolled yet</p>
+              <button 
+                className="profile-empty-btn"
+                onClick={() => navigate('/subjects')}
+              >
+                Browse Subjects →
+              </button>
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Change Password Modal */}
+      {showPasswordModal && (
+        <div className="profile-modal-overlay" onClick={() => setShowPasswordModal(false)}>
+          <div className="profile-modal" onClick={(e) => e.stopPropagation()}>
+            <div className="profile-modal-header">
+              <h3>🔑 Change Password</h3>
+              <button className="modal-close" onClick={() => setShowPasswordModal(false)}>×</button>
+            </div>
+            <form onSubmit={handlePasswordChange}>
+              <div className="form-group">
+                <label>Current Password</label>
+                <input
+                  type="password"
+                  value={passwordData.currentPassword}
+                  onChange={(e) => setPasswordData(prev => ({ ...prev, currentPassword: e.target.value }))}
+                  required
+                />
+              </div>
+              <div className="form-group">
+                <label>New Password</label>
+                <input
+                  type="password"
+                  value={passwordData.newPassword}
+                  onChange={(e) => setPasswordData(prev => ({ ...prev, newPassword: e.target.value }))}
+                  required
+                  minLength="8"
+                />
+              </div>
+              <div className="form-group">
+                <label>Confirm New Password</label>
+                <input
+                  type="password"
+                  value={passwordData.confirmPassword}
+                  onChange={(e) => setPasswordData(prev => ({ ...prev, confirmPassword: e.target.value }))}
+                  required
+                />
+              </div>
+              {error && <div className="profile-error">{error}</div>}
+              <div className="profile-modal-actions">
+                <button type="button" className="modal-cancel" onClick={() => setShowPasswordModal(false)}>
+                  Cancel
+                </button>
+                <button type="submit" className="modal-submit" disabled={loading}>
+                  {loading ? 'Changing...' : 'Change Password'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Delete Account Modal */}
+      {showDeleteModal && (
+        <div className="profile-modal-overlay" onClick={() => setShowDeleteModal(false)}>
+          <div className="profile-modal" onClick={(e) => e.stopPropagation()}>
+            <div className="profile-modal-header danger">
+              <h3>⚠️ Delete Account</h3>
+              <button className="modal-close" onClick={() => setShowDeleteModal(false)}>×</button>
+            </div>
+            <div className="profile-modal-body">
+              <p className="delete-warning">
+                Are you sure you want to delete your account? This action is <strong>permanent</strong> and cannot be undone.
+              </p>
+              <p>All your data, including enrolled courses and progress, will be permanently removed.</p>
+            </div>
+            <div className="profile-modal-actions">
+              <button type="button" className="modal-cancel" onClick={() => setShowDeleteModal(false)}>
+                Cancel
+              </button>
+              <button 
+                type="button" 
+                className="modal-delete" 
+                onClick={handleDeleteAccount}
+                disabled={loading}
+              >
+                {loading ? 'Deleting...' : '🗑️ Delete Account'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};
+
+export default Profile;

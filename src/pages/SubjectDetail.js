@@ -1,18 +1,89 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useHomeData } from '../hooks/useHomeData';
+import { authService } from '../services/authService';
 import './SubjectDetail.css';
+
+const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000/api/v1';
 
 const SubjectDetail = () => {
   const { subjectName } = useParams();
   const navigate = useNavigate();
   const { data, loading, error } = useHomeData();
   const [activeTab, setActiveTab] = useState('overview');
+  const [isEnrolling, setIsEnrolling] = useState(false);
+  const [enrollmentStatus, setEnrollmentStatus] = useState(null);
+  const [user, setUser] = useState(null);
+  const [subscription, setSubscription] = useState(null);
+  const [isCheckingAuth, setIsCheckingAuth] = useState(true);
 
   // Find the subject from the data
   const subject = data?.subjects?.items?.find(
     (item) => item.name.toLowerCase().replace(/\s+/g, '-') === subjectName
   );
+
+  // Check authentication status on mount
+  useEffect(() => {
+    const checkAuth = async () => {
+      setIsCheckingAuth(true);
+
+      const isAuthenticated = authService.isAuthenticated();
+
+      if (isAuthenticated) {
+        try {
+          const userData = await authService.getCurrentUser();
+          if (userData) {
+            setUser(userData);
+            try {
+              const response = await fetch(`${API_BASE_URL}/subscription/me`, {
+                headers: {
+                  'Authorization': `Bearer ${localStorage.getItem('accessToken')}`
+                }
+              });
+              if (response.ok) {
+                const data = await response.json();
+                setSubscription(data.subscription);
+              }
+            } catch (error) {
+              console.error('Failed to get subscription:', error);
+            }
+          }
+        } catch (error) {
+          console.error('Failed to get user:', error);
+          authService.logout();
+        }
+      }
+
+      setIsCheckingAuth(false);
+    };
+
+    checkAuth();
+  }, []);
+
+  // Check shift availability for user's country
+  useEffect(() => {
+    if (user) {
+      const checkShift = async () => {
+        try {
+          const response = await fetch(`${API_BASE_URL}/auth/shift/check`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${localStorage.getItem('accessToken')}`
+            },
+            body: JSON.stringify({ countryCode: user.country || 'ZA' })
+          });
+          if (response.ok) {
+            const data = await response.json();
+            console.log('Shift status:', data);
+          }
+        } catch (error) {
+          console.error('Failed to check shift:', error);
+        }
+      };
+      checkShift();
+    }
+  }, [user]);
 
   // If subject not found, redirect
   useEffect(() => {
@@ -21,11 +92,257 @@ const SubjectDetail = () => {
     }
   }, [loading, subject, data, navigate]);
 
-  if (loading) {
+  const getCohortTier = () => {
+    if (subject?.name === 'Algebra' || subject?.name === 'Geometry') return 'Tier 1';
+    if (subject?.name === 'Calculus' || subject?.name === 'Statistics' || subject?.name === 'Trigonometry') return 'Tier 2';
+    if (subject?.name === 'Differential Equations' || subject?.name === 'Linear Algebra' || subject?.name === 'Matrices') return 'Tier 3';
+    return 'Tier 1';
+  };
+
+  const getRegion = () => {
+    const regions = {
+      'Algebra': 'Global',
+      'Geometry': 'Global',
+      'Calculus': 'Global',
+      'Statistics': 'Global',
+      'Trigonometry': 'Global',
+      'Matrices': 'Global',
+      'Functions': 'Global',
+      'Financial Mathematics': 'South Africa',
+      'Differential Equations': 'Global',
+      'Linear Algebra': 'Global'
+    };
+    return regions[subject?.name] || 'Global';
+  };
+
+  const getAWSRegion = () => {
+    const regions = {
+      'South Africa': 'af-south-1',
+      'USA': 'us-east-1',
+      'UK': 'eu-west-1',
+      'Australia': 'ap-southeast-2',
+      'Singapore': 'ap-southeast-1',
+      'Japan': 'ap-northeast-1',
+      'Brazil': 'sa-east-1'
+    };
+    return regions[getRegion()] || 'us-east-1';
+  };
+
+  // ===== ENROLLMENT FUNCTION =====
+  const handleEnroll = async () => {
+    if (!authService.isAuthenticated()) {
+      navigate('/login', { state: { redirect: `/subjects/${subjectName}` } });
+      return;
+    }
+
+    if (isCheckingAuth) {
+      return;
+    }
+
+    if (!user) {
+      try {
+        const userData = await authService.getCurrentUser();
+        if (userData) {
+          setUser(userData);
+        } else {
+          navigate('/login', { state: { redirect: `/subjects/${subjectName}` } });
+          return;
+        }
+      } catch (error) {
+        navigate('/login', { state: { redirect: `/subjects/${subjectName}` } });
+        return;
+      }
+    }
+
+    setIsEnrolling(true);
+    setEnrollmentStatus(null);
+
+    try {
+      // ✅ USE THE ACTUAL SUBJECT ID (UUID) - NOT "1"
+      const subjectId = subject.id; // This should be the UUID from your data
+
+      // Check if user has subscription
+      let subscription = null;
+      try {
+        const subResponse = await fetch(`${API_BASE_URL}/subscription/me`, {
+          headers: {
+            'Authorization': `Bearer ${localStorage.getItem('accessToken')}`
+          }
+        });
+        if (subResponse.ok) {
+          const data = await subResponse.json();
+          subscription = data.subscription;
+        }
+      } catch (error) {
+        console.error('Failed to check subscription:', error);
+      }
+
+      if (!subscription || subscription.status !== 'active') {
+        setEnrollmentStatus({
+          type: 'error',
+          message: 'You need an active subscription to enroll. Please subscribe first.',
+          action: 'upgrade'
+        });
+        setIsEnrolling(false);
+        return;
+      }
+
+      if (subscription.tier === 'Tier_Silver') {
+        setEnrollmentStatus({
+          type: 'warning',
+          message: 'Silver tier provides archive access only. Upgrade to Gold for live sessions.',
+          action: 'upgrade'
+        });
+      }
+
+      // Check shift availability for Gold/Platinum
+      if (subscription.tier !== 'Tier_Silver') {
+        try {
+          const shiftResponse = await fetch(`${API_BASE_URL}/auth/shift/check`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${localStorage.getItem('accessToken')}`
+            },
+            body: JSON.stringify({ countryCode: user?.country || 'ZA' })
+          });
+
+          if (shiftResponse.ok) {
+            const shiftData = await shiftResponse.json();
+            if (!shiftData.authorized) {
+              setEnrollmentStatus({
+                type: 'warning',
+                message: `No active shift. Sessions available 16:00-23:00 Local Time. Current shift: ${shiftData.shiftName}`,
+                action: 'schedule'
+              });
+            }
+          }
+        } catch (error) {
+          console.error('Failed to check shift:', error);
+        }
+      }
+
+      // ✅ USE THE CORRECT SUBJECT ID
+      const enrollmentResponse = await fetch(`${API_BASE_URL}/content/subjects/${subjectId}/enroll`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${localStorage.getItem('accessToken')}`
+        }
+      });
+
+      if (enrollmentResponse.ok) {
+        setEnrollmentStatus({
+          type: 'success',
+          message: `✅ Successfully enrolled in ${subject.name}! You now have access to all materials.`,
+          action: 'dashboard'
+        });
+
+        setTimeout(() => {
+          navigate('/dashboard');
+        }, 2000);
+      } else if (enrollmentResponse.status === 400) {
+        const errorData = await enrollmentResponse.json();
+        if (errorData.error && errorData.error.toLowerCase().includes('already enrolled')) {
+          setEnrollmentStatus({
+            type: 'info',
+            message: `ℹ️ You are already enrolled in ${subject.name}. You can access all materials from your dashboard.`,
+            action: 'dashboard'
+          });
+        } else {
+          setEnrollmentStatus({
+            type: 'error',
+            message: errorData.error || 'Failed to enroll. Please try again.',
+            action: 'retry'
+          });
+        }
+      } else if (enrollmentResponse.status === 401) {
+        setEnrollmentStatus({
+          type: 'error',
+          message: 'Please login again to enroll.',
+          action: 'login'
+        });
+      } else {
+        const errorData = await enrollmentResponse.json();
+        setEnrollmentStatus({
+          type: 'error',
+          message: errorData.error || 'Failed to enroll. Please try again.',
+          action: 'retry'
+        });
+      }
+    } catch (error) {
+      console.error('Enrollment error:', error);
+      setEnrollmentStatus({
+        type: 'error',
+        message: 'An error occurred during enrollment. Please try again.',
+        action: 'retry'
+      });
+    } finally {
+      setIsEnrolling(false);
+    }
+  };
+
+  // ===== HANDLE ENROLLMENT ACTION =====
+  const handleEnrollmentAction = () => {
+    if (!enrollmentStatus) return;
+
+    switch (enrollmentStatus.action) {
+      case 'upgrade':
+        navigate('/pricing');
+        break;
+      case 'login':
+        navigate('/login', { state: { redirect: `/subjects/${subjectName}` } });
+        break;
+      case 'schedule':
+        setActiveTab('schedule');
+        setEnrollmentStatus(null);
+        break;
+      case 'dashboard':
+        navigate('/dashboard');
+        break;
+      case 'subjects':
+        navigate('/subjects');
+        break;
+      case 'prereqs':
+        setEnrollmentStatus(null);
+        break;
+      case 'retry':
+        setEnrollmentStatus(null);
+        handleEnroll();
+        break;
+      default:
+        setEnrollmentStatus(null);
+    }
+  };
+
+  // ===== HANDLE RESOURCE CLICK =====
+  const handleResourceClick = (resource) => {
+    if (resource.path) {
+      navigate(resource.path);
+      return;
+    }
+    
+    if (resource.id && resource.type) {
+      const slug = resource.name?.toLowerCase().replace(/\s+/g, '-') || resource.id;
+      navigate(`/resources/${resource.type}s/${slug}`);
+      return;
+    }
+    
+    navigate('/resources');
+  };
+
+  const tabs = [
+    { id: 'overview', label: '📋 Overview' },
+    { id: 'topics', label: '📚 Topics' },
+    { id: 'schedule', label: '🕐 Schedule' },
+    { id: 'resources', label: '📄 Resources' }
+  ];
+
+  if (loading || isCheckingAuth) {
     return (
       <div className="subject-detail-container loading">
         <div className="loading-spinner"></div>
-        <p>Loading subject details...</p>
+        <p>{isCheckingAuth ? 'Checking your account...' : 'Loading subject details...'}</p>
       </div>
     );
   }
@@ -56,49 +373,6 @@ const SubjectDetail = () => {
     );
   }
 
-  const getCohortTier = () => {
-    if (subject.name === 'Algebra' || subject.name === 'Geometry') return 'Tier 1';
-    if (subject.name === 'Calculus' || subject.name === 'Statistics' || subject.name === 'Trigonometry') return 'Tier 2';
-    if (subject.name === 'Differential Equations' || subject.name === 'Linear Algebra' || subject.name === 'Matrices') return 'Tier 3';
-    return 'Tier 1';
-  };
-
-  const getRegion = () => {
-    const regions = {
-      'Algebra': 'Global',
-      'Geometry': 'Global',
-      'Calculus': 'Global',
-      'Statistics': 'Global',
-      'Trigonometry': 'Global',
-      'Matrices': 'Global',
-      'Functions': 'Global',
-      'Financial Mathematics': 'South Africa',
-      'Differential Equations': 'Global',
-      'Linear Algebra': 'Global'
-    };
-    return regions[subject.name] || 'Global';
-  };
-
-  const getAWSRegion = () => {
-    const regions = {
-      'South Africa': 'af-south-1',
-      'USA': 'us-east-1',
-      'UK': 'eu-west-1',
-      'Australia': 'ap-southeast-2',
-      'Singapore': 'ap-southeast-1',
-      'Japan': 'ap-northeast-1',
-      'Brazil': 'sa-east-1'
-    };
-    return regions[getRegion()] || 'us-east-1';
-  };
-
-  const tabs = [
-    { id: 'overview', label: '📋 Overview' },
-    { id: 'topics', label: '📚 Topics' },
-    { id: 'schedule', label: '🕐 Schedule' },
-    { id: 'resources', label: '📄 Resources' }
-  ];
-
   return (
     <div className="subject-detail-container">
       {/* Header */}
@@ -112,18 +386,66 @@ const SubjectDetail = () => {
           </div>
         </div>
         <div className="subject-actions">
-          <button className="btn btn-primary">📚 Enroll Now</button>
+          <button
+            className={`btn btn-primary ${isEnrolling ? 'loading' : ''}`}
+            onClick={handleEnroll}
+            disabled={isEnrolling}
+          >
+            {isEnrolling ? '⏳ Enrolling...' : '📚 Enroll Now'}
+          </button>
           <button className="btn btn-secondary">📝 View Syllabus</button>
         </div>
       </div>
 
+      {/* Enrollment Status */}
+      {enrollmentStatus && (
+        <div className={`enrollment-status ${enrollmentStatus.type}`}>
+          <p>{enrollmentStatus.message}</p>
+          {(enrollmentStatus.action === 'upgrade' ||
+            enrollmentStatus.action === 'login' ||
+            enrollmentStatus.action === 'schedule' ||
+            enrollmentStatus.action === 'dashboard' ||
+            enrollmentStatus.action === 'subjects' ||
+            enrollmentStatus.action === 'retry') && (
+              <button
+                className="enrollment-action-btn"
+                onClick={handleEnrollmentAction}
+              >
+                {enrollmentStatus.action === 'upgrade' && 'Upgrade Plan →'}
+                {enrollmentStatus.action === 'login' && 'Login →'}
+                {enrollmentStatus.action === 'schedule' && 'View Schedule →'}
+                {enrollmentStatus.action === 'dashboard' && 'Go to Dashboard →'}
+                {enrollmentStatus.action === 'subjects' && 'Browse Subjects →'}
+                {enrollmentStatus.action === 'retry' && 'Try Again →'}
+              </button>
+            )}
+        </div>
+      )}
+
+      {/* Subscription info banner */}
+      {user && subscription && (
+        <div className="subscription-banner">
+          <span className="subscription-tier">📊 {subscription.tier}</span>
+          <span className="subscription-status">{subscription.status}</span>
+          {subscription.tier === 'Tier_Silver' && (
+            <span className="subscription-note">💡 Upgrade to Gold for live sessions</span>
+          )}
+        </div>
+      )}
+
+      {/* If not logged in, show login prompt */}
+      {!user && !isCheckingAuth && (
+        <div className="login-prompt">
+          <p>🔐 Please <button className="login-link" onClick={() => navigate('/login', { state: { redirect: `/subjects/${subjectName}` } })}>login</button> to enroll in this subject.</p>
+        </div>
+      )}
+
       {/* Content */}
       <div className="subject-detail-content">
-        {/* Overview Section */}
         <div className="subject-overview">
           <h3>📖 About This Subject</h3>
           <p className="subject-description">{subject.longDescription || subject.description}</p>
-          
+
           <div className="subject-info-grid">
             <div className="info-card">
               <h4>🎯 Curriculum Structure</h4>
@@ -136,7 +458,7 @@ const SubjectDetail = () => {
               <p><strong>South Africa:</strong> Grades 8-12</p>
               <p><strong>International:</strong> Equivalent</p>
               <div className="curriculum-adjustment">
-                <p>⚠️ <strong>Adjustment:</strong> {subject.name} may be introduced earlier in accelerated curricula (e.g., Singapore, USA AP tracks).</p>
+                <p>⚠️ <strong>Adjustment:</strong> {subject.name} may be introduced earlier in accelerated curricula.</p>
               </div>
             </div>
             <div className="info-card">
@@ -169,7 +491,6 @@ const SubjectDetail = () => {
 
         {/* Tabs Section */}
         <div className="topics-section">
-          {/* Tab Navigation */}
           <div className="tab-navigation">
             {tabs.map((tab) => (
               <button
@@ -182,9 +503,7 @@ const SubjectDetail = () => {
             ))}
           </div>
 
-          {/* Tab Content */}
           <div className="tab-content">
-            {/* Overview Tab */}
             {activeTab === 'overview' && (
               <>
                 <h3>📋 Subject Overview</h3>
@@ -200,7 +519,6 @@ const SubjectDetail = () => {
               </>
             )}
 
-            {/* Topics Tab */}
             {activeTab === 'topics' && (
               <>
                 <h3>📚 Topics Covered</h3>
@@ -220,7 +538,6 @@ const SubjectDetail = () => {
               </>
             )}
 
-            {/* Schedule Tab */}
             {activeTab === 'schedule' && (
               <>
                 <h3>🕐 Learning Schedule</h3>
@@ -253,23 +570,47 @@ const SubjectDetail = () => {
               </>
             )}
 
-            {/* Resources Tab */}
             {activeTab === 'resources' && (
               <>
                 <h3>📄 Learning Resources</h3>
-                <div className="overview-details">
-                  {subject.resources?.map((resource) => (
-                    <div key={resource.id} className="info-card">
-                      <h4>
-                        {resource.type === 'guide' && '📖'}
-                        {resource.type === 'practice' && '✏️'}
-                        {resource.type === 'video' && '🎬'}
-                        {resource.type === 'interactive' && '🎮'}
-                        {' '}{resource.name}
-                      </h4>
-                      <p><a href={resource.url} className="btn btn-secondary" style={{ display: 'inline-block', marginTop: '8px' }}>Access →</a></p>
+                <div className="resources-grid">
+                  {subject.resources && subject.resources.length > 0 ? (
+                    subject.resources.map((resource) => (
+                      <div 
+                        key={resource.id} 
+                        className="resource-card"
+                        onClick={() => handleResourceClick(resource)}
+                        style={{ cursor: 'pointer' }}
+                        role="button"
+                        tabIndex={0}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter' || e.key === ' ') {
+                            e.preventDefault();
+                            handleResourceClick(resource);
+                          }
+                        }}
+                      >
+                        <div className="resource-icon">
+                          {resource.type === 'guide' && '📖'}
+                          {resource.type === 'practice' && '✏️'}
+                          {resource.type === 'video' && '🎬'}
+                          {resource.type === 'interactive' && '🎮'}
+                          {!resource.type && '📄'}
+                        </div>
+                        <div className="resource-info">
+                          <h4>{resource.name}</h4>
+                          <span className="resource-type">{resource.type || 'Resource'}</span>
+                        </div>
+                        <span className="resource-link">View →</span>
+                      </div>
+                    ))
+                  ) : (
+                    <div className="no-resources">
+                      <span>📚</span>
+                      <p>No resources available for this subject yet.</p>
+                      <p className="no-resources-sub">Resources will be added soon.</p>
                     </div>
-                  ))}
+                  )}
                 </div>
               </>
             )}

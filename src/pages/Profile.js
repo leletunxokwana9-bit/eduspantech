@@ -43,6 +43,7 @@ const Profile = () => {
   // API Base URL
   const API_URL = 'https://eduspantech-backend.onrender.com';
 
+  // ===== FETCH USER DATA =====
   useEffect(() => {
     const fetchUserData = async () => {
       try {
@@ -52,8 +53,13 @@ const Profile = () => {
           return;
         }
 
+        console.log('🔍 Fetching user data...');
+        
+        // ✅ Get user with subscription (handles token refresh)
         const userData = await authService.getCurrentUserWithSubscription();
+        
         if (userData) {
+          console.log('✅ User data loaded:', userData.name);
           setUser(userData);
           
           // ✅ Set avatar if exists
@@ -66,6 +72,7 @@ const Profile = () => {
             });
           }
 
+          // ✅ Set subscription
           if (userData.subscription || userData.tier) {
             setSubscription({
               tier: userData.tier || userData.subscription?.tier || 'Silver',
@@ -73,6 +80,7 @@ const Profile = () => {
               endDate: userData.subscriptionEnd || userData.subscription?.end_date
             });
           }
+          
           setEditForm({
             name: userData.name || '',
             email: userData.email || '',
@@ -83,9 +91,11 @@ const Profile = () => {
           
           await fetchUserStats();
         } else {
+          console.log('❌ No user data, redirecting to login');
           navigate('/login');
         }
       } catch (err) {
+        console.error('❌ Failed to load profile data:', err);
         setError('Failed to load profile data');
         navigate('/login');
       } finally {
@@ -93,13 +103,17 @@ const Profile = () => {
       }
     };
 
+    // ===== FETCH USER STATS (ENROLLMENTS) =====
     const fetchUserStats = async () => {
       try {
         const token = localStorage.getItem('accessToken');
+        
         if (!token) {
-          console.log('No token found');
+          console.log('❌ No token found for stats');
           return;
         }
+
+        console.log('🔍 Fetching enrollments...');
 
         const enrollResponse = await fetch(`${API_URL}/api/v1/content/my/subjects`, {
           headers: {
@@ -108,17 +122,55 @@ const Profile = () => {
           }
         });
         
+        console.log('📊 Enrollments status:', enrollResponse.status);
+        
+        // ✅ Handle 401 - Token expired
         if (enrollResponse.status === 401) {
-          console.log('Token expired');
-          localStorage.removeItem('accessToken');
-          localStorage.removeItem('refreshToken');
-          localStorage.removeItem('user');
-          navigate('/login');
-          return;
+          console.log('⚠️ Token expired, attempting refresh...');
+          const refreshSuccess = await authService.refreshToken();
+          
+          if (refreshSuccess.success) {
+            // ✅ Retry with new token
+            const newToken = localStorage.getItem('accessToken');
+            console.log('🔄 Retrying with new token...');
+            
+            const retryResponse = await fetch(`${API_URL}/api/v1/content/my/subjects`, {
+              headers: {
+                'Authorization': `Bearer ${newToken}`,
+                'Content-Type': 'application/json'
+              }
+            });
+            
+            if (retryResponse.ok) {
+              const data = await retryResponse.json();
+              console.log('✅ Enrollments fetched on retry:', data);
+              if (data.success) {
+                const subjects = data.subjects || [];
+                setEnrollments(subjects);
+                setStats({
+                  coursesEnrolled: subjects.length,
+                  hoursSpent: 0,
+                  badgesEarned: 0,
+                  completionRate: subjects.length > 0 ? Math.min(subjects.length * 20, 100) : 0
+                });
+              }
+            }
+            return;
+          } else {
+            // ❌ Refresh failed - redirect to login
+            console.log('❌ Refresh failed, redirecting to login');
+            localStorage.removeItem('accessToken');
+            localStorage.removeItem('refreshToken');
+            localStorage.removeItem('user');
+            navigate('/login');
+            return;
+          }
         }
         
+        // ✅ Handle success
         if (enrollResponse.ok) {
           const data = await enrollResponse.json();
+          console.log('✅ Enrollments data:', data);
           if (data.success) {
             const subjects = data.subjects || [];
             setEnrollments(subjects);
@@ -129,9 +181,11 @@ const Profile = () => {
               completionRate: subjects.length > 0 ? Math.min(subjects.length * 20, 100) : 0
             });
           }
+        } else {
+          console.log('❌ Failed to fetch enrollments:', enrollResponse.status);
         }
       } catch (error) {
-        console.error('Failed to fetch stats:', error);
+        console.error('❌ Failed to fetch stats:', error);
       }
     };
 
@@ -139,17 +193,22 @@ const Profile = () => {
   }, [navigate]);
 
   // ===== AVATAR FUNCTIONS =====
-  const handleAvatarSelect = (avatar) => {
+  const handleAvatarSelect = async (avatar) => {
     setAvatarData(avatar);
     setAvatarImage(avatar.svg);
     setShowAvatarSelector(false);
-    saveAvatarToBackend(avatar);
+    await saveAvatarToBackend(avatar);
   };
 
   const saveAvatarToBackend = async (avatar) => {
     try {
       const token = localStorage.getItem('accessToken');
-      if (!token) return;
+      if (!token) {
+        setError('Please login again to save avatar');
+        return;
+      }
+
+      console.log('💾 Saving avatar to backend...');
 
       const response = await fetch(`${API_URL}/api/v1/auth/update-profile`, {
         method: 'PUT',
@@ -164,25 +223,74 @@ const Profile = () => {
         })
       });
 
+      if (response.status === 401) {
+        // Try to refresh token and retry
+        const refreshSuccess = await authService.refreshToken();
+        if (refreshSuccess.success) {
+          const newToken = localStorage.getItem('accessToken');
+          const retryResponse = await fetch(`${API_URL}/api/v1/auth/update-profile`, {
+            method: 'PUT',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${newToken}`
+            },
+            body: JSON.stringify({
+              avatar: avatar.svg,
+              avatar_seed: avatar.seed,
+              avatar_style: avatar.style || 'adventurer'
+            })
+          });
+          
+          if (retryResponse.ok) {
+            const data = await retryResponse.json();
+            if (data.success) {
+              setSuccess('Avatar updated successfully! ✅');
+              setUser(prev => ({
+                ...prev,
+                avatar: avatar.svg,
+                avatar_seed: avatar.seed,
+                avatar_style: avatar.style || 'adventurer'
+              }));
+              // Update localStorage
+              const storedUser = JSON.parse(localStorage.getItem('user') || '{}');
+              storedUser.avatar = avatar.svg;
+              storedUser.avatar_seed = avatar.seed;
+              storedUser.avatar_style = avatar.style || 'adventurer';
+              localStorage.setItem('user', JSON.stringify(storedUser));
+            }
+          }
+        }
+        return;
+      }
+
       if (response.ok) {
         const data = await response.json();
         if (data.success) {
-          setSuccess('Avatar updated successfully!');
-          // Update user object
+          setSuccess('Avatar updated successfully! ✅');
+          // Update local state
           setUser(prev => ({
             ...prev,
             avatar: avatar.svg,
             avatar_seed: avatar.seed,
             avatar_style: avatar.style || 'adventurer'
           }));
+          // Update localStorage
+          const storedUser = JSON.parse(localStorage.getItem('user') || '{}');
+          storedUser.avatar = avatar.svg;
+          storedUser.avatar_seed = avatar.seed;
+          storedUser.avatar_style = avatar.style || 'adventurer';
+          localStorage.setItem('user', JSON.stringify(storedUser));
         }
+      } else {
+        setError('Failed to save avatar');
       }
     } catch (error) {
-      console.error('Failed to save avatar:', error);
+      console.error('❌ Failed to save avatar:', error);
       setError('Failed to save avatar');
     }
   };
 
+  // ===== PROFILE EDIT FUNCTIONS =====
   const handleEditToggle = () => {
     setIsEditing(!isEditing);
     setError('');
@@ -222,11 +330,38 @@ const Profile = () => {
       });
 
       if (response.status === 401) {
+        // Try refresh
+        const refreshSuccess = await authService.refreshToken();
+        if (refreshSuccess.success) {
+          const newToken = localStorage.getItem('accessToken');
+          const retryResponse = await fetch(`${API_URL}/api/v1/auth/update-profile`, {
+            method: 'PUT',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${newToken}`
+            },
+            body: JSON.stringify(editForm)
+          });
+          
+          if (retryResponse.ok) {
+            const data = await retryResponse.json();
+            if (data.success) {
+              const updatedUser = { ...user, ...editForm };
+              setUser(updatedUser);
+              localStorage.setItem('user', JSON.stringify(updatedUser));
+              setSuccess('Profile updated successfully!');
+              setIsEditing(false);
+              setLoading(false);
+              return;
+            }
+          }
+        }
         localStorage.removeItem('accessToken');
         localStorage.removeItem('refreshToken');
         localStorage.removeItem('user');
         setError('Session expired. Please login again.');
         setTimeout(() => navigate('/login'), 2000);
+        setLoading(false);
         return;
       }
 
@@ -251,6 +386,7 @@ const Profile = () => {
     }
   };
 
+  // ===== PASSWORD CHANGE =====
   const handlePasswordChange = async (e) => {
     e.preventDefault();
     setLoading(true);
@@ -326,6 +462,7 @@ const Profile = () => {
     }
   };
 
+  // ===== DELETE ACCOUNT =====
   const handleDeleteAccount = async () => {
     setLoading(true);
     try {
@@ -378,6 +515,7 @@ const Profile = () => {
           className="profile-avatar" 
           style={{ cursor: 'pointer' }} 
           onClick={() => setShowAvatarSelector(true)}
+          title="Click to change avatar"
         >
           {avatarImage ? (
             <img src={avatarImage} alt="Avatar" className="profile-avatar-img" />

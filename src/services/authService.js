@@ -169,9 +169,11 @@ export const authService = {
     try {
       const refreshToken = localStorage.getItem('refreshToken');
       if (!refreshToken) {
+        console.log('❌ No refresh token found');
         return { success: false, error: 'No refresh token' };
       }
 
+      console.log('🔄 Refreshing token...');
       const response = await fetch(`${API_URL}/api/v1/auth/refresh`, {
         method: 'POST',
         headers: {
@@ -181,14 +183,22 @@ export const authService = {
       });
 
       const data = await response.json();
+      console.log('📊 Refresh response:', data);
       
       if (data.success && data.accessToken) {
         localStorage.setItem('accessToken', data.accessToken);
+        if (data.refreshToken) {
+          localStorage.setItem('refreshToken', data.refreshToken);
+        }
+        if (data.user) {
+          localStorage.setItem('user', JSON.stringify(data.user));
+        }
         return { success: true, accessToken: data.accessToken };
       }
 
       return { success: false, error: data.error || 'Refresh failed' };
     } catch (error) {
+      console.error('❌ Refresh error:', error);
       return { success: false, error: 'Network error' };
     }
   },
@@ -197,7 +207,12 @@ export const authService = {
   getCurrentUserWithSubscription: async () => {
     try {
       const token = localStorage.getItem('accessToken');
-      if (!token) return null;
+      if (!token) {
+        console.log('❌ No token found');
+        return null;
+      }
+
+      console.log('🔍 Fetching user with subscription...');
 
       // Get user data
       const userResponse = await fetch(`${API_URL}/api/v1/auth/me`, {
@@ -206,39 +221,79 @@ export const authService = {
         }
       });
 
-      if (!userResponse.ok) return null;
+      if (userResponse.status === 401) {
+        console.log('⚠️ Token expired, attempting refresh...');
+        const refreshResult = await authService.refreshToken();
+        if (refreshResult.success) {
+          // Retry with new token
+          const newToken = localStorage.getItem('accessToken');
+          const retryResponse = await fetch(`${API_URL}/api/v1/auth/me`, {
+            headers: {
+              'Authorization': `Bearer ${newToken}`
+            }
+          });
+          if (retryResponse.ok) {
+            const userData = await retryResponse.json();
+            const fullUser = userData.user || userData;
+            // Also fetch subscription
+            try {
+              const subResponse = await fetch(`${API_URL}/api/v1/subscription/me`, {
+                headers: {
+                  'Authorization': `Bearer ${newToken}`
+                }
+              });
+              if (subResponse.ok) {
+                const subData = await subResponse.json();
+                if (subData.success) {
+                  fullUser.tier = subData.subscription?.tier;
+                  fullUser.subscriptionStatus = subData.subscription?.status;
+                  fullUser.subscriptionEnd = subData.subscription?.end_date;
+                  fullUser.subscription = subData.subscription;
+                }
+              }
+            } catch (e) {}
+            return fullUser;
+          }
+        }
+        return null;
+      }
+
+      if (!userResponse.ok) {
+        console.log('❌ Failed to get user:', userResponse.status);
+        return null;
+      }
+
       const userData = await userResponse.json();
+      console.log('✅ User data fetched');
+      const fullUser = userData.user || userData;
 
       // Get subscription data
-      const subResponse = await fetch(`${API_URL}/api/v1/subscription/me`, {
-        headers: {
-          'Authorization': `Bearer ${token}`
-        }
-      });
+      try {
+        const subResponse = await fetch(`${API_URL}/api/v1/subscription/me`, {
+          headers: {
+            'Authorization': `Bearer ${token}`
+          }
+        });
 
-      let subscription = null;
-      if (subResponse.ok) {
-        const subData = await subResponse.json();
-        if (subData.success) {
-          subscription = subData.subscription;
+        if (subResponse.ok) {
+          const subData = await subResponse.json();
+          if (subData.success) {
+            fullUser.tier = subData.subscription?.tier;
+            fullUser.subscriptionStatus = subData.subscription?.status;
+            fullUser.subscriptionEnd = subData.subscription?.end_date;
+            fullUser.subscription = subData.subscription;
+          }
         }
+      } catch (subError) {
+        console.log('⚠️ Could not fetch subscription:', subError.message);
       }
 
-      // Merge user and subscription
-      const fullUser = userData.user || userData;
-      if (subscription) {
-        fullUser.tier = subscription.tier;
-        fullUser.subscriptionStatus = subscription.status;
-        fullUser.subscriptionEnd = subscription.end_date;
-        fullUser.subscription = subscription;
-      }
-
-      // Store updated user in localStorage
+      // Save merged user to localStorage
       localStorage.setItem('user', JSON.stringify(fullUser));
 
       return fullUser;
     } catch (error) {
-      console.error('Failed to get user with subscription:', error);
+      console.error('❌ Failed to get user with subscription:', error);
       return null;
     }
   },
@@ -255,6 +310,24 @@ export const authService = {
           'Content-Type': 'application/json'
         }
       });
+
+      if (response.status === 401) {
+        const refreshResult = await authService.refreshToken();
+        if (refreshResult.success) {
+          const newToken = localStorage.getItem('accessToken');
+          const retryResponse = await fetch(`${API_URL}/api/v1/content/my/subjects`, {
+            headers: {
+              'Authorization': `Bearer ${newToken}`,
+              'Content-Type': 'application/json'
+            }
+          });
+          if (retryResponse.ok) {
+            const data = await retryResponse.json();
+            return data.subjects || [];
+          }
+        }
+        return [];
+      }
 
       if (!response.ok) return [];
       const data = await response.json();

@@ -136,13 +136,11 @@ const generateUUID = () => {
 // ===== HELPER: GET PUBLIC IP (FIXED - CORS-friendly) =====
 const getPublicIP = async () => {
   try {
-    // Use ipapi.co which supports CORS
     const response = await fetch('https://ipapi.co/json/');
     const data = await response.json();
     return data.ip || '127.0.0.1';
   } catch {
     try {
-      // Fallback to ipify
       const response = await fetch('https://api.ipify.org?format=json');
       const data = await response.json();
       return data.ip || '127.0.0.1';
@@ -200,7 +198,7 @@ const TutorSession = () => {
 
   // ===== FEATURE 1: WebGL Watermark =====
   const [watermark, setWatermark] = useState({ text: '', position: { x: 10, y: 30 } });
-  const [userUUID, setUserUUID] = useState('');
+  // userUUID is stored in localStorage only - not needed in component state
   const [publicIP, setPublicIP] = useState('127.0.0.1');
   const [watermarkVisible] = useState(true);
 
@@ -246,7 +244,7 @@ const TutorSession = () => {
 
   // ===== FEATURE 10: Recording Indicator =====
   const [isRecording, setIsRecording] = useState(false);
-  const [recordingTime, setRecordingTime] = useState(0);
+  // recordingTime is tracked via refs only - not needed in state
 
   // ===== STATE =====
   const [isMuted, setIsMuted] = useState(false);
@@ -330,7 +328,7 @@ const TutorSession = () => {
       uuid = generateUUID();
       localStorage.setItem('eduspantech_uuid', uuid);
     }
-    setUserUUID(uuid);
+    // uuid is stored but not used in component state
 
     getPublicIP().then(ip => {
       setPublicIP(ip);
@@ -448,14 +446,14 @@ const TutorSession = () => {
   useEffect(() => {
     if (isRecording) {
       recordingIntervalRef.current = setInterval(() => {
-        setRecordingTime(prev => prev + 1);
+        // Recording time is tracked but not displayed in UI
+        // Just keep the recording active indicator
       }, 1000);
     } else {
       if (recordingIntervalRef.current) {
         clearInterval(recordingIntervalRef.current);
         recordingIntervalRef.current = null;
       }
-      setRecordingTime(0);
     }
     return () => {
       if (recordingIntervalRef.current) {

@@ -25,6 +25,8 @@ import { SessionSettingsProvider } from './context/SessionSettingsContext';
 import './App.css';
 import Profile from './pages/Profile';
 import Settings from './pages/Settings';
+import Help from './pages/Help';
+
 
 // Add route
 <Route path="/settings" element={<Settings />} />
@@ -38,6 +40,8 @@ function App() {
             <Navbar />
             <main className="app-main">
               <Routes>
+                <Route path="/help" element={<Help />} />
+                <Route path="/help/*" element={<Help />} />
                 <Route path="/settings" element={<Settings />} />
                 <Route path="/profile" element={<Profile />} />
                 <Route path="/" element={<Home />} />

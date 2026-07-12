@@ -43,6 +43,16 @@ const Profile = () => {
   // API Base URL
   const API_URL = 'https://eduspantech-backend.onrender.com';
 
+  // ===== AUTO-DISMISS SUCCESS MESSAGE =====
+  useEffect(() => {
+    if (success) {
+      const timer = setTimeout(() => {
+        setSuccess('');
+      }, 3000); // Auto-dismiss after 3 seconds
+      return () => clearTimeout(timer);
+    }
+  }, [success]);
+
   // ===== FETCH USER DATA =====
   useEffect(() => {
     const fetchUserData = async () => {
@@ -55,14 +65,12 @@ const Profile = () => {
 
         console.log('🔍 Fetching user data...');
         
-        // ✅ Get user with subscription (handles token refresh)
         const userData = await authService.getCurrentUserWithSubscription();
         
         if (userData) {
           console.log('✅ User data loaded:', userData.name);
           setUser(userData);
           
-          // ✅ Set avatar if exists
           if (userData.avatar) {
             setAvatarImage(userData.avatar);
             setAvatarData({
@@ -72,7 +80,6 @@ const Profile = () => {
             });
           }
 
-          // ✅ Set subscription
           if (userData.subscription || userData.tier) {
             setSubscription({
               tier: userData.tier || userData.subscription?.tier || 'Silver',
@@ -124,13 +131,11 @@ const Profile = () => {
         
         console.log('📊 Enrollments status:', enrollResponse.status);
         
-        // ✅ Handle 401 - Token expired
         if (enrollResponse.status === 401) {
           console.log('⚠️ Token expired, attempting refresh...');
           const refreshSuccess = await authService.refreshToken();
           
           if (refreshSuccess.success) {
-            // ✅ Retry with new token
             const newToken = localStorage.getItem('accessToken');
             console.log('🔄 Retrying with new token...');
             
@@ -157,7 +162,6 @@ const Profile = () => {
             }
             return;
           } else {
-            // ❌ Refresh failed - redirect to login
             console.log('❌ Refresh failed, redirecting to login');
             localStorage.removeItem('accessToken');
             localStorage.removeItem('refreshToken');
@@ -167,7 +171,6 @@ const Profile = () => {
           }
         }
         
-        // ✅ Handle success
         if (enrollResponse.ok) {
           const data = await enrollResponse.json();
           console.log('✅ Enrollments data:', data);
@@ -224,7 +227,6 @@ const Profile = () => {
       });
 
       if (response.status === 401) {
-        // Try to refresh token and retry
         const refreshSuccess = await authService.refreshToken();
         if (refreshSuccess.success) {
           const newToken = localStorage.getItem('accessToken');
@@ -251,7 +253,6 @@ const Profile = () => {
                 avatar_seed: avatar.seed,
                 avatar_style: avatar.style || 'adventurer'
               }));
-              // Update localStorage
               const storedUser = JSON.parse(localStorage.getItem('user') || '{}');
               storedUser.avatar = avatar.svg;
               storedUser.avatar_seed = avatar.seed;
@@ -267,14 +268,12 @@ const Profile = () => {
         const data = await response.json();
         if (data.success) {
           setSuccess('Avatar updated successfully! ✅');
-          // Update local state
           setUser(prev => ({
             ...prev,
             avatar: avatar.svg,
             avatar_seed: avatar.seed,
             avatar_style: avatar.style || 'adventurer'
           }));
-          // Update localStorage
           const storedUser = JSON.parse(localStorage.getItem('user') || '{}');
           storedUser.avatar = avatar.svg;
           storedUser.avatar_seed = avatar.seed;
@@ -330,7 +329,6 @@ const Profile = () => {
       });
 
       if (response.status === 401) {
-        // Try refresh
         const refreshSuccess = await authService.refreshToken();
         if (refreshSuccess.success) {
           const newToken = localStorage.getItem('accessToken');
@@ -349,7 +347,7 @@ const Profile = () => {
               const updatedUser = { ...user, ...editForm };
               setUser(updatedUser);
               localStorage.setItem('user', JSON.stringify(updatedUser));
-              setSuccess('Profile updated successfully!');
+              setSuccess('Profile updated successfully! ✅');
               setIsEditing(false);
               setLoading(false);
               return;
@@ -371,7 +369,7 @@ const Profile = () => {
           const updatedUser = { ...user, ...editForm };
           setUser(updatedUser);
           localStorage.setItem('user', JSON.stringify(updatedUser));
-          setSuccess('Profile updated successfully!');
+          setSuccess('Profile updated successfully! ✅');
           setIsEditing(false);
         } else {
           setError(data.error || 'Failed to update profile');

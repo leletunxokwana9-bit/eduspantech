@@ -6,7 +6,6 @@ import './Settings.css';
 
 const Settings = () => {
   const navigate = useNavigate();
-  const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
   const [success, setSuccess] = useState('');
   const [error, setError] = useState('');
@@ -80,9 +79,7 @@ const Settings = () => {
 
         const userData = await authService.getCurrentUserWithSubscription();
         if (userData) {
-          setUser(userData);
-          
-          // Load saved settings from localStorage or API
+          // Load saved settings from localStorage
           const savedSettings = localStorage.getItem('eduspantech_settings');
           if (savedSettings) {
             try {

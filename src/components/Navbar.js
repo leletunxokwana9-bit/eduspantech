@@ -9,7 +9,6 @@ import {
   FiUser,
   FiLogOut,
   FiSettings,
-  FiBell,
   FiBookOpen,
   FiAward,
   FiClock,

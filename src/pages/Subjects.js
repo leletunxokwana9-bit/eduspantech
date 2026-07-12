@@ -1,5 +1,5 @@
 // src/pages/Subjects.js
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useHomeData } from '../hooks/useHomeData';
 import './Subjects.css';
@@ -7,21 +7,75 @@ import './Subjects.css';
 const Subjects = () => {
   const navigate = useNavigate();
   const { data, loading, error } = useHomeData();
+  const [subjects, setSubjects] = useState([]);
 
-  if (loading) return <div className="subjects-loading">Loading subjects...</div>;
-  if (error) return <div className="subjects-error">Error loading subjects</div>;
-  if (!data) return <div className="subjects-empty">No subjects available</div>;
-
-  // ✅ FIXED: Ensure subjects is always an array
-  const subjects = Array.isArray(data.subjects) ? data.subjects : [];
+  useEffect(() => {
+    console.log('📊 Subjects page - raw data:', data);
+    
+    if (data) {
+      // ✅ Try multiple paths to find subjects
+      let foundSubjects = [];
+      
+      // Path 1: data.subjects (direct array)
+      if (data.subjects && Array.isArray(data.subjects)) {
+        foundSubjects = data.subjects;
+        console.log('✅ Found subjects in data.subjects:', foundSubjects.length);
+      }
+      // Path 2: data.subjects.items
+      else if (data.subjects?.items && Array.isArray(data.subjects.items)) {
+        foundSubjects = data.subjects.items;
+        console.log('✅ Found subjects in data.subjects.items:', foundSubjects.length);
+      }
+      // Path 3: data.items
+      else if (data.items && Array.isArray(data.items)) {
+        foundSubjects = data.items;
+        console.log('✅ Found subjects in data.items:', foundSubjects.length);
+      }
+      // Path 4: data.subjects.subjects (nested)
+      else if (data.subjects?.subjects && Array.isArray(data.subjects.subjects)) {
+        foundSubjects = data.subjects.subjects;
+        console.log('✅ Found subjects in data.subjects.subjects:', foundSubjects.length);
+      }
+      
+      setSubjects(foundSubjects);
+    }
+  }, [data]);
 
   const handleSubjectClick = (subject) => {
     const slug = subject.name.toLowerCase().replace(/\s+/g, '-');
     navigate(`/subjects/${slug}`);
   };
 
+  if (loading) {
+    return (
+      <div className="subjects-loading">
+        <div className="loader">Loading subjects...</div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="subjects-error">
+        <p>Error loading subjects: {error}</p>
+        <button onClick={() => window.location.reload()} className="subjects-retry-btn">
+          🔄 Retry
+        </button>
+      </div>
+    );
+  }
+
   if (subjects.length === 0) {
-    return <div className="subjects-empty">No subjects available</div>;
+    return (
+      <div className="subjects-empty">
+        <span className="empty-icon">📚</span>
+        <p>No subjects available</p>
+        <p className="subjects-empty-sub">Please check your connection or try again later.</p>
+        <button onClick={() => window.location.reload()} className="subjects-retry-btn">
+          🔄 Retry
+        </button>
+      </div>
+    );
   }
 
   return (

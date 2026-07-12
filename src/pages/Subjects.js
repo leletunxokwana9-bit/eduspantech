@@ -11,7 +11,6 @@ const Subjects = () => {
 
   useEffect(() => {
     if (data) {
-      // Try multiple paths to find subjects
       let foundSubjects = [];
       
       if (data.subjects && Array.isArray(data.subjects)) {
@@ -32,40 +31,40 @@ const Subjects = () => {
   };
 
   if (loading) {
-    return <div className="subjects-loading">Loading subjects...</div>;
+    return <div className="subjects-page-loading">Loading subjects...</div>;
   }
 
   if (error) {
-    return <div className="subjects-error">Error loading subjects</div>;
+    return <div className="subjects-page-error">Error loading subjects</div>;
   }
 
   if (subjects.length === 0) {
-    return <div className="subjects-empty">No subjects available</div>;
+    return <div className="subjects-page-empty">No subjects available</div>;
   }
 
   return (
     <div className="subjects-page">
-      <div className="subjects-header">
+      <div className="subjects-page-header">
         <h1>📚 Mathematics Subjects</h1>
         <p>Master any topic with expert guidance and interactive tools</p>
       </div>
 
-      <div className="subjects-grid">
+      <div className="subjects-page-grid">
         {subjects.map((subject) => (
           <div
             key={subject.id}
-            className="subject-card"
+            className="subjects-page-card"
             onClick={() => handleSubjectClick(subject)}
             style={{ borderColor: subject.color || '#4f46e5' }}
           >
-            <div className="subject-card-icon" style={{ background: subject.color || '#4f46e5' }}>
+            <div className="subjects-page-card-icon" style={{ background: subject.color || '#4f46e5' }}>
               {subject.icon || '📚'}
             </div>
             <h3>{subject.name}</h3>
             <p>{subject.description}</p>
-            <div className="subject-card-footer">
-              <span className="subject-tier">{subject.tier || 'Tier 1'}</span>
-              <span className="subject-topics">📖 {subject.topics?.length || 0} topics</span>
+            <div className="subjects-page-card-footer">
+              <span className="subjects-page-tier">{subject.tier || 'Tier 1'}</span>
+              <span className="subjects-page-topics">📖 {subject.topics?.length || 0} topics</span>
             </div>
           </div>
         ))}

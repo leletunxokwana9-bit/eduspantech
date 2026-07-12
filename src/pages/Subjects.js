@@ -12,13 +12,17 @@ const Subjects = () => {
   if (error) return <div className="subjects-error">Error loading subjects</div>;
   if (!data) return <div className="subjects-empty">No subjects available</div>;
 
-  const subjects = data.subjects || [];
+  // ✅ FIXED: Ensure subjects is always an array
+  const subjects = Array.isArray(data.subjects) ? data.subjects : [];
 
   const handleSubjectClick = (subject) => {
-    // ✅ CORRECT: Create a slug from the subject name
     const slug = subject.name.toLowerCase().replace(/\s+/g, '-');
     navigate(`/subjects/${slug}`);
   };
+
+  if (subjects.length === 0) {
+    return <div className="subjects-empty">No subjects available</div>;
+  }
 
   return (
     <div className="subjects-page">

@@ -12,7 +12,11 @@ export const homeService = {
       const data = await response.json();
       console.log('✅ Subjects fetched successfully:', data);
       
-      const subjects = data.subjects || [];
+      // ✅ Ensure subjects is always an array
+      let subjects = [];
+      if (data && data.subjects) {
+        subjects = Array.isArray(data.subjects) ? data.subjects : [];
+      }
       
       return {
         hero: {

@@ -1,10 +1,10 @@
+// src/pages/SubjectDetail.js
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useHomeData } from '../hooks/useHomeData';
 import { authService } from '../services/authService';
 import './SubjectDetail.css';
 
-// ✅ FIXED: Changed to Render backend URL
 const API_BASE_URL = process.env.REACT_APP_API_URL || 'https://eduspantech-backend.onrender.com/api/v1';
 
 const SubjectDetail = () => {
@@ -18,8 +18,8 @@ const SubjectDetail = () => {
   const [subscription, setSubscription] = useState(null);
   const [isCheckingAuth, setIsCheckingAuth] = useState(true);
 
-  // Find the subject from the data
-  const subject = data?.subjects?.items?.find(
+  // ✅ FIXED: Find subject from data.subjects (not data.subjects.items)
+  const subject = data?.subjects?.find(
     (item) => item.name.toLowerCase().replace(/\s+/g, '-') === subjectName
   );
 

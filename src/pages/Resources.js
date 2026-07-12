@@ -1,3 +1,4 @@
+// src/pages/Resources.js
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useHomeData } from '../hooks/useHomeData';
@@ -11,9 +12,9 @@ const Resources = () => {
   if (error) return <div className="resources-page-error">Error loading resources</div>;
   if (!data) return <div className="resources-page-empty">No resources available</div>;
 
+  // ✅ FIXED: Access vaults correctly
   const vaults = data.resources?.vaults || [];
 
-  // ===== CORRECT NAVIGATION =====
   const handleAccessResources = (vault) => {
     const slug = vault.name.toLowerCase().replace(/\s+/g, '-');
     navigate(`/resources/${slug}`);

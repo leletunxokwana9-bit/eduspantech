@@ -7,7 +7,13 @@ import {
   FiMenu,
   FiX,
   FiUser,
-  FiLogOut
+  FiLogOut,
+  FiSettings,
+  FiBell,
+  FiBookOpen,
+  FiAward,
+  FiClock,
+  FiHelpCircle
 } from "react-icons/fi";
 import { useHomeData } from "../hooks/useHomeData";
 import { useLanguage } from "../context/LanguageContext";
@@ -18,6 +24,7 @@ function Navbar() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [isLanguageOpen, setIsLanguageOpen] = useState(false);
+  const [isUserDropdownOpen, setIsUserDropdownOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState([]);
   const [showSuggestions, setShowSuggestions] = useState(false);
@@ -28,6 +35,7 @@ function Navbar() {
   const menuRef = useRef(null);
   const searchRef = useRef(null);
   const languageRef = useRef(null);
+  const userDropdownRef = useRef(null);
   const searchInputRef = useRef(null);
   const { data, loading } = useHomeData();
   const { currentLanguage, changeLanguage, t, languages } = useLanguage();
@@ -68,6 +76,7 @@ function Navbar() {
     authService.logout();
     setIsAuthenticated(false);
     setUser(null);
+    setIsUserDropdownOpen(false);
     navigate('/');
   };
 
@@ -77,6 +86,14 @@ function Navbar() {
 
   const closeMenu = () => {
     setIsMenuOpen(false);
+  };
+
+  const toggleUserDropdown = () => {
+    setIsUserDropdownOpen(!isUserDropdownOpen);
+  };
+
+  const closeUserDropdown = () => {
+    setIsUserDropdownOpen(false);
   };
 
   const toggleSearch = () => {
@@ -98,6 +115,17 @@ function Navbar() {
     changeLanguage(langCode);
     setIsLanguageOpen(false);
   };
+
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (userDropdownRef.current && !userDropdownRef.current.contains(event.target)) {
+        setIsUserDropdownOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
 
   useEffect(() => {
     const handleClickOutside = (event) => {
@@ -132,6 +160,7 @@ function Navbar() {
 
   useEffect(() => {
     setIsMenuOpen(false);
+    setIsUserDropdownOpen(false);
   }, [location]);
 
   const performSearch = useCallback((query) => {
@@ -269,6 +298,19 @@ function Navbar() {
     return user.name?.split(' ')[0] || user.name || 'User';
   };
 
+  const getUserInitial = () => {
+    if (!user || !user.name) return 'U';
+    return user.name.charAt(0).toUpperCase();
+  };
+
+  const getUserTier = () => {
+    if (!user) return 'Silver';
+    if (user.tier) return user.tier;
+    if (user.subscriptionTier) return user.subscriptionTier;
+    if (user.subscription?.tier) return user.subscription.tier;
+    return 'Silver';
+  };
+
   if (loading) {
     return (
       <header className="navbar" ref={menuRef}>
@@ -403,16 +445,87 @@ function Navbar() {
             </div>
           </div>
 
-          {/* ✅ FIXED: User menu - Profile icon goes to /profile */}
+          {/* ✅ USER DROPDOWN MENU (Option B) */}
           {isAuthenticated ? (
-            <div className="user-menu">
-              <Link to="/profile" className="user-profile-btn">
-                <FiUser className="user-icon" />
+            <div className="user-menu" ref={userDropdownRef}>
+              <button 
+                className={`user-dropdown-toggle ${isUserDropdownOpen ? 'open' : ''}`}
+                onClick={toggleUserDropdown}
+                aria-label="User menu"
+              >
+                <div className="user-avatar-circle">
+                  {user?.avatar ? (
+                    <img src={user.avatar} alt="Avatar" className="user-avatar-img" />
+                  ) : (
+                    <span className="user-avatar-initial">{getUserInitial()}</span>
+                  )}
+                </div>
                 <span className="user-name">{getUserName()}</span>
-              </Link>
-              <button className="logout-btn" onClick={handleLogout} title="Logout">
-                <FiLogOut />
+                <FiChevronDown className={`dropdown-arrow ${isUserDropdownOpen ? 'open' : ''}`} />
               </button>
+
+              {/* Dropdown Menu */}
+              {isUserDropdownOpen && (
+                <div className="user-dropdown">
+                  {/* User Info Header */}
+                  <div className="dropdown-header">
+                    <div className="dropdown-user-info">
+                      <div className="dropdown-avatar">
+                        {user?.avatar ? (
+                          <img src={user.avatar} alt="Avatar" className="dropdown-avatar-img" />
+                        ) : (
+                          <span className="dropdown-avatar-initial">{getUserInitial()}</span>
+                        )}
+                      </div>
+                      <div className="dropdown-user-details">
+                        <span className="dropdown-user-name">{user?.name || 'User'}</span>
+                        <span className="dropdown-user-email">{user?.email || ''}</span>
+                        <span className="dropdown-user-tier">🏅 {getUserTier()} Tier</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Dropdown Items */}
+                  <div className="dropdown-items">
+                    <Link to="/profile" className="dropdown-item" onClick={closeUserDropdown}>
+                      <FiUser className="dropdown-icon" />
+                      <span>Profile</span>
+                    </Link>
+                    
+                    <Link to="/settings" className="dropdown-item" onClick={closeUserDropdown}>
+                      <FiSettings className="dropdown-icon" />
+                      <span>Settings</span>
+                    </Link>
+
+                    <Link to="/dashboard" className="dropdown-item" onClick={closeUserDropdown}>
+                      <FiBookOpen className="dropdown-icon" />
+                      <span>Dashboard</span>
+                    </Link>
+
+                    <Link to="/subjects" className="dropdown-item" onClick={closeUserDropdown}>
+                      <FiAward className="dropdown-icon" />
+                      <span>My Courses</span>
+                    </Link>
+
+                    <Link to="/tutors" className="dropdown-item" onClick={closeUserDropdown}>
+                      <FiClock className="dropdown-icon" />
+                      <span>My Sessions</span>
+                    </Link>
+
+                    <Link to="/help" className="dropdown-item" onClick={closeUserDropdown}>
+                      <FiHelpCircle className="dropdown-icon" />
+                      <span>Help & Support</span>
+                    </Link>
+
+                    <div className="dropdown-divider"></div>
+
+                    <button className="dropdown-item logout" onClick={handleLogout}>
+                      <FiLogOut className="dropdown-icon" />
+                      <span>Logout</span>
+                    </button>
+                  </div>
+                </div>
+              )}
             </div>
           ) : (
             <>
@@ -481,6 +594,9 @@ function Navbar() {
               <>
                 <Link to="/profile" className="mobile-profile" onClick={closeMenu}>
                   <FiUser /> {getUserName()}
+                </Link>
+                <Link to="/settings" className="mobile-settings" onClick={closeMenu}>
+                  <FiSettings /> Settings
                 </Link>
                 <button className="mobile-logout" onClick={handleLogout}>
                   <FiLogOut /> Logout

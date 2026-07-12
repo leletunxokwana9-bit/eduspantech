@@ -1,393 +1,535 @@
+// src/pages/SubjectDetail.js
 import React, { useState, useEffect } from 'react';
-import { useParams, useNavigate, useLocation } from 'react-router-dom';
+import { useParams, useNavigate } from 'react-router-dom';
 import { useHomeData } from '../hooks/useHomeData';
 import { authService } from '../services/authService';
-import './ResourceDetails.css';
+import './SubjectDetail.css';
 
-const ResourceDetail = () => {
-  const { vaultName, resourceId } = useParams();
+const API_BASE_URL = process.env.REACT_APP_API_URL || 'https://eduspantech-backend.onrender.com/api/v1';
+
+const SubjectDetail = () => {
+  const { subjectName } = useParams();
   const navigate = useNavigate();
-  const location = useLocation();
   const { data, loading, error } = useHomeData();
-  
-  const [resource, setResource] = useState(null);
-  const [resourceType, setResourceType] = useState('resource');
-  const [vault, setVault] = useState(null);
   const [activeTab, setActiveTab] = useState('overview');
-  const [isEnrolled, setIsEnrolled] = useState(false);
+  const [isEnrolling, setIsEnrolling] = useState(false);
+  const [enrollmentStatus, setEnrollmentStatus] = useState(null);
+  const [user, setUser] = useState(null);
+  const [subscription, setSubscription] = useState(null);
   const [isCheckingAuth, setIsCheckingAuth] = useState(true);
 
-  // Find the resource from location state or data
-  useEffect(() => {
-    // First check if we have data from navigation state
-    if (location.state?.resource) {
-      setResource(location.state.resource);
-      setResourceType(location.state.type || 'resource');
-      setVault(location.state.vault || null);
-      return;
-    }
+  // ✅ FIXED: Make sure subjects is always an array
+  const subjects = Array.isArray(data?.subjects) ? data.subjects : [];
+  
+  // ✅ FIXED: Find subject - handles both slug and exact name
+  const subject = subjects.find((item) => {
+    if (!item?.name) return false;
+    const itemSlug = item.name.toLowerCase().replace(/\s+/g, '-');
+    // Check if subjectName matches the slug OR the exact name
+    return itemSlug === subjectName || item.name === subjectName;
+  });
 
-    // Otherwise find from data
-    if (data?.resources?.vaults) {
-      const foundVault = data.resources.vaults.find(
-        v => v.name.toLowerCase().replace(/\s+/g, '-') === vaultName
-      );
-
-      if (foundVault) {
-        setVault(foundVault);
-        
-        // Build all resources from vault
-        const allResources = [];
-        
-        if (foundVault.videos) {
-          if (Array.isArray(foundVault.videos)) {
-            foundVault.videos.forEach(v => allResources.push({ ...v, type: 'video' }));
-          } else {
-            allResources.push({ ...foundVault.videos, type: 'video' });
-          }
-        }
-        if (foundVault.practice) {
-          if (Array.isArray(foundVault.practice)) {
-            foundVault.practice.forEach(p => allResources.push({ ...p, type: 'practice' }));
-          } else {
-            allResources.push({ ...foundVault.practice, type: 'practice' });
-          }
-        }
-        if (foundVault.guides) {
-          if (Array.isArray(foundVault.guides)) {
-            foundVault.guides.forEach(g => allResources.push({ ...g, type: 'guide' }));
-          } else {
-            allResources.push({ ...foundVault.guides, type: 'guide' });
-          }
-        }
-        if (foundVault.interactive) {
-          if (Array.isArray(foundVault.interactive)) {
-            foundVault.interactive.forEach(i => allResources.push({ ...i, type: 'interactive' }));
-          } else {
-            allResources.push({ ...foundVault.interactive, type: 'interactive' });
-          }
-        }
-        if (foundVault.resources) {
-          if (Array.isArray(foundVault.resources)) {
-            foundVault.resources.forEach(r => allResources.push({ ...r, type: r.type || 'resource' }));
-          } else {
-            allResources.push({ ...foundVault.resources, type: foundVault.resources.type || 'resource' });
-          }
-        }
-
-        // Find the specific resource
-        let foundResource = null;
-        for (const r of allResources) {
-          const rId = r.id ? String(r.id) : r.name?.toLowerCase().replace(/\s+/g, '-');
-          const searchId = resourceId || '';
-          if (rId === searchId || r.name?.toLowerCase().replace(/\s+/g, '-') === resourceId) {
-            foundResource = r;
-            break;
-          }
-        }
-
-        if (foundResource) {
-          setResource(foundResource);
-          setResourceType(foundResource.type || 'resource');
-        } else {
-          // If no specific resource, show vault overview
-          setResource({
-            id: foundVault.id,
-            name: foundVault.name,
-            description: foundVault.description,
-            icon: foundVault.icon,
-            topics: foundVault.topics || [],
-            type: 'vault'
-          });
-          setResourceType('vault');
-        }
-      }
-    }
-  }, [data, vaultName, resourceId, location.state]);
-
-  // Check authentication
+  // Check authentication status on mount
   useEffect(() => {
     const checkAuth = async () => {
       setIsCheckingAuth(true);
+
       const isAuthenticated = authService.isAuthenticated();
+
       if (isAuthenticated) {
         try {
-          const userData = await authService.getCurrentUser();
+          // ✅ Get fresh user data with token refresh handling
+          const userData = await authService.getCurrentUserWithSubscription();
           if (userData) {
-            setIsEnrolled(true);
+            setUser(userData);
+            // ✅ Get subscription from the merged data
+            if (userData.subscription) {
+              setSubscription(userData.subscription);
+            } else {
+              // Fallback: fetch subscription separately
+              try {
+                const token = localStorage.getItem('accessToken');
+                if (token) {
+                  const response = await fetch(`${API_BASE_URL}/subscription/me`, {
+                    headers: {
+                      'Authorization': `Bearer ${token}`
+                    }
+                  });
+                  if (response.ok) {
+                    const data = await response.json();
+                    setSubscription(data.subscription);
+                  }
+                }
+              } catch (error) {
+                console.error('Failed to get subscription:', error);
+              }
+            }
+          } else {
+            // Try fallback
+            const fallbackUser = await authService.getCurrentUser();
+            if (fallbackUser) {
+              setUser(fallbackUser);
+            }
           }
         } catch (error) {
           console.error('Failed to get user:', error);
+          authService.logout();
         }
       }
+
       setIsCheckingAuth(false);
     };
+
     checkAuth();
   }, []);
 
-  const getIcon = () => {
-    if (resource?.icon) return resource.icon;
-    switch (resourceType) {
-      case 'video': return '🎬';
-      case 'practice': return '✏️';
-      case 'guide': return '📖';
-      case 'interactive': return '🎮';
-      case 'vault': return '📁';
-      default: return '📄';
+  // Check shift availability for user's country
+  useEffect(() => {
+    if (user) {
+      const checkShift = async () => {
+        try {
+          const token = localStorage.getItem('accessToken');
+          if (!token) return;
+          
+          const response = await fetch(`${API_BASE_URL}/auth/shift/check`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${token}`
+            },
+            body: JSON.stringify({ countryCode: user.country || 'ZA' })
+          });
+          if (response.ok) {
+            const data = await response.json();
+            console.log('Shift status:', data);
+          }
+        } catch (error) {
+          console.error('Failed to check shift:', error);
+        }
+      };
+      checkShift();
+    }
+  }, [user]);
+
+  // If subject not found, redirect
+  useEffect(() => {
+    if (!loading && !subject && data) {
+      navigate('/subjects');
+    }
+  }, [loading, subject, data, navigate]);
+
+  const getCohortTier = () => {
+    if (subject?.name === 'Algebra' || subject?.name === 'Geometry') return 'Tier 1';
+    if (subject?.name === 'Calculus' || subject?.name === 'Statistics' || subject?.name === 'Trigonometry') return 'Tier 2';
+    if (subject?.name === 'Differential Equations' || subject?.name === 'Linear Algebra' || subject?.name === 'Matrices') return 'Tier 3';
+    return 'Tier 1';
+  };
+
+  const getRegion = () => {
+    const regions = {
+      'Algebra': 'Global',
+      'Geometry': 'Global',
+      'Calculus': 'Global',
+      'Statistics': 'Global',
+      'Trigonometry': 'Global',
+      'Matrices': 'Global',
+      'Functions': 'Global',
+      'Financial Mathematics': 'South Africa',
+      'Differential Equations': 'Global',
+      'Linear Algebra': 'Global'
+    };
+    return regions[subject?.name] || 'Global';
+  };
+
+  const getAWSRegion = () => {
+    const regions = {
+      'South Africa': 'af-south-1',
+      'USA': 'us-east-1',
+      'UK': 'eu-west-1',
+      'Australia': 'ap-southeast-2',
+      'Singapore': 'ap-southeast-1',
+      'Japan': 'ap-northeast-1',
+      'Brazil': 'sa-east-1'
+    };
+    return regions[getRegion()] || 'us-east-1';
+  };
+
+  // ===== ENROLLMENT FUNCTION =====
+  const handleEnroll = async () => {
+    if (!authService.isAuthenticated()) {
+      navigate('/login', { state: { redirect: `/subjects/${subjectName}` } });
+      return;
+    }
+
+    if (isCheckingAuth) {
+      return;
+    }
+
+    if (!user) {
+      try {
+        const userData = await authService.getCurrentUser();
+        if (userData) {
+          setUser(userData);
+        } else {
+          navigate('/login', { state: { redirect: `/subjects/${subjectName}` } });
+          return;
+        }
+      } catch (error) {
+        navigate('/login', { state: { redirect: `/subjects/${subjectName}` } });
+        return;
+      }
+    }
+
+    setIsEnrolling(true);
+    setEnrollmentStatus(null);
+
+    try {
+      const subjectId = subject.id;
+
+      let subscription = null;
+      try {
+        const token = localStorage.getItem('accessToken');
+        if (token) {
+          const subResponse = await fetch(`${API_BASE_URL}/subscription/me`, {
+            headers: {
+              'Authorization': `Bearer ${token}`
+            }
+          });
+          if (subResponse.ok) {
+            const data = await subResponse.json();
+            subscription = data.subscription;
+          }
+        }
+      } catch (error) {
+        console.error('Failed to check subscription:', error);
+      }
+
+      if (!subscription || subscription.status !== 'active') {
+        setEnrollmentStatus({
+          type: 'error',
+          message: 'You need an active subscription to enroll. Please subscribe first.',
+          action: 'upgrade'
+        });
+        setIsEnrolling(false);
+        return;
+      }
+
+      if (subscription.tier === 'Tier_Silver') {
+        setEnrollmentStatus({
+          type: 'warning',
+          message: 'Silver tier provides archive access only. Upgrade to Gold for live sessions.',
+          action: 'upgrade'
+        });
+      }
+
+      if (subscription.tier !== 'Tier_Silver') {
+        try {
+          const token = localStorage.getItem('accessToken');
+          if (token) {
+            const shiftResponse = await fetch(`${API_BASE_URL}/auth/shift/check`, {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`
+              },
+              body: JSON.stringify({ countryCode: user?.country || 'ZA' })
+            });
+
+            if (shiftResponse.ok) {
+              const shiftData = await shiftResponse.json();
+              if (!shiftData.authorized) {
+                setEnrollmentStatus({
+                  type: 'warning',
+                  message: `No active shift. Sessions available 16:00-23:00 Local Time. Current shift: ${shiftData.shiftName}`,
+                  action: 'schedule'
+                });
+              }
+            }
+          }
+        } catch (error) {
+          console.error('Failed to check shift:', error);
+        }
+      }
+
+      const token = localStorage.getItem('accessToken');
+      if (!token) {
+        setEnrollmentStatus({
+          type: 'error',
+          message: 'Please login again to enroll.',
+          action: 'login'
+        });
+        setIsEnrolling(false);
+        return;
+      }
+
+      const enrollmentResponse = await fetch(`${API_BASE_URL}/content/subjects/${subjectId}/enroll`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        }
+      });
+
+      if (enrollmentResponse.ok) {
+        setEnrollmentStatus({
+          type: 'success',
+          message: `✅ Successfully enrolled in ${subject.name}! You now have access to all materials.`,
+          action: 'dashboard'
+        });
+
+        setTimeout(() => {
+          navigate('/dashboard');
+        }, 2000);
+      } else if (enrollmentResponse.status === 400) {
+        const errorData = await enrollmentResponse.json();
+        if (errorData.error && errorData.error.toLowerCase().includes('already enrolled')) {
+          setEnrollmentStatus({
+            type: 'info',
+            message: `ℹ️ You are already enrolled in ${subject.name}. You can access all materials from your dashboard.`,
+            action: 'dashboard'
+          });
+        } else {
+          setEnrollmentStatus({
+            type: 'error',
+            message: errorData.error || 'Failed to enroll. Please try again.',
+            action: 'retry'
+          });
+        }
+      } else if (enrollmentResponse.status === 401) {
+        setEnrollmentStatus({
+          type: 'error',
+          message: 'Please login again to enroll.',
+          action: 'login'
+        });
+      } else {
+        const errorData = await enrollmentResponse.json();
+        setEnrollmentStatus({
+          type: 'error',
+          message: errorData.error || 'Failed to enroll. Please try again.',
+          action: 'retry'
+        });
+      }
+    } catch (error) {
+      console.error('Enrollment error:', error);
+      setEnrollmentStatus({
+        type: 'error',
+        message: 'An error occurred during enrollment. Please try again.',
+        action: 'retry'
+      });
+    } finally {
+      setIsEnrolling(false);
     }
   };
 
-  const getTypeLabel = () => {
-    switch (resourceType) {
-      case 'video': return 'Video Lesson';
-      case 'practice': return 'Practice Problems';
-      case 'guide': return 'Study Guide';
-      case 'interactive': return 'Interactive Activity';
-      case 'vault': return 'Resource Collection';
-      default: return 'Resource';
+  // ===== HANDLE ENROLLMENT ACTION =====
+  const handleEnrollmentAction = () => {
+    if (!enrollmentStatus) return;
+
+    switch (enrollmentStatus.action) {
+      case 'upgrade':
+        navigate('/pricing');
+        break;
+      case 'login':
+        navigate('/login', { state: { redirect: `/subjects/${subjectName}` } });
+        break;
+      case 'schedule':
+        setActiveTab('schedule');
+        setEnrollmentStatus(null);
+        break;
+      case 'dashboard':
+        navigate('/dashboard');
+        break;
+      case 'subjects':
+        navigate('/subjects');
+        break;
+      case 'prereqs':
+        setEnrollmentStatus(null);
+        break;
+      case 'retry':
+        setEnrollmentStatus(null);
+        handleEnroll();
+        break;
+      default:
+        setEnrollmentStatus(null);
     }
   };
 
-  const getBackUrl = () => {
-    return vault ? `/resources/${vault.name.toLowerCase().replace(/\s+/g, '-')}` : '/resources';
+  // ===== HANDLE RESOURCE CLICK =====
+  const handleResourceClick = (resource) => {
+    if (resource.path) {
+      navigate(resource.path);
+      return;
+    }
+    
+    if (resource.id && resource.type) {
+      const slug = resource.name?.toLowerCase().replace(/\s+/g, '-') || resource.id;
+      navigate(`/resources/${resource.type}s/${slug}`);
+      return;
+    }
+    
+    navigate('/resources');
   };
 
-  // Get actual video embed URL
-  const getEmbedUrl = () => {
-    if (resource?.embedUrl) return resource.embedUrl;
-    if (resource?.videoUrl) return resource.videoUrl;
-    if (resource?.url) return resource.url;
-    return null;
-  };
+  const tabs = [
+    { id: 'overview', label: '📋 Overview' },
+    { id: 'topics', label: '📚 Topics' },
+    { id: 'schedule', label: '🕐 Schedule' },
+    { id: 'resources', label: '📄 Resources' }
+  ];
 
   if (loading || isCheckingAuth) {
     return (
-      <div className="resource-detail-container loading">
+      <div className="subject-detail-container loading">
         <div className="loading-spinner"></div>
-        <p>Loading resource...</p>
+        <p>{isCheckingAuth ? 'Checking your account...' : 'Loading subject details...'}</p>
       </div>
     );
   }
 
-  if (error || !resource) {
+  if (error) {
     return (
-      <div className="resource-detail-container error">
-        <div className="error-icon">🔍</div>
-        <h2>Resource Not Found</h2>
-        <p>The resource you're looking for doesn't exist or has been moved.</p>
-        <button className="btn-primary" onClick={() => navigate('/resources')}>
-          Back to Resources
+      <div className="subject-detail-container error">
+        <div className="error-icon">⚠️</div>
+        <h2>Error loading subject</h2>
+        <p>{error}</p>
+        <button className="retry-button" onClick={() => window.location.reload()}>
+          Try Again
         </button>
       </div>
     );
   }
 
-  const tabs = [
-    { id: 'overview', label: '📋 Overview' },
-    { id: 'content', label: '📄 Content' },
-    { id: 'related', label: '🔗 Related' }
-  ];
-
-  // Find related resources from the same vault
-  const getRelatedResources = () => {
-    if (!vault) return [];
-    const allRelated = [];
-    if (vault.videos) {
-      if (Array.isArray(vault.videos)) {
-        vault.videos.forEach(v => allRelated.push({ ...v, type: 'video' }));
-      } else {
-        allRelated.push({ ...vault.videos, type: 'video' });
-      }
-    }
-    if (vault.practice) {
-      if (Array.isArray(vault.practice)) {
-        vault.practice.forEach(p => allRelated.push({ ...p, type: 'practice' }));
-      } else {
-        allRelated.push({ ...vault.practice, type: 'practice' });
-      }
-    }
-    if (vault.guides) {
-      if (Array.isArray(vault.guides)) {
-        vault.guides.forEach(g => allRelated.push({ ...g, type: 'guide' }));
-      } else {
-        allRelated.push({ ...vault.guides, type: 'guide' });
-      }
-    }
-    if (vault.interactive) {
-      if (Array.isArray(vault.interactive)) {
-        vault.interactive.forEach(i => allRelated.push({ ...i, type: 'interactive' }));
-      } else {
-        allRelated.push({ ...vault.interactive, type: 'interactive' });
-      }
-    }
-    if (vault.resources) {
-      if (Array.isArray(vault.resources)) {
-        vault.resources.forEach(r => allRelated.push({ ...r, type: r.type || 'resource' }));
-      } else {
-        allRelated.push({ ...vault.resources, type: vault.resources.type || 'resource' });
-      }
-    }
-    return allRelated.filter(r => r.id !== resource.id && r.name !== resource.name).slice(0, 4);
-  };
-
-  const relatedResources = getRelatedResources();
-
-  // Navigate within app (same tab)
-  const handleResourceClick = (related) => {
-    const vaultSlug = vault?.name?.toLowerCase().replace(/\s+/g, '-') || '';
-    const relatedSlug = related.id || related.name?.toLowerCase().replace(/\s+/g, '-') || '';
-    navigate(`/resources/${vaultSlug}/${relatedSlug}`, {
-      state: { resource: related, type: related.type, vault }
-    });
-  };
-
-  const embedUrl = getEmbedUrl();
+  if (!subject) {
+    return (
+      <div className="subject-detail-container error">
+        <div className="error-icon">🔍</div>
+        <h2>Subject Not Found</h2>
+        <p>The subject you're looking for doesn't exist.</p>
+        <button className="retry-button" onClick={() => navigate('/subjects')}>
+          Back to Subjects
+        </button>
+      </div>
+    );
+  }
 
   return (
-    <div className="resource-detail-container">
+    <div className="subject-detail-container">
       {/* Header */}
-      <div className="resource-detail-header">
-        <div className="resource-header-top">
-          <button className="back-button" onClick={() => navigate(getBackUrl())}>
-            ← Back to {vault?.name || 'Resources'}
-          </button>
-          <span className="resource-type-badge">{getIcon()} {getTypeLabel()}</span>
-        </div>
-        <div className="resource-title-section">
-          <h1>{getIcon()} {resource.name}</h1>
-          <p className="resource-description">{resource.description || 'No description available.'}</p>
-          <div className="resource-meta-tags">
-            <span className="tag">📚 {vault?.name || 'General'}</span>
-            {resource.duration && <span className="tag">⏱️ {resource.duration}</span>}
-            {resource.difficulty && <span className="tag">📊 {resource.difficulty}</span>}
-            {resource.tier && <span className="tag">🎯 {resource.tier}</span>}
+      <div className="subject-detail-header">
+        <div className="subject-title-section">
+          <h1>{subject.icon} {subject.name}</h1>
+          <div className="subject-meta-tags">
+            <span className="tag cohort-tier">{getCohortTier()}</span>
+            <span className="tag region">🌍 {getRegion()}</span>
+            <span className="tag aws-region">☁️ {getAWSRegion()}</span>
           </div>
         </div>
-        <div className="resource-actions">
-          {isEnrolled ? (
-            <button className="btn-primary" onClick={() => navigate(`/session/${resource.id}`)}>
-              🚀 Start Learning
-            </button>
-          ) : (
-            <button className="btn-secondary" onClick={() => navigate('/pricing')}>
-              🔒 Subscribe to Access
-            </button>
-          )}
-          {resource.downloadUrl && (
-            <button className="btn-outline" onClick={() => window.open(resource.downloadUrl, '_blank')}>
-              📥 Download
-            </button>
-          )}
+        <div className="subject-actions">
+          <button
+            className={`btn btn-primary ${isEnrolling ? 'loading' : ''}`}
+            onClick={handleEnroll}
+            disabled={isEnrolling}
+          >
+            {isEnrolling ? '⏳ Enrolling...' : '📚 Enroll Now'}
+          </button>
+          <button className="btn btn-secondary">📝 View Syllabus</button>
         </div>
       </div>
 
-      {/* Main Content */}
-      <div className="resource-detail-content">
-        {/* Video Player */}
-        {resourceType === 'video' && (
-          <div className="video-player-section">
-            <div className="video-container">
-              {embedUrl ? (
-                <iframe
-                  src={embedUrl}
-                  title={resource.name}
-                  className="video-iframe"
-                  allowFullScreen
-                  allow="autoplay; encrypted-media; picture-in-picture"
-                  sandbox="allow-same-origin allow-scripts allow-presentation allow-forms"
-                />
-              ) : (
-                <div className="video-placeholder">
-                  <div className="video-icon">🎬</div>
-                  <p className="video-title">{resource.name}</p>
-                  <p className="video-subtitle">{resource.description || 'Video content is being prepared'}</p>
-                  {isEnrolled && (
-                    <button className="btn-primary" style={{ marginTop: '16px' }} onClick={() => navigate(`/session/${resource.id}`)}>
-                      Watch in Session
-                    </button>
-                  )}
-                </div>
-              )}
-            </div>
-            {resource.views !== undefined && (
-              <div className="video-info">
-                <div className="video-stats">
-                  <span>👁️ {resource.views} views</span>
-                  {resource.likes !== undefined && <span>❤️ {resource.likes} likes</span>}
-                  {resource.date && <span>📅 {resource.date}</span>}
-                </div>
-              </div>
+      {/* Enrollment Status */}
+      {enrollmentStatus && (
+        <div className={`enrollment-status ${enrollmentStatus.type}`}>
+          <p>{enrollmentStatus.message}</p>
+          {(enrollmentStatus.action === 'upgrade' ||
+            enrollmentStatus.action === 'login' ||
+            enrollmentStatus.action === 'schedule' ||
+            enrollmentStatus.action === 'dashboard' ||
+            enrollmentStatus.action === 'subjects' ||
+            enrollmentStatus.action === 'retry') && (
+              <button
+                className="enrollment-action-btn"
+                onClick={handleEnrollmentAction}
+              >
+                {enrollmentStatus.action === 'upgrade' && 'Upgrade Plan →'}
+                {enrollmentStatus.action === 'login' && 'Login →'}
+                {enrollmentStatus.action === 'schedule' && 'View Schedule →'}
+                {enrollmentStatus.action === 'dashboard' && 'Go to Dashboard →'}
+                {enrollmentStatus.action === 'subjects' && 'Browse Subjects →'}
+                {enrollmentStatus.action === 'retry' && 'Try Again →'}
+              </button>
             )}
-          </div>
-        )}
+        </div>
+      )}
 
-        {/* Practice Problems */}
-        {resourceType === 'practice' && (
-          <div className="practice-section">
-            <div className="practice-stats">
-              <div className="practice-stat">
-                <span className="stat-number">{resource.problems || 10}</span>
-                <span className="stat-label">Problems</span>
-              </div>
-              <div className="practice-stat">
-                <span className="stat-number">{resource.difficulty || 'Medium'}</span>
-                <span className="stat-label">Difficulty</span>
-              </div>
-              {resource.timeLimit && (
-                <div className="practice-stat">
-                  <span className="stat-number">{resource.timeLimit}</span>
-                  <span className="stat-label">Time Limit</span>
-                </div>
-              )}
+      {/* Subscription info banner */}
+      {user && subscription && (
+        <div className="subscription-banner">
+          <span className="subscription-tier">📊 {subscription.tier}</span>
+          <span className="subscription-status">{subscription.status}</span>
+          {subscription.tier === 'Tier_Silver' && (
+            <span className="subscription-note">💡 Upgrade to Gold for live sessions</span>
+          )}
+        </div>
+      )}
+
+      {/* If not logged in, show login prompt */}
+      {!user && !isCheckingAuth && (
+        <div className="login-prompt">
+          <p>🔐 Please <button className="login-link" onClick={() => navigate('/login', { state: { redirect: `/subjects/${subjectName}` } })}>login</button> to enroll in this subject.</p>
+        </div>
+      )}
+
+      {/* Content */}
+      <div className="subject-detail-content">
+        <div className="subject-overview">
+          <h3>📖 About This Subject</h3>
+          <p className="subject-description">{subject.longDescription || subject.description}</p>
+
+          <div className="subject-info-grid">
+            <div className="info-card">
+              <h4>🎯 Curriculum Structure</h4>
+              <p><strong>Tier:</strong> {getCohortTier()}</p>
+              <p><strong>Region:</strong> {getRegion()}</p>
+              <p><strong>AWS Hub:</strong> {getAWSRegion()}</p>
             </div>
-            <p className="practice-description">{resource.description || 'Practice problems to master this topic.'}</p>
-            <button className="btn-primary" onClick={() => navigate(`/practice/${resource.id}`)}>
-              ✏️ Start Practice
-            </button>
-          </div>
-        )}
-
-        {/* Study Guide */}
-        {resourceType === 'guide' && (
-          <div className="guide-section">
-            <div className="guide-stats">
-              <div className="guide-stat">
-                <span className="stat-number">{resource.pages || 0}</span>
-                <span className="stat-label">Pages</span>
-              </div>
-              {resource.difficulty && (
-                <div className="guide-stat">
-                  <span className="stat-number">{resource.difficulty}</span>
-                  <span className="stat-label">Difficulty</span>
-                </div>
-              )}
-            </div>
-            <p className="guide-description">{resource.description || 'Study guide to help you master this topic.'}</p>
-            <button className="btn-primary" onClick={() => navigate(`/guide/${resource.id}`)}>
-              📖 Read Guide
-            </button>
-          </div>
-        )}
-
-        {/* Vault Overview */}
-        {resourceType === 'vault' && (
-          <div className="vault-section">
-            <div className="vault-topics">
-              <h3>📚 Topics in this Collection</h3>
-              <div className="vault-topics-grid">
-                {resource.topics?.map((topic, index) => (
-                  <span key={index} className="vault-topic">{topic}</span>
-                ))}
+            <div className="info-card">
+              <h4>📊 Grade Mapping</h4>
+              <p><strong>South Africa:</strong> Grades 8-12</p>
+              <p><strong>International:</strong> Equivalent</p>
+              <div className="curriculum-adjustment">
+                <p>⚠️ <strong>Adjustment:</strong> {subject.name} may be introduced earlier in accelerated curricula.</p>
               </div>
             </div>
-            <button className="btn-primary" onClick={() => navigate('/resources')}>
-              Browse All Resources
-            </button>
+            <div className="info-card">
+              <h4>👨‍🏫 Tutor Assignment</h4>
+              <p><strong>Shift:</strong> 24/7 Centralised South African Tutors</p>
+              <div className="tutors-list">
+                <span className="tutor-tag">🇿🇦 Tutor A (Tier 1)</span>
+                <span className="tutor-tag">🇿🇦 Tutor B (Tier 2)</span>
+                <span className="tutor-tag">🇿🇦 Tutor C (Tier 3)</span>
+              </div>
+            </div>
           </div>
-        )}
+        </div>
+
+        {/* Whiteboard Preview */}
+        <div className="whiteboard-preview-section">
+          <h3>✏️ Interactive Whiteboard Preview</h3>
+          <div className="whiteboard-container">
+            <svg className="whiteboard-canvas" viewBox="0 0 600 200" preserveAspectRatio="xMidYMid meet">
+              <rect width="100%" height="100%" fill="#ffffff" />
+              <text x="20" y="40" fontSize="14" fill="#333" fontFamily="monospace">📐 Interactive Whiteboard</text>
+              <text x="20" y="70" fontSize="12" fill="#666" fontFamily="monospace">Draw, collaborate, and solve problems in real-time</text>
+              <line x1="20" y1="100" x2="580" y2="100" stroke="#e2e8f0" strokeWidth="1" />
+              <text x="20" y="130" fontSize="12" fill="#888" fontFamily="monospace">✏️ Vector tools | 📐 Shape tools | ✏️ Freehand</text>
+              <text x="20" y="160" fontSize="12" fill="#aaa" fontFamily="monospace">💡 {subject.name} • Live session • Tutor: 🇿🇦</text>
+            </svg>
+          </div>
+          <p className="whiteboard-note">💡 Whiteboard archives available for Tier_Silver and above</p>
+        </div>
 
         {/* Tabs Section */}
-        <div className="resource-tabs">
+        <div className="topics-section">
           <div className="tab-navigation">
             {tabs.map((tab) => (
               <button
@@ -402,100 +544,114 @@ const ResourceDetail = () => {
 
           <div className="tab-content">
             {activeTab === 'overview' && (
-              <div className="tab-panel">
-                <h3>📋 Overview</h3>
-                <p>{resource.longDescription || resource.description || 'No description available.'}</p>
-                <div className="resource-details-grid">
-                  <div className="detail-item">
-                    <span className="detail-label">Type</span>
-                    <span className="detail-value">{getTypeLabel()}</span>
-                  </div>
-                  {resource.difficulty && (
-                    <div className="detail-item">
-                      <span className="detail-label">Difficulty</span>
-                      <span className="detail-value">{resource.difficulty}</span>
-                    </div>
-                  )}
-                  {resource.duration && (
-                    <div className="detail-item">
-                      <span className="detail-label">Duration</span>
-                      <span className="detail-value">{resource.duration}</span>
-                    </div>
-                  )}
-                  {resource.tier && (
-                    <div className="detail-item">
-                      <span className="detail-label">Tier</span>
-                      <span className="detail-value">{resource.tier}</span>
-                    </div>
-                  )}
-                  {resource.topics && resource.topics.length > 0 && (
-                    <div className="detail-item full-width">
-                      <span className="detail-label">Topics</span>
-                      <div className="detail-tags">
-                        {resource.topics.map((topic, i) => (
-                          <span key={i} className="topic-tag">{topic}</span>
-                        ))}
+              <>
+                <h3>📋 Subject Overview</h3>
+                <p>{subject.longDescription || subject.description}</p>
+                <div className="overview-details">
+                  <p><strong>📚 Subject:</strong> {subject.name}</p>
+                  <p><strong>🎯 Tier:</strong> {getCohortTier()}</p>
+                  <p><strong>🌍 Region:</strong> {getRegion()}</p>
+                  <p><strong>☁️ AWS Hub:</strong> {getAWSRegion()}</p>
+                  <p><strong>📖 Topics:</strong> {subject.topics?.length || 0}</p>
+                  <p><strong>📄 Resources:</strong> {subject.resources?.length || 0}</p>
+                </div>
+              </>
+            )}
+
+            {activeTab === 'topics' && (
+              <>
+                <h3>📚 Topics Covered</h3>
+                <div className="topics-grid">
+                  {subject.topics?.map((topic) => (
+                    <div key={topic.id} className="topic-card">
+                      <h4>{topic.name}</h4>
+                      <p>{topic.description}</p>
+                      <div className="subtopics">
+                        <span className="subtopic-tag">📖 Study</span>
+                        <span className="subtopic-tag">✏️ Practice</span>
+                        <span className="subtopic-tag">🎯 Master</span>
                       </div>
                     </div>
-                  )}
+                  ))}
                 </div>
-              </div>
+              </>
             )}
 
-            {activeTab === 'content' && (
-              <div className="tab-panel">
-                <h3>📄 Content</h3>
-                <div className="content-section">
-                  {resource.content ? (
-                    <div dangerouslySetInnerHTML={{ __html: resource.content }} />
-                  ) : (
-                    <div className="content-placeholder">
-                      <p>📖 {resource.name}</p>
-                      <p className="content-sub">{resource.description || 'Content is being prepared.'}</p>
-                      {isEnrolled && (
-                        <button 
-                          className="btn-primary" 
-                          onClick={() => navigate(`/session/${resource.id}`)}
-                        >
-                          View Full Content →
-                        </button>
-                      )}
-                    </div>
-                  )}
+            {activeTab === 'schedule' && (
+              <>
+                <h3>🕐 Learning Schedule</h3>
+                <div className="schedule-info">
+                  <div className="schedule-item">
+                    <h4>🌏 Asia-Pacific Window</h4>
+                    <p><strong>Time:</strong> 08:00 – 15:00 SAST</p>
+                    <p><strong>Tutor:</strong> 🇿🇦 Tutor A (Tier 1)</p>
+                    <p><strong>Hubs:</strong> Sydney, Tokyo</p>
+                  </div>
+                  <div className="schedule-item">
+                    <h4>🌏 South Asian / Indian Corridor</h4>
+                    <p><strong>Time:</strong> 12:00 – 19:30 SAST</p>
+                    <p><strong>Tutor:</strong> 🇿🇦 Tutor B (Tier 2)</p>
+                    <p><strong>Hubs:</strong> Singapore, Mumbai</p>
+                  </div>
+                  <div className="schedule-item">
+                    <h4>🌍 Africa / Europe Core</h4>
+                    <p><strong>Time:</strong> 16:00 – 23:00 SAST</p>
+                    <p><strong>Tutor:</strong> 🇿🇦 Tutor C (Tier 3)</p>
+                    <p><strong>Hubs:</strong> Cape Town, Ireland</p>
+                  </div>
+                  <div className="schedule-item">
+                    <h4>🌎 Pan-American Axis</h4>
+                    <p><strong>Time:</strong> 21:00 – 04:00 SAST</p>
+                    <p><strong>Tutor:</strong> 🇿🇦 Tutor D (Tier 3)</p>
+                    <p><strong>Hubs:</strong> São Paulo, N. Virginia, Oregon</p>
+                  </div>
                 </div>
-              </div>
+              </>
             )}
 
-            {activeTab === 'related' && (
-              <div className="tab-panel">
-                <h3>🔗 Related Resources</h3>
-                {relatedResources.length > 0 ? (
-                  <div className="related-grid">
-                    {relatedResources.map((related, index) => (
+            {activeTab === 'resources' && (
+              <>
+                <h3>📄 Learning Resources</h3>
+                <div className="resources-grid">
+                  {subject.resources && subject.resources.length > 0 ? (
+                    subject.resources.map((resource) => (
                       <div 
-                        key={index} 
-                        className="related-card" 
-                        onClick={() => handleResourceClick(related)}
+                        key={resource.id} 
+                        className="resource-card"
+                        onClick={() => handleResourceClick(resource)}
+                        style={{ cursor: 'pointer' }}
+                        role="button"
+                        tabIndex={0}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter' || e.key === ' ') {
+                            e.preventDefault();
+                            handleResourceClick(resource);
+                          }
+                        }}
                       >
-                        <div className="related-icon">
-                          {related.type === 'video' && '🎬'}
-                          {related.type === 'practice' && '✏️'}
-                          {related.type === 'guide' && '📖'}
-                          {related.type === 'interactive' && '🎮'}
-                          {!related.type && '📄'}
+                        <div className="resource-icon">
+                          {resource.type === 'guide' && '📖'}
+                          {resource.type === 'practice' && '✏️'}
+                          {resource.type === 'video' && '🎬'}
+                          {resource.type === 'interactive' && '🎮'}
+                          {!resource.type && '📄'}
                         </div>
-                        <div className="related-info">
-                          <h4>{related.name}</h4>
-                          <span className="related-type">{related.type || 'Resource'}</span>
+                        <div className="resource-info">
+                          <h4>{resource.name}</h4>
+                          <span className="resource-type">{resource.type || 'Resource'}</span>
                         </div>
-                        <span className="related-arrow">→</span>
+                        <span className="resource-link">View →</span>
                       </div>
-                    ))}
-                  </div>
-                ) : (
-                  <p className="no-related">No related resources found.</p>
-                )}
-              </div>
+                    ))
+                  ) : (
+                    <div className="no-resources">
+                      <span>📚</span>
+                      <p>No resources available for this subject yet.</p>
+                      <p className="no-resources-sub">Resources will be added soon.</p>
+                    </div>
+                  )}
+                </div>
+              </>
             )}
           </div>
         </div>
@@ -504,4 +660,4 @@ const ResourceDetail = () => {
   );
 };
 
-export default ResourceDetail;
+export default SubjectDetail;

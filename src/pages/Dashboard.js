@@ -10,12 +10,14 @@ const Dashboard = () => {
   const [error, setError] = useState('');
   const [timeOfDay, setTimeOfDay] = useState('');
   const [subjects, setSubjects] = useState([]);
-  // ✅ Removed unused 'enrollments' state
   const [userStats, setUserStats] = useState({
     coursesEnrolled: 0,
     hoursSpent: 0,
     badgesEarned: 0
   });
+
+  // API URL - Changed to Render backend
+  const API_URL = 'https://eduspantech-backend.onrender.com';
 
   useEffect(() => {
     const fetchUser = async () => {
@@ -34,7 +36,6 @@ const Dashboard = () => {
             setTimeOfDay('Good Night');
           }
           
-          // Fetch REAL data
           await fetchRealData();
         } else {
           navigate('/login');
@@ -56,7 +57,7 @@ const Dashboard = () => {
       const token = localStorage.getItem('accessToken');
       
       // 1. Fetch all subjects
-      const subjectsResponse = await fetch('http://localhost:5000/api/v1/content/subjects', {
+      const subjectsResponse = await fetch(`${API_URL}/api/v1/content/subjects`, {
         headers: {
           'Authorization': `Bearer ${token}`
         }
@@ -70,7 +71,7 @@ const Dashboard = () => {
       }
 
       // 2. Fetch user's enrollments (REAL data)
-      const enrollResponse = await fetch('http://localhost:5000/api/v1/content/my/subjects', {
+      const enrollResponse = await fetch(`${API_URL}/api/v1/content/my/subjects`, {
         headers: {
           'Authorization': `Bearer ${token}`
         }

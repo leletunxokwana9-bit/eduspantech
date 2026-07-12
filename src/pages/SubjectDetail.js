@@ -4,7 +4,8 @@ import { useHomeData } from '../hooks/useHomeData';
 import { authService } from '../services/authService';
 import './SubjectDetail.css';
 
-const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000/api/v1';
+// ✅ FIXED: Changed to Render backend URL
+const API_BASE_URL = process.env.REACT_APP_API_URL || 'https://eduspantech-backend.onrender.com/api/v1';
 
 const SubjectDetail = () => {
   const { subjectName } = useParams();
@@ -158,10 +159,8 @@ const SubjectDetail = () => {
     setEnrollmentStatus(null);
 
     try {
-      // ✅ USE THE ACTUAL SUBJECT ID (UUID) - NOT "1"
-      const subjectId = subject.id; // This should be the UUID from your data
+      const subjectId = subject.id;
 
-      // Check if user has subscription
       let subscription = null;
       try {
         const subResponse = await fetch(`${API_BASE_URL}/subscription/me`, {
@@ -195,7 +194,6 @@ const SubjectDetail = () => {
         });
       }
 
-      // Check shift availability for Gold/Platinum
       if (subscription.tier !== 'Tier_Silver') {
         try {
           const shiftResponse = await fetch(`${API_BASE_URL}/auth/shift/check`, {
@@ -222,7 +220,6 @@ const SubjectDetail = () => {
         }
       }
 
-      // ✅ USE THE CORRECT SUBJECT ID
       const enrollmentResponse = await fetch(`${API_BASE_URL}/content/subjects/${subjectId}/enroll`, {
         method: 'POST',
         headers: {

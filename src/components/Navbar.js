@@ -444,7 +444,7 @@ function Navbar() {
             </div>
           </div>
 
-          {/* ✅ USER DROPDOWN MENU (Option B) */}
+          {/* ✅ USER DROPDOWN MENU - FIXED WITH 'open' CLASS */}
           {isAuthenticated ? (
             <div className="user-menu" ref={userDropdownRef}>
               <button 
@@ -463,68 +463,66 @@ function Navbar() {
                 <FiChevronDown className={`dropdown-arrow ${isUserDropdownOpen ? 'open' : ''}`} />
               </button>
 
-              {/* Dropdown Menu */}
-              {isUserDropdownOpen && (
-                <div className="user-dropdown">
-                  {/* User Info Header */}
-                  <div className="dropdown-header">
-                    <div className="dropdown-user-info">
-                      <div className="dropdown-avatar">
-                        {user?.avatar ? (
-                          <img src={user.avatar} alt="Avatar" className="dropdown-avatar-img" />
-                        ) : (
-                          <span className="dropdown-avatar-initial">{getUserInitial()}</span>
-                        )}
-                      </div>
-                      <div className="dropdown-user-details">
-                        <span className="dropdown-user-name">{user?.name || 'User'}</span>
-                        <span className="dropdown-user-email">{user?.email || ''}</span>
-                        <span className="dropdown-user-tier">🏅 {getUserTier()} Tier</span>
-                      </div>
+              {/* ✅ FIXED: Added 'open' class to make dropdown visible */}
+              <div className={`user-dropdown ${isUserDropdownOpen ? 'open' : ''}`}>
+                {/* User Info Header */}
+                <div className="dropdown-header">
+                  <div className="dropdown-user-info">
+                    <div className="dropdown-avatar">
+                      {user?.avatar ? (
+                        <img src={user.avatar} alt="Avatar" className="dropdown-avatar-img" />
+                      ) : (
+                        <span className="dropdown-avatar-initial">{getUserInitial()}</span>
+                      )}
+                    </div>
+                    <div className="dropdown-user-details">
+                      <span className="dropdown-user-name">{user?.name || 'User'}</span>
+                      <span className="dropdown-user-email">{user?.email || ''}</span>
+                      <span className="dropdown-user-tier">🏅 {getUserTier()} Tier</span>
                     </div>
                   </div>
-
-                  {/* Dropdown Items */}
-                  <div className="dropdown-items">
-                    <Link to="/profile" className="dropdown-item" onClick={closeUserDropdown}>
-                      <FiUser className="dropdown-icon" />
-                      <span>Profile</span>
-                    </Link>
-                    
-                    <Link to="/settings" className="dropdown-item" onClick={closeUserDropdown}>
-                      <FiSettings className="dropdown-icon" />
-                      <span>Settings</span>
-                    </Link>
-
-                    <Link to="/dashboard" className="dropdown-item" onClick={closeUserDropdown}>
-                      <FiBookOpen className="dropdown-icon" />
-                      <span>Dashboard</span>
-                    </Link>
-
-                    <Link to="/subjects" className="dropdown-item" onClick={closeUserDropdown}>
-                      <FiAward className="dropdown-icon" />
-                      <span>My Courses</span>
-                    </Link>
-
-                    <Link to="/tutors" className="dropdown-item" onClick={closeUserDropdown}>
-                      <FiClock className="dropdown-icon" />
-                      <span>My Sessions</span>
-                    </Link>
-
-                    <Link to="/help" className="dropdown-item" onClick={closeUserDropdown}>
-                      <FiHelpCircle className="dropdown-icon" />
-                      <span>Help & Support</span>
-                    </Link>
-
-                    <div className="dropdown-divider"></div>
-
-                    <button className="dropdown-item logout" onClick={handleLogout}>
-                      <FiLogOut className="dropdown-icon" />
-                      <span>Logout</span>
-                    </button>
-                  </div>
                 </div>
-              )}
+
+                {/* Dropdown Items */}
+                <div className="dropdown-items">
+                  <Link to="/profile" className="dropdown-item" onClick={closeUserDropdown}>
+                    <FiUser className="dropdown-icon" />
+                    <span>Profile</span>
+                  </Link>
+                  
+                  <Link to="/settings" className="dropdown-item" onClick={closeUserDropdown}>
+                    <FiSettings className="dropdown-icon" />
+                    <span>Settings</span>
+                  </Link>
+
+                  <Link to="/dashboard" className="dropdown-item" onClick={closeUserDropdown}>
+                    <FiBookOpen className="dropdown-icon" />
+                    <span>Dashboard</span>
+                  </Link>
+
+                  <Link to="/subjects" className="dropdown-item" onClick={closeUserDropdown}>
+                    <FiAward className="dropdown-icon" />
+                    <span>My Courses</span>
+                  </Link>
+
+                  <Link to="/tutors" className="dropdown-item" onClick={closeUserDropdown}>
+                    <FiClock className="dropdown-icon" />
+                    <span>My Sessions</span>
+                  </Link>
+
+                  <Link to="/help" className="dropdown-item" onClick={closeUserDropdown}>
+                    <FiHelpCircle className="dropdown-icon" />
+                    <span>Help & Support</span>
+                  </Link>
+
+                  <div className="dropdown-divider"></div>
+
+                  <button className="dropdown-item logout" onClick={handleLogout}>
+                    <FiLogOut className="dropdown-icon" />
+                    <span>Logout</span>
+                  </button>
+                </div>
+              </div>
             </div>
           ) : (
             <>

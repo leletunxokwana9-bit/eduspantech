@@ -9,16 +9,23 @@ function Home() {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
 
-  // Check authentication status on mount
+  // Check authentication status on mount - WITH SUBSCRIPTION
   useEffect(() => {
     const checkAuth = async () => {
       const accessToken = localStorage.getItem('accessToken');
       if (accessToken) {
         setIsAuthenticated(true);
         try {
-          const userData = await authService.getCurrentUser();
+          // ✅ Fetch user WITH subscription data
+          const userData = await authService.getCurrentUserWithSubscription();
           if (userData) {
             setUser(userData);
+          } else {
+            // Fallback to regular user data
+            const fallbackUser = await authService.getCurrentUser();
+            if (fallbackUser) {
+              setUser(fallbackUser);
+            }
           }
         } catch (error) {
           console.error('Failed to get user:', error);
@@ -44,7 +51,11 @@ function Home() {
 
   const getUserTier = () => {
     if (!user) return 'Silver';
-    return user.tier || user.subscriptionTier || 'Silver';
+    // ✅ Check multiple possible locations for tier
+    if (user.tier) return user.tier;
+    if (user.subscriptionTier) return user.subscriptionTier;
+    if (user.subscription?.tier) return user.subscription.tier;
+    return 'Silver';
   };
 
   if (loading) {
@@ -487,7 +498,6 @@ function Home() {
             </div>
             <div className="footer-links">
               <h4>Connect</h4>
-              {/* Fixed: Changed href="#" to valid paths */}
               <a href="https://twitter.com/eduspantech">Twitter</a>
               <a href="https://linkedin.com/company/eduspantech">LinkedIn</a>
               <a href="https://youtube.com/@eduspantech">YouTube</a>

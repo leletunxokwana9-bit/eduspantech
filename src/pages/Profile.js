@@ -31,6 +31,7 @@ const Profile = () => {
     badgesEarned: 0,
     completionRate: 0
   });
+  const [subscription, setSubscription] = useState(null);
 
   // API Base URL
   const API_URL = 'https://eduspantech-backend.onrender.com';
@@ -44,9 +45,18 @@ const Profile = () => {
           return;
         }
 
-        const userData = await authService.getCurrentUser();
+        // ✅ Fetch user data
+        const userData = await authService.getCurrentUserWithSubscription();
         if (userData) {
           setUser(userData);
+          // ✅ Extract subscription if it exists
+          if (userData.subscription || userData.tier) {
+            setSubscription({
+              tier: userData.tier || userData.subscription?.tier || 'Silver',
+              status: userData.subscriptionStatus || userData.subscription?.status || 'active',
+              endDate: userData.subscriptionEnd || userData.subscription?.end_date
+            });
+          }
           setEditForm({
             name: userData.name || '',
             email: userData.email || '',
@@ -76,6 +86,7 @@ const Profile = () => {
           return;
         }
 
+        // ✅ Fetch enrollments
         const enrollResponse = await fetch(`${API_URL}/api/v1/content/my/subjects`, {
           headers: {
             'Authorization': `Bearer ${token}`,
@@ -324,6 +335,19 @@ const Profile = () => {
 
       {error && <div className="profile-error">{error}</div>}
       {success && <div className="profile-success">{success}</div>}
+
+      {/* Subscription Banner */}
+      {subscription && (
+        <div className="subscription-banner">
+          <span className="subscription-tier">📊 {subscription.tier}</span>
+          <span className="subscription-status">{subscription.status}</span>
+          {subscription.endDate && (
+            <span className="subscription-end">
+              Expires: {new Date(subscription.endDate).toLocaleDateString()}
+            </span>
+          )}
+        </div>
+      )}
 
       {/* Stats */}
       <div className="profile-stats">

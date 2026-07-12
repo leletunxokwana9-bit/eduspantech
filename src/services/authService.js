@@ -1,10 +1,11 @@
+// src/services/authService.js
 const API_URL = 'https://eduspantech-backend.onrender.com';
 
 export const authService = {
   // ===== LOGIN =====
   login: async (email, password) => {
     try {
-      const url = `${API_URL}/api/v1/auth/login`;  // ← FIXED: API_URL not API_BASE_URL
+      const url = `${API_URL}/api/v1/auth/login`;
       console.log('📤 Sending login to:', url);
 
       const response = await fetch(url, {
@@ -65,14 +66,12 @@ export const authService = {
     }
   },
 
-  // ===== REGISTER - Accepts an object =====
+  // ===== REGISTER =====
   register: async (userData) => {
     try {
-      const url = `${API_URL}/api/v1/auth/register`;  // ← FIXED: API_URL not API_BASE_URL
+      const url = `${API_URL}/api/v1/auth/register`;
       console.log('📤 Sending register to:', url);
-      console.log('📦 Registration data:', userData);
 
-      // Map frontend field names to backend expected field names
       const payload = {
         name: userData.name || userData.fullName,
         email: userData.email,
@@ -82,8 +81,6 @@ export const authService = {
         grade: userData.grade || '',
         timezone: userData.timezone || 'Africa/Johannesburg'
       };
-
-      console.log('📤 Sending payload:', payload);
 
       const response = await fetch(url, {
         method: 'POST',
@@ -95,8 +92,6 @@ export const authService = {
       });
 
       const text = await response.text();
-      console.log('📥 Raw response:', text);
-      
       let data;
       try {
         data = JSON.parse(text);
@@ -106,8 +101,6 @@ export const authService = {
           error: 'Server returned invalid response' 
         };
       }
-
-      console.log('📦 Parsed response:', data);
 
       if (!response.ok) {
         return { 
@@ -179,7 +172,7 @@ export const authService = {
         return { success: false, error: 'No refresh token' };
       }
 
-      const response = await fetch(`${API_URL}/api/v1/auth/refresh-token`, {
+      const response = await fetch(`${API_URL}/api/v1/auth/refresh`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'
@@ -197,6 +190,78 @@ export const authService = {
       return { success: false, error: data.error || 'Refresh failed' };
     } catch (error) {
       return { success: false, error: 'Network error' };
+    }
+  },
+
+  // ===== GET USER WITH SUBSCRIPTION =====
+  getCurrentUserWithSubscription: async () => {
+    try {
+      const token = localStorage.getItem('accessToken');
+      if (!token) return null;
+
+      // Get user data
+      const userResponse = await fetch(`${API_URL}/api/v1/auth/me`, {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+
+      if (!userResponse.ok) return null;
+      const userData = await userResponse.json();
+
+      // Get subscription data
+      const subResponse = await fetch(`${API_URL}/api/v1/subscription/me`, {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+
+      let subscription = null;
+      if (subResponse.ok) {
+        const subData = await subResponse.json();
+        if (subData.success) {
+          subscription = subData.subscription;
+        }
+      }
+
+      // Merge user and subscription
+      const fullUser = userData.user || userData;
+      if (subscription) {
+        fullUser.tier = subscription.tier;
+        fullUser.subscriptionStatus = subscription.status;
+        fullUser.subscriptionEnd = subscription.end_date;
+        fullUser.subscription = subscription;
+      }
+
+      // Store updated user in localStorage
+      localStorage.setItem('user', JSON.stringify(fullUser));
+
+      return fullUser;
+    } catch (error) {
+      console.error('Failed to get user with subscription:', error);
+      return null;
+    }
+  },
+
+  // ===== GET USER ENROLLMENTS =====
+  getEnrollments: async () => {
+    try {
+      const token = localStorage.getItem('accessToken');
+      if (!token) return [];
+
+      const response = await fetch(`${API_URL}/api/v1/content/my/subjects`, {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      });
+
+      if (!response.ok) return [];
+      const data = await response.json();
+      return data.subjects || [];
+    } catch (error) {
+      console.error('Failed to fetch enrollments:', error);
+      return [];
     }
   }
 };

@@ -1,6 +1,8 @@
+// src/pages/Profile.js
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { authService } from '../services/authService';
+import AvatarSelector from '../components/AvatarSelector';
 import './Profile.css';
 
 const Profile = () => {
@@ -33,6 +35,11 @@ const Profile = () => {
   });
   const [subscription, setSubscription] = useState(null);
 
+  // ===== AVATAR STATE =====
+  const [showAvatarSelector, setShowAvatarSelector] = useState(false);
+  const [avatarData, setAvatarData] = useState(null);
+  const [avatarImage, setAvatarImage] = useState(null);
+
   // API Base URL
   const API_URL = 'https://eduspantech-backend.onrender.com';
 
@@ -45,11 +52,20 @@ const Profile = () => {
           return;
         }
 
-        // ✅ Fetch user data
         const userData = await authService.getCurrentUserWithSubscription();
         if (userData) {
           setUser(userData);
-          // ✅ Extract subscription if it exists
+          
+          // ✅ Set avatar if exists
+          if (userData.avatar) {
+            setAvatarImage(userData.avatar);
+            setAvatarData({
+              id: userData.avatar_seed || 'default',
+              seed: userData.avatar_seed || 'default',
+              style: userData.avatar_style || 'adventurer'
+            });
+          }
+
           if (userData.subscription || userData.tier) {
             setSubscription({
               tier: userData.tier || userData.subscription?.tier || 'Silver',
@@ -80,13 +96,11 @@ const Profile = () => {
     const fetchUserStats = async () => {
       try {
         const token = localStorage.getItem('accessToken');
-        
         if (!token) {
           console.log('No token found');
           return;
         }
 
-        // ✅ Fetch enrollments
         const enrollResponse = await fetch(`${API_URL}/api/v1/content/my/subjects`, {
           headers: {
             'Authorization': `Bearer ${token}`,
@@ -123,6 +137,51 @@ const Profile = () => {
 
     fetchUserData();
   }, [navigate]);
+
+  // ===== AVATAR FUNCTIONS =====
+  const handleAvatarSelect = (avatar) => {
+    setAvatarData(avatar);
+    setAvatarImage(avatar.svg);
+    setShowAvatarSelector(false);
+    saveAvatarToBackend(avatar);
+  };
+
+  const saveAvatarToBackend = async (avatar) => {
+    try {
+      const token = localStorage.getItem('accessToken');
+      if (!token) return;
+
+      const response = await fetch(`${API_URL}/api/v1/auth/update-profile`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          avatar: avatar.svg,
+          avatar_seed: avatar.seed,
+          avatar_style: avatar.style || 'adventurer'
+        })
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        if (data.success) {
+          setSuccess('Avatar updated successfully!');
+          // Update user object
+          setUser(prev => ({
+            ...prev,
+            avatar: avatar.svg,
+            avatar_seed: avatar.seed,
+            avatar_style: avatar.style || 'adventurer'
+          }));
+        }
+      }
+    } catch (error) {
+      console.error('Failed to save avatar:', error);
+      setError('Failed to save avatar');
+    }
+  };
 
   const handleEditToggle = () => {
     setIsEditing(!isEditing);
@@ -315,8 +374,17 @@ const Profile = () => {
     <div className="profile-container">
       {/* Header */}
       <div className="profile-header">
-        <div className="profile-avatar">
-          <span className="profile-avatar-emoji">👤</span>
+        <div 
+          className="profile-avatar" 
+          style={{ cursor: 'pointer' }} 
+          onClick={() => setShowAvatarSelector(true)}
+        >
+          {avatarImage ? (
+            <img src={avatarImage} alt="Avatar" className="profile-avatar-img" />
+          ) : (
+            <span className="profile-avatar-emoji">👤</span>
+          )}
+          <div className="avatar-edit-badge">✎</div>
         </div>
         <div className="profile-header-info">
           <h1>{user?.name || 'User'}</h1>
@@ -643,6 +711,15 @@ const Profile = () => {
             </div>
           </div>
         </div>
+      )}
+
+      {/* Avatar Selector Modal */}
+      {showAvatarSelector && (
+        <AvatarSelector
+          onSelect={handleAvatarSelect}
+          currentAvatar={avatarData}
+          onClose={() => setShowAvatarSelector(false)}
+        />
       )}
     </div>
   );

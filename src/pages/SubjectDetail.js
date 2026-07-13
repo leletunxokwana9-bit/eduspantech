@@ -18,13 +18,15 @@ const SubjectDetail = () => {
   const [subscription, setSubscription] = useState(null);
   const [isCheckingAuth, setIsCheckingAuth] = useState(true);
 
-  // ✅ FIXED: Make sure subjects is always an array
+  // Make sure subjects is always an array
   const subjects = Array.isArray(data?.subjects) ? data.subjects : [];
   
-  // ✅ FIXED: Find subject safely
-  const subject = subjects.find(
-    (item) => item.name?.toLowerCase().replace(/\s+/g, '-') === subjectName
-  );
+  // Find subject - handles both slug and exact name
+  const subject = subjects.find((item) => {
+    if (!item?.name) return false;
+    const itemSlug = item.name.toLowerCase().replace(/\s+/g, '-');
+    return itemSlug === subjectName || item.name === subjectName;
+  });
 
   // Check authentication status on mount
   useEffect(() => {
@@ -35,15 +37,12 @@ const SubjectDetail = () => {
 
       if (isAuthenticated) {
         try {
-          // ✅ Get fresh user data with token refresh handling
           const userData = await authService.getCurrentUserWithSubscription();
           if (userData) {
             setUser(userData);
-            // ✅ Get subscription from the merged data
             if (userData.subscription) {
               setSubscription(userData.subscription);
             } else {
-              // Fallback: fetch subscription separately
               try {
                 const token = localStorage.getItem('accessToken');
                 if (token) {
@@ -62,7 +61,6 @@ const SubjectDetail = () => {
               }
             }
           } else {
-            // Try fallback
             const fallbackUser = await authService.getCurrentUser();
             if (fallbackUser) {
               setUser(fallbackUser);
@@ -351,19 +349,41 @@ const SubjectDetail = () => {
     }
   };
 
-  // ===== HANDLE RESOURCE CLICK =====
+  // ============================================
+  // ✅ FIXED: HANDLE RESOURCE CLICK - Matches App.js routes
+  // ============================================
   const handleResourceClick = (resource) => {
+    console.log('📄 Resource clicked:', resource);
+    
+    // If there's a direct path, use it
     if (resource.path) {
       navigate(resource.path);
       return;
     }
     
+    // For resources with type, navigate to the correct route
     if (resource.id && resource.type) {
       const slug = resource.name?.toLowerCase().replace(/\s+/g, '-') || resource.id;
-      navigate(`/resources/${resource.type}s/${slug}`);
+      
+      // ✅ Match your App.js routes
+      switch (resource.type) {
+        case 'video':
+          navigate(`/resources/videos/${slug}`);
+          break;
+        case 'practice':
+          navigate(`/resources/practice/${slug}`);
+          break;
+        case 'guide':
+        case 'interactive':
+          navigate(`/resources/guides/${slug}`);
+          break;
+        default:
+          navigate(`/resources/${slug}`);
+      }
       return;
     }
     
+    // Fallback to resources page
     navigate('/resources');
   };
 

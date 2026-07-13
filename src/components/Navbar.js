@@ -16,6 +16,7 @@ import {
 } from "react-icons/fi";
 import { useHomeData } from "../hooks/useHomeData";
 import { useLanguage } from "../context/LanguageContext";
+import { useSound } from "../context/SoundContext";
 import { authService } from "../services/authService";
 import "./Navbar.css";
 
@@ -38,6 +39,7 @@ function Navbar() {
   const searchInputRef = useRef(null);
   const { data, loading } = useHomeData();
   const { currentLanguage, changeLanguage, t, languages } = useLanguage();
+  const { playClick } = useSound();
 
   // Check authentication status on mount and when location changes
   useEffect(() => {
@@ -76,11 +78,13 @@ function Navbar() {
     setIsAuthenticated(false);
     setUser(null);
     setIsUserDropdownOpen(false);
+    playClick();
     navigate('/');
   };
 
   const toggleMenu = () => {
     setIsMenuOpen(!isMenuOpen);
+    playClick();
   };
 
   const closeMenu = () => {
@@ -89,6 +93,7 @@ function Navbar() {
 
   const toggleUserDropdown = () => {
     setIsUserDropdownOpen(!isUserDropdownOpen);
+    playClick();
   };
 
   const closeUserDropdown = () => {
@@ -98,6 +103,7 @@ function Navbar() {
   const toggleSearch = () => {
     setIsSearchOpen(!isSearchOpen);
     setIsLanguageOpen(false);
+    playClick();
     if (!isSearchOpen) {
       setTimeout(() => {
         searchInputRef.current?.focus();
@@ -108,11 +114,13 @@ function Navbar() {
   const toggleLanguage = () => {
     setIsLanguageOpen(!isLanguageOpen);
     setIsSearchOpen(false);
+    playClick();
   };
 
   const handleLanguageChange = (langCode) => {
     changeLanguage(langCode);
     setIsLanguageOpen(false);
+    playClick();
   };
 
   // Close dropdown when clicking outside
@@ -257,6 +265,7 @@ function Navbar() {
   const handleSearch = (e) => {
     e.preventDefault();
     if (searchQuery.trim()) {
+      playClick();
       navigate(`/search?q=${encodeURIComponent(searchQuery.trim())}`);
       setSearchQuery('');
       setIsSearchOpen(false);
@@ -265,6 +274,7 @@ function Navbar() {
   };
 
   const handleResultClick = (path) => {
+    playClick();
     navigate(path);
     setIsSearchOpen(false);
     setSearchQuery('');
@@ -343,6 +353,7 @@ function Navbar() {
               key={link.path}
               to={link.path}
               className={isActive(link.path) ? "active" : ""}
+              onClick={() => playClick()}
             >
               {link.label}
             </Link>
@@ -444,7 +455,7 @@ function Navbar() {
             </div>
           </div>
 
-          {/* ✅ USER DROPDOWN MENU - FIXED WITH 'open' CLASS */}
+          {/* User Dropdown */}
           {isAuthenticated ? (
             <div className="user-menu" ref={userDropdownRef}>
               <button 
@@ -463,9 +474,7 @@ function Navbar() {
                 <FiChevronDown className={`dropdown-arrow ${isUserDropdownOpen ? 'open' : ''}`} />
               </button>
 
-              {/* ✅ FIXED: Added 'open' class to make dropdown visible */}
               <div className={`user-dropdown ${isUserDropdownOpen ? 'open' : ''}`}>
-                {/* User Info Header */}
                 <div className="dropdown-header">
                   <div className="dropdown-user-info">
                     <div className="dropdown-avatar">
@@ -483,34 +492,33 @@ function Navbar() {
                   </div>
                 </div>
 
-                {/* Dropdown Items */}
                 <div className="dropdown-items">
-                  <Link to="/profile" className="dropdown-item" onClick={closeUserDropdown}>
+                  <Link to="/profile" className="dropdown-item" onClick={() => { closeUserDropdown(); playClick(); }}>
                     <FiUser className="dropdown-icon" />
                     <span>Profile</span>
                   </Link>
                   
-                  <Link to="/settings" className="dropdown-item" onClick={closeUserDropdown}>
+                  <Link to="/settings" className="dropdown-item" onClick={() => { closeUserDropdown(); playClick(); }}>
                     <FiSettings className="dropdown-icon" />
                     <span>Settings</span>
                   </Link>
 
-                  <Link to="/dashboard" className="dropdown-item" onClick={closeUserDropdown}>
+                  <Link to="/dashboard" className="dropdown-item" onClick={() => { closeUserDropdown(); playClick(); }}>
                     <FiBookOpen className="dropdown-icon" />
                     <span>Dashboard</span>
                   </Link>
 
-                  <Link to="/subjects" className="dropdown-item" onClick={closeUserDropdown}>
+                  <Link to="/subjects" className="dropdown-item" onClick={() => { closeUserDropdown(); playClick(); }}>
                     <FiAward className="dropdown-icon" />
                     <span>My Courses</span>
                   </Link>
 
-                  <Link to="/tutors" className="dropdown-item" onClick={closeUserDropdown}>
+                  <Link to="/tutors" className="dropdown-item" onClick={() => { closeUserDropdown(); playClick(); }}>
                     <FiClock className="dropdown-icon" />
                     <span>My Sessions</span>
                   </Link>
 
-                  <Link to="/help" className="dropdown-item" onClick={closeUserDropdown}>
+                  <Link to="/help" className="dropdown-item" onClick={() => { closeUserDropdown(); playClick(); }}>
                     <FiHelpCircle className="dropdown-icon" />
                     <span>Help & Support</span>
                   </Link>
@@ -526,10 +534,10 @@ function Navbar() {
             </div>
           ) : (
             <>
-              <Link to="/login" className="login-button">
+              <Link to="/login" className="login-button" onClick={() => playClick()}>
                 {t('nav.login')}
               </Link>
-              <Link to="/register" className="signup-button">
+              <Link to="/register" className="signup-button" onClick={() => playClick()}>
                 {t('nav.register')}
               </Link>
             </>
@@ -548,7 +556,7 @@ function Navbar() {
               key={link.path}
               to={link.path}
               className={isActive(link.path) ? "active" : ""}
-              onClick={closeMenu}
+              onClick={() => { closeMenu(); playClick(); }}
             >
               {link.label}
             </Link>
@@ -589,10 +597,10 @@ function Navbar() {
           <div className="mobile-actions">
             {isAuthenticated ? (
               <>
-                <Link to="/profile" className="mobile-profile" onClick={closeMenu}>
+                <Link to="/profile" className="mobile-profile" onClick={() => { closeMenu(); playClick(); }}>
                   <FiUser /> {getUserName()}
                 </Link>
-                <Link to="/settings" className="mobile-settings" onClick={closeMenu}>
+                <Link to="/settings" className="mobile-settings" onClick={() => { closeMenu(); playClick(); }}>
                   <FiSettings /> Settings
                 </Link>
                 <button className="mobile-logout" onClick={handleLogout}>
@@ -601,10 +609,10 @@ function Navbar() {
               </>
             ) : (
               <>
-                <Link to="/login" className="mobile-login" onClick={closeMenu}>
+                <Link to="/login" className="mobile-login" onClick={() => { closeMenu(); playClick(); }}>
                   {t('nav.login')}
                 </Link>
-                <Link to="/register" className="mobile-signup" onClick={closeMenu}>
+                <Link to="/register" className="mobile-signup" onClick={() => { closeMenu(); playClick(); }}>
                   {t('nav.register')}
                 </Link>
               </>

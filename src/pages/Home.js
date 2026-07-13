@@ -1,7 +1,59 @@
+// src/pages/Home.js
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { authService } from '../services/authService';
 import './Home.css';
+
+// ============================================
+// MATHEMATICAL ORBIT COMPONENT
+// ============================================
+const MathematicalOrbit = () => {
+  const [isHovered, setIsHovered] = useState(false);
+  const mathSymbols = ['∫', 'π', '∑', 'θ', 'Δ', '∞', '√', '∂'];
+
+  return (
+    <div 
+      className="mathematical-orbit"
+      onMouseEnter={() => setIsHovered(true)}
+      onMouseLeave={() => setIsHovered(false)}
+    >
+      {/* Core - Glowing Math Symbol */}
+      <div className="core-math">
+        <span>∫</span>
+      </div>
+
+      {/* Orbit Rings */}
+      <div className="orbit-ring orbit-ring-1">
+        <div className="orbit-node node-1">{mathSymbols[0]}</div>
+        <div className="orbit-node node-2">{mathSymbols[1]}</div>
+        <div className="orbit-node node-3">{mathSymbols[2]}</div>
+        <div className="orbit-node node-4">{mathSymbols[3]}</div>
+      </div>
+
+      <div className="orbit-ring orbit-ring-2">
+        <div className="orbit-node node-5">{mathSymbols[4]}</div>
+        <div className="orbit-node node-6">{mathSymbols[5]}</div>
+        <div className="orbit-node node-7">{mathSymbols[6]}</div>
+        <div className="orbit-node node-8">{mathSymbols[7]}</div>
+      </div>
+
+      <div className="orbit-ring orbit-ring-3">
+        <div className="orbit-node node-9">∞</div>
+        <div className="orbit-node node-10">∇</div>
+        <div className="orbit-node node-11">α</div>
+        <div className="orbit-node node-12">β</div>
+      </div>
+
+      {/* Glowing particle trails */}
+      <div className="particle-trail"></div>
+      <div className="particle-trail-2"></div>
+      <div className="particle-trail-3"></div>
+
+      {/* Hover glow effect */}
+      {isHovered && <div className="orbit-glow"></div>}
+    </div>
+  );
+};
 
 function Home() {
   const navigate = useNavigate();
@@ -56,7 +108,7 @@ function Home() {
     return 'Silver';
   };
 
-  // ✅ Country list with flagCDN URLs (same pattern as Curriculum page)
+  // Country list with flagCDN URLs
   const countries = [
     { 
       id: 'za',
@@ -217,20 +269,14 @@ function Home() {
             )}
           </div>
         </div>
-        <div className="hero-visual">
-          <div className="globe-animation">
-            <div className="ring ring-1"></div>
-            <div className="ring ring-2"></div>
-            <div className="ring ring-3"></div>
-            <div className="center-dot"></div>
-            <div className="region-marker marker-1">🌍</div>
-            <div className="region-marker marker-2">🌏</div>
-            <div className="region-marker marker-3">🌎</div>
-          </div>
-        </div>
+
+        {/* ============================================
+            MATHEMATICAL ORBIT - REPLACES THE GLOBE
+            ============================================ */}
+        <MathematicalOrbit />
       </section>
 
-      {/* Features Section */}
+      {/* Rest of your sections... (Features, Pricing, Curriculum, etc.) */}
       <section className="features-section">
         <div className="container">
           <div className="section-header">
@@ -417,7 +463,7 @@ function Home() {
         </section>
       )}
 
-      {/* ===== CURRICULUM SECTION WITH FLAGCDN (Same as Curriculum page) ===== */}
+      {/* Curriculum Section */}
       <section className="curriculum-section">
         <div className="container">
           <div className="section-header">
@@ -457,7 +503,7 @@ function Home() {
         </div>
       </section>
 
-      {/* Infrastructure Section - Visible to everyone */}
+      {/* Infrastructure Section */}
       <section className="infrastructure-section">
         <div className="container">
           <div className="infrastructure-content">
@@ -490,7 +536,7 @@ function Home() {
         </div>
       </section>
 
-      {/* CTA Section - Different for authenticated users */}
+      {/* CTA Section */}
       <section className="cta-section">
         <div className="container">
           <div className="cta-content">

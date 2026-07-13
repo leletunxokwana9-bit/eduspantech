@@ -1,8 +1,13 @@
+/* Resources.css - Fixed Dark Theme Visibility */
+
 .resources-page {
-  padding: 60px 20px;
+  padding: 60px 20px 80px;
   max-width: 1280px;
   margin: 0 auto;
+  min-height: 80vh;
   animation: fadeInUp 0.6s ease-out;
+  background: #0a0e1a !important;
+  transition: background 0.3s ease;
 }
 
 @keyframes fadeInUp {
@@ -18,9 +23,9 @@
 .resources-page-header h1 {
   font-size: 42px;
   font-weight: 800;
-  color: #1a1a2e;
+  color: #ffffff !important;
   margin-bottom: 12px;
-  background: linear-gradient(135deg, #1a1a2e, #06b6d4);
+  background: linear-gradient(135deg, #ffffff, #06b6d4);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
@@ -28,7 +33,8 @@
 
 .resources-page-header p {
   font-size: 18px;
-  color: #6b7280;
+  color: rgba(255, 255, 255, 0.7) !important;
+  margin: 0;
 }
 
 .resources-page-grid {
@@ -38,19 +44,19 @@
 }
 
 .resources-page-card {
-  background: white;
+  background: #141b2d !important;
   padding: 32px 24px;
   border-radius: 16px;
   text-align: center;
-  border: 1px solid #f1f3f5;
+  border: 1px solid rgba(255, 255, 255, 0.06) !important;
   transition: all 0.3s ease;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
 }
 
 .resources-page-card:hover {
   transform: translateY(-6px);
-  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.06);
-  border-color: #06b6d4;
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.5);
+  border-color: #06b6d4 !important;
 }
 
 .resources-page-icon {
@@ -62,15 +68,15 @@
 .resources-page-card h3 {
   font-size: 18px;
   font-weight: 700;
-  color: #1a1a2e;
-  margin-bottom: 8px;
+  color: #ffffff !important;
+  margin: 0 0 8px 0;
 }
 
 .resources-page-card p {
   font-size: 14px;
-  color: #6b7280;
+  color: rgba(255, 255, 255, 0.7) !important;
   line-height: 1.6;
-  margin-bottom: 12px;
+  margin: 0 0 12px 0;
 }
 
 .resources-page-topics {
@@ -82,17 +88,17 @@
 }
 
 .topic-tag {
-  background: #f3f4f6;
-  color: #4b5563;
-  padding: 2px 10px;
+  background: rgba(255, 255, 255, 0.06) !important;
+  color: rgba(255, 255, 255, 0.7) !important;
+  padding: 4px 12px;
   border-radius: 12px;
   font-size: 11px;
   font-weight: 500;
 }
 
 .resources-page-btn {
-  background: linear-gradient(135deg, #06b6d4, #0284c7);
-  color: white;
+  background: linear-gradient(135deg, #06b6d4, #4f46e5) !important;
+  color: #ffffff !important;
   border: none;
   padding: 10px 24px;
   border-radius: 8px;
@@ -115,14 +121,67 @@
   justify-content: center;
   min-height: 60vh;
   font-size: 18px;
-  color: #6b7280;
+  color: rgba(255, 255, 255, 0.7) !important;
 }
 
+.resources-page-error {
+  color: #f87171 !important;
+}
+
+/* ===== RESPONSIVE ===== */
 @media (max-width: 768px) {
+  .resources-page {
+    padding: 40px 16px 60px;
+  }
+  
   .resources-page-header h1 {
     font-size: 28px;
   }
+  
   .resources-page-grid {
     grid-template-columns: 1fr;
   }
+}
+
+/* ===== LIGHT THEME OVERRIDES ===== */
+[data-theme="light"] .resources-page {
+  background: #f8fafc !important;
+}
+
+[data-theme="light"] .resources-page-header h1 {
+  background: linear-gradient(135deg, #0f172a, #06b6d4);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+[data-theme="light"] .resources-page-header p {
+  color: rgba(0, 0, 0, 0.6) !important;
+}
+
+[data-theme="light"] .resources-page-card {
+  background: #ffffff !important;
+  border: 1px solid rgba(0, 0, 0, 0.06) !important;
+}
+
+[data-theme="light"] .resources-page-card h3 {
+  color: #0f172a !important;
+}
+
+[data-theme="light"] .resources-page-card p {
+  color: rgba(0, 0, 0, 0.6) !important;
+}
+
+[data-theme="light"] .topic-tag {
+  background: rgba(0, 0, 0, 0.04) !important;
+  color: rgba(0, 0, 0, 0.6) !important;
+}
+
+[data-theme="light"] .resources-page-loading,
+[data-theme="light"] .resources-page-empty {
+  color: rgba(0, 0, 0, 0.6) !important;
+}
+
+[data-theme="light"] .resources-page-error {
+  color: #dc2626 !important;
 }

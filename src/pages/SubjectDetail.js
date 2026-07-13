@@ -1,8 +1,8 @@
-// src/pages/SubjectDetail.js
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useHomeData } from '../hooks/useHomeData';
 import { authService } from '../services/authService';
+import { useSound } from '../context/SoundContext';
 import './SubjectDetail.css';
 
 const API_BASE_URL = process.env.REACT_APP_API_URL || 'https://eduspantech-backend.onrender.com/api/v1';
@@ -17,6 +17,21 @@ const SubjectDetail = () => {
   const [user, setUser] = useState(null);
   const [subscription, setSubscription] = useState(null);
   const [isCheckingAuth, setIsCheckingAuth] = useState(true);
+
+  // ===== SOUND HOOK =====
+  const { 
+    playClick, 
+    playTabSwitch, 
+    playPageTransition,
+    playEnrollSuccess, 
+    playEnrollFail, 
+    playAlreadyEnrolled,
+    playEnrollComplete,
+    playPaymentSuccess,
+    playSubscriptionCreated,
+    playSuccess,
+    playNotification
+  } = useSound();
 
   // Make sure subjects is always an array
   const subjects = Array.isArray(data?.subjects) ? data.subjects : [];
@@ -109,9 +124,10 @@ const SubjectDetail = () => {
   // If subject not found, redirect
   useEffect(() => {
     if (!loading && !subject && data) {
+      playPageTransition();
       navigate('/subjects');
     }
-  }, [loading, subject, data, navigate]);
+  }, [loading, subject, data, navigate, playPageTransition]);
 
   const getCohortTier = () => {
     if (subject?.name === 'Algebra' || subject?.name === 'Geometry') return 'Tier 1';
@@ -149,9 +165,13 @@ const SubjectDetail = () => {
     return regions[getRegion()] || 'us-east-1';
   };
 
-  // ===== ENROLLMENT FUNCTION =====
+  // ===== ENROLLMENT FUNCTION WITH SOUNDS =====
   const handleEnroll = async () => {
+    // Play click sound
+    playClick();
+
     if (!authService.isAuthenticated()) {
+      playNotification();
       navigate('/login', { state: { redirect: `/subjects/${subjectName}` } });
       return;
     }
@@ -166,10 +186,12 @@ const SubjectDetail = () => {
         if (userData) {
           setUser(userData);
         } else {
+          playNotification();
           navigate('/login', { state: { redirect: `/subjects/${subjectName}` } });
           return;
         }
       } catch (error) {
+        playNotification();
         navigate('/login', { state: { redirect: `/subjects/${subjectName}` } });
         return;
       }
@@ -181,6 +203,7 @@ const SubjectDetail = () => {
     try {
       const subjectId = subject.id;
 
+      // Check subscription
       let subscription = null;
       try {
         const token = localStorage.getItem('accessToken');
@@ -199,7 +222,9 @@ const SubjectDetail = () => {
         console.error('Failed to check subscription:', error);
       }
 
+      // No subscription or inactive
       if (!subscription || subscription.status !== 'active') {
+        playEnrollFail();
         setEnrollmentStatus({
           type: 'error',
           message: 'You need an active subscription to enroll. Please subscribe first.',
@@ -209,7 +234,9 @@ const SubjectDetail = () => {
         return;
       }
 
+      // Silver tier warning
       if (subscription.tier === 'Tier_Silver') {
+        playNotification();
         setEnrollmentStatus({
           type: 'warning',
           message: 'Silver tier provides archive access only. Upgrade to Gold for live sessions.',
@@ -217,6 +244,7 @@ const SubjectDetail = () => {
         });
       }
 
+      // Check shift for Gold/Platinum
       if (subscription.tier !== 'Tier_Silver') {
         try {
           const token = localStorage.getItem('accessToken');
@@ -233,6 +261,7 @@ const SubjectDetail = () => {
             if (shiftResponse.ok) {
               const shiftData = await shiftResponse.json();
               if (!shiftData.authorized) {
+                playNotification();
                 setEnrollmentStatus({
                   type: 'warning',
                   message: `No active shift. Sessions available 16:00-23:00 Local Time. Current shift: ${shiftData.shiftName}`,
@@ -246,8 +275,10 @@ const SubjectDetail = () => {
         }
       }
 
+      // Send enrollment request
       const token = localStorage.getItem('accessToken');
       if (!token) {
+        playEnrollFail();
         setEnrollmentStatus({
           type: 'error',
           message: 'Please login again to enroll.',
@@ -266,6 +297,11 @@ const SubjectDetail = () => {
       });
 
       if (enrollmentResponse.ok) {
+        // ===== SUCCESS SOUNDS =====
+        playEnrollSuccess();
+        setTimeout(() => playEnrollComplete(), 300);
+        setTimeout(() => playSubscriptionCreated(), 600);
+
         setEnrollmentStatus({
           type: 'success',
           message: `✅ Successfully enrolled in ${subject.name}! You now have access to all materials.`,
@@ -273,17 +309,21 @@ const SubjectDetail = () => {
         });
 
         setTimeout(() => {
+          playSuccess();
           navigate('/dashboard');
         }, 2000);
       } else if (enrollmentResponse.status === 400) {
         const errorData = await enrollmentResponse.json();
         if (errorData.error && errorData.error.toLowerCase().includes('already enrolled')) {
+          // ===== ALREADY ENROLLED SOUND =====
+          playAlreadyEnrolled();
           setEnrollmentStatus({
             type: 'info',
             message: `ℹ️ You are already enrolled in ${subject.name}. You can access all materials from your dashboard.`,
             action: 'dashboard'
           });
         } else {
+          playEnrollFail();
           setEnrollmentStatus({
             type: 'error',
             message: errorData.error || 'Failed to enroll. Please try again.',
@@ -291,6 +331,7 @@ const SubjectDetail = () => {
           });
         }
       } else if (enrollmentResponse.status === 401) {
+        playEnrollFail();
         setEnrollmentStatus({
           type: 'error',
           message: 'Please login again to enroll.',
@@ -298,6 +339,7 @@ const SubjectDetail = () => {
         });
       } else {
         const errorData = await enrollmentResponse.json();
+        playEnrollFail();
         setEnrollmentStatus({
           type: 'error',
           message: errorData.error || 'Failed to enroll. Please try again.',
@@ -306,6 +348,7 @@ const SubjectDetail = () => {
       }
     } catch (error) {
       console.error('Enrollment error:', error);
+      playEnrollFail();
       setEnrollmentStatus({
         type: 'error',
         message: 'An error occurred during enrollment. Please try again.',
@@ -316,25 +359,32 @@ const SubjectDetail = () => {
     }
   };
 
-  // ===== HANDLE ENROLLMENT ACTION =====
+  // ===== HANDLE ENROLLMENT ACTION WITH SOUNDS =====
   const handleEnrollmentAction = () => {
     if (!enrollmentStatus) return;
+    
+    playClick();
 
     switch (enrollmentStatus.action) {
       case 'upgrade':
+        playPageTransition();
         navigate('/pricing');
         break;
       case 'login':
+        playPageTransition();
         navigate('/login', { state: { redirect: `/subjects/${subjectName}` } });
         break;
       case 'schedule':
+        playTabSwitch();
         setActiveTab('schedule');
         setEnrollmentStatus(null);
         break;
       case 'dashboard':
+        playPageTransition();
         navigate('/dashboard');
         break;
       case 'subjects':
+        playPageTransition();
         navigate('/subjects');
         break;
       case 'prereqs':
@@ -350,44 +400,59 @@ const SubjectDetail = () => {
   };
 
   // ============================================
-  // ✅ FINAL FIX: HANDLE RESOURCE CLICK - Uses ID directly
+  // HANDLE RESOURCE CLICK WITH SOUNDS
   // ============================================
   const handleResourceClick = (resource) => {
     console.log('📄 Resource clicked:', resource);
+    playClick();
     
     // If there's a direct path, use it
     if (resource.path) {
+      playPageTransition();
       navigate(resource.path);
       return;
     }
     
     // For resources with type, navigate using the ID
     if (resource.id && resource.type) {
-      // ✅ Use the resource ID directly (not slug)
       const id = resource.id;
       
-      // ✅ Match your App.js routes
+      // Match your App.js routes
       switch (resource.type) {
         case 'video':
+          playPageTransition();
           navigate(`/resources/videos/${id}`);
           break;
         case 'practice':
+          playPageTransition();
           navigate(`/resources/practice/${id}`);
           break;
         case 'guide':
+          playPageTransition();
           navigate(`/resources/guides/${id}`);
           break;
         case 'interactive':
+          playPageTransition();
           navigate(`/resources/interactive/${id}`);
           break;
         default:
+          playPageTransition();
           navigate(`/resources/${id}`);
       }
       return;
     }
     
     // Fallback to resources page
+    playPageTransition();
     navigate('/resources');
+  };
+
+  // ===== HANDLE TAB SWITCH WITH SOUNDS =====
+  const handleTabSwitch = (tabId) => {
+    if (activeTab !== tabId) {
+      playTabSwitch();
+      setActiveTab(tabId);
+    }
   };
 
   const tabs = [
@@ -452,7 +517,7 @@ const SubjectDetail = () => {
           >
             {isEnrolling ? '⏳ Enrolling...' : '📚 Enroll Now'}
           </button>
-          <button className="btn btn-secondary">📝 View Syllabus</button>
+          <button className="btn btn-secondary" onClick={() => { playClick(); }}>📝 View Syllabus</button>
         </div>
       </div>
 
@@ -495,7 +560,7 @@ const SubjectDetail = () => {
       {/* If not logged in, show login prompt */}
       {!user && !isCheckingAuth && (
         <div className="login-prompt">
-          <p>🔐 Please <button className="login-link" onClick={() => navigate('/login', { state: { redirect: `/subjects/${subjectName}` } })}>login</button> to enroll in this subject.</p>
+          <p>🔐 Please <button className="login-link" onClick={() => { playClick(); navigate('/login', { state: { redirect: `/subjects/${subjectName}` } }); }}>login</button> to enroll in this subject.</p>
         </div>
       )}
 
@@ -555,7 +620,7 @@ const SubjectDetail = () => {
               <button
                 key={tab.id}
                 className={`tab-btn ${activeTab === tab.id ? 'active' : ''}`}
-                onClick={() => setActiveTab(tab.id)}
+                onClick={() => handleTabSwitch(tab.id)}
               >
                 {tab.label}
               </button>

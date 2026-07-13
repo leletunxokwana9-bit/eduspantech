@@ -1,4 +1,6 @@
-/* ===== SETTINGS OVERLAY - DROPDOWN FROM ICON ===== */
+/* SessionSettings.css - Updated with Theme Variables */
+
+/* ===== SETTINGS OVERLAY ===== */
 .session-settings-overlay {
   position: fixed;
   top: 0;
@@ -18,20 +20,21 @@
   to { opacity: 1; }
 }
 
-/* ===== SETTINGS PANEL - DROPDOWN STYLE ===== */
+/* ===== SETTINGS PANEL ===== */
 .session-settings-panel {
-  background: #1a1a2e;
+  background: var(--bg-secondary);
   border-radius: 16px;
   width: 380px;
   max-width: 90vw;
   max-height: 80vh;
   overflow: hidden;
   box-shadow: 
-    0 20px 60px rgba(0, 0, 0, 0.5),
-    0 0 0 1px rgba(255, 255, 255, 0.06);
+    0 20px 60px var(--shadow-color),
+    0 0 0 1px var(--border-color);
   animation: panelDrop 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
   transform-origin: top right;
   position: relative;
+  transition: background 0.3s ease, border-color 0.3s ease;
 }
 
 @keyframes panelDrop {
@@ -51,14 +54,14 @@
   justify-content: space-between;
   align-items: center;
   padding: 18px 24px;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
-  background: rgba(255, 255, 255, 0.02);
+  border-bottom: 1px solid var(--border-color);
+  background: var(--bg-card);
 }
 
 .session-settings-header h3 {
   font-size: 16px;
   font-weight: 700;
-  color: #ffffff;
+  color: var(--text-primary);
   margin: 0;
   display: flex;
   align-items: center;
@@ -66,12 +69,10 @@
   letter-spacing: -0.01em;
 }
 
-
-
 .settings-close {
-  background: rgba(255, 255, 255, 0.06);
+  background: var(--bg-card);
   border: none;
-  color: #94a3b8;
+  color: var(--text-muted);
   width: 32px;
   height: 32px;
   border-radius: 50%;
@@ -84,8 +85,8 @@
 }
 
 .settings-close:hover {
-  background: rgba(255, 255, 255, 0.12);
-  color: #ffffff;
+  background: var(--bg-hover);
+  color: var(--text-primary);
   transform: rotate(90deg);
 }
 
@@ -105,7 +106,7 @@
 }
 
 .session-settings-body::-webkit-scrollbar-thumb {
-  background: rgba(255, 255, 255, 0.15);
+  background: var(--text-muted);
   border-radius: 2px;
 }
 
@@ -115,14 +116,14 @@
   justify-content: space-between;
   align-items: center;
   padding: 14px 16px 14px 0;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+  border-bottom: 1px solid var(--border-color);
   transition: background 0.2s ease;
   border-radius: 8px;
   cursor: default;
 }
 
 .setting-item:hover {
-  background: rgba(255, 255, 255, 0.02);
+  background: var(--bg-card);
 }
 
 .setting-item:last-child {
@@ -143,7 +144,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  background: rgba(255, 255, 255, 0.04);
+  background: var(--bg-card);
   border-radius: 8px;
   flex-shrink: 0;
 }
@@ -157,28 +158,28 @@
 .setting-label {
   font-size: 14px;
   font-weight: 600;
-  color: #ffffff;
+  color: var(--text-primary);
   line-height: 1.3;
 }
 
 .setting-description {
   font-size: 12px;
-  color: #94a3b8;
+  color: var(--text-secondary);
   line-height: 1.3;
 }
 
-/* ===== TOGGLE SWITCH - PREMIUM ===== */
+/* ===== TOGGLE SWITCH ===== */
 .toggle-switch {
   width: 44px;
   height: 26px;
   border-radius: 13px;
   border: none;
-  background: #2d2d4a;
+  background: var(--toggle-bg);
   cursor: pointer;
   position: relative;
   transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
   flex-shrink: 0;
-  box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.3);
+  box-shadow: inset 0 1px 3px var(--shadow-color);
 }
 
 .toggle-switch .toggle-slider {
@@ -188,14 +189,14 @@
   width: 22px;
   height: 22px;
   border-radius: 50%;
-  background: #6b7280;
+  background: var(--toggle-slider);
   transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+  box-shadow: 0 1px 3px var(--shadow-color);
 }
 
 /* Toggle ON state */
 .toggle-switch.on {
-  background: #4f46e5;
+  background: var(--accent-primary);
 }
 
 .toggle-switch.on .toggle-slider {
@@ -205,7 +206,7 @@
 
 /* Toggle Dark theme state */
 .toggle-switch.dark {
-  background: #4f46e5;
+  background: var(--accent-primary);
 }
 
 .toggle-switch.dark .toggle-slider {
@@ -215,7 +216,7 @@
 
 /* Toggle Light theme state */
 .toggle-switch.light {
-  background: #f59e0b;
+  background: var(--accent-warning);
 }
 
 .toggle-switch.light .toggle-slider {
@@ -225,12 +226,12 @@
 
 /* Toggle OFF state */
 .toggle-switch.off {
-  background: #2d2d4a;
+  background: var(--toggle-bg);
 }
 
 .toggle-switch.off .toggle-slider {
   left: 2px;
-  background: #6b7280;
+  background: var(--toggle-slider);
 }
 
 /* Toggle hover effect */
@@ -248,25 +249,25 @@
   justify-content: space-between;
   align-items: center;
   padding: 14px 24px;
-  border-top: 1px solid rgba(255, 255, 255, 0.04);
-  background: rgba(255, 255, 255, 0.02);
+  border-top: 1px solid var(--border-color);
+  background: var(--bg-card);
 }
 
 .settings-version {
   font-size: 11px;
-  color: #6b7280;
+  color: var(--text-muted);
   letter-spacing: 0.02em;
 }
 
 .settings-version span {
-  background: rgba(255, 255, 255, 0.04);
+  background: var(--bg-card);
   padding: 2px 8px;
   border-radius: 4px;
 }
 
 .settings-done {
   padding: 8px 28px;
-  background: #4f46e5;
+  background: var(--gradient-primary);
   color: white;
   border: none;
   border-radius: 8px;
@@ -278,7 +279,6 @@
 }
 
 .settings-done:hover {
-  background: #4338ca;
   transform: translateY(-1px);
   box-shadow: 0 4px 16px rgba(79, 70, 229, 0.3);
 }
@@ -444,22 +444,4 @@
   .session-settings-footer {
     padding: 12px 16px;
   }
-}
-
-/* ===== DARK THEME SCROLLBAR ===== */
-.session-settings-panel:not(.light) .session-settings-body::-webkit-scrollbar-thumb {
-  background: rgba(255, 255, 255, 0.12);
-}
-
-.session-settings-panel:not(.light) .session-settings-body::-webkit-scrollbar-thumb:hover {
-  background: rgba(255, 255, 255, 0.2);
-}
-
-/* ===== LIGHT THEME SCROLLBAR ===== */
-.session-settings-panel.light .session-settings-body::-webkit-scrollbar-thumb {
-  background: rgba(0, 0, 0, 0.12);
-}
-
-.session-settings-panel.light .session-settings-body::-webkit-scrollbar-thumb:hover {
-  background: rgba(0, 0, 0, 0.2);
 }

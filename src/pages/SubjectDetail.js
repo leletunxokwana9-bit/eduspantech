@@ -350,7 +350,7 @@ const SubjectDetail = () => {
   };
 
   // ============================================
-  // ✅ FIXED: HANDLE RESOURCE CLICK - Matches App.js routes
+  // ✅ FINAL FIX: HANDLE RESOURCE CLICK - Uses ID directly
   // ============================================
   const handleResourceClick = (resource) => {
     console.log('📄 Resource clicked:', resource);
@@ -361,24 +361,27 @@ const SubjectDetail = () => {
       return;
     }
     
-    // For resources with type, navigate to the correct route
+    // For resources with type, navigate using the ID
     if (resource.id && resource.type) {
-      const slug = resource.name?.toLowerCase().replace(/\s+/g, '-') || resource.id;
+      // ✅ Use the resource ID directly (not slug)
+      const id = resource.id;
       
       // ✅ Match your App.js routes
       switch (resource.type) {
         case 'video':
-          navigate(`/resources/videos/${slug}`);
+          navigate(`/resources/videos/${id}`);
           break;
         case 'practice':
-          navigate(`/resources/practice/${slug}`);
+          navigate(`/resources/practice/${id}`);
           break;
         case 'guide':
+          navigate(`/resources/guides/${id}`);
+          break;
         case 'interactive':
-          navigate(`/resources/guides/${slug}`);
+          navigate(`/resources/interactive/${id}`);
           break;
         default:
-          navigate(`/resources/${slug}`);
+          navigate(`/resources/${id}`);
       }
       return;
     }

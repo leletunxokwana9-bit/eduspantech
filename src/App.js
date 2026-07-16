@@ -28,6 +28,7 @@ import './App.css';
 import Profile from './pages/Profile';
 import Settings from './pages/Settings';
 import Help from './pages/Help';
+import Practice from './pages/Practice';
 
 function App() {
   return (
@@ -40,6 +41,7 @@ function App() {
                 <Navbar />
                 <main className="app-main">
                   <Routes>
+                    <Route path="/practice/:id" element={<Practice />} />
                     <Route path="/help" element={<Help />} />
                     <Route path="/help/*" element={<Help />} />
                     <Route path="/settings" element={<Settings />} />

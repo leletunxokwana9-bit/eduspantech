@@ -1,663 +1,521 @@
-// src/pages/SubjectDetail.js
+// src/pages/ResourceDetail.js
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { useHomeData } from '../hooks/useHomeData';
+import { resourceService } from '../services/resourceService';
 import { authService } from '../services/authService';
-import './SubjectDetail.css';
+import './ResourceDetail.css';
 
 const API_BASE_URL = process.env.REACT_APP_API_URL || 'https://eduspantech-backend.onrender.com/api/v1';
 
-const SubjectDetail = () => {
-  const { subjectName } = useParams();
+const ResourceDetail = () => {
+  const { vaultName, resourceId, id } = useParams();
   const navigate = useNavigate();
-  const { data, loading, error } = useHomeData();
-  const [activeTab, setActiveTab] = useState('overview');
-  const [isEnrolling, setIsEnrolling] = useState(false);
-  const [enrollmentStatus, setEnrollmentStatus] = useState(null);
+  
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const [vault, setVault] = useState(null);
+  const [allResources, setAllResources] = useState([]);
+  const [subjects, setSubjects] = useState([]);
+  const [activeTab, setActiveTab] = useState('videos');
   const [user, setUser] = useState(null);
   const [subscription, setSubscription] = useState(null);
-  const [isCheckingAuth, setIsCheckingAuth] = useState(true);
+  const [selectedVideo, setSelectedVideo] = useState(null);
 
-  // ✅ FIXED: Make sure subjects is always an array
-  const subjects = Array.isArray(data?.subjects) ? data.subjects : [];
-  
-  // ✅ FIXED: Find subject - handles both slug and exact name
-  const subject = subjects.find((item) => {
-    if (!item?.name) return false;
-    const itemSlug = item.name.toLowerCase().replace(/\s+/g, '-');
-    // Check if subjectName matches the slug OR the exact name
-    return itemSlug === subjectName || item.name === subjectName;
-  });
+  const videoId = id || resourceId;
 
-  // Check authentication status on mount
+  // ✅ Helper function to get clean description from JSON content
+  const getPracticeDescription = (content) => {
+    if (!content) return 'Practice problems with step-by-step solutions.';
+    
+    try {
+      if (content.startsWith('{')) {
+        const parsed = JSON.parse(content);
+        if (parsed.problems && Array.isArray(parsed.problems)) {
+          return `${parsed.problems.length} practice problems with step-by-step solutions.`;
+        }
+      }
+    } catch (e) {}
+    return content.length > 100 ? content.substring(0, 100) + '...' : content;
+  };
+
+  // ✅ Helper function to get problem count
+  const getProblemCount = (content) => {
+    if (!content) return 0;
+    try {
+      if (content.startsWith('{')) {
+        const parsed = JSON.parse(content);
+        if (parsed.problems && Array.isArray(parsed.problems)) {
+          return parsed.problems.length;
+        }
+      }
+    } catch (e) {}
+    return 0;
+  };
+
   useEffect(() => {
-    const checkAuth = async () => {
-      setIsCheckingAuth(true);
-
-      const isAuthenticated = authService.isAuthenticated();
-
-      if (isAuthenticated) {
-        try {
-          // ✅ Get fresh user data with token refresh handling
+    const fetchData = async () => {
+      try {
+        setLoading(true);
+        
+        const data = await resourceService.getAllResources();
+        console.log('📚 All resources from API:', data);
+        setAllResources(data.resources || []);
+        
+        const subjectsResponse = await fetch(`${API_BASE_URL}/content/subjects`);
+        const subjectsData = await subjectsResponse.json();
+        const subjectsList = subjectsData.subjects || [];
+        setSubjects(subjectsList);
+        
+        const isAuthenticated = authService.isAuthenticated();
+        if (isAuthenticated) {
           const userData = await authService.getCurrentUserWithSubscription();
           if (userData) {
             setUser(userData);
-            // ✅ Get subscription from the merged data
-            if (userData.subscription) {
-              setSubscription(userData.subscription);
-            } else {
-              // Fallback: fetch subscription separately
-              try {
-                const token = localStorage.getItem('accessToken');
-                if (token) {
-                  const response = await fetch(`${API_BASE_URL}/subscription/me`, {
-                    headers: {
-                      'Authorization': `Bearer ${token}`
-                    }
-                  });
-                  if (response.ok) {
-                    const data = await response.json();
-                    setSubscription(data.subscription);
-                  }
-                }
-              } catch (error) {
-                console.error('Failed to get subscription:', error);
-              }
+            const tier = userData.tier || userData.subscriptionTier || 'Free';
+            const status = userData.subscriptionStatus || 'inactive';
+            setSubscription({ tier, status });
+          }
+        }
+        
+        const vaults = getVaultsFromResources(data.resources || [], subjectsList);
+        
+        if (videoId) {
+          const foundVideo = data.resources?.find(r => r.id === videoId && r.type === 'video');
+          if (foundVideo) {
+            setSelectedVideo(foundVideo);
+            const subject = subjectsList.find(s => s.id === foundVideo.subject_id);
+            if (subject) {
+              const foundVault = vaults.find(v => v.id === subject.id);
+              if (foundVault) setVault(foundVault);
             }
+            setLoading(false);
+            setError(null);
+            return;
+          }
+        }
+        
+        if (vaultName) {
+          const slug = vaultName.toLowerCase().replace(/\s+/g, '-');
+          const foundVault = vaults.find(v => {
+            const vaultSlug = v.name.toLowerCase().replace(/\s+/g, '-');
+            return vaultSlug === slug;
+          });
+          if (foundVault) {
+            setVault(foundVault);
           } else {
-            // Try fallback
-            const fallbackUser = await authService.getCurrentUser();
-            if (fallbackUser) {
-              setUser(fallbackUser);
-            }
+            const partialMatch = vaults.find(v => 
+              v.name.toLowerCase().includes(vaultName.toLowerCase()) ||
+              vaultName.toLowerCase().includes(v.name.toLowerCase())
+            );
+            if (partialMatch) setVault(partialMatch);
+            else setVault(null);
           }
-        } catch (error) {
-          console.error('Failed to get user:', error);
-          authService.logout();
-        }
-      }
-
-      setIsCheckingAuth(false);
-    };
-
-    checkAuth();
-  }, []);
-
-  // Check shift availability for user's country
-  useEffect(() => {
-    if (user) {
-      const checkShift = async () => {
-        try {
-          const token = localStorage.getItem('accessToken');
-          if (!token) return;
-          
-          const response = await fetch(`${API_BASE_URL}/auth/shift/check`, {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              'Authorization': `Bearer ${token}`
-            },
-            body: JSON.stringify({ countryCode: user.country || 'ZA' })
-          });
-          if (response.ok) {
-            const data = await response.json();
-            console.log('Shift status:', data);
-          }
-        } catch (error) {
-          console.error('Failed to check shift:', error);
-        }
-      };
-      checkShift();
-    }
-  }, [user]);
-
-  // If subject not found, redirect
-  useEffect(() => {
-    if (!loading && !subject && data) {
-      navigate('/subjects');
-    }
-  }, [loading, subject, data, navigate]);
-
-  const getCohortTier = () => {
-    if (subject?.name === 'Algebra' || subject?.name === 'Geometry') return 'Tier 1';
-    if (subject?.name === 'Calculus' || subject?.name === 'Statistics' || subject?.name === 'Trigonometry') return 'Tier 2';
-    if (subject?.name === 'Differential Equations' || subject?.name === 'Linear Algebra' || subject?.name === 'Matrices') return 'Tier 3';
-    return 'Tier 1';
-  };
-
-  const getRegion = () => {
-    const regions = {
-      'Algebra': 'Global',
-      'Geometry': 'Global',
-      'Calculus': 'Global',
-      'Statistics': 'Global',
-      'Trigonometry': 'Global',
-      'Matrices': 'Global',
-      'Functions': 'Global',
-      'Financial Mathematics': 'South Africa',
-      'Differential Equations': 'Global',
-      'Linear Algebra': 'Global'
-    };
-    return regions[subject?.name] || 'Global';
-  };
-
-  const getAWSRegion = () => {
-    const regions = {
-      'South Africa': 'af-south-1',
-      'USA': 'us-east-1',
-      'UK': 'eu-west-1',
-      'Australia': 'ap-southeast-2',
-      'Singapore': 'ap-southeast-1',
-      'Japan': 'ap-northeast-1',
-      'Brazil': 'sa-east-1'
-    };
-    return regions[getRegion()] || 'us-east-1';
-  };
-
-  // ===== ENROLLMENT FUNCTION =====
-  const handleEnroll = async () => {
-    if (!authService.isAuthenticated()) {
-      navigate('/login', { state: { redirect: `/subjects/${subjectName}` } });
-      return;
-    }
-
-    if (isCheckingAuth) {
-      return;
-    }
-
-    if (!user) {
-      try {
-        const userData = await authService.getCurrentUser();
-        if (userData) {
-          setUser(userData);
         } else {
-          navigate('/login', { state: { redirect: `/subjects/${subjectName}` } });
-          return;
+          setVault(null);
         }
-      } catch (error) {
-        navigate('/login', { state: { redirect: `/subjects/${subjectName}` } });
-        return;
+        
+        setError(null);
+      } catch (err) {
+        console.error('❌ Error fetching resources:', err);
+        setError('Failed to load resources');
+      } finally {
+        setLoading(false);
       }
-    }
+    };
+    fetchData();
+  }, [vaultName, videoId]);
 
-    setIsEnrolling(true);
-    setEnrollmentStatus(null);
-
-    try {
-      const subjectId = subject.id;
-
-      let subscription = null;
-      try {
-        const token = localStorage.getItem('accessToken');
-        if (token) {
-          const subResponse = await fetch(`${API_BASE_URL}/subscription/me`, {
-            headers: {
-              'Authorization': `Bearer ${token}`
-            }
-          });
-          if (subResponse.ok) {
-            const data = await subResponse.json();
-            subscription = data.subscription;
-          }
-        }
-      } catch (error) {
-        console.error('Failed to check subscription:', error);
-      }
-
-      if (!subscription || subscription.status !== 'active') {
-        setEnrollmentStatus({
-          type: 'error',
-          message: 'You need an active subscription to enroll. Please subscribe first.',
-          action: 'upgrade'
-        });
-        setIsEnrolling(false);
-        return;
-      }
-
-      if (subscription.tier === 'Tier_Silver') {
-        setEnrollmentStatus({
-          type: 'warning',
-          message: 'Silver tier provides archive access only. Upgrade to Gold for live sessions.',
-          action: 'upgrade'
-        });
-      }
-
-      if (subscription.tier !== 'Tier_Silver') {
-        try {
-          const token = localStorage.getItem('accessToken');
-          if (token) {
-            const shiftResponse = await fetch(`${API_BASE_URL}/auth/shift/check`, {
-              method: 'POST',
-              headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${token}`
-              },
-              body: JSON.stringify({ countryCode: user?.country || 'ZA' })
-            });
-
-            if (shiftResponse.ok) {
-              const shiftData = await shiftResponse.json();
-              if (!shiftData.authorized) {
-                setEnrollmentStatus({
-                  type: 'warning',
-                  message: `No active shift. Sessions available 16:00-23:00 Local Time. Current shift: ${shiftData.shiftName}`,
-                  action: 'schedule'
-                });
-              }
-            }
-          }
-        } catch (error) {
-          console.error('Failed to check shift:', error);
-        }
-      }
-
-      const token = localStorage.getItem('accessToken');
-      if (!token) {
-        setEnrollmentStatus({
-          type: 'error',
-          message: 'Please login again to enroll.',
-          action: 'login'
-        });
-        setIsEnrolling(false);
-        return;
-      }
-
-      const enrollmentResponse = await fetch(`${API_BASE_URL}/content/subjects/${subjectId}/enroll`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        }
-      });
-
-      if (enrollmentResponse.ok) {
-        setEnrollmentStatus({
-          type: 'success',
-          message: `✅ Successfully enrolled in ${subject.name}! You now have access to all materials.`,
-          action: 'dashboard'
-        });
-
-        setTimeout(() => {
-          navigate('/dashboard');
-        }, 2000);
-      } else if (enrollmentResponse.status === 400) {
-        const errorData = await enrollmentResponse.json();
-        if (errorData.error && errorData.error.toLowerCase().includes('already enrolled')) {
-          setEnrollmentStatus({
-            type: 'info',
-            message: `ℹ️ You are already enrolled in ${subject.name}. You can access all materials from your dashboard.`,
-            action: 'dashboard'
-          });
-        } else {
-          setEnrollmentStatus({
-            type: 'error',
-            message: errorData.error || 'Failed to enroll. Please try again.',
-            action: 'retry'
-          });
-        }
-      } else if (enrollmentResponse.status === 401) {
-        setEnrollmentStatus({
-          type: 'error',
-          message: 'Please login again to enroll.',
-          action: 'login'
-        });
-      } else {
-        const errorData = await enrollmentResponse.json();
-        setEnrollmentStatus({
-          type: 'error',
-          message: errorData.error || 'Failed to enroll. Please try again.',
-          action: 'retry'
-        });
-      }
-    } catch (error) {
-      console.error('Enrollment error:', error);
-      setEnrollmentStatus({
-        type: 'error',
-        message: 'An error occurred during enrollment. Please try again.',
-        action: 'retry'
-      });
-    } finally {
-      setIsEnrolling(false);
-    }
-  };
-
-  // ===== HANDLE ENROLLMENT ACTION =====
-  const handleEnrollmentAction = () => {
-    if (!enrollmentStatus) return;
-
-    switch (enrollmentStatus.action) {
-      case 'upgrade':
-        navigate('/pricing');
-        break;
-      case 'login':
-        navigate('/login', { state: { redirect: `/subjects/${subjectName}` } });
-        break;
-      case 'schedule':
-        setActiveTab('schedule');
-        setEnrollmentStatus(null);
-        break;
-      case 'dashboard':
-        navigate('/dashboard');
-        break;
-      case 'subjects':
-        navigate('/subjects');
-        break;
-      case 'prereqs':
-        setEnrollmentStatus(null);
-        break;
-      case 'retry':
-        setEnrollmentStatus(null);
-        handleEnroll();
-        break;
-      default:
-        setEnrollmentStatus(null);
-    }
-  };
-
-  // ===== HANDLE RESOURCE CLICK =====
-  const handleResourceClick = (resource) => {
-    if (resource.path) {
-      navigate(resource.path);
-      return;
-    }
+  const getVaultsFromResources = (resources, subjectsList) => {
+    if (!resources || !resources.length) return [];
     
-    if (resource.id && resource.type) {
-      const slug = resource.name?.toLowerCase().replace(/\s+/g, '-') || resource.id;
-      navigate(`/resources/${resource.type}s/${slug}`);
-      return;
-    }
+    const grouped = {};
+    resources.forEach(resource => {
+      const subjectId = resource.subject_id;
+      if (!subjectId) return;
+      
+      if (!grouped[subjectId]) {
+        const subject = subjectsList.find(s => s.id === subjectId);
+        grouped[subjectId] = {
+          id: subjectId,
+          name: subject?.name || 'Unknown Subject',
+          icon: subject?.icon || '📚',
+          description: subject?.description || '',
+          videos: [],
+          practice: [],
+          guides: []
+        };
+      }
+      
+      if (resource.type === 'video') {
+        grouped[subjectId].videos.push(resource);
+      } else if (resource.type === 'practice') {
+        grouped[subjectId].practice.push(resource);
+      } else if (resource.type === 'guide') {
+        grouped[subjectId].guides.push(resource);
+      }
+    });
     
-    navigate('/resources');
+    return Object.values(grouped);
   };
 
-  const tabs = [
-    { id: 'overview', label: '📋 Overview' },
-    { id: 'topics', label: '📚 Topics' },
-    { id: 'schedule', label: '🕐 Schedule' },
-    { id: 'resources', label: '📄 Resources' }
-  ];
+  const getYouTubeThumbnail = (url) => {
+    if (!url) return null;
+    if (url.includes('youtube.com/embed')) {
+      const videoId = url.split('/embed/')[1]?.split('?')[0];
+      if (videoId) return `https://img.youtube.com/vi/${videoId}/mqdefault.jpg`;
+    } else if (url.includes('youtu.be')) {
+      const videoId = url.split('/').pop()?.split('?')[0];
+      if (videoId) return `https://img.youtube.com/vi/${videoId}/mqdefault.jpg`;
+    } else if (url.includes('youtube.com/watch')) {
+      const params = new URLSearchParams(url.split('?')[1]);
+      const videoId = params.get('v');
+      if (videoId) return `https://img.youtube.com/vi/${videoId}/mqdefault.jpg`;
+    }
+    return null;
+  };
 
-  if (loading || isCheckingAuth) {
+  const isYouTube = (url) => {
+    if (!url) return false;
+    return url.includes('youtube.com/embed') || 
+           url.includes('youtu.be') || 
+           url.includes('youtube.com/watch');
+  };
+
+  const handleVideoClick = (video) => {
+    setSelectedVideo(video);
+    navigate(`/resources/videos/${video.id}`, { replace: true });
+  };
+
+  const handleBackToVault = () => {
+    setSelectedVideo(null);
+    if (vault) {
+      const slug = vault.name.toLowerCase().replace(/\s+/g, '-');
+      navigate(`/resources/${slug}`);
+    } else {
+      navigate('/resources');
+    }
+  };
+
+  const hasSilverAccess = () => {
+    if (!subscription) return false;
+    const tier = subscription.tier;
+    return tier === 'Tier_Silver' || tier === 'Silver' || tier === 'Tier_Gold' || tier === 'Gold' || tier === 'Tier_Platinum' || tier === 'Platinum';
+  };
+
+  if (loading) {
     return (
-      <div className="subject-detail-container loading">
+      <div className="resource-detail-loading">
         <div className="loading-spinner"></div>
-        <p>{isCheckingAuth ? 'Checking your account...' : 'Loading subject details...'}</p>
+        <p>Loading resources...</p>
       </div>
     );
   }
 
   if (error) {
     return (
-      <div className="subject-detail-container error">
-        <div className="error-icon">⚠️</div>
-        <h2>Error loading subject</h2>
+      <div className="resource-detail-error">
+        <h2>⚠️ Error Loading Resources</h2>
         <p>{error}</p>
-        <button className="retry-button" onClick={() => window.location.reload()}>
-          Try Again
-        </button>
+        <button onClick={() => navigate('/resources')}>Back to Resources</button>
       </div>
     );
   }
 
-  if (!subject) {
+  if (selectedVideo) {
+    const isYouTubeVideo = isYouTube(selectedVideo.url);
+    const thumbnail = getYouTubeThumbnail(selectedVideo.url);
+
     return (
-      <div className="subject-detail-container error">
-        <div className="error-icon">🔍</div>
-        <h2>Subject Not Found</h2>
-        <p>The subject you're looking for doesn't exist.</p>
-        <button className="retry-button" onClick={() => navigate('/subjects')}>
-          Back to Subjects
-        </button>
+      <div className="resource-detail-container">
+        <div className="resource-detail-header">
+          <button className="back-btn" onClick={handleBackToVault}>
+            ← Back to {vault ? vault.name : 'Resources'}
+          </button>
+          <h1>🎬 {selectedVideo.name}</h1>
+        </div>
+
+        <div className="video-player-container">
+          <div className="video-player">
+            {isYouTubeVideo ? (
+              <div className="video-embed-wrapper">
+                <iframe
+                  width="100%"
+                  height="450"
+                  src={selectedVideo.url}
+                  title={selectedVideo.name}
+                  frameBorder="0"
+                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                  allowFullScreen
+                  style={{ borderRadius: '12px', background: '#000' }}
+                />
+              </div>
+            ) : (
+              <div 
+                className="video-placeholder" 
+                style={{
+                  background: thumbnail ? `url(${thumbnail})` : '#141b2d',
+                  backgroundSize: 'cover',
+                  backgroundPosition: 'center',
+                  minHeight: '300px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  position: 'relative'
+                }}
+              >
+                <div className="video-thumbnail" style={{ textAlign: 'center' }}>
+                  <span className="play-icon" style={{ fontSize: '64px', opacity: 0.8 }}>▶</span>
+                  <div className="video-controls" style={{ marginTop: '16px' }}>
+                    <button className="play-btn">▶ Play Video</button>
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+
+          <div className="video-info">
+            <h3>{selectedVideo.name}</h3>
+            <p>{selectedVideo.content || 'No description available'}</p>
+            <div className="video-meta">
+              <span className="meta-tag">📚 {vault?.name || 'Unknown'}</span>
+              {isYouTubeVideo && <span className="meta-tag">🎬 YouTube</span>}
+            </div>
+            {!hasSilverAccess() && (
+              <div className="upgrade-prompt">
+                <p>💡 This video requires a subscription to access.</p>
+                <button onClick={() => navigate('/pricing')}>Upgrade Now</button>
+              </div>
+            )}
+          </div>
+        </div>
+
+        {vault && vault.videos && vault.videos.length > 1 && (
+          <div className="related-videos">
+            <h3>More from {vault.name}</h3>
+            <div className="related-videos-grid">
+              {vault.videos
+                .filter(v => v.id !== selectedVideo.id)
+                .map(video => {
+                  const thumb = getYouTubeThumbnail(video.url);
+                  return (
+                    <div 
+                      key={video.id} 
+                      className="related-video-card"
+                      onClick={() => handleVideoClick(video)}
+                    >
+                      <div 
+                        className="related-video-thumbnail"
+                        style={{
+                          background: thumb ? `url(${thumb})` : '#141b2d',
+                          backgroundSize: 'cover',
+                          backgroundPosition: 'center',
+                          height: '80px',
+                          borderRadius: '6px',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          marginBottom: '8px'
+                        }}
+                      >
+                        <span style={{ fontSize: '28px', opacity: 0.5 }}>▶</span>
+                      </div>
+                      <h4>{video.name}</h4>
+                    </div>
+                  );
+                })}
+            </div>
+          </div>
+        )}
       </div>
     );
+  }
+
+  if (!vault && vaultName) {
+    return (
+      <div className="resource-detail-error">
+        <h2>🔍 Vault Not Found</h2>
+        <p>The resource vault "{vaultName}" doesn't exist.</p>
+        <button onClick={() => navigate('/resources')}>Browse All Resources</button>
+      </div>
+    );
+  }
+
+  if (!vault && !vaultName && !selectedVideo) {
+    navigate('/resources');
+    return null;
   }
 
   return (
-    <div className="subject-detail-container">
-      {/* Header */}
-      <div className="subject-detail-header">
-        <div className="subject-title-section">
-          <h1>{subject.icon} {subject.name}</h1>
-          <div className="subject-meta-tags">
-            <span className="tag cohort-tier">{getCohortTier()}</span>
-            <span className="tag region">🌍 {getRegion()}</span>
-            <span className="tag aws-region">☁️ {getAWSRegion()}</span>
-          </div>
-        </div>
-        <div className="subject-actions">
-          <button
-            className={`btn btn-primary ${isEnrolling ? 'loading' : ''}`}
-            onClick={handleEnroll}
-            disabled={isEnrolling}
-          >
-            {isEnrolling ? '⏳ Enrolling...' : '📚 Enroll Now'}
-          </button>
-          <button className="btn btn-secondary">📝 View Syllabus</button>
+    <div className="resource-detail-container">
+      <div className="resource-detail-header">
+        <button className="back-btn" onClick={() => navigate('/resources')}>
+          ← All Resources
+        </button>
+        <h1>{vault?.icon} {vault?.name}</h1>
+        <p>{vault?.description}</p>
+        <div className="vault-stats">
+          <span>🎬 {vault?.videos?.length || 0} Videos</span>
+          <span>✏️ {vault?.practice?.length || 0} Practice</span>
+          <span>📖 {vault?.guides?.length || 0} Guides</span>
         </div>
       </div>
 
-      {/* Enrollment Status */}
-      {enrollmentStatus && (
-        <div className={`enrollment-status ${enrollmentStatus.type}`}>
-          <p>{enrollmentStatus.message}</p>
-          {(enrollmentStatus.action === 'upgrade' ||
-            enrollmentStatus.action === 'login' ||
-            enrollmentStatus.action === 'schedule' ||
-            enrollmentStatus.action === 'dashboard' ||
-            enrollmentStatus.action === 'subjects' ||
-            enrollmentStatus.action === 'retry') && (
-              <button
-                className="enrollment-action-btn"
-                onClick={handleEnrollmentAction}
-              >
-                {enrollmentStatus.action === 'upgrade' && 'Upgrade Plan →'}
-                {enrollmentStatus.action === 'login' && 'Login →'}
-                {enrollmentStatus.action === 'schedule' && 'View Schedule →'}
-                {enrollmentStatus.action === 'dashboard' && 'Go to Dashboard →'}
-                {enrollmentStatus.action === 'subjects' && 'Browse Subjects →'}
-                {enrollmentStatus.action === 'retry' && 'Try Again →'}
-              </button>
-            )}
-        </div>
-      )}
+      <div className="resource-tabs">
+        <button 
+          className={`tab-btn ${activeTab === 'videos' ? 'active' : ''}`}
+          onClick={() => setActiveTab('videos')}
+        >
+          🎬 Videos ({vault?.videos?.length || 0})
+        </button>
+        <button 
+          className={`tab-btn ${activeTab === 'practice' ? 'active' : ''}`}
+          onClick={() => setActiveTab('practice')}
+        >
+          ✏️ Practice ({vault?.practice?.length || 0})
+        </button>
+        <button 
+          className={`tab-btn ${activeTab === 'guides' ? 'active' : ''}`}
+          onClick={() => setActiveTab('guides')}
+        >
+          📖 Guides ({vault?.guides?.length || 0})
+        </button>
+      </div>
 
-      {/* Subscription info banner */}
-      {user && subscription && (
-        <div className="subscription-banner">
-          <span className="subscription-tier">📊 {subscription.tier}</span>
-          <span className="subscription-status">{subscription.status}</span>
-          {subscription.tier === 'Tier_Silver' && (
-            <span className="subscription-note">💡 Upgrade to Gold for live sessions</span>
+      {activeTab === 'videos' && (
+        <div className="videos-grid">
+          {vault?.videos && vault.videos.length > 0 ? (
+            vault.videos.map((video) => {
+              const thumbnail = getYouTubeThumbnail(video.url);
+              const isYouTubeVideo = isYouTube(video.url);
+              
+              return (
+                <div 
+                  key={video.id} 
+                  className="video-card"
+                  onClick={() => handleVideoClick(video)}
+                >
+                  <div 
+                    className="video-card-thumbnail"
+                    style={{
+                      background: thumbnail ? `url(${thumbnail})` : 'rgba(79, 70, 229, 0.1)',
+                      backgroundSize: 'cover',
+                      backgroundPosition: 'center',
+                      height: '140px',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      position: 'relative',
+                      borderRadius: '12px 12px 0 0'
+                    }}
+                  >
+                    <span className="play-icon" style={{ 
+                      fontSize: '40px',
+                      opacity: 0.8,
+                      color: 'white',
+                      textShadow: '0 2px 8px rgba(0,0,0,0.5)'
+                    }}>▶</span>
+                    {isYouTubeVideo && (
+                      <span style={{
+                        position: 'absolute',
+                        bottom: '8px',
+                        right: '12px',
+                        background: 'rgba(0,0,0,0.7)',
+                        color: 'white',
+                        padding: '2px 8px',
+                        borderRadius: '4px',
+                        fontSize: '11px'
+                      }}>YouTube</span>
+                    )}
+                  </div>
+                  <div className="video-card-info">
+                    <h4>{video.name}</h4>
+                    <p>{video.content?.substring(0, 80)}...</p>
+                    <div className="video-card-meta">
+                      <span className="type">Video</span>
+                    </div>
+                  </div>
+                </div>
+              );
+            })
+          ) : (
+            <div className="no-resources-message">
+              <span>📹</span>
+              <p>No videos available in this vault yet.</p>
+            </div>
           )}
         </div>
       )}
 
-      {/* If not logged in, show login prompt */}
-      {!user && !isCheckingAuth && (
-        <div className="login-prompt">
-          <p>🔐 Please <button className="login-link" onClick={() => navigate('/login', { state: { redirect: `/subjects/${subjectName}` } })}>login</button> to enroll in this subject.</p>
+      {activeTab === 'practice' && (
+        <div className="practice-grid">
+          {vault?.practice && vault.practice.length > 0 ? (
+            vault.practice.map((item) => {
+              const problemCount = getProblemCount(item.content);
+              const description = getPracticeDescription(item.content);
+              
+              return (
+                <div key={item.id} className="practice-card">
+                  <div className="practice-card-icon">✏️</div>
+                  <div className="practice-card-info">
+                    <h4>{item.name}</h4>
+                    <p>{description}</p>
+                    {problemCount > 0 && (
+                      <span className="problem-count">{problemCount} problems</span>
+                    )}
+                  </div>
+                  <button 
+                    className="start-btn"
+                    onClick={() => {
+                      console.log('🔍 Navigating to practice:', item.id);
+                      navigate(`/practice/${item.id}`);
+                    }}
+                  >
+                    Start Practice →
+                  </button>
+                </div>
+              );
+            })
+          ) : (
+            <div className="no-resources-message">
+              <span>✏️</span>
+              <p>No practice problems available yet.</p>
+            </div>
+          )}
         </div>
       )}
 
-      {/* Content */}
-      <div className="subject-detail-content">
-        <div className="subject-overview">
-          <h3>📖 About This Subject</h3>
-          <p className="subject-description">{subject.longDescription || subject.description}</p>
-
-          <div className="subject-info-grid">
-            <div className="info-card">
-              <h4>🎯 Curriculum Structure</h4>
-              <p><strong>Tier:</strong> {getCohortTier()}</p>
-              <p><strong>Region:</strong> {getRegion()}</p>
-              <p><strong>AWS Hub:</strong> {getAWSRegion()}</p>
-            </div>
-            <div className="info-card">
-              <h4>📊 Grade Mapping</h4>
-              <p><strong>South Africa:</strong> Grades 8-12</p>
-              <p><strong>International:</strong> Equivalent</p>
-              <div className="curriculum-adjustment">
-                <p>⚠️ <strong>Adjustment:</strong> {subject.name} may be introduced earlier in accelerated curricula.</p>
+      {activeTab === 'guides' && (
+        <div className="guides-grid">
+          {vault?.guides && vault.guides.length > 0 ? (
+            vault.guides.map((guide) => (
+              <div key={guide.id} className="guide-card">
+                <div className="guide-card-icon">📖</div>
+                <div className="guide-card-info">
+                  <h4>{guide.name}</h4>
+                  <p>{guide.content}</p>
+                </div>
+                <button className="view-btn">View Guide →</button>
               </div>
+            ))
+          ) : (
+            <div className="no-resources-message">
+              <span>📖</span>
+              <p>No study guides available yet.</p>
             </div>
-            <div className="info-card">
-              <h4>👨‍🏫 Tutor Assignment</h4>
-              <p><strong>Shift:</strong> 24/7 Centralised South African Tutors</p>
-              <div className="tutors-list">
-                <span className="tutor-tag">🇿🇦 Tutor A (Tier 1)</span>
-                <span className="tutor-tag">🇿🇦 Tutor B (Tier 2)</span>
-                <span className="tutor-tag">🇿🇦 Tutor C (Tier 3)</span>
-              </div>
-            </div>
-          </div>
+          )}
         </div>
+      )}
 
-        {/* Whiteboard Preview */}
-        <div className="whiteboard-preview-section">
-          <h3>✏️ Interactive Whiteboard Preview</h3>
-          <div className="whiteboard-container">
-            <svg className="whiteboard-canvas" viewBox="0 0 600 200" preserveAspectRatio="xMidYMid meet">
-              <rect width="100%" height="100%" fill="#ffffff" />
-              <text x="20" y="40" fontSize="14" fill="#333" fontFamily="monospace">📐 Interactive Whiteboard</text>
-              <text x="20" y="70" fontSize="12" fill="#666" fontFamily="monospace">Draw, collaborate, and solve problems in real-time</text>
-              <line x1="20" y1="100" x2="580" y2="100" stroke="#e2e8f0" strokeWidth="1" />
-              <text x="20" y="130" fontSize="12" fill="#888" fontFamily="monospace">✏️ Vector tools | 📐 Shape tools | ✏️ Freehand</text>
-              <text x="20" y="160" fontSize="12" fill="#aaa" fontFamily="monospace">💡 {subject.name} • Live session • Tutor: 🇿🇦</text>
-            </svg>
-          </div>
-          <p className="whiteboard-note">💡 Whiteboard archives available for Tier_Silver and above</p>
+      {subscription && (
+        <div className="subscription-info-banner">
+          <span>📊 Your Plan: {subscription.tier}</span>
+          {!hasSilverAccess() && (
+            <span className="upgrade-hint">💡 Upgrade to access all content</span>
+          )}
         </div>
-
-        {/* Tabs Section */}
-        <div className="topics-section">
-          <div className="tab-navigation">
-            {tabs.map((tab) => (
-              <button
-                key={tab.id}
-                className={`tab-btn ${activeTab === tab.id ? 'active' : ''}`}
-                onClick={() => setActiveTab(tab.id)}
-              >
-                {tab.label}
-              </button>
-            ))}
-          </div>
-
-          <div className="tab-content">
-            {activeTab === 'overview' && (
-              <>
-                <h3>📋 Subject Overview</h3>
-                <p>{subject.longDescription || subject.description}</p>
-                <div className="overview-details">
-                  <p><strong>📚 Subject:</strong> {subject.name}</p>
-                  <p><strong>🎯 Tier:</strong> {getCohortTier()}</p>
-                  <p><strong>🌍 Region:</strong> {getRegion()}</p>
-                  <p><strong>☁️ AWS Hub:</strong> {getAWSRegion()}</p>
-                  <p><strong>📖 Topics:</strong> {subject.topics?.length || 0}</p>
-                  <p><strong>📄 Resources:</strong> {subject.resources?.length || 0}</p>
-                </div>
-              </>
-            )}
-
-            {activeTab === 'topics' && (
-              <>
-                <h3>📚 Topics Covered</h3>
-                <div className="topics-grid">
-                  {subject.topics?.map((topic) => (
-                    <div key={topic.id} className="topic-card">
-                      <h4>{topic.name}</h4>
-                      <p>{topic.description}</p>
-                      <div className="subtopics">
-                        <span className="subtopic-tag">📖 Study</span>
-                        <span className="subtopic-tag">✏️ Practice</span>
-                        <span className="subtopic-tag">🎯 Master</span>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </>
-            )}
-
-            {activeTab === 'schedule' && (
-              <>
-                <h3>🕐 Learning Schedule</h3>
-                <div className="schedule-info">
-                  <div className="schedule-item">
-                    <h4>🌏 Asia-Pacific Window</h4>
-                    <p><strong>Time:</strong> 08:00 – 15:00 SAST</p>
-                    <p><strong>Tutor:</strong> 🇿🇦 Tutor A (Tier 1)</p>
-                    <p><strong>Hubs:</strong> Sydney, Tokyo</p>
-                  </div>
-                  <div className="schedule-item">
-                    <h4>🌏 South Asian / Indian Corridor</h4>
-                    <p><strong>Time:</strong> 12:00 – 19:30 SAST</p>
-                    <p><strong>Tutor:</strong> 🇿🇦 Tutor B (Tier 2)</p>
-                    <p><strong>Hubs:</strong> Singapore, Mumbai</p>
-                  </div>
-                  <div className="schedule-item">
-                    <h4>🌍 Africa / Europe Core</h4>
-                    <p><strong>Time:</strong> 16:00 – 23:00 SAST</p>
-                    <p><strong>Tutor:</strong> 🇿🇦 Tutor C (Tier 3)</p>
-                    <p><strong>Hubs:</strong> Cape Town, Ireland</p>
-                  </div>
-                  <div className="schedule-item">
-                    <h4>🌎 Pan-American Axis</h4>
-                    <p><strong>Time:</strong> 21:00 – 04:00 SAST</p>
-                    <p><strong>Tutor:</strong> 🇿🇦 Tutor D (Tier 3)</p>
-                    <p><strong>Hubs:</strong> São Paulo, N. Virginia, Oregon</p>
-                  </div>
-                </div>
-              </>
-            )}
-
-            {activeTab === 'resources' && (
-              <>
-                <h3>📄 Learning Resources</h3>
-                <div className="resources-grid">
-                  {subject.resources && subject.resources.length > 0 ? (
-                    subject.resources.map((resource) => (
-                      <div 
-                        key={resource.id} 
-                        className="resource-card"
-                        onClick={() => handleResourceClick(resource)}
-                        style={{ cursor: 'pointer' }}
-                        role="button"
-                        tabIndex={0}
-                        onKeyDown={(e) => {
-                          if (e.key === 'Enter' || e.key === ' ') {
-                            e.preventDefault();
-                            handleResourceClick(resource);
-                          }
-                        }}
-                      >
-                        <div className="resource-icon">
-                          {resource.type === 'guide' && '📖'}
-                          {resource.type === 'practice' && '✏️'}
-                          {resource.type === 'video' && '🎬'}
-                          {resource.type === 'interactive' && '🎮'}
-                          {!resource.type && '📄'}
-                        </div>
-                        <div className="resource-info">
-                          <h4>{resource.name}</h4>
-                          <span className="resource-type">{resource.type || 'Resource'}</span>
-                        </div>
-                        <span className="resource-link">View →</span>
-                      </div>
-                    ))
-                  ) : (
-                    <div className="no-resources">
-                      <span>📚</span>
-                      <p>No resources available for this subject yet.</p>
-                      <p className="no-resources-sub">Resources will be added soon.</p>
-                    </div>
-                  )}
-                </div>
-              </>
-            )}
-          </div>
-        </div>
-      </div>
+      )}
     </div>
   );
 };
 
-export default SubjectDetail;
+export default ResourceDetail;

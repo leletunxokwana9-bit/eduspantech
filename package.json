@@ -2,6 +2,7 @@
   "name": "edu-spantech",
   "version": "0.1.0",
   "private": true,
+  "homepage": ".",
   "dependencies": {
     "@dicebear/collection": "^9.4.2",
     "@dicebear/core": "^9.4.3",

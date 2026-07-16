@@ -8,7 +8,6 @@ const CurriculumDetail = () => {
   const navigate = useNavigate();
   const { data, loading, error } = useHomeData();
   const [country, setCountry] = useState(null);
-  const [flagLoaded, setFlagLoaded] = useState(false);
   const [flagError, setFlagError] = useState(false);
 
   useEffect(() => {
@@ -17,6 +16,8 @@ const CurriculumDetail = () => {
         item => item.country.toLowerCase().replace(/\s+/g, '-') === countryId
       );
       setCountry(found);
+      // Reset flag error when country changes
+      setFlagError(false);
     }
   }, [data, countryId]);
 
@@ -142,17 +143,13 @@ const CurriculumDetail = () => {
 
   const topics = getTopics();
 
-  // ===== FLAG URL =====
+  // ===== GET COUNTRY CODE FROM COUNTRY NAME =====
   const countryCode = getCountryCode(country.country);
   const flagUrl = `https://flagcdn.com/w120/${countryCode}.png`;
 
-  const handleFlagLoad = () => {
-    setFlagLoaded(true);
-  };
-
   const handleFlagError = () => {
+    console.log('Flag failed to load for:', country.country, 'code:', countryCode);
     setFlagError(true);
-    setFlagLoaded(false);
   };
 
   return (
@@ -169,10 +166,8 @@ const CurriculumDetail = () => {
               src={flagUrl}
               alt={`${country.country} flag`}
               className="curriculum-detail-flag"
-              onLoad={handleFlagLoad}
               onError={handleFlagError}
               loading="lazy"
-              style={{ display: flagLoaded ? 'block' : 'block' }}
             />
           ) : (
             <div className="curriculum-detail-flag-fallback">

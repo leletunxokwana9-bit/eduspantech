@@ -396,3 +396,280 @@
     text-align: center;
   }
 }
+/* ===== LOGIN PROMPT OVERLAY ===== */
+.login-prompt-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.7);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 2000;
+  animation: fadeIn 0.3s ease;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes slideUp {
+  from { opacity: 0; transform: translateY(30px) scale(0.95); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+.login-prompt-modal {
+  background: #141b2d;
+  border-radius: 20px;
+  padding: 48px 40px;
+  max-width: 420px;
+  width: 90%;
+  text-align: center;
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+  animation: slideUp 0.3s ease;
+  position: relative;
+}
+
+.login-prompt-close {
+  position: absolute;
+  top: 16px;
+  right: 20px;
+  background: none;
+  border: none;
+  color: rgba(255, 255, 255, 0.4);
+  font-size: 28px;
+  cursor: pointer;
+  transition: color 0.3s ease;
+  line-height: 1;
+}
+
+.login-prompt-close:hover {
+  color: rgba(255, 255, 255, 0.8);
+}
+
+.login-prompt-icon {
+  font-size: 56px;
+  display: block;
+  margin-bottom: 12px;
+}
+
+.login-prompt-modal h3 {
+  font-size: 28px;
+  font-weight: 700;
+  color: #ffffff;
+  margin: 0 0 8px 0;
+}
+
+.login-prompt-modal p {
+  font-size: 16px;
+  color: rgba(255, 255, 255, 0.6);
+  margin: 0 0 24px 0;
+  line-height: 1.6;
+}
+
+.login-prompt-modal p strong {
+  color: #ffffff;
+}
+
+.login-prompt-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.login-prompt-btn {
+  padding: 14px 40px;
+  background: linear-gradient(135deg, #4f46e5, #7c3aed);
+  color: #ffffff;
+  border: none;
+  border-radius: 12px;
+  font-size: 16px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  width: 100%;
+}
+
+.login-prompt-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 30px rgba(79, 70, 229, 0.35);
+}
+
+.login-prompt-cancel {
+  padding: 12px 40px;
+  background: transparent;
+  color: rgba(255, 255, 255, 0.5);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 12px;
+  font-size: 16px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  width: 100%;
+}
+
+.login-prompt-cancel:hover {
+  background: rgba(255, 255, 255, 0.05);
+  color: rgba(255, 255, 255, 0.8);
+}
+
+.login-prompt-register {
+  margin-top: 16px !important;
+  font-size: 14px !important;
+  color: rgba(255, 255, 255, 0.4) !important;
+}
+
+.login-prompt-register span {
+  color: #818cf8;
+  cursor: pointer;
+  font-weight: 600;
+  transition: color 0.3s ease;
+}
+
+.login-prompt-register span:hover {
+  color: #a5b4fc;
+  text-decoration: underline;
+}
+
+/* ===== AUTH BANNER ===== */
+.tutors-auth-banner {
+  display: inline-block;
+  margin-top: 12px;
+  padding: 8px 20px;
+  background: rgba(245, 158, 11, 0.12);
+  border: 1px solid rgba(245, 158, 11, 0.2);
+  border-radius: 12px;
+  color: rgba(255, 255, 255, 0.7);
+  font-size: 14px;
+}
+
+.tutors-auth-banner button {
+  background: none;
+  border: none;
+  color: #818cf8;
+  font-weight: 600;
+  cursor: pointer;
+  padding: 0 4px;
+  transition: color 0.3s ease;
+}
+
+.tutors-auth-banner button:hover {
+  color: #a5b4fc;
+  text-decoration: underline;
+}
+
+/* ===== LOADING SPINNER ===== */
+.loading-spinner {
+  width: 40px;
+  height: 40px;
+  border: 3px solid rgba(255, 255, 255, 0.1);
+  border-top: 3px solid #4f46e5;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+.page-loading {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 60vh;
+  gap: 16px;
+  color: rgba(255, 255, 255, 0.7);
+}
+
+/* ===== LIGHT THEME ===== */
+[data-theme="light"] .login-prompt-modal {
+  background: #ffffff;
+  border: 1px solid rgba(0, 0, 0, 0.06);
+}
+
+[data-theme="light"] .login-prompt-modal h3 {
+  color: #0f172a;
+}
+
+[data-theme="light"] .login-prompt-modal p {
+  color: rgba(0, 0, 0, 0.6);
+}
+
+[data-theme="light"] .login-prompt-modal p strong {
+  color: #0f172a;
+}
+
+[data-theme="light"] .login-prompt-close {
+  color: rgba(0, 0, 0, 0.3);
+}
+
+[data-theme="light"] .login-prompt-close:hover {
+  color: rgba(0, 0, 0, 0.6);
+}
+
+[data-theme="light"] .login-prompt-cancel {
+  color: rgba(0, 0, 0, 0.5);
+  border-color: rgba(0, 0, 0, 0.1);
+}
+
+[data-theme="light"] .login-prompt-cancel:hover {
+  background: rgba(0, 0, 0, 0.05);
+}
+
+[data-theme="light"] .login-prompt-register {
+  color: rgba(0, 0, 0, 0.4) !important;
+}
+
+[data-theme="light"] .login-prompt-register span {
+  color: #4f46e5;
+}
+
+[data-theme="light"] .login-prompt-register span:hover {
+  color: #4338ca;
+}
+
+[data-theme="light"] .tutors-auth-banner {
+  color: rgba(0, 0, 0, 0.6);
+  background: rgba(245, 158, 11, 0.08);
+}
+
+[data-theme="light"] .tutors-auth-banner button {
+  color: #4f46e5;
+}
+
+[data-theme="light"] .page-loading {
+  color: rgba(0, 0, 0, 0.6);
+}
+
+[data-theme="light"] .loading-spinner {
+  border-color: rgba(0, 0, 0, 0.1);
+  border-top-color: #4f46e5;
+}
+
+/* ===== RESPONSIVE ===== */
+@media (max-width: 480px) {
+  .login-prompt-modal {
+    padding: 32px 24px;
+  }
+  
+  .login-prompt-modal h3 {
+    font-size: 24px;
+  }
+  
+  .login-prompt-icon {
+    font-size: 44px;
+  }
+  
+  .tutors-auth-banner {
+    font-size: 12px;
+    padding: 6px 14px;
+  }
+}

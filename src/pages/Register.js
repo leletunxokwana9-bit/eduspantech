@@ -24,6 +24,8 @@ const Register = () => {
   const [showPrivacyModal, setShowPrivacyModal] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [registrationSuccess, setRegistrationSuccess] = useState(false);
+  const [registeredEmail, setRegisteredEmail] = useState('');
 
   // Check if user is already logged in
   useEffect(() => {
@@ -99,7 +101,21 @@ const Register = () => {
       const response = await authService.register(registrationData);
       
       if (response.success) {
-        navigate('/dashboard');
+        // ✅ Show verification message instead of auto-login
+        setRegisteredEmail(formData.email);
+        setRegistrationSuccess(true);
+        // Clear form
+        setFormData({
+          fullName: '',
+          email: '',
+          password: '',
+          confirmPassword: '',
+          cohort: 'HighSchool',
+          country: 'ZA',
+          grade: '',
+          agreeToTerms: false
+        });
+        setStep(1);
       } else {
         setError(response.error || 'Registration failed. Please try again.');
       }
@@ -189,6 +205,112 @@ const Register = () => {
       </div>
     );
   };
+
+  // ✅ Show verification success screen
+  if (registrationSuccess) {
+    return (
+      <div className="register-wrapper">
+        <div className="register-bg">
+          <div className="math-symbols">
+            <span className="math-symbol">∫</span>
+            <span className="math-symbol">∑</span>
+            <span className="math-symbol">π</span>
+            <span className="math-symbol">√</span>
+            <span className="math-symbol">∞</span>
+            <span className="math-symbol">∂</span>
+            <span className="math-symbol">Δ</span>
+            <span className="math-symbol">θ</span>
+          </div>
+          <div className="gradient-orb orb-1"></div>
+          <div className="gradient-orb orb-2"></div>
+          <div className="gradient-orb orb-3"></div>
+        </div>
+
+        <div className="register-container">
+          <div className="register-right" style={{ maxWidth: '500px', margin: '0 auto' }}>
+            <div className="register-card" style={{ textAlign: 'center', padding: '48px 40px' }}>
+              <div className="verification-success">
+                <div className="success-icon">📧</div>
+                <h2 style={{ fontSize: '28px', fontWeight: 800, marginTop: '16px', color: '#1a1a2e' }}>
+                  Verify Your Email
+                </h2>
+                <p style={{ fontSize: '16px', color: '#4b5563', lineHeight: '1.7', marginTop: '8px' }}>
+                  We've sent a verification link to <br />
+                  <strong style={{ color: '#4f46e5' }}>{registeredEmail}</strong>
+                </p>
+                <div style={{ 
+                  background: '#f0f4ff', 
+                  padding: '16px', 
+                  borderRadius: '12px', 
+                  marginTop: '20px',
+                  border: '1px solid #c7d2fe'
+                }}>
+                  <p style={{ fontSize: '14px', color: '#3730a3' }}>
+                    🔒 Please check your inbox and click the verification link to activate your account.
+                  </p>
+                </div>
+                <div style={{ marginTop: '24px' }}>
+                  <p style={{ fontSize: '14px', color: '#6b7280' }}>
+                    Didn't receive the email? <br />
+                    <button 
+                      onClick={async () => {
+                        try {
+                          setLoading(true);
+                          await authService.resendVerification(registeredEmail);
+                          alert('Verification email resent! Please check your inbox.');
+                        } catch (err) {
+                          alert('Failed to resend verification email. Please try again.');
+                        } finally {
+                          setLoading(false);
+                        }
+                      }}
+                      disabled={loading}
+                      style={{
+                        background: 'none',
+                        border: 'none',
+                        color: '#4f46e5',
+                        fontWeight: 600,
+                        cursor: 'pointer',
+                        textDecoration: 'underline',
+                        marginTop: '4px'
+                      }}
+                    >
+                      {loading ? 'Sending...' : 'Resend verification email'}
+                    </button>
+                  </p>
+                </div>
+                <button
+                  onClick={() => navigate('/login')}
+                  style={{
+                    marginTop: '24px',
+                    padding: '12px 32px',
+                    background: '#4f46e5',
+                    color: 'white',
+                    border: 'none',
+                    borderRadius: '10px',
+                    fontSize: '16px',
+                    fontWeight: 600,
+                    cursor: 'pointer',
+                    transition: 'all 0.3s ease'
+                  }}
+                  onMouseEnter={(e) => {
+                    e.target.style.background = '#4338ca';
+                    e.target.style.transform = 'translateY(-2px)';
+                  }}
+                  onMouseLeave={(e) => {
+                    e.target.style.background = '#4f46e5';
+                    e.target.style.transform = 'translateY(0)';
+                  }}
+                >
+                  Go to Login →
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="register-wrapper">

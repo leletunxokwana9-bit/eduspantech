@@ -29,6 +29,10 @@ import Profile from './pages/Profile';
 import Settings from './pages/Settings';
 import Help from './pages/Help';
 import Practice from './pages/Practice';
+// In App.js, add this route
+import VerifyEmail from './pages/VerifyEmail';
+
+
 
 function App() {
   return (
@@ -41,6 +45,7 @@ function App() {
                 <Navbar />
                 <main className="app-main">
                   <Routes>
+                    <Route path="/verify-email" element={<VerifyEmail />} />
                     <Route path="/practice/:id" element={<Practice />} />
                     <Route path="/help" element={<Help />} />
                     <Route path="/help/*" element={<Help />} />

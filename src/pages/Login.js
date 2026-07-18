@@ -10,6 +10,9 @@ const Login = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [showPassword, setShowPassword] = useState(false);
+  const [needsVerification, setNeedsVerification] = useState(false);
+  const [unverifiedEmail, setUnverifiedEmail] = useState('');
+  const [resendSuccess, setResendSuccess] = useState(false);
 
   useEffect(() => {
     const checkAuth = async () => {
@@ -35,16 +38,50 @@ const Login = () => {
     e.preventDefault();
     setLoading(true);
     setError('');
+    setNeedsVerification(false);
 
     try {
       const response = await authService.login(email, password);
+      
       if (response.success) {
         navigate('/dashboard');
       } else {
-        setError(response.error || 'Login failed. Please try again.');
+        // ✅ Check if error is due to unverified email
+        if (response.needsVerification) {
+          setNeedsVerification(true);
+          setUnverifiedEmail(email);
+          setError('Please verify your email before logging in.');
+        } else {
+          setError(response.error || 'Login failed. Please try again.');
+        }
       }
     } catch (err) {
-      setError(err.message || 'Invalid email or password. Please try again.');
+      // ✅ Check if error message contains verification hint
+      if (err.message && err.message.toLowerCase().includes('verify')) {
+        setNeedsVerification(true);
+        setUnverifiedEmail(email);
+        setError('Please verify your email before logging in.');
+      } else {
+        setError(err.message || 'Invalid email or password. Please try again.');
+      }
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // ✅ Resend verification email
+  const handleResendVerification = async () => {
+    try {
+      setLoading(true);
+      const response = await authService.resendVerification(unverifiedEmail);
+      if (response.success) {
+        setResendSuccess(true);
+        setTimeout(() => setResendSuccess(false), 5000);
+      } else {
+        alert(response.error || 'Failed to resend verification email. Please try again.');
+      }
+    } catch (err) {
+      alert(err.message || 'Failed to resend verification email. Please try again.');
     } finally {
       setLoading(false);
     }
@@ -112,7 +149,33 @@ const Login = () => {
               <p>Sign in to continue your mathematics journey</p>
             </div>
 
-            {error && (
+            {/* ✅ Show verification notice */}
+            {needsVerification && (
+              <div className="login-verification-notice">
+                <div className="verification-icon">📧</div>
+                <div className="verification-content">
+                  <p><strong>Verify your email address</strong></p>
+                  <p>We sent a verification link to <strong>{unverifiedEmail}</strong></p>
+                  <div className="verification-actions">
+                    <button 
+                      onClick={handleResendVerification}
+                      disabled={loading}
+                      className="resend-btn"
+                    >
+                      {loading ? 'Sending...' : 'Resend verification email'}
+                    </button>
+                    {resendSuccess && (
+                      <span className="resend-success">✓ Email sent! Check your inbox.</span>
+                    )}
+                  </div>
+                  <p className="verification-help">
+                    <span>💡</span> Check your spam folder if you don't see the email.
+                  </p>
+                </div>
+              </div>
+            )}
+
+            {error && !needsVerification && (
               <div className="login-error">
                 <span className="error-icon">✕</span>
                 {error}

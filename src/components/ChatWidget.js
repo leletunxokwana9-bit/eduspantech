@@ -21,6 +21,8 @@ const ChatWidget = () => {
     );
     const messagesEndRef = useRef(null);
 
+    console.log('✅ ChatWidget loaded with API:', API_URL);
+
     // ===== SCROLL TO BOTTOM =====
     useEffect(() => {
         messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -28,8 +30,11 @@ const ChatWidget = () => {
 
     // ===== AUTO-OPEN ON FIRST VISIT =====
     useEffect(() => {
+        console.log('🔍 Auto-open check:', { hasOpened, consentGiven });
         if (!hasOpened) {
+            console.log('⏳ Auto-open timer started');
             const timer = setTimeout(() => {
+                console.log('🚀 Auto-opening chat');
                 setIsOpen(true);
                 setHasOpened(true);
                 sessionStorage.setItem('eduspantech_chat_opened', 'true');
@@ -39,11 +44,17 @@ const ChatWidget = () => {
             }, 1500);
             return () => clearTimeout(timer);
         }
-    }, [hasOpened, WELCOME_MESSAGE]);
+    }, [hasOpened, WELCOME_MESSAGE, consentGiven]);
 
     // ===== SEND MESSAGE =====
     const sendMessage = async (text) => {
-        if (!text || !text.trim()) return;
+        if (!text || !text.trim()) {
+            console.warn('⚠️ Empty message, ignoring');
+            return;
+        }
+
+        console.log('📤 Sending message:', text);
+        console.log('📡 API URL:', API_URL);
 
         // Add user message
         setMessages(prev => [...prev, { text: text, sender: 'user' }]);
@@ -51,22 +62,32 @@ const ChatWidget = () => {
         setIsLoading(true);
 
         try {
+            const requestBody = {
+                message: text,
+                page: window.location.pathname || '/'
+            };
+            console.log('📦 Request body:', requestBody);
+
             const response = await fetch(API_URL, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
+                    'Accept': 'application/json',
                 },
-                body: JSON.stringify({
-                    message: text,
-                    page: window.location.pathname || '/'
-                })
+                body: JSON.stringify(requestBody)
             });
 
+            console.log('📨 Response status:', response.status);
+            console.log('📨 Response headers:', response.headers);
+
             if (!response.ok) {
-                throw new Error(`HTTP error! status: ${response.status}`);
+                const errorText = await response.text();
+                console.error('❌ Response error:', errorText);
+                throw new Error(`HTTP error! status: ${response.status}, body: ${errorText}`);
             }
 
             const data = await response.json();
+            console.log('✅ Response data:', data);
 
             // Add bot reply
             const reply = data.reply || "I'm not sure how to respond to that.";
@@ -75,17 +96,24 @@ const ChatWidget = () => {
             // Handle navigation
             if (data.navigationAction) {
                 const action = data.navigationAction;
+                console.log('🧭 Navigation detected:', action);
                 const confirmMsg = `Would you like to go to ${action.label}?`;
                 if (window.confirm(confirmMsg)) {
                     const url = action.url.startsWith('http') ? action.url : SITE_URL + action.url;
+                    console.log('🔗 Navigating to:', url);
                     window.location.href = url;
                 }
             }
 
         } catch (error) {
-            console.error('Chat error:', error);
+            console.error('❌ Chat error details:', {
+                message: error.message,
+                stack: error.stack,
+                url: API_URL,
+                name: error.name
+            });
             setMessages(prev => [...prev, {
-                text: "Oops! Something went wrong. Please try again.",
+                text: "Oops! Something went wrong. Please try again. Error: " + error.message,
                 sender: 'bot'
             }]);
         } finally {
@@ -95,6 +123,7 @@ const ChatWidget = () => {
 
     // ===== CONSENT HANDLER =====
     const handleConsent = () => {
+        console.log('✅ Consent given');
         setConsentGiven(true);
         sessionStorage.setItem('eduspantech_consent', 'true');
     };
@@ -105,7 +134,10 @@ const ChatWidget = () => {
             {/* Chat Bubble */}
             <button
                 className="chat-bubble"
-                onClick={() => setIsOpen(!isOpen)}
+                onClick={() => {
+                    console.log('🔄 Chat bubble clicked, isOpen:', !isOpen);
+                    setIsOpen(!isOpen);
+                }}
                 aria-label="Open AI Assistant"
             >
                 💬
@@ -126,7 +158,10 @@ const ChatWidget = () => {
                         </div>
                         <button
                             className="chat-close"
-                            onClick={() => setIsOpen(false)}
+                            onClick={() => {
+                                console.log('❌ Chat closed');
+                                setIsOpen(false);
+                            }}
                         >
                             ✕
                         </button>
@@ -142,6 +177,11 @@ const ChatWidget = () => {
 
                     {/* Messages */}
                     <div className="chat-messages">
+                        {messages.length === 0 && (
+                            <div className="message bot" style={{ opacity: 0.6 }}>
+                                Click the button below to start chatting! 👋
+                            </div>
+                        )}
                         {messages.map((msg, idx) => (
                             <div key={idx} className={`message ${msg.sender}`}>
                                 {msg.text}

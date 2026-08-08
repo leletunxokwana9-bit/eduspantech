@@ -31,7 +31,7 @@ import Help from './pages/Help';
 import Practice from './pages/Practice';
 import VerifyEmail from './pages/VerifyEmail';
 
-// ===== ADD THIS IMPORT =====
+// ===== CHAT WIDGET IMPORT =====
 import ChatWidget from './components/ChatWidget';
 
 function App() {
@@ -77,7 +77,7 @@ function App() {
                 </main>
                 <Footer />
                 
-                {/* ===== ADD CHAT WIDGET HERE ===== */}
+                {/* ===== CHAT WIDGET - RENDERED ON ALL PAGES ===== */}
                 <ChatWidget />
                 
               </div>

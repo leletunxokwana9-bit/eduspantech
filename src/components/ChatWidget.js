@@ -20,8 +20,10 @@ const ChatWidget = () => {
         sessionStorage.getItem('eduspantech_chat_opened') === 'true'
     );
     const messagesEndRef = useRef(null);
+    const widgetId = useRef(Math.random().toString(36).substr(2, 9));
 
-    console.log('✅ ChatWidget loaded with API:', API_URL);
+    // ===== LOGGING =====
+    console.log(`✅ ChatWidget [${widgetId.current}] loaded with API:`, API_URL);
 
     // ===== SCROLL TO BOTTOM =====
     useEffect(() => {
@@ -30,11 +32,12 @@ const ChatWidget = () => {
 
     // ===== AUTO-OPEN ON FIRST VISIT =====
     useEffect(() => {
-        console.log('🔍 Auto-open check:', { hasOpened, consentGiven });
+        console.log(`🔍 ChatWidget [${widgetId.current}] auto-open check:`, { hasOpened, consentGiven });
+        
         if (!hasOpened) {
-            console.log('⏳ Auto-open timer started');
+            console.log(`⏳ ChatWidget [${widgetId.current}] auto-open timer started`);
             const timer = setTimeout(() => {
-                console.log('🚀 Auto-opening chat');
+                console.log(`🚀 ChatWidget [${widgetId.current}] auto-opening chat`);
                 setIsOpen(true);
                 setHasOpened(true);
                 sessionStorage.setItem('eduspantech_chat_opened', 'true');
@@ -49,12 +52,12 @@ const ChatWidget = () => {
     // ===== SEND MESSAGE =====
     const sendMessage = async (text) => {
         if (!text || !text.trim()) {
-            console.warn('⚠️ Empty message, ignoring');
+            console.warn(`⚠️ ChatWidget [${widgetId.current}] empty message, ignoring`);
             return;
         }
 
-        console.log('📤 Sending message:', text);
-        console.log('📡 API URL:', API_URL);
+        console.log(`📤 ChatWidget [${widgetId.current}] sending message:`, text);
+        console.log(`📡 ChatWidget [${widgetId.current}] API URL:`, API_URL);
 
         // Add user message
         setMessages(prev => [...prev, { text: text, sender: 'user' }]);
@@ -66,7 +69,7 @@ const ChatWidget = () => {
                 message: text,
                 page: window.location.pathname || '/'
             };
-            console.log('📦 Request body:', requestBody);
+            console.log(`📦 ChatWidget [${widgetId.current}] request body:`, requestBody);
 
             const response = await fetch(API_URL, {
                 method: 'POST',
@@ -77,43 +80,43 @@ const ChatWidget = () => {
                 body: JSON.stringify(requestBody)
             });
 
-            console.log('📨 Response status:', response.status);
-            console.log('📨 Response headers:', response.headers);
+            console.log(`📨 ChatWidget [${widgetId.current}] response status:`, response.status);
+            console.log(`📨 ChatWidget [${widgetId.current}] response headers:`, response.headers);
 
             if (!response.ok) {
                 const errorText = await response.text();
-                console.error('❌ Response error:', errorText);
+                console.error(`❌ ChatWidget [${widgetId.current}] response error:`, errorText);
                 throw new Error(`HTTP error! status: ${response.status}, body: ${errorText}`);
             }
 
             const data = await response.json();
-            console.log('✅ Response data:', data);
+            console.log(`✅ ChatWidget [${widgetId.current}] response data:`, data);
 
             // Add bot reply
-            const reply = data.reply || "I'm not sure how to respond to that.";
+            const reply = data.reply || "I'm not sure how to respond to that. Could you try rephrasing?";
             setMessages(prev => [...prev, { text: reply, sender: 'bot' }]);
 
             // Handle navigation
             if (data.navigationAction) {
                 const action = data.navigationAction;
-                console.log('🧭 Navigation detected:', action);
+                console.log(`🧭 ChatWidget [${widgetId.current}] navigation detected:`, action);
                 const confirmMsg = `Would you like to go to ${action.label}?`;
                 if (window.confirm(confirmMsg)) {
                     const url = action.url.startsWith('http') ? action.url : SITE_URL + action.url;
-                    console.log('🔗 Navigating to:', url);
+                    console.log(`🔗 ChatWidget [${widgetId.current}] navigating to:`, url);
                     window.location.href = url;
                 }
             }
 
         } catch (error) {
-            console.error('❌ Chat error details:', {
+            console.error(`❌ ChatWidget [${widgetId.current}] error details:`, {
                 message: error.message,
                 stack: error.stack,
                 url: API_URL,
                 name: error.name
             });
             setMessages(prev => [...prev, {
-                text: "Oops! Something went wrong. Please try again. Error: " + error.message,
+                text: "Oops! Something went wrong. Please try again. If the problem persists, contact support.",
                 sender: 'bot'
             }]);
         } finally {
@@ -123,7 +126,7 @@ const ChatWidget = () => {
 
     // ===== CONSENT HANDLER =====
     const handleConsent = () => {
-        console.log('✅ Consent given');
+        console.log(`✅ ChatWidget [${widgetId.current}] consent given`);
         setConsentGiven(true);
         sessionStorage.setItem('eduspantech_consent', 'true');
     };
@@ -135,7 +138,7 @@ const ChatWidget = () => {
             <button
                 className="chat-bubble"
                 onClick={() => {
-                    console.log('🔄 Chat bubble clicked, isOpen:', !isOpen);
+                    console.log(`🔄 ChatWidget [${widgetId.current}] bubble clicked, isOpen:`, !isOpen);
                     setIsOpen(!isOpen);
                 }}
                 aria-label="Open AI Assistant"
@@ -159,7 +162,7 @@ const ChatWidget = () => {
                         <button
                             className="chat-close"
                             onClick={() => {
-                                console.log('❌ Chat closed');
+                                console.log(`❌ ChatWidget [${widgetId.current}] chat closed`);
                                 setIsOpen(false);
                             }}
                         >
@@ -211,6 +214,9 @@ const ChatWidget = () => {
                             </button>
                             <button onClick={() => sendMessage("Tell me about the community")}>
                                 👥 Community
+                            </button>
+                            <button onClick={() => sendMessage("Show me pricing plans")}>
+                                💰 Pricing
                             </button>
                         </div>
                     )}

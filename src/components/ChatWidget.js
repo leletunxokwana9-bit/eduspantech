@@ -10,6 +10,8 @@ const ChatWidget = () => {
 
     // ===== STATE =====
     const [isOpen, setIsOpen] = useState(false);
+    const [isMinimized, setIsMinimized] = useState(false);
+    const [isVisible, setIsVisible] = useState(true);
     const [messages, setMessages] = useState([]);
     const [input, setInput] = useState('');
     const [isLoading, setIsLoading] = useState(false);
@@ -30,15 +32,55 @@ const ChatWidget = () => {
         messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
     }, [messages]);
 
+    // ===== PLAY BEEP SOUND (Same as Wix version) =====
+    const playBeepSound = () => {
+        try {
+            console.log('🔊 Playing beep sound...');
+            const AudioContext = window.AudioContext || window.webkitAudioContext;
+            const ctx = new AudioContext();
+            const now = ctx.currentTime;
+
+            // Create two tones like Wix version
+            function tone(freq, start, duration) {
+                const osc = ctx.createOscillator();
+                const gain = ctx.createGain();
+                osc.type = 'sine';
+                osc.frequency.value = freq;
+                gain.gain.setValueAtTime(0, now + start);
+                gain.gain.linearRampToValueAtTime(0.12, now + start + 0.02);
+                gain.gain.linearRampToValueAtTime(0, now + start + duration);
+                osc.connect(gain);
+                gain.connect(ctx.destination);
+                osc.start(now + start);
+                osc.stop(now + start + duration + 0.02);
+            }
+
+            // First tone: 880Hz (higher note)
+            tone(880, 0, 0.09);
+            // Second tone: 1175Hz (slightly higher - friendly "ping-ping")
+            tone(1175, 0.11, 0.12);
+
+            console.log('🔊 Beep sound played successfully');
+        } catch (e) {
+            // Autoplay blocked or Web Audio unsupported - fail silently
+            console.log('🔇 Beep sound skipped (autoplay blocked or unsupported)');
+        }
+    };
+
     // ===== AUTO-OPEN ON FIRST VISIT =====
     useEffect(() => {
         console.log(`🔍 ChatWidget [${widgetId.current}] auto-open check:`, { hasOpened, consentGiven });
         
-        if (!hasOpened) {
+        if (!hasOpened && isVisible) {
             console.log(`⏳ ChatWidget [${widgetId.current}] auto-open timer started`);
             const timer = setTimeout(() => {
                 console.log(`🚀 ChatWidget [${widgetId.current}] auto-opening chat`);
+                
+                // Play beep sound before opening
+                playBeepSound();
+                
                 setIsOpen(true);
+                setIsMinimized(false);
                 setHasOpened(true);
                 sessionStorage.setItem('eduspantech_chat_opened', 'true');
                 setMessages([
@@ -47,7 +89,31 @@ const ChatWidget = () => {
             }, 1500);
             return () => clearTimeout(timer);
         }
-    }, [hasOpened, WELCOME_MESSAGE, consentGiven]);
+    }, [hasOpened, WELCOME_MESSAGE, consentGiven, isVisible]);
+
+    // ===== MINIMIZE CHAT =====
+    const handleMinimize = () => {
+        console.log(`📉 ChatWidget [${widgetId.current}] minimized`);
+        setIsOpen(false);
+        setIsMinimized(true);
+    };
+
+    // ===== CLOSE CHAT =====
+    const handleClose = () => {
+        console.log(`❌ ChatWidget [${widgetId.current}] closed permanently`);
+        setIsOpen(false);
+        setIsMinimized(false);
+        setIsVisible(false);
+        sessionStorage.setItem('eduspantech_chat_closed', 'true');
+    };
+
+    // ===== OPEN CHAT =====
+    const handleOpen = () => {
+        if (!isVisible) return;
+        console.log(`📤 ChatWidget [${widgetId.current}] opened`);
+        setIsOpen(true);
+        setIsMinimized(false);
+    };
 
     // ===== SEND MESSAGE =====
     const sendMessage = async (text) => {
@@ -59,7 +125,6 @@ const ChatWidget = () => {
         console.log(`📤 ChatWidget [${widgetId.current}] sending message:`, text);
         console.log(`📡 ChatWidget [${widgetId.current}] API URL:`, API_URL);
 
-        // Add user message
         setMessages(prev => [...prev, { text: text, sender: 'user' }]);
         setInput('');
         setIsLoading(true);
@@ -81,42 +146,64 @@ const ChatWidget = () => {
             });
 
             console.log(`📨 ChatWidget [${widgetId.current}] response status:`, response.status);
-            console.log(`📨 ChatWidget [${widgetId.current}] response headers:`, response.headers);
 
             if (!response.ok) {
                 const errorText = await response.text();
                 console.error(`❌ ChatWidget [${widgetId.current}] response error:`, errorText);
-                throw new Error(`HTTP error! status: ${response.status}, body: ${errorText}`);
+                setMessages(prev => [...prev, {
+                    text: `Error: Server returned ${response.status}. Please try again.`,
+                    sender: 'bot'
+                }]);
+                setIsLoading(false);
+                return;
             }
 
             const data = await response.json();
             console.log(`✅ ChatWidget [${widgetId.current}] response data:`, data);
 
-            // Add bot reply
-            const reply = data.reply || "I'm not sure how to respond to that. Could you try rephrasing?";
+            let reply = "I'm not sure how to respond to that. Could you try rephrasing?";
+            let navigationAction = null;
+
+            if (data && typeof data === 'object') {
+                if (data.reply && typeof data.reply === 'string') {
+                    reply = data.reply;
+                } else if (data.message && typeof data.message === 'string') {
+                    reply = data.message;
+                } else if (data.text && typeof data.text === 'string') {
+                    reply = data.text;
+                } else if (data.response && typeof data.response === 'string') {
+                    reply = data.response;
+                } else if (data.content && typeof data.content === 'string') {
+                    reply = data.content;
+                } else if (data.error && typeof data.error === 'string') {
+                    reply = "Error: " + data.error;
+                } else {
+                    console.warn('⚠️ No reply field found in response:', data);
+                    reply = "I received a response but couldn't understand it. Please try again.";
+                }
+
+                if (data.navigationAction) {
+                    navigationAction = data.navigationAction;
+                }
+            }
+
+            console.log(`✅ ChatWidget [${widgetId.current}] extracted reply:`, reply);
+
             setMessages(prev => [...prev, { text: reply, sender: 'bot' }]);
 
-            // Handle navigation
-            if (data.navigationAction) {
-                const action = data.navigationAction;
-                console.log(`🧭 ChatWidget [${widgetId.current}] navigation detected:`, action);
+            if (navigationAction) {
+                const action = navigationAction;
                 const confirmMsg = `Would you like to go to ${action.label}?`;
                 if (window.confirm(confirmMsg)) {
                     const url = action.url.startsWith('http') ? action.url : SITE_URL + action.url;
-                    console.log(`🔗 ChatWidget [${widgetId.current}] navigating to:`, url);
                     window.location.href = url;
                 }
             }
 
         } catch (error) {
-            console.error(`❌ ChatWidget [${widgetId.current}] error details:`, {
-                message: error.message,
-                stack: error.stack,
-                url: API_URL,
-                name: error.name
-            });
+            console.error(`❌ ChatWidget [${widgetId.current}] error:`, error);
             setMessages(prev => [...prev, {
-                text: "Oops! Something went wrong. Please try again. If the problem persists, contact support.",
+                text: "⚠️ Connection error. Please check your internet and try again.",
                 sender: 'bot'
             }]);
         } finally {
@@ -132,20 +219,23 @@ const ChatWidget = () => {
     };
 
     // ===== RENDER =====
+    if (!isVisible) {
+        return null;
+    }
+
     return (
         <>
             {/* Chat Bubble */}
-            <button
-                className="chat-bubble"
-                onClick={() => {
-                    console.log(`🔄 ChatWidget [${widgetId.current}] bubble clicked, isOpen:`, !isOpen);
-                    setIsOpen(!isOpen);
-                }}
-                aria-label="Open AI Assistant"
-            >
-                💬
-                <span className="bubble-dot"></span>
-            </button>
+            {!isOpen && (
+                <button
+                    className="chat-bubble"
+                    onClick={handleOpen}
+                    aria-label="Open AI Assistant"
+                >
+                    💬
+                    <span className="bubble-dot"></span>
+                </button>
+            )}
 
             {/* Chat Panel */}
             {isOpen && (
@@ -159,15 +249,24 @@ const ChatWidget = () => {
                                 <span>Online • AI Powered</span>
                             </div>
                         </div>
-                        <button
-                            className="chat-close"
-                            onClick={() => {
-                                console.log(`❌ ChatWidget [${widgetId.current}] chat closed`);
-                                setIsOpen(false);
-                            }}
-                        >
-                            ✕
-                        </button>
+                        <div className="chat-header-actions">
+                            <button
+                                className="chat-minimize"
+                                onClick={handleMinimize}
+                                aria-label="Minimize chat"
+                                title="Minimize"
+                            >
+                                −
+                            </button>
+                            <button
+                                className="chat-close"
+                                onClick={handleClose}
+                                aria-label="Close chat permanently"
+                                title="Close"
+                            >
+                                ✕
+                            </button>
+                        </div>
                     </div>
 
                     {/* Consent */}

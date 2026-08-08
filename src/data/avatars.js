@@ -91,4 +91,16 @@ export const avatarCategories = [
   }
 ];
 
-export default avatarCategories;
+export const avatarStyles = {
+  adventurer: 'Adventurer',
+  avataaars: 'Avatar Aaars',
+  bigSmile: 'Big Smile',
+  bottts: 'Bottts',
+  funEmoji: 'Fun Emoji',
+  icons: 'Icons',
+  lorelei: 'Lorelei',
+  notionists: 'Notionists',
+  openPeeps: 'Open Peeps',
+  pixelArt: 'Pixel Art',
+  thumbs: 'Thumbs'
+};

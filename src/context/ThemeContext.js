@@ -1,56 +1,40 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useState, useContext, useEffect } from 'react';
 
 const ThemeContext = createContext();
 
 export const ThemeProvider = ({ children }) => {
-  // FORCE DARK - ignore localStorage
   const [theme, setTheme] = useState(() => {
-    // Check localStorage
-    const saved = localStorage.getItem('eduspantech_theme');
-    // If saved is 'dark', use it, otherwise force dark
-    if (saved === 'dark') return 'dark';
-    // Force dark as default
-    return 'dark';
+    const saved = localStorage.getItem('app-theme');
+    return saved || 'dark';
   });
 
-  // Apply theme whenever it changes
+  const [isDark, setIsDark] = useState(theme === 'dark');
+
   useEffect(() => {
-    // Save to localStorage
-    localStorage.setItem('eduspantech_theme', theme);
+    localStorage.setItem('app-theme', theme);
+    setIsDark(theme === 'dark');
     
-    // CRITICAL: Remove inline styles from body
-    document.body.style.background = '';
-    document.body.style.color = '';
-    document.body.style.backgroundColor = '';
-    
-    // Apply data-theme to html element
+    // Apply theme to document body
     document.documentElement.setAttribute('data-theme', theme);
-    
-    // Force dark theme styles
-    if (theme === 'dark') {
-      document.documentElement.style.backgroundColor = '#0a0e1a';
-      document.body.style.background = '#0a0e1a';
-      document.body.style.color = '#ffffff';
-    } else {
-      document.documentElement.style.backgroundColor = '#f8fafc';
-      document.body.style.background = '#f8fafc';
-      document.body.style.color = '#0f172a';
-    }
-    
-    console.log('🎨 Theme applied:', theme);
-    console.log('📄 data-theme:', document.documentElement.getAttribute('data-theme'));
+    document.body.className = theme === 'dark' ? 'dark-mode' : 'light-mode';
   }, [theme]);
 
   const toggleTheme = () => {
     setTheme(prev => prev === 'dark' ? 'light' : 'dark');
   };
 
+  const setThemeMode = (mode) => {
+    if (mode === 'dark' || mode === 'light') {
+      setTheme(mode);
+    }
+  };
+
   const value = {
     theme,
-    setTheme,
+    isDark,
+    isLight: !isDark,
     toggleTheme,
-    isDark: theme === 'dark',
-    isLight: theme === 'light'
+    setThemeMode
   };
 
   return (
@@ -63,7 +47,7 @@ export const ThemeProvider = ({ children }) => {
 export const useTheme = () => {
   const context = useContext(ThemeContext);
   if (!context) {
-    throw new Error('useTheme must be used within ThemeProvider');
+    throw new Error('useTheme must be used within a ThemeProvider');
   }
   return context;
 };

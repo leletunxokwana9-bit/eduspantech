@@ -1,3 +1,5 @@
+/* Modal.css - Updated with Theme Variables */
+
 .modal-overlay {
   position: fixed;
   top: 0;
@@ -19,15 +21,17 @@
 }
 
 .modal-content {
-  background: white;
+  background: var(--bg-secondary);
   border-radius: 16px;
   max-width: 700px;
   width: 90%;
   max-height: 85vh;
   display: flex;
   flex-direction: column;
-  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.2);
+  box-shadow: 0 20px 60px var(--shadow-color);
   animation: slideUp 0.3s ease-out;
+  border: 1px solid var(--border-color);
+  transition: background 0.3s ease, border-color 0.3s ease;
 }
 
 @keyframes slideUp {
@@ -40,19 +44,19 @@
   justify-content: space-between;
   align-items: center;
   padding: 20px 24px;
-  border-bottom: 1px solid #f1f3f5;
+  border-bottom: 1px solid var(--border-color);
   flex-shrink: 0;
 }
 
 .modal-header h2 {
   font-size: 20px;
   font-weight: 700;
-  color: #1a1a2e;
+  color: var(--text-primary);
   margin: 0;
 }
 
 .modal-close {
-  background: #f3f4f6;
+  background: var(--bg-card);
   border: none;
   width: 36px;
   height: 36px;
@@ -63,12 +67,12 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  color: #6b7280;
+  color: var(--text-secondary);
 }
 
 .modal-close:hover {
-  background: #e5e7eb;
-  color: #1a1a2e;
+  background: var(--bg-hover);
+  color: var(--text-primary);
 }
 
 .modal-body {
@@ -81,26 +85,26 @@
   font-size: 24px;
   font-weight: 800;
   margin-bottom: 12px;
-  color: #1a1a2e;
+  color: var(--text-primary);
 }
 
 .modal-body h2 {
   font-size: 18px;
   font-weight: 700;
   margin: 20px 0 12px 0;
-  color: #1a1a2e;
+  color: var(--text-primary);
 }
 
 .modal-body h3 {
   font-size: 16px;
   font-weight: 600;
   margin: 12px 0 8px 0;
-  color: #1a1a2e;
+  color: var(--text-primary);
 }
 
 .modal-body p {
   font-size: 14px;
-  color: #4b5563;
+  color: var(--text-secondary);
   line-height: 1.7;
   margin-bottom: 8px;
 }
@@ -111,14 +115,14 @@
 
 .modal-body li {
   font-size: 14px;
-  color: #4b5563;
+  color: var(--text-secondary);
   line-height: 1.7;
   margin-bottom: 4px;
 }
 
 .modal-footer {
   padding: 16px 24px;
-  border-top: 1px solid #f1f3f5;
+  border-top: 1px solid var(--border-color);
   display: flex;
   justify-content: flex-end;
   flex-shrink: 0;
@@ -126,7 +130,7 @@
 
 .modal-close-btn {
   padding: 10px 28px;
-  background: #4f46e5;
+  background: var(--gradient-primary);
   color: white;
   border: none;
   border-radius: 8px;
@@ -137,15 +141,16 @@
 }
 
 .modal-close-btn:hover {
-  background: #4338ca;
+  transform: translateY(-2px);
+  box-shadow: 0 8px 25px rgba(79, 70, 229, 0.3);
 }
 
 .last-updated {
   font-size: 13px;
-  color: #6b7280;
+  color: var(--text-muted);
   margin-bottom: 20px;
   padding-bottom: 12px;
-  border-bottom: 1px solid #f3f4f6;
+  border-bottom: 1px solid var(--border-color);
 }
 
 .section {
@@ -155,14 +160,14 @@
 .section h2 {
   font-size: 18px;
   font-weight: 700;
-  color: #1a1a2e;
+  color: var(--text-primary);
   margin: 0 0 10px 0;
 }
 
 .section p {
   font-size: 14px;
   line-height: 1.7;
-  color: #374151;
+  color: var(--text-secondary);
   margin-bottom: 8px;
 }
 

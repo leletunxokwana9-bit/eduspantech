@@ -62,7 +62,7 @@ function Home() {
   const [loading, setLoading] = useState(true);
   const [failedFlags, setFailedFlags] = useState({});
 
-  // Check authentication status on mount - WITH SUBSCRIPTION
+  // Check authentication status on mount
   useEffect(() => {
     const checkAuth = async () => {
       const accessToken = localStorage.getItem('accessToken');
@@ -271,12 +271,14 @@ function Home() {
         </div>
 
         {/* ============================================
-            MATHEMATICAL ORBIT - REPLACES THE GLOBE
+            MATHEMATICAL ORBIT - HERO VISUAL
             ============================================ */}
-        <MathematicalOrbit />
+        <div className="hero-visual">
+          <MathematicalOrbit />
+        </div>
       </section>
 
-      {/* Rest of your sections... (Features, Pricing, Curriculum, etc.) */}
+      {/* Features Section */}
       <section className="features-section">
         <div className="container">
           <div className="section-header">

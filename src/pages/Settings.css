@@ -1,8 +1,10 @@
-/* ===== SETTINGS PAGE ===== */
+/* src/pages/Settings.css - Updated with theme variables */
+
 .settings-page {
   min-height: 100vh;
-  background: #0a0e1a;
+  background: var(--bg-primary);
   padding: 40px 24px;
+  transition: background 0.3s ease;
 }
 
 .settings-loading {
@@ -10,12 +12,12 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  background: #0a0e1a;
+  background: var(--bg-primary);
 }
 
 .loader {
   font-size: 18px;
-  color: #4f46e5;
+  color: var(--accent-primary);
   font-weight: 600;
   animation: pulse 1.5s ease-in-out infinite;
 }
@@ -43,14 +45,16 @@
 .settings-header-left h1 {
   font-size: 36px;
   font-weight: 700;
-  color: #ffffff;
+  color: var(--text-primary);
   margin: 0;
+  transition: color 0.3s ease;
 }
 
 .settings-header-left p {
   font-size: 16px;
-  color: rgba(255, 255, 255, 0.4);
+  color: var(--text-muted);
   margin-top: 4px;
+  transition: color 0.3s ease;
 }
 
 .settings-reset-btn {
@@ -99,15 +103,15 @@
 }
 
 .settings-card {
-  background: rgba(255, 255, 255, 0.04);
-  border: 1px solid rgba(255, 255, 255, 0.06);
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
   border-radius: 16px;
   padding: 24px;
-  transition: border-color 0.3s ease;
+  transition: all 0.3s ease;
 }
 
 .settings-card:hover {
-  border-color: rgba(255, 255, 255, 0.08);
+  border-color: var(--border-hover);
 }
 
 .settings-card-header {
@@ -124,8 +128,9 @@
 .settings-card-header h3 {
   font-size: 18px;
   font-weight: 600;
-  color: #ffffff;
+  color: var(--text-primary);
   margin: 0;
+  transition: color 0.3s ease;
 }
 
 .settings-card-body {
@@ -144,15 +149,16 @@
 .settings-group label {
   font-size: 13px;
   font-weight: 500;
-  color: rgba(255, 255, 255, 0.6);
+  color: var(--text-secondary);
+  transition: color 0.3s ease;
 }
 
 .settings-select {
   padding: 10px 14px;
-  background: rgba(255, 255, 255, 0.06);
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: var(--bg-input);
+  border: 1px solid var(--border-color);
   border-radius: 10px;
-  color: #ffffff;
+  color: var(--text-primary);
   font-size: 14px;
   transition: all 0.3s ease;
   outline: none;
@@ -160,13 +166,13 @@
 }
 
 .settings-select:focus {
-  border-color: #4f46e5;
-  box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.15);
+  border-color: var(--accent-primary);
+  box-shadow: 0 0 0 3px var(--shadow-glow);
 }
 
 .settings-select option {
-  background: #1a1a2e;
-  color: #ffffff;
+  background: var(--bg-secondary);
+  color: var(--text-primary);
 }
 
 /* ===== THEME OPTIONS ===== */
@@ -178,10 +184,10 @@
 .theme-option {
   flex: 1;
   padding: 10px 16px;
-  background: rgba(255, 255, 255, 0.04);
-  border: 2px solid rgba(255, 255, 255, 0.06);
+  background: var(--bg-input);
+  border: 2px solid var(--border-color);
   border-radius: 10px;
-  color: rgba(255, 255, 255, 0.5);
+  color: var(--text-muted);
   font-size: 14px;
   font-weight: 500;
   cursor: pointer;
@@ -189,13 +195,13 @@
 }
 
 .theme-option:hover {
-  background: rgba(255, 255, 255, 0.06);
-  color: rgba(255, 255, 255, 0.7);
+  background: var(--bg-hover);
+  color: var(--text-secondary);
 }
 
 .theme-option.active {
   background: rgba(79, 70, 229, 0.15);
-  border-color: #4f46e5;
+  border-color: var(--accent-primary);
   color: #818cf8;
 }
 
@@ -208,10 +214,10 @@
 .font-option {
   width: 48px;
   height: 48px;
-  background: rgba(255, 255, 255, 0.04);
-  border: 2px solid rgba(255, 255, 255, 0.06);
+  background: var(--bg-input);
+  border: 2px solid var(--border-color);
   border-radius: 10px;
-  color: rgba(255, 255, 255, 0.5);
+  color: var(--text-muted);
   font-weight: 500;
   cursor: pointer;
   transition: all 0.3s ease;
@@ -225,13 +231,13 @@
 .font-option:nth-child(3) { font-size: 22px; }
 
 .font-option:hover {
-  background: rgba(255, 255, 255, 0.06);
-  color: rgba(255, 255, 255, 0.7);
+  background: var(--bg-hover);
+  color: var(--text-secondary);
 }
 
 .font-option.active {
   background: rgba(79, 70, 229, 0.15);
-  border-color: #4f46e5;
+  border-color: var(--accent-primary);
   color: #818cf8;
 }
 
@@ -244,10 +250,10 @@
 .difficulty-option {
   flex: 1;
   padding: 10px 16px;
-  background: rgba(255, 255, 255, 0.04);
-  border: 2px solid rgba(255, 255, 255, 0.06);
+  background: var(--bg-input);
+  border: 2px solid var(--border-color);
   border-radius: 10px;
-  color: rgba(255, 255, 255, 0.5);
+  color: var(--text-muted);
   font-size: 14px;
   font-weight: 500;
   cursor: pointer;
@@ -255,13 +261,13 @@
 }
 
 .difficulty-option:hover {
-  background: rgba(255, 255, 255, 0.06);
-  color: rgba(255, 255, 255, 0.7);
+  background: var(--bg-hover);
+  color: var(--text-secondary);
 }
 
 .difficulty-option.active {
   background: rgba(79, 70, 229, 0.15);
-  border-color: #4f46e5;
+  border-color: var(--accent-primary);
   color: #818cf8;
 }
 
@@ -273,17 +279,18 @@
   padding: 8px 0;
   cursor: pointer;
   font-size: 14px;
-  color: rgba(255, 255, 255, 0.7);
+  color: var(--text-secondary);
+  transition: color 0.3s ease;
 }
 
 .toggle-item:hover {
-  color: rgba(255, 255, 255, 0.9);
+  color: var(--text-primary);
 }
 
 .toggle-track {
   width: 44px;
   height: 24px;
-  background: rgba(255, 255, 255, 0.12);
+  background: var(--border-color);
   border-radius: 12px;
   cursor: pointer;
   transition: background 0.3s ease;
@@ -293,14 +300,14 @@
 .toggle-thumb {
   width: 20px;
   height: 20px;
-  background: rgba(255, 255, 255, 0.3);
+  background: var(--text-muted);
   border-radius: 50%;
   transform: translateX(2px);
   transition: all 0.3s ease;
 }
 
 .toggle-thumb.active {
-  background: #4f46e5;
+  background: var(--accent-primary);
   transform: translateX(22px);
 }
 
@@ -314,27 +321,27 @@
 
 .security-btn {
   padding: 8px 16px;
-  background: rgba(255, 255, 255, 0.04);
-  border: 1px solid rgba(255, 255, 255, 0.06);
+  background: var(--bg-input);
+  border: 1px solid var(--border-color);
   border-radius: 8px;
-  color: rgba(255, 255, 255, 0.6);
+  color: var(--text-secondary);
   font-size: 13px;
   cursor: pointer;
   transition: all 0.3s ease;
 }
 
 .security-btn:hover {
-  background: rgba(255, 255, 255, 0.08);
-  color: rgba(255, 255, 255, 0.8);
+  background: var(--bg-hover);
+  color: var(--text-primary);
 }
 
 .export-btn:hover {
-  border-color: #4f46e5;
+  border-color: var(--accent-primary);
   color: #818cf8;
 }
 
 .sessions-btn:hover {
-  border-color: #f59e0b;
+  border-color: var(--accent-warning);
   color: #fbbf24;
 }
 
@@ -346,7 +353,7 @@
 .settings-save-btn {
   width: 100%;
   padding: 16px;
-  background: linear-gradient(135deg, #4f46e5, #7c3aed);
+  background: var(--gradient-primary);
   border: none;
   border-radius: 12px;
   color: #ffffff;

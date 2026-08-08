@@ -29,10 +29,10 @@ import Profile from './pages/Profile';
 import Settings from './pages/Settings';
 import Help from './pages/Help';
 import Practice from './pages/Practice';
-// In App.js, add this route
 import VerifyEmail from './pages/VerifyEmail';
 
-
+// ===== ADD THIS IMPORT =====
+import ChatWidget from './components/ChatWidget';
 
 function App() {
   return (
@@ -76,6 +76,10 @@ function App() {
                   </Routes>
                 </main>
                 <Footer />
+                
+                {/* ===== ADD CHAT WIDGET HERE ===== */}
+                <ChatWidget />
+                
               </div>
             </SessionSettingsProvider>
           </LanguageProvider>

@@ -682,3 +682,60 @@
 .verification-help span {
   font-size: 16px;
 }
+/* ===== VERIFICATION NOTICE - USING CSS VARIABLES ===== */
+.login-verification-notice {
+  display: flex;
+  gap: 14px;
+  padding: 16px 20px;
+  background: var(--bg-warning-light, #fef3c7);
+  border: 1px solid var(--border-warning, #fbbf24);
+  border-radius: 12px;
+  margin-bottom: 20px;
+  align-items: flex-start;
+}
+
+[data-theme="dark"] .login-verification-notice {
+  background: var(--bg-warning-dark, #1e1b10);
+  border-color: var(--border-warning-dark, #f59e0b);
+}
+
+.verification-content p {
+  margin: 0 0 4px 0;
+  font-size: 14px;
+  color: var(--text-warning-light, #92400e);
+}
+
+[data-theme="dark"] .verification-content p {
+  color: var(--text-warning-dark, #fbbf24);
+}
+
+.verification-content p strong {
+  color: var(--text-strong-warning-light, #78350f);
+}
+
+[data-theme="dark"] .verification-content p strong {
+  color: var(--text-strong-warning-dark, #fcd34d);
+}
+
+.verification-help {
+  font-size: 13px !important;
+  color: var(--text-warning-light, #92400e) !important;
+  margin-top: 6px !important;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+[data-theme="dark"] .verification-help {
+  color: var(--text-warning-dark, #fbbf24) !important;
+}
+
+.resend-success {
+  font-size: 13px;
+  color: var(--success-color, #27ae60);
+  font-weight: 600;
+}
+
+[data-theme="dark"] .resend-success {
+  color: var(--success-color-dark, #6ee7b7);
+}

@@ -39,13 +39,29 @@ class SoundService {
     this.sounds.participantLeft = this.createSound('/sounds/participant-left.mp3', 0.25);
 
     // ===== ENROLLMENT & PAYMENT SOUNDS =====
+    // Enrollment
+    this.sounds.enrollStart = this.createSound('/sounds/enroll-start.mp3', 0.3);
+    this.sounds.enrollProgress = this.createSound('/sounds/enroll-progress.mp3', 0.2);
     this.sounds.enrollSuccess = this.createSound('/sounds/enroll-success.mp3', 0.5);
     this.sounds.enrollFail = this.createSound('/sounds/enroll-fail.mp3', 0.4);
+    this.sounds.alreadyEnrolled = this.createSound('/sounds/already-enrolled.mp3', 0.35);
+    this.sounds.enrollComplete = this.createSound('/sounds/enroll-complete.mp3', 0.5);
+    
+    // Subscription
+    this.sounds.subscriptionCreated = this.createSound('/sounds/subscription-created.mp3', 0.5);
+    this.sounds.subscriptionActivated = this.createSound('/sounds/subscription-activated.mp3', 0.5);
+    this.sounds.subscriptionCancelled = this.createSound('/sounds/subscription-cancelled.mp3', 0.4);
+    this.sounds.subscriptionExpired = this.createSound('/sounds/subscription-expired.mp3', 0.35);
+    this.sounds.subscriptionRenewed = this.createSound('/sounds/subscription-renewed.mp3', 0.45);
+    this.sounds.tierUpgraded = this.createSound('/sounds/tier-upgraded.mp3', 0.5);
+    
+    // Payment
+    this.sounds.paymentProcessing = this.createSound('/sounds/payment-processing.mp3', 0.3);
     this.sounds.paymentSuccess = this.createSound('/sounds/payment-success.mp3', 0.6);
     this.sounds.paymentFail = this.createSound('/sounds/payment-fail.mp3', 0.4);
-    this.sounds.subscriptionCreated = this.createSound('/sounds/subscription-created.mp3', 0.5);
-    this.sounds.subscriptionCancelled = this.createSound('/sounds/subscription-cancelled.mp3', 0.4);
     this.sounds.refundInitiated = this.createSound('/sounds/refund-initiated.mp3', 0.35);
+    this.sounds.refundApproved = this.createSound('/sounds/refund-approved.mp3', 0.4);
+    this.sounds.refundDenied = this.createSound('/sounds/refund-denied.mp3', 0.35);
 
     // ===== WHITEBOARD SOUNDS =====
     this.sounds.penStroke = this.createSound('/sounds/pen-stroke.mp3', 0.08);
@@ -133,14 +149,29 @@ class SoundService {
   playNewParticipant() { this.play('newParticipant'); }
   playParticipantLeft() { this.play('participantLeft'); }
 
-  // ===== ENROLLMENT & PAYMENT =====
+  // ===== ENROLLMENT =====
+  playEnrollStart() { this.play('enrollStart'); }
+  playEnrollProgress() { this.play('enrollProgress'); }
   playEnrollSuccess() { this.play('enrollSuccess'); }
   playEnrollFail() { this.play('enrollFail'); }
+  playAlreadyEnrolled() { this.play('alreadyEnrolled'); }
+  playEnrollComplete() { this.play('enrollComplete'); }
+
+  // ===== SUBSCRIPTION =====
+  playSubscriptionCreated() { this.play('subscriptionCreated'); }
+  playSubscriptionActivated() { this.play('subscriptionActivated'); }
+  playSubscriptionCancelled() { this.play('subscriptionCancelled'); }
+  playSubscriptionExpired() { this.play('subscriptionExpired'); }
+  playSubscriptionRenewed() { this.play('subscriptionRenewed'); }
+  playTierUpgraded() { this.play('tierUpgraded'); }
+
+  // ===== PAYMENT =====
+  playPaymentProcessing() { this.play('paymentProcessing'); }
   playPaymentSuccess() { this.play('paymentSuccess'); }
   playPaymentFail() { this.play('paymentFail'); }
-  playSubscriptionCreated() { this.play('subscriptionCreated'); }
-  playSubscriptionCancelled() { this.play('subscriptionCancelled'); }
   playRefundInitiated() { this.play('refundInitiated'); }
+  playRefundApproved() { this.play('refundApproved'); }
+  playRefundDenied() { this.play('refundDenied'); }
 
   // ===== WHITEBOARD =====
   playPenStroke() { this.play('penStroke'); }

@@ -2,10 +2,12 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { authService } from '../services/authService';
+import { useTheme } from '../context/ThemeContext';
 import './Settings.css';
 
 const Settings = () => {
   const navigate = useNavigate();
+  const { theme, setTheme, toggleTheme, isDark } = useTheme();
   const [loading, setLoading] = useState(true);
   const [success, setSuccess] = useState('');
   const [error, setError] = useState('');
@@ -14,7 +16,7 @@ const Settings = () => {
   // Settings state
   const [settings, setSettings] = useState({
     // Appearance
-    theme: 'dark',
+    theme: theme || 'dark',
     fontSize: 'medium',
     reduceAnimations: false,
     
@@ -84,6 +86,10 @@ const Settings = () => {
           if (savedSettings) {
             try {
               const parsed = JSON.parse(savedSettings);
+              // Ensure theme from saved settings matches global theme
+              if (parsed.theme) {
+                setTheme(parsed.theme);
+              }
               setSettings(prev => ({ ...prev, ...parsed }));
             } catch (e) {}
           }
@@ -97,29 +103,27 @@ const Settings = () => {
       }
     };
     fetchData();
-  }, [navigate]);
+  }, [navigate, setTheme]);
 
-  // Apply theme on change
+  // Apply theme on change - Now managed by ThemeContext
   useEffect(() => {
-    document.documentElement.setAttribute('data-theme', settings.theme);
-  }, [settings.theme]);
+    // Update local settings when global theme changes
+    setSettings(prev => ({ ...prev, theme: theme }));
+  }, [theme]);
 
   // Handle setting changes
   const handleSettingChange = (category, key, value) => {
     setSettings(prev => {
-      if (category) {
-        return {
-          ...prev,
-          [category]: {
-            ...prev[category],
-            [key]: value
-          }
-        };
+      const newSettings = category 
+        ? { ...prev, [category]: { ...prev[category], [key]: value } }
+        : { ...prev, [key]: value };
+      
+      // If theme changes, update global theme
+      if (key === 'theme' && !category) {
+        setTheme(value);
       }
-      return {
-        ...prev,
-        [key]: value
-      };
+      
+      return newSettings;
     });
   };
 
@@ -165,6 +169,7 @@ const Settings = () => {
   const handleReset = () => {
     if (window.confirm('Reset all settings to default?')) {
       localStorage.removeItem('eduspantech_settings');
+      setTheme('dark');
       window.location.reload();
     }
   };

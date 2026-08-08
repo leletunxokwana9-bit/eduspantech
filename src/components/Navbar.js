@@ -20,6 +20,11 @@ import { useSound } from "../context/SoundContext";
 import { authService } from "../services/authService";
 import "./Navbar.css";
 
+// ============================================
+// IMPORT LOGO FROM ASSETS FOLDER
+// ============================================
+import logo from "../assets/EduspanLogo.png";
+
 function Navbar() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isSearchOpen, setIsSearchOpen] = useState(false);
@@ -30,6 +35,7 @@ function Navbar() {
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [user, setUser] = useState(null);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [logoError, setLogoError] = useState(false);
   const location = useLocation();
   const navigate = useNavigate();
   const menuRef = useRef(null);
@@ -320,12 +326,35 @@ function Navbar() {
     return 'Silver';
   };
 
+  // ============================================
+  // RENDER LOGO WITH IMPORTED IMAGE
+  // ============================================
+  const renderLogo = () => {
+    return (
+      <div className="logo-icon">
+        {!logoError ? (
+          <img 
+            src={logo} 
+            alt="EduSpantech" 
+            className="logo-image"
+            onError={() => {
+              console.log('Logo failed to load');
+              setLogoError(true);
+            }}
+          />
+        ) : (
+          <span style={{ fontSize: '24px', fontWeight: '700', color: '#818cf8' }}>∑</span>
+        )}
+      </div>
+    );
+  };
+
   if (loading) {
     return (
       <header className="navbar" ref={menuRef}>
         <div className="navbar-container">
           <Link to="/" className="logo">
-            <div className="logo-icon">∑</div>
+            {renderLogo()}
             <div className="logo-content">
               <span className="logo-title">EduSpantech</span>
               <span className="logo-subtitle">Global Mathematics Platform</span>
@@ -340,7 +369,7 @@ function Navbar() {
     <header className="navbar" ref={menuRef}>
       <div className="navbar-container">
         <Link to="/" className="logo" onClick={closeMenu}>
-          <div className="logo-icon">∑</div>
+          {renderLogo()}
           <div className="logo-content">
             <span className="logo-title">EduSpantech</span>
             <span className="logo-subtitle">{t('app.subtitle')}</span>

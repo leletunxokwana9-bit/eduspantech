@@ -321,28 +321,30 @@ const Profile = () => {
     <div className="profile-container">
       {/* Header */}
       <div className="profile-header">
-        <div className="profile-avatar-wrapper" onClick={() => setShowAvatarSelector(true)}>
+        <div 
+          className="profile-avatar" 
+          style={{ cursor: 'pointer' }} 
+          onClick={() => setShowAvatarSelector(true)}
+          title="Click to change avatar"
+        >
           {avatarImage ? (
-            <img src={avatarImage} alt="Avatar" className="profile-avatar-image" />
+            <img src={avatarImage} alt="Avatar" className="profile-avatar-img" />
           ) : (
-            <span className="profile-avatar-placeholder">👤</span>
+            <span className="profile-avatar-emoji">👤</span>
           )}
-          <div className="profile-avatar-edit">✎</div>
+          <div className="avatar-edit-badge">✎</div>
         </div>
-        <div className="profile-info">
-          <h1 className="profile-name">{user?.name || 'User'}</h1>
-          <p className="profile-subtitle">
+        <div className="profile-header-info">
+          <h1>{user?.name || 'User'}</h1>
+          <p className="profile-header-subtitle">
             {user?.cohort === 'HighSchool' ? 'High School Student' : 'University Student'} • {user?.country || 'South Africa'}
           </p>
           <div className="profile-status">
-            <span className="profile-status-dot"></span>
+            <span className="status-dot"></span>
             Active Member
           </div>
         </div>
-        <button 
-          onClick={() => setIsEditing(!isEditing)} 
-          className={`profile-edit-btn ${isEditing ? 'cancel' : ''}`}
-        >
+        <button className="profile-edit-btn" onClick={() => setIsEditing(!isEditing)}>
           {isEditing ? 'Cancel' : '✏️ Edit Profile'}
         </button>
       </div>
@@ -351,31 +353,31 @@ const Profile = () => {
       {success && <div className="profile-success">{success}</div>}
 
       {/* Stats */}
-      <div className="profile-stats-grid">
+      <div className="profile-stats">
         <div className="profile-stat-card">
-          <span className="profile-stat-number">{stats.coursesEnrolled}</span>
-          <span className="profile-stat-label">Courses Enrolled</span>
+          <span className="stat-number">{stats.coursesEnrolled}</span>
+          <span className="stat-label">Courses Enrolled</span>
         </div>
         <div className="profile-stat-card">
-          <span className="profile-stat-number">{stats.hoursSpent}</span>
-          <span className="profile-stat-label">Hours Spent</span>
+          <span className="stat-number">{stats.hoursSpent}</span>
+          <span className="stat-label">Hours Spent</span>
         </div>
         <div className="profile-stat-card">
-          <span className="profile-stat-number">{stats.badgesEarned}</span>
-          <span className="profile-stat-label">Badges Earned</span>
+          <span className="stat-number">{stats.badgesEarned}</span>
+          <span className="stat-label">Badges Earned</span>
         </div>
         <div className="profile-stat-card">
-          <span className="profile-stat-number">{stats.completionRate}%</span>
-          <span className="profile-stat-label">Completion Rate</span>
+          <span className="stat-number">{stats.completionRate}%</span>
+          <span className="stat-label">Completion Rate</span>
         </div>
       </div>
 
       {/* Profile Grid */}
-      <div className="profile-content-grid">
+      <div className="profile-grid">
         {/* Personal Information */}
-        <div className="profile-section">
-          <h3 className="profile-section-title">📋 Personal Information</h3>
-          <div>
+        <div className="profile-card">
+          <h3>📋 Personal Information</h3>
+          <div className="profile-info-group">
             {[
               { label: 'Full Name', name: 'name', value: editForm.name },
               { label: 'Email Address', name: 'email', value: editForm.email },
@@ -383,8 +385,8 @@ const Profile = () => {
               { label: 'Grade / Year', name: 'grade', value: editForm.grade },
               { label: 'Cohort', name: 'cohort', value: user?.cohort === 'HighSchool' ? 'High School' : 'University First Year' }
             ].map((field, i) => (
-              <div key={i} className="profile-info-row">
-                <span className="profile-info-label">{field.label}</span>
+              <div key={i} className="profile-info-item">
+                <span className="info-label">{field.label}</span>
                 {isEditing && field.name !== 'cohort' ? (
                   <input
                     type="text"
@@ -394,16 +396,18 @@ const Profile = () => {
                     className="profile-input"
                   />
                 ) : (
-                  <span className={`profile-info-value ${!field.value ? 'not-set' : ''}`}>
-                    {field.value || 'Not set'}
-                  </span>
+                  <span className="info-value">{field.value || 'Not set'}</span>
                 )}
               </div>
             ))}
           </div>
           {isEditing && (
-            <div style={{ marginTop: '16px', paddingTop: '16px', borderTop: '1px solid rgba(255,255,255,0.06)' }}>
-              <button onClick={handleSaveProfile} disabled={loading} className="profile-save-btn">
+            <div className="profile-actions">
+              <button 
+                className="profile-save-btn" 
+                onClick={handleSaveProfile}
+                disabled={loading}
+              >
                 {loading ? 'Saving...' : '💾 Save Changes'}
               </button>
             </div>
@@ -411,30 +415,37 @@ const Profile = () => {
         </div>
 
         {/* Account Settings */}
-        <div className="profile-section">
-          <h3 className="profile-section-title">🔒 Account Settings</h3>
-          <div>
+        <div className="profile-card">
+          <h3>🔒 Account Settings</h3>
+          <div className="profile-settings-list">
             <div className="profile-setting-item">
-              <div className="profile-setting-left">
-                <span className="profile-setting-icon">🔑</span>
-                <div className="profile-setting-content">
-                  <h4 className="profile-setting-title">Change Password</h4>
-                  <p className="profile-setting-description">Update your password regularly for security</p>
+              <div className="setting-info">
+                <span className="setting-icon">🔑</span>
+                <div>
+                  <h4>Change Password</h4>
+                  <p>Update your password regularly for security</p>
                 </div>
               </div>
-              <button onClick={() => setShowPasswordModal(true)} className="profile-setting-btn">
+              <button 
+                className="setting-action-btn"
+                onClick={() => setShowPasswordModal(true)}
+              >
                 Update
               </button>
             </div>
+
             <div className="profile-setting-item danger">
-              <div className="profile-setting-left">
-                <span className="profile-setting-icon">⚠️</span>
-                <div className="profile-setting-content">
-                  <h4 className="profile-setting-title">Delete Account</h4>
-                  <p className="profile-setting-description">Permanently delete your account and all data</p>
+              <div className="setting-info">
+                <span className="setting-icon">⚠️</span>
+                <div>
+                  <h4>Delete Account</h4>
+                  <p>Permanently delete your account and all data</p>
                 </div>
               </div>
-              <button onClick={() => setShowDeleteModal(true)} className="profile-setting-btn danger">
+              <button 
+                className="setting-action-btn danger"
+                onClick={() => setShowDeleteModal(true)}
+              >
                 Delete
               </button>
             </div>
@@ -442,29 +453,31 @@ const Profile = () => {
         </div>
 
         {/* Enrolled Courses */}
-        <div className="profile-section full-width">
-          <h3 className="profile-section-title">📚 My Courses</h3>
+        <div className="profile-card full-width">
+          <h3>📚 My Courses</h3>
           {enrollments.length > 0 ? (
             <div className="profile-courses-grid">
               {enrollments.map((course) => (
                 <div 
                   key={course.id} 
-                  onClick={() => navigate(`/subjects/${course.name.toLowerCase()}`)} 
-                  className="profile-course-item"
+                  className="profile-course-card"
+                  onClick={() => navigate(`/subjects/${course.name.toLowerCase()}`)}
                 >
-                  <span className="profile-course-icon">{course.icon || '📘'}</span>
-                  <div className="profile-course-info">
-                    <h4 className="profile-course-name">{course.name}</h4>
-                    <span className="profile-course-tier">{course.tier || 'Tier 1'}</span>
+                  <span className="course-icon">{course.icon || '📘'}</span>
+                  <div className="course-info">
+                    <h4>{course.name}</h4>
+                    <span className="course-tier">{course.tier || 'Tier 1'}</span>
                   </div>
-                  <div className="profile-course-progress">
-                    <div className="profile-course-progress-bar">
+                  <div className="course-progress">
+                    <div className="progress-bar">
                       <div 
-                        className="profile-course-progress-fill" 
+                        className="progress-fill" 
                         style={{ width: `${Math.floor(Math.random() * 60 + 20)}%` }}
                       ></div>
                     </div>
-                    <span className="profile-course-progress-text">{Math.floor(Math.random() * 60 + 20)}%</span>
+                    <span className="progress-text">
+                      {Math.floor(Math.random() * 60 + 20)}%
+                    </span>
                   </div>
                 </div>
               ))}
@@ -472,7 +485,10 @@ const Profile = () => {
           ) : (
             <div className="profile-empty-state">
               <p>No courses enrolled yet</p>
-              <button onClick={() => navigate('/subjects')} className="profile-empty-btn">
+              <button 
+                className="profile-empty-btn"
+                onClick={() => navigate('/subjects')}
+              >
                 Browse Subjects →
               </button>
             </div>
@@ -480,51 +496,51 @@ const Profile = () => {
         </div>
       </div>
 
-      {/* Password Modal */}
+      {/* Modals */}
       {showPasswordModal && (
         <div className="profile-modal-overlay" onClick={() => setShowPasswordModal(false)}>
           <div className="profile-modal" onClick={(e) => e.stopPropagation()}>
             <div className="profile-modal-header">
-              <h3 className="profile-modal-title">🔑 Change Password</h3>
-              <button onClick={() => setShowPasswordModal(false)} className="profile-modal-close">×</button>
+              <h3>🔑 Change Password</h3>
+              <button className="modal-close" onClick={() => setShowPasswordModal(false)}>×</button>
             </div>
             <form onSubmit={handlePasswordChange}>
               <div className="profile-modal-body">
-                <div className="profile-modal-form-group">
+                <div className="form-group">
                   <label>Current Password</label>
-                  <input 
-                    type="password" 
-                    value={passwordData.currentPassword} 
-                    onChange={(e) => setPasswordData(prev => ({ ...prev, currentPassword: e.target.value }))} 
-                    required 
+                  <input
+                    type="password"
+                    value={passwordData.currentPassword}
+                    onChange={(e) => setPasswordData(prev => ({ ...prev, currentPassword: e.target.value }))}
+                    required
                   />
                 </div>
-                <div className="profile-modal-form-group">
+                <div className="form-group">
                   <label>New Password</label>
-                  <input 
-                    type="password" 
-                    value={passwordData.newPassword} 
-                    onChange={(e) => setPasswordData(prev => ({ ...prev, newPassword: e.target.value }))} 
-                    required 
+                  <input
+                    type="password"
+                    value={passwordData.newPassword}
+                    onChange={(e) => setPasswordData(prev => ({ ...prev, newPassword: e.target.value }))}
+                    required
                     minLength="8"
                   />
                 </div>
-                <div className="profile-modal-form-group">
+                <div className="form-group">
                   <label>Confirm New Password</label>
-                  <input 
-                    type="password" 
-                    value={passwordData.confirmPassword} 
-                    onChange={(e) => setPasswordData(prev => ({ ...prev, confirmPassword: e.target.value }))} 
-                    required 
+                  <input
+                    type="password"
+                    value={passwordData.confirmPassword}
+                    onChange={(e) => setPasswordData(prev => ({ ...prev, confirmPassword: e.target.value }))}
+                    required
                   />
                 </div>
-                {error && <div className="profile-modal-error">{error}</div>}
+                {error && <div className="profile-error">{error}</div>}
               </div>
-              <div className="profile-modal-footer">
-                <button type="button" onClick={() => setShowPasswordModal(false)} className="profile-modal-btn secondary">
+              <div className="profile-modal-actions">
+                <button type="button" className="modal-cancel" onClick={() => setShowPasswordModal(false)}>
                   Cancel
                 </button>
-                <button type="submit" disabled={loading} className="profile-modal-btn primary">
+                <button type="submit" className="modal-submit" disabled={loading}>
                   {loading ? 'Changing...' : 'Change Password'}
                 </button>
               </div>
@@ -533,23 +549,29 @@ const Profile = () => {
         </div>
       )}
 
-      {/* Delete Modal */}
       {showDeleteModal && (
         <div className="profile-modal-overlay" onClick={() => setShowDeleteModal(false)}>
           <div className="profile-modal" onClick={(e) => e.stopPropagation()}>
             <div className="profile-modal-header danger">
-              <h3 className="profile-modal-title">⚠️ Delete Account</h3>
-              <button onClick={() => setShowDeleteModal(false)} className="profile-modal-close">×</button>
+              <h3>⚠️ Delete Account</h3>
+              <button className="modal-close" onClick={() => setShowDeleteModal(false)}>×</button>
             </div>
             <div className="profile-modal-body">
-              <p className="danger-text">Are you sure you want to delete your account? This action is <strong>permanent</strong> and cannot be undone.</p>
+              <p className="delete-warning">
+                Are you sure you want to delete your account? This action is <strong>permanent</strong> and cannot be undone.
+              </p>
               <p>All your data, including enrolled courses and progress, will be permanently removed.</p>
             </div>
-            <div className="profile-modal-footer">
-              <button onClick={() => setShowDeleteModal(false)} className="profile-modal-btn secondary">
+            <div className="profile-modal-actions">
+              <button type="button" className="modal-cancel" onClick={() => setShowDeleteModal(false)}>
                 Cancel
               </button>
-              <button onClick={handleDeleteAccount} disabled={loading} className="profile-modal-btn danger">
+              <button 
+                type="button" 
+                className="modal-delete" 
+                onClick={handleDeleteAccount}
+                disabled={loading}
+              >
                 {loading ? 'Deleting...' : '🗑️ Delete Account'}
               </button>
             </div>
@@ -568,4 +590,4 @@ const Profile = () => {
   );
 };
 
-export default Profile;"// Force new build $(date)" 
+export default Profile;

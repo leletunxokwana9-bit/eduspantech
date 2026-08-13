@@ -1,9 +1,8 @@
-// src/pages/Profile.js
+// src/pages/Profile.js - COMPLETE DARK THEME WITH INLINE STYLES
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { authService } from '../services/authService';
 import AvatarSelector from '../components/AvatarSelector';
-import './Profile.css';
 
 const Profile = () => {
   const navigate = useNavigate();
@@ -40,12 +39,239 @@ const Profile = () => {
 
   const API_URL = 'https://eduspantech-backend.onrender.com';
 
+  // ===== STYLES =====
+  const darkStyles = {
+    container: {
+      maxWidth: '1200px',
+      margin: '0 auto',
+      padding: '32px 40px',
+      minHeight: '100vh',
+      background: '#0a0e1a',
+      color: '#ffffff'
+    },
+    header: {
+      display: 'flex',
+      alignItems: 'center',
+      gap: '24px',
+      padding: '28px 32px',
+      background: '#141b2d',
+      borderRadius: '16px',
+      border: '1px solid rgba(255,255,255,0.06)',
+      marginBottom: '28px'
+    },
+    avatar: {
+      width: '80px',
+      height: '80px',
+      borderRadius: '50%',
+      background: 'linear-gradient(135deg, #4f46e5, #7c3aed)',
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+      cursor: 'pointer',
+      position: 'relative',
+      flexShrink: 0
+    },
+    avatarImg: {
+      width: '100%',
+      height: '100%',
+      borderRadius: '50%',
+      objectFit: 'cover'
+    },
+    avatarEmoji: {
+      fontSize: '40px'
+    },
+    avatarBadge: {
+      position: 'absolute',
+      bottom: '-4px',
+      right: '-4px',
+      background: '#4f46e5',
+      color: 'white',
+      width: '28px',
+      height: '28px',
+      borderRadius: '50%',
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+      fontSize: '14px',
+      border: '2px solid #141b2d'
+    },
+    headerInfo: { flex: 1 },
+    headerName: { fontSize: '28px', fontWeight: 700, color: '#ffffff', margin: '0 0 4px 0' },
+    headerSubtitle: { fontSize: '15px', color: '#94a3b8', margin: '0 0 8px 0' },
+    headerStatus: {
+      display: 'inline-flex',
+      alignItems: 'center',
+      gap: '8px',
+      fontSize: '13px',
+      color: '#6ee7b7',
+      background: 'rgba(52,211,153,0.1)',
+      padding: '4px 14px',
+      borderRadius: '20px',
+      border: '1px solid rgba(52,211,153,0.2)'
+    },
+    statusDot: { width: '8px', height: '8px', background: '#34d399', borderRadius: '50%', display: 'inline-block' },
+    editBtn: {
+      padding: '10px 24px',
+      borderRadius: '10px',
+      border: '1px solid rgba(255,255,255,0.1)',
+      background: 'rgba(255,255,255,0.05)',
+      color: '#ffffff',
+      fontSize: '14px',
+      fontWeight: 600,
+      cursor: 'pointer'
+    },
+    error: {
+      background: 'rgba(239,68,68,0.1)',
+      color: '#fca5a5',
+      padding: '12px 20px',
+      borderRadius: '10px',
+      marginBottom: '16px',
+      border: '1px solid rgba(239,68,68,0.15)'
+    },
+    success: {
+      background: 'rgba(52,211,153,0.1)',
+      color: '#6ee7b7',
+      padding: '12px 20px',
+      borderRadius: '10px',
+      marginBottom: '16px',
+      border: '1px solid rgba(52,211,153,0.15)'
+    },
+    statsGrid: {
+      display: 'grid',
+      gridTemplateColumns: 'repeat(4, 1fr)',
+      gap: '16px',
+      marginBottom: '28px'
+    },
+    statCard: {
+      background: '#141b2d',
+      borderRadius: '12px',
+      padding: '20px 24px',
+      border: '1px solid rgba(255,255,255,0.06)',
+      textAlign: 'center'
+    },
+    statNumber: { display: 'block', fontSize: '32px', fontWeight: 700, color: '#ffffff' },
+    statLabel: { display: 'block', fontSize: '14px', color: '#94a3b8', fontWeight: 500 },
+    grid: {
+      display: 'grid',
+      gridTemplateColumns: '1fr 1fr',
+      gap: '24px'
+    },
+    card: {
+      background: '#141b2d',
+      borderRadius: '16px',
+      padding: '24px 28px',
+      border: '1px solid rgba(255,255,255,0.06)'
+    },
+    cardFull: {
+      gridColumn: '1 / -1',
+      background: '#141b2d',
+      borderRadius: '16px',
+      padding: '24px 28px',
+      border: '1px solid rgba(255,255,255,0.06)'
+    },
+    cardTitle: {
+      fontSize: '18px',
+      fontWeight: 600,
+      color: '#ffffff',
+      margin: '0 0 20px 0',
+      paddingBottom: '12px',
+      borderBottom: '1px solid rgba(255,255,255,0.06)'
+    },
+    infoRow: {
+      display: 'flex',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      padding: '6px 0'
+    },
+    infoLabel: { fontSize: '13px', fontWeight: 500, color: '#94a3b8' },
+    infoValue: { fontSize: '15px', color: '#ffffff', fontWeight: 500 },
+    input: {
+      padding: '8px 12px',
+      border: '1px solid rgba(255,255,255,0.08)',
+      borderRadius: '8px',
+      fontSize: '14px',
+      width: '60%',
+      background: 'rgba(255,255,255,0.04)',
+      color: '#ffffff'
+    },
+    saveBtn: {
+      padding: '10px 28px',
+      background: 'linear-gradient(135deg, #4f46e5, #7c3aed)',
+      color: '#ffffff',
+      border: 'none',
+      borderRadius: '10px',
+      fontSize: '14px',
+      fontWeight: 600,
+      cursor: 'pointer'
+    },
+    settingItem: {
+      display: 'flex',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      padding: '14px 16px',
+      borderRadius: '10px',
+      border: '1px solid rgba(255,255,255,0.06)'
+    },
+    settingItemDanger: {
+      display: 'flex',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      padding: '14px 16px',
+      borderRadius: '10px',
+      border: '1px solid rgba(239,68,68,0.2)'
+    },
+    settingLeft: { display: 'flex', alignItems: 'center', gap: '14px' },
+    settingIcon: { fontSize: '20px' },
+    settingTitle: { fontSize: '14px', fontWeight: 600, color: '#ffffff', margin: '0 0 2px 0' },
+    settingDesc: { fontSize: '13px', color: '#94a3b8', margin: '0' },
+    settingBtn: {
+      padding: '6px 18px',
+      borderRadius: '8px',
+      border: '1px solid rgba(255,255,255,0.08)',
+      background: 'rgba(255,255,255,0.04)',
+      color: '#ffffff',
+      fontSize: '13px',
+      fontWeight: 500,
+      cursor: 'pointer'
+    },
+    settingBtnDanger: {
+      padding: '6px 18px',
+      borderRadius: '8px',
+      border: '1px solid rgba(239,68,68,0.2)',
+      background: 'rgba(239,68,68,0.1)',
+      color: '#fca5a5',
+      fontSize: '13px',
+      fontWeight: 500,
+      cursor: 'pointer'
+    },
+    coursesGrid: {
+      display: 'grid',
+      gridTemplateColumns: 'repeat(auto-fill, minmax(250px, 1fr))',
+      gap: '12px'
+    },
+    courseCard: {
+      display: 'flex',
+      alignItems: 'center',
+      gap: '14px',
+      padding: '14px 18px',
+      borderRadius: '10px',
+      border: '1px solid rgba(255,255,255,0.06)',
+      cursor: 'pointer'
+    },
+    courseIcon: { fontSize: '28px' },
+    courseInfo: { flex: 1 },
+    courseName: { fontSize: '14px', fontWeight: 600, color: '#ffffff', margin: '0 0 2px 0' },
+    courseTier: { fontSize: '12px', color: '#94a3b8' },
+    courseProgress: { display: 'flex', alignItems: 'center', gap: '10px', minWidth: '70px' },
+    progressBar: { flex: 1, height: '6px', background: 'rgba(255,255,255,0.06)', borderRadius: '4px', overflow: 'hidden', minWidth: '40px' },
+    progressFill: { height: '100%', background: 'linear-gradient(135deg, #4f46e5, #7c3aed)', borderRadius: '4px', width: '40%' },
+    progressText: { fontSize: '12px', fontWeight: 600, color: '#ffffff', minWidth: '36px', textAlign: 'right' }
+  };
+
   // ===== AUTO-DISMISS SUCCESS MESSAGE =====
   useEffect(() => {
     if (success) {
-      const timer = setTimeout(() => {
-        setSuccess('');
-      }, 3000);
+      const timer = setTimeout(() => setSuccess(''), 3000);
       return () => clearTimeout(timer);
     }
   }, [success]);
@@ -60,14 +286,9 @@ const Profile = () => {
           return;
         }
 
-        console.log('🔍 Fetching user data...');
-        
         const userData = await authService.getCurrentUserWithSubscription();
-        
         if (userData) {
-          console.log('✅ User data loaded:', userData.name);
           setUser(userData);
-          
           if (userData.avatar) {
             setAvatarImage(userData.avatar);
             setAvatarData({
@@ -76,7 +297,6 @@ const Profile = () => {
               style: userData.avatar_style || 'adventurer'
             });
           }
-
           if (userData.subscription || userData.tier) {
             setSubscription({
               tier: userData.tier || userData.subscription?.tier || 'Silver',
@@ -84,7 +304,6 @@ const Profile = () => {
               endDate: userData.subscriptionEnd || userData.subscription?.end_date
             });
           }
-          
           setEditForm({
             name: userData.name || '',
             email: userData.email || '',
@@ -92,59 +311,48 @@ const Profile = () => {
             timezone: userData.timezone || 'Africa/Johannesburg',
             grade: userData.grade || ''
           });
-          
           await fetchUserStats();
         } else {
-          console.log('❌ No user data, redirecting to login');
           navigate('/login');
         }
       } catch (err) {
-        console.error('❌ Failed to load profile data:', err);
+        console.error('Failed to load profile data:', err);
         setError('Failed to load profile data');
         navigate('/login');
       } finally {
         setLoading(false);
       }
     };
-
-    const fetchUserStats = async () => {
-      try {
-        const token = localStorage.getItem('accessToken');
-        if (!token) return;
-
-        console.log('🔍 Fetching enrollments...');
-        const enrollResponse = await fetch(`${API_URL}/api/v1/content/my/subjects`, {
-          headers: {
-            'Authorization': `Bearer ${token}`,
-            'Content-Type': 'application/json'
-          }
-        });
-        
-        console.log('📊 Enrollments status:', enrollResponse.status);
-        
-        if (enrollResponse.ok) {
-          const data = await enrollResponse.json();
-          console.log('✅ Enrollments data:', data);
-          if (data.success) {
-            const subjects = data.subjects || [];
-            setEnrollments(subjects);
-            setStats({
-              coursesEnrolled: subjects.length,
-              hoursSpent: 0,
-              badgesEarned: 0,
-              completionRate: subjects.length > 0 ? Math.min(subjects.length * 20, 100) : 0
-            });
-          }
-        }
-      } catch (error) {
-        console.error('❌ Failed to fetch stats:', error);
-      }
-    };
-
     fetchUserData();
   }, [navigate]);
 
-  // ===== AVATAR FUNCTIONS =====
+  const fetchUserStats = async () => {
+    try {
+      const token = localStorage.getItem('accessToken');
+      if (!token) return;
+
+      const enrollResponse = await fetch(`${API_URL}/api/v1/content/my/subjects`, {
+        headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' }
+      });
+
+      if (enrollResponse.ok) {
+        const data = await enrollResponse.json();
+        if (data.success) {
+          const subjects = data.subjects || [];
+          setEnrollments(subjects);
+          setStats({
+            coursesEnrolled: subjects.length,
+            hoursSpent: 0,
+            badgesEarned: 0,
+            completionRate: subjects.length > 0 ? Math.min(subjects.length * 20, 100) : 0
+          });
+        }
+      }
+    } catch (error) {
+      console.error('Failed to fetch stats:', error);
+    }
+  };
+
   const handleAvatarSelect = async (avatar) => {
     setAvatarData(avatar);
     setAvatarImage(avatar.svg);
@@ -155,17 +363,11 @@ const Profile = () => {
   const saveAvatarToBackend = async (avatar) => {
     try {
       const token = localStorage.getItem('accessToken');
-      if (!token) {
-        setError('Please login again to save avatar');
-        return;
-      }
+      if (!token) return;
 
       const response = await fetch(`${API_URL}/api/v1/auth/update-profile`, {
         method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
         body: JSON.stringify({
           avatar: avatar.svg,
           avatar_seed: avatar.seed,
@@ -177,16 +379,11 @@ const Profile = () => {
         const data = await response.json();
         if (data.success) {
           setSuccess('Avatar updated successfully! ✅');
-          setUser(prev => ({
-            ...prev,
-            avatar: avatar.svg,
-            avatar_seed: avatar.seed,
-            avatar_style: avatar.style || 'adventurer'
-          }));
+          setUser(prev => ({ ...prev, avatar: avatar.svg, avatar_seed: avatar.seed, avatar_style: avatar.style || 'adventurer' }));
         }
       }
     } catch (error) {
-      console.error('❌ Failed to save avatar:', error);
+      console.error('Failed to save avatar:', error);
       setError('Failed to save avatar');
     }
   };
@@ -212,10 +409,7 @@ const Profile = () => {
 
       const response = await fetch(`${API_URL}/api/v1/auth/update-profile`, {
         method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
         body: JSON.stringify(editForm)
       });
 
@@ -257,10 +451,7 @@ const Profile = () => {
 
       const response = await fetch(`${API_URL}/api/v1/auth/change-password`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
         body: JSON.stringify({
           currentPassword: passwordData.currentPassword,
           newPassword: passwordData.newPassword
@@ -284,7 +475,7 @@ const Profile = () => {
 
   const handleDeleteAccount = async () => {
     if (!window.confirm('Are you sure you want to delete your account? This action is permanent!')) return;
-    
+
     setLoading(true);
     try {
       const token = localStorage.getItem('accessToken');
@@ -295,9 +486,7 @@ const Profile = () => {
 
       const response = await fetch(`${API_URL}/api/v1/auth/delete-account`, {
         method: 'DELETE',
-        headers: {
-          'Authorization': `Bearer ${token}`
-        }
+        headers: { 'Authorization': `Bearer ${token}` }
       });
 
       if (response.ok) {
@@ -315,69 +504,59 @@ const Profile = () => {
     }
   };
 
-  if (loading) return <div className="profile-loading">Loading profile...</div>;
+  if (loading) return <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '60vh', color: '#94a3b8' }}>Loading profile...</div>;
 
   return (
-    <div className="profile-container">
+    <div style={darkStyles.container}>
       {/* Header */}
-      <div className="profile-header">
-        <div 
-          className="profile-avatar" 
-          style={{ cursor: 'pointer' }} 
-          onClick={() => setShowAvatarSelector(true)}
-          title="Click to change avatar"
-        >
+      <div style={darkStyles.header}>
+        <div style={darkStyles.avatar} onClick={() => setShowAvatarSelector(true)}>
           {avatarImage ? (
-            <img src={avatarImage} alt="Avatar" className="profile-avatar-img" />
+            <img src={avatarImage} alt="Avatar" style={darkStyles.avatarImg} />
           ) : (
-            <span className="profile-avatar-emoji">👤</span>
+            <span style={darkStyles.avatarEmoji}>👤</span>
           )}
-          <div className="avatar-edit-badge">✎</div>
+          <div style={darkStyles.avatarBadge}>✎</div>
         </div>
-        <div className="profile-header-info">
-          <h1>{user?.name || 'User'}</h1>
-          <p className="profile-header-subtitle">
+        <div style={darkStyles.headerInfo}>
+          <h1 style={darkStyles.headerName}>{user?.name || 'User'}</h1>
+          <p style={darkStyles.headerSubtitle}>
             {user?.cohort === 'HighSchool' ? 'High School Student' : 'University Student'} • {user?.country || 'South Africa'}
           </p>
-          <div className="profile-status">
-            <span className="status-dot"></span>
+          <div style={darkStyles.headerStatus}>
+            <span style={darkStyles.statusDot}></span>
             Active Member
           </div>
         </div>
-        <button className="profile-edit-btn" onClick={() => setIsEditing(!isEditing)}>
+        <button style={darkStyles.editBtn} onClick={() => setIsEditing(!isEditing)}>
           {isEditing ? 'Cancel' : '✏️ Edit Profile'}
         </button>
       </div>
 
-      {error && <div className="profile-error">{error}</div>}
-      {success && <div className="profile-success">{success}</div>}
+      {error && <div style={darkStyles.error}>{error}</div>}
+      {success && <div style={darkStyles.success}>{success}</div>}
 
       {/* Stats */}
-      <div className="profile-stats">
-        <div className="profile-stat-card">
-          <span className="stat-number">{stats.coursesEnrolled}</span>
-          <span className="stat-label">Courses Enrolled</span>
-        </div>
-        <div className="profile-stat-card">
-          <span className="stat-number">{stats.hoursSpent}</span>
-          <span className="stat-label">Hours Spent</span>
-        </div>
-        <div className="profile-stat-card">
-          <span className="stat-number">{stats.badgesEarned}</span>
-          <span className="stat-label">Badges Earned</span>
-        </div>
-        <div className="profile-stat-card">
-          <span className="stat-number">{stats.completionRate}%</span>
-          <span className="stat-label">Completion Rate</span>
-        </div>
+      <div style={darkStyles.statsGrid}>
+        {[
+          { number: stats.coursesEnrolled, label: 'Courses Enrolled' },
+          { number: stats.hoursSpent, label: 'Hours Spent' },
+          { number: stats.badgesEarned, label: 'Badges Earned' },
+          { number: `${stats.completionRate}%`, label: 'Completion Rate' }
+        ].map((stat, i) => (
+          <div key={i} style={darkStyles.statCard}>
+            <span style={darkStyles.statNumber}>{stat.number}</span>
+            <span style={darkStyles.statLabel}>{stat.label}</span>
+          </div>
+        ))}
       </div>
 
       {/* Profile Grid */}
-      <div className="profile-grid">
+      <div style={darkStyles.grid}>
         {/* Personal Information */}
-        <div className="profile-card">
-          <h3>📋 Personal Information</h3>
-          <div className="profile-info-group">
+        <div style={darkStyles.card}>
+          <h3 style={darkStyles.cardTitle}>📋 Personal Information</h3>
+          <div>
             {[
               { label: 'Full Name', name: 'name', value: editForm.name },
               { label: 'Email Address', name: 'email', value: editForm.email },
@@ -385,29 +564,25 @@ const Profile = () => {
               { label: 'Grade / Year', name: 'grade', value: editForm.grade },
               { label: 'Cohort', name: 'cohort', value: user?.cohort === 'HighSchool' ? 'High School' : 'University First Year' }
             ].map((field, i) => (
-              <div key={i} className="profile-info-item">
-                <span className="info-label">{field.label}</span>
+              <div key={i} style={darkStyles.infoRow}>
+                <span style={darkStyles.infoLabel}>{field.label}</span>
                 {isEditing && field.name !== 'cohort' ? (
                   <input
                     type="text"
                     name={field.name}
                     value={field.value}
                     onChange={handleInputChange}
-                    className="profile-input"
+                    style={darkStyles.input}
                   />
                 ) : (
-                  <span className="info-value">{field.value || 'Not set'}</span>
+                  <span style={darkStyles.infoValue}>{field.value || 'Not set'}</span>
                 )}
               </div>
             ))}
           </div>
           {isEditing && (
-            <div className="profile-actions">
-              <button 
-                className="profile-save-btn" 
-                onClick={handleSaveProfile}
-                disabled={loading}
-              >
+            <div style={{ marginTop: '16px', paddingTop: '16px', borderTop: '1px solid rgba(255,255,255,0.06)' }}>
+              <button style={darkStyles.saveBtn} onClick={handleSaveProfile} disabled={loading}>
                 {loading ? 'Saving...' : '💾 Save Changes'}
               </button>
             </div>
@@ -415,78 +590,62 @@ const Profile = () => {
         </div>
 
         {/* Account Settings */}
-        <div className="profile-card">
-          <h3>🔒 Account Settings</h3>
-          <div className="profile-settings-list">
-            <div className="profile-setting-item">
-              <div className="setting-info">
-                <span className="setting-icon">🔑</span>
+        <div style={darkStyles.card}>
+          <h3 style={darkStyles.cardTitle}>🔒 Account Settings</h3>
+          <div>
+            <div style={darkStyles.settingItem}>
+              <div style={darkStyles.settingLeft}>
+                <span style={darkStyles.settingIcon}>🔑</span>
                 <div>
-                  <h4>Change Password</h4>
-                  <p>Update your password regularly for security</p>
+                  <h4 style={darkStyles.settingTitle}>Change Password</h4>
+                  <p style={darkStyles.settingDesc}>Update your password regularly for security</p>
                 </div>
               </div>
-              <button 
-                className="setting-action-btn"
-                onClick={() => setShowPasswordModal(true)}
-              >
-                Update
-              </button>
+              <button style={darkStyles.settingBtn} onClick={() => setShowPasswordModal(true)}>Update</button>
             </div>
-
-            <div className="profile-setting-item danger">
-              <div className="setting-info">
-                <span className="setting-icon">⚠️</span>
+            <div style={darkStyles.settingItemDanger}>
+              <div style={darkStyles.settingLeft}>
+                <span style={darkStyles.settingIcon}>⚠️</span>
                 <div>
-                  <h4>Delete Account</h4>
-                  <p>Permanently delete your account and all data</p>
+                  <h4 style={darkStyles.settingTitle}>Delete Account</h4>
+                  <p style={darkStyles.settingDesc}>Permanently delete your account and all data</p>
                 </div>
               </div>
-              <button 
-                className="setting-action-btn danger"
-                onClick={() => setShowDeleteModal(true)}
-              >
-                Delete
-              </button>
+              <button style={darkStyles.settingBtnDanger} onClick={() => setShowDeleteModal(true)}>Delete</button>
             </div>
           </div>
         </div>
 
         {/* Enrolled Courses */}
-        <div className="profile-card full-width">
-          <h3>📚 My Courses</h3>
+        <div style={darkStyles.cardFull}>
+          <h3 style={darkStyles.cardTitle}>📚 My Courses</h3>
           {enrollments.length > 0 ? (
-            <div className="profile-courses-grid">
+            <div style={darkStyles.coursesGrid}>
               {enrollments.map((course) => (
-                <div 
-                  key={course.id} 
-                  className="profile-course-card"
+                <div
+                  key={course.id}
+                  style={darkStyles.courseCard}
                   onClick={() => navigate(`/subjects/${course.name.toLowerCase()}`)}
                 >
-                  <span className="course-icon">{course.icon || '📘'}</span>
-                  <div className="course-info">
-                    <h4>{course.name}</h4>
-                    <span className="course-tier">{course.tier || 'Tier 1'}</span>
+                  <span style={darkStyles.courseIcon}>{course.icon || '📘'}</span>
+                  <div style={darkStyles.courseInfo}>
+                    <h4 style={darkStyles.courseName}>{course.name}</h4>
+                    <span style={darkStyles.courseTier}>{course.tier || 'Tier 1'}</span>
                   </div>
-                  <div className="course-progress">
-                    <div className="progress-bar">
-                      <div 
-                        className="progress-fill" 
-                        style={{ width: `${Math.floor(Math.random() * 60 + 20)}%` }}
-                      ></div>
+                  <div style={darkStyles.courseProgress}>
+                    <div style={darkStyles.progressBar}>
+                      <div style={{ ...darkStyles.progressFill, width: `${Math.floor(Math.random() * 60 + 20)}%` }}></div>
                     </div>
-                    <span className="progress-text">
-                      {Math.floor(Math.random() * 60 + 20)}%
-                    </span>
+                    <span style={darkStyles.progressText}>{Math.floor(Math.random() * 60 + 20)}%</span>
                   </div>
                 </div>
               ))}
             </div>
           ) : (
-            <div className="profile-empty-state">
+            <div style={{ textAlign: 'center', padding: '32px 0', color: '#94a3b8' }}>
               <p>No courses enrolled yet</p>
-              <button 
-                className="profile-empty-btn"
+              <button
+                style={{ marginTop: '12px', padding: '10px 28px', background: 'linear-gradient(135deg, #4f46e5, #7c3aed)', color: '#ffffff', border: 'none', borderRadius: '10px', fontSize: '14px', fontWeight: 600, cursor: 'pointer' }}
                 onClick={() => navigate('/subjects')}
               >
                 Browse Subjects →
@@ -496,53 +655,33 @@ const Profile = () => {
         </div>
       </div>
 
-      {/* Modals */}
+      {/* Modals - Keep your existing modal code */}
       {showPasswordModal && (
-        <div className="profile-modal-overlay" onClick={() => setShowPasswordModal(false)}>
-          <div className="profile-modal" onClick={(e) => e.stopPropagation()}>
-            <div className="profile-modal-header">
-              <h3>🔑 Change Password</h3>
-              <button className="modal-close" onClick={() => setShowPasswordModal(false)}>×</button>
+        <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.7)', backdropFilter: 'blur(8px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }} onClick={() => setShowPasswordModal(false)}>
+          <div style={{ background: '#141b2d', borderRadius: '16px', maxWidth: '480px', width: '90%', maxHeight: '90vh', overflow: 'auto', boxShadow: '0 20px 60px rgba(0,0,0,0.5)', border: '1px solid rgba(255,255,255,0.06)' }} onClick={(e) => e.stopPropagation()}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '20px 24px', borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
+              <h3 style={{ fontSize: '18px', fontWeight: 600, color: '#ffffff', margin: 0 }}>🔑 Change Password</h3>
+              <button onClick={() => setShowPasswordModal(false)} style={{ background: 'none', border: 'none', fontSize: '24px', color: '#94a3b8', cursor: 'pointer' }}>×</button>
             </div>
             <form onSubmit={handlePasswordChange}>
-              <div className="profile-modal-body">
-                <div className="form-group">
-                  <label>Current Password</label>
-                  <input
-                    type="password"
-                    value={passwordData.currentPassword}
-                    onChange={(e) => setPasswordData(prev => ({ ...prev, currentPassword: e.target.value }))}
-                    required
-                  />
+              <div style={{ padding: '24px' }}>
+                <div style={{ marginBottom: '16px' }}>
+                  <label style={{ display: 'block', fontSize: '13px', fontWeight: 500, color: '#94a3b8', marginBottom: '4px' }}>Current Password</label>
+                  <input type="password" value={passwordData.currentPassword} onChange={(e) => setPasswordData(prev => ({ ...prev, currentPassword: e.target.value }))} required style={{ width: '100%', padding: '10px 14px', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '8px', fontSize: '14px', background: 'rgba(255,255,255,0.04)', color: '#ffffff' }} />
                 </div>
-                <div className="form-group">
-                  <label>New Password</label>
-                  <input
-                    type="password"
-                    value={passwordData.newPassword}
-                    onChange={(e) => setPasswordData(prev => ({ ...prev, newPassword: e.target.value }))}
-                    required
-                    minLength="8"
-                  />
+                <div style={{ marginBottom: '16px' }}>
+                  <label style={{ display: 'block', fontSize: '13px', fontWeight: 500, color: '#94a3b8', marginBottom: '4px' }}>New Password</label>
+                  <input type="password" value={passwordData.newPassword} onChange={(e) => setPasswordData(prev => ({ ...prev, newPassword: e.target.value }))} required minLength="8" style={{ width: '100%', padding: '10px 14px', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '8px', fontSize: '14px', background: 'rgba(255,255,255,0.04)', color: '#ffffff' }} />
                 </div>
-                <div className="form-group">
-                  <label>Confirm New Password</label>
-                  <input
-                    type="password"
-                    value={passwordData.confirmPassword}
-                    onChange={(e) => setPasswordData(prev => ({ ...prev, confirmPassword: e.target.value }))}
-                    required
-                  />
+                <div style={{ marginBottom: '16px' }}>
+                  <label style={{ display: 'block', fontSize: '13px', fontWeight: 500, color: '#94a3b8', marginBottom: '4px' }}>Confirm New Password</label>
+                  <input type="password" value={passwordData.confirmPassword} onChange={(e) => setPasswordData(prev => ({ ...prev, confirmPassword: e.target.value }))} required style={{ width: '100%', padding: '10px 14px', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '8px', fontSize: '14px', background: 'rgba(255,255,255,0.04)', color: '#ffffff' }} />
                 </div>
-                {error && <div className="profile-error">{error}</div>}
-              </div>
-              <div className="profile-modal-actions">
-                <button type="button" className="modal-cancel" onClick={() => setShowPasswordModal(false)}>
-                  Cancel
-                </button>
-                <button type="submit" className="modal-submit" disabled={loading}>
-                  {loading ? 'Changing...' : 'Change Password'}
-                </button>
+                {error && <div style={{ color: '#fca5a5', marginBottom: '16px' }}>{error}</div>}
+                <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px', paddingTop: '16px', borderTop: '1px solid rgba(255,255,255,0.06)' }}>
+                  <button type="button" onClick={() => setShowPasswordModal(false)} style={{ padding: '10px 24px', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '8px', background: 'rgba(255,255,255,0.04)', color: '#ffffff', fontSize: '14px', fontWeight: 500, cursor: 'pointer' }}>Cancel</button>
+                  <button type="submit" disabled={loading} style={{ padding: '10px 24px', border: 'none', borderRadius: '8px', background: 'linear-gradient(135deg, #4f46e5, #7c3aed)', color: '#ffffff', fontSize: '14px', fontWeight: 500, cursor: 'pointer' }}>{loading ? 'Changing...' : 'Change Password'}</button>
+                </div>
               </div>
             </form>
           </div>
@@ -550,30 +689,19 @@ const Profile = () => {
       )}
 
       {showDeleteModal && (
-        <div className="profile-modal-overlay" onClick={() => setShowDeleteModal(false)}>
-          <div className="profile-modal" onClick={(e) => e.stopPropagation()}>
-            <div className="profile-modal-header danger">
-              <h3>⚠️ Delete Account</h3>
-              <button className="modal-close" onClick={() => setShowDeleteModal(false)}>×</button>
+        <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.7)', backdropFilter: 'blur(8px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }} onClick={() => setShowDeleteModal(false)}>
+          <div style={{ background: '#141b2d', borderRadius: '16px', maxWidth: '480px', width: '90%', maxHeight: '90vh', overflow: 'auto', boxShadow: '0 20px 60px rgba(0,0,0,0.5)', border: '1px solid rgba(255,255,255,0.06)' }} onClick={(e) => e.stopPropagation()}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '20px 24px', borderBottom: '1px solid rgba(239,68,68,0.2)' }}>
+              <h3 style={{ fontSize: '18px', fontWeight: 600, color: '#ffffff', margin: 0 }}>⚠️ Delete Account</h3>
+              <button onClick={() => setShowDeleteModal(false)} style={{ background: 'none', border: 'none', fontSize: '24px', color: '#94a3b8', cursor: 'pointer' }}>×</button>
             </div>
-            <div className="profile-modal-body">
-              <p className="delete-warning">
-                Are you sure you want to delete your account? This action is <strong>permanent</strong> and cannot be undone.
-              </p>
+            <div style={{ padding: '24px' }}>
+              <p style={{ fontSize: '15px', color: '#fca5a5', marginBottom: '12px' }}>Are you sure you want to delete your account? This action is <strong>permanent</strong> and cannot be undone.</p>
               <p>All your data, including enrolled courses and progress, will be permanently removed.</p>
             </div>
-            <div className="profile-modal-actions">
-              <button type="button" className="modal-cancel" onClick={() => setShowDeleteModal(false)}>
-                Cancel
-              </button>
-              <button 
-                type="button" 
-                className="modal-delete" 
-                onClick={handleDeleteAccount}
-                disabled={loading}
-              >
-                {loading ? 'Deleting...' : '🗑️ Delete Account'}
-              </button>
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px', padding: '16px 24px', borderTop: '1px solid rgba(255,255,255,0.06)' }}>
+              <button onClick={() => setShowDeleteModal(false)} style={{ padding: '10px 24px', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '8px', background: 'rgba(255,255,255,0.04)', color: '#ffffff', fontSize: '14px', fontWeight: 500, cursor: 'pointer' }}>Cancel</button>
+              <button onClick={handleDeleteAccount} disabled={loading} style={{ padding: '10px 24px', border: 'none', borderRadius: '8px', background: '#dc2626', color: '#ffffff', fontSize: '14px', fontWeight: 500, cursor: 'pointer' }}>{loading ? 'Deleting...' : '🗑️ Delete Account'}</button>
             </div>
           </div>
         </div>
@@ -590,4 +718,4 @@ const Profile = () => {
   );
 };
 
-export default Profile;// Force new deployment $(date) 
+export default Profile;

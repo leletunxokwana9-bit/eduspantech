@@ -2,6 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { authService } from '../services/authService';
+import Pricing from '../components/home/Pricing/Pricing';
 import './Home.css';
 
 // ============================================
@@ -365,70 +366,11 @@ function Home() {
         </section>
       )}
 
-      {/* Pricing Section - Only show to non-authenticated users */}
-      {!isAuthenticated && (
-        <section className="pricing-section">
-          <div className="container">
-            <div className="section-header">
-              <span className="section-tag">Flexible Plans</span>
-              <h2>Choose your learning path</h2>
-              <p>Affordable monthly subscriptions designed for every student's needs.</p>
-            </div>
-            <div className="pricing-grid">
-              <div className="pricing-card pricing-silver">
-                <div className="pricing-tier">Silver</div>
-                <div className="pricing-price">
-                  R100 <span>/ month</span>
-                </div>
-                <p className="pricing-description">Self-study with on-demand content</p>
-                <ul className="pricing-features">
-                  <li>✅ On-demand whiteboard archives</li>
-                  <li>✅ Step-by-step mathematical proofs</li>
-                  <li>✅ Video-free presentation playback</li>
-                  <li>✅ Topic-based math domain vaults</li>
-                </ul>
-                <button className="btn-outline" onClick={() => navigate('/register')}>
-                  Get Started
-                </button>
-              </div>
-              <div className="pricing-card pricing-gold featured">
-                <div className="pricing-badge">Most Popular</div>
-                <div className="pricing-tier">Gold</div>
-                <div className="pricing-price">
-                  R200 <span>/ month</span>
-                </div>
-                <p className="pricing-description">Live evening homework clinics</p>
-                <ul className="pricing-features">
-                  <li>✅ All Silver features</li>
-                  <li>✅ Live drop-in evening clinics</li>
-                  <li>✅ Real-time interactive canvas</li>
-                  <li>✅ Regional evening windows (16:00-23:00)</li>
-                </ul>
-                <button className="btn-primary" onClick={() => navigate('/register')}>
-                  🚀 Get Started
-                </button>
-              </div>
-              <div className="pricing-card pricing-platinum">
-                <div className="pricing-tier">Platinum</div>
-                <div className="pricing-price">
-                  R350 <span>/ month</span>
-                </div>
-                <p className="pricing-description">Premium priority access &amp; weekend clinics</p>
-                <ul className="pricing-features">
-                  <li>✅ All Gold features</li>
-                  <li>✅ Weekend math clinics</li>
-                  <li>✅ Queue-bypass privileges</li>
-                  <li>✅ Priority during test weeks</li>
-                </ul>
-                <button className="btn-outline" onClick={() => navigate('/register')}>
-                  Get Started
-                </button>
-              </div>
-            </div>
-            <p className="pricing-note">* Multi-currency pricing available: $6–$20 / R$25–R$90</p>
-          </div>
-        </section>
-      )}
+      {/* ============================================
+          PRICING SECTION - FETCHES FROM SUPABASE
+          Shows: R600, R1700, R2900
+          ============================================ */}
+      {!isAuthenticated && <Pricing />}
 
       {/* Progress Section for Authenticated Users */}
       {isAuthenticated && (

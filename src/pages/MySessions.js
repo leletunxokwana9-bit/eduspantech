@@ -1,0 +1,605 @@
+// src/pages/MySessions.js
+import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { authService } from '../services/authService';
+import './MySessions.css';
+
+const MySessions = () => {
+  const navigate = useNavigate();
+  const [user, setUser] = useState(null);
+  const [sessions, setSessions] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+  const [showRedirectPopup, setShowRedirectPopup] = useState(false);
+  const [selectedSession, setSelectedSession] = useState(null);
+  const [expandedSession, setExpandedSession] = useState(null);
+  const [filterStatus, setFilterStatus] = useState('all');
+
+  const API_URL = 'https://eduspantech-backend.onrender.com';
+
+  useEffect(() => {
+    const fetchUserAndSessions = async () => {
+      try {
+        const userData = await authService.getCurrentUser();
+        if (userData) {
+          setUser(userData);
+          await fetchUserSessions();
+        } else {
+          navigate('/login');
+        }
+      } catch (err) {
+        setError('Failed to load user data');
+        navigate('/login');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchUserAndSessions();
+  }, [navigate]);
+
+  const fetchUserSessions = async () => {
+    try {
+      const token = localStorage.getItem('accessToken');
+      
+      const response = await fetch(`${API_URL}/api/v1/sessions/user`, {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        if (data.success && data.sessions && data.sessions.length > 0) {
+          const enrichedSessions = await Promise.all(
+            data.sessions.map(async (session) => {
+              let tutor = null;
+              try {
+                const tutorResponse = await fetch(`${API_URL}/api/v1/tutors/${session.tutorId}`, {
+                  headers: {
+                    'Authorization': `Bearer ${token}`
+                  }
+                });
+                if (tutorResponse.ok) {
+                  const tutorData = await tutorResponse.json();
+                  tutor = tutorData.tutor || tutorData;
+                }
+              } catch (e) {
+                console.error('Failed to fetch tutor details:', e);
+              }
+
+              const now = new Date();
+              const sessionDate = new Date(session.date);
+              const sessionEnd = new Date(sessionDate.getTime() + (session.duration || 60) * 60000);
+              
+              let status = session.status || 'upcoming';
+              if (status === 'upcoming' && sessionEnd < now) {
+                status = 'completed';
+              } else if (status === 'upcoming' && sessionDate < now && sessionEnd > now) {
+                status = 'ongoing';
+              }
+
+              return {
+                ...session,
+                tutor: tutor || null,
+                status,
+                dateFormatted: formatDate(session.date),
+                timeFormatted: formatTime(session.date),
+                durationFormatted: formatDuration(session.duration || 60)
+              };
+            })
+          );
+
+          setSessions(enrichedSessions);
+        } else {
+          setSessions([]);
+        }
+      } else {
+        setSessions([]);
+        console.error('Failed to fetch sessions:', response.status);
+      }
+    } catch (error) {
+      console.error('Failed to fetch sessions:', error);
+      setSessions([]);
+    }
+  };
+
+  const formatDate = (dateString) => {
+    if (!dateString) return 'N/A';
+    const date = new Date(dateString);
+    return date.toLocaleDateString('en-US', {
+      weekday: 'short',
+      month: 'short',
+      day: 'numeric',
+      year: 'numeric'
+    });
+  };
+
+  const formatTime = (dateString) => {
+    if (!dateString) return 'N/A';
+    const date = new Date(dateString);
+    return date.toLocaleTimeString('en-US', {
+      hour: '2-digit',
+      minute: '2-digit'
+    });
+  };
+
+  const formatDuration = (minutes) => {
+    if (!minutes) return 'N/A';
+    if (minutes < 60) return `${minutes} min`;
+    const hours = Math.floor(minutes / 60);
+    const remainingMinutes = minutes % 60;
+    if (remainingMinutes === 0) return `${hours}h`;
+    return `${hours}h ${remainingMinutes}min`;
+  };
+
+  const getStatusColor = (status) => {
+    switch (status) {
+      case 'upcoming':
+        return 'status-upcoming';
+      case 'ongoing':
+        return 'status-ongoing';
+      case 'completed':
+        return 'status-completed';
+      case 'cancelled':
+        return 'status-cancelled';
+      default:
+        return 'status-upcoming';
+    }
+  };
+
+  const getStatusIcon = (status) => {
+    switch (status) {
+      case 'upcoming':
+        return '📅';
+      case 'ongoing':
+        return '🟢';
+      case 'completed':
+        return '✅';
+      case 'cancelled':
+        return '❌';
+      default:
+        return '📅';
+    }
+  };
+
+  const getStatusLabel = (status) => {
+    switch (status) {
+      case 'upcoming':
+        return 'Upcoming';
+      case 'ongoing':
+        return 'Ongoing';
+      case 'completed':
+        return 'Completed';
+      case 'cancelled':
+        return 'Cancelled';
+      default:
+        return 'Upcoming';
+    }
+  };
+
+  const handleSessionClick = (session) => {
+    setSelectedSession(session);
+    setExpandedSession(expandedSession === session.id ? null : session.id);
+  };
+
+  const handleJoinSession = (session) => {
+    if (session.meetingLink) {
+      window.open(session.meetingLink, '_blank');
+    } else {
+      navigate(`/session/${session.id}`, { state: { tutor: session.tutor } });
+    }
+  };
+
+  const handleCancelSession = async (session) => {
+    if (!window.confirm(`Are you sure you want to cancel your session with ${session.tutor?.name || 'Tutor'} on ${session.dateFormatted}?`)) {
+      return;
+    }
+
+    try {
+      const token = localStorage.getItem('accessToken');
+      const response = await fetch(`${API_URL}/api/v1/sessions/${session.id}/cancel`, {
+        method: 'PUT',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      });
+
+      if (response.ok) {
+        setSessions(prev => 
+          prev.map(s => 
+            s.id === session.id 
+              ? { ...s, status: 'cancelled' }
+              : s
+          )
+        );
+      } else {
+        alert('Failed to cancel session. Please try again.');
+      }
+    } catch (error) {
+      console.error('Error cancelling session:', error);
+      alert('An error occurred. Please try again.');
+    }
+  };
+
+  const handleReschedule = (session) => {
+    navigate('/tutors', { state: { reschedule: session } });
+  };
+
+  const handleRedirectToTutors = () => {
+    setShowRedirectPopup(true);
+  };
+
+  const handleProceed = () => {
+    setShowRedirectPopup(false);
+    navigate('/tutors');
+  };
+
+  const handleCancelPopup = () => {
+    setShowRedirectPopup(false);
+  };
+
+  const getFilteredSessions = () => {
+    if (filterStatus === 'all') return sessions;
+    return sessions.filter(s => s.status === filterStatus);
+  };
+
+  const filteredSessions = getFilteredSessions();
+  const upcomingSessions = sessions.filter(s => s.status === 'upcoming' || s.status === 'ongoing');
+  const completedSessions = sessions.filter(s => s.status === 'completed');
+  const cancelledSessions = sessions.filter(s => s.status === 'cancelled');
+
+  if (loading) {
+    return (
+      <div className="my-sessions-loading">
+        <div className="loading-spinner"></div>
+        <p>Loading your sessions...</p>
+      </div>
+    );
+  }
+
+  if (error) {
+    return <div className="my-sessions-error">{error}</div>;
+  }
+
+  return (
+    <div className="my-sessions-wrapper">
+      {/* Background Effects */}
+      <div className="my-sessions-bg">
+        <div className="gradient-orb orb-1"></div>
+        <div className="gradient-orb orb-2"></div>
+        <div className="gradient-orb orb-3"></div>
+      </div>
+
+      <div className="my-sessions-container">
+        {/* Header Section */}
+        <div className="my-sessions-header">
+          <div className="header-content">
+            <div className="header-left">
+              <h1 className="header-title">
+                <span className="title-icon">📋</span>
+                My Sessions
+              </h1>
+              <p className="header-subtitle">
+                {sessions.length === 0 
+                  ? "You haven't booked any sessions yet"
+                  : `${sessions.length} session${sessions.length > 1 ? 's' : ''} total`
+                }
+              </p>
+            </div>
+            {/* Only show "Book New Session" if user has sessions */}
+            {sessions.length > 0 && (
+              <div className="header-right">
+                <button 
+                  className="book-new-btn"
+                  onClick={handleRedirectToTutors}
+                >
+                  <span className="btn-icon">➕</span>
+                  Book New Session
+                </button>
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Stats Summary - Only show if sessions exist */}
+        {sessions.length > 0 && (
+          <div className="sessions-stats">
+            <div className="stat-item">
+              <span className="stat-number">{upcomingSessions.length}</span>
+              <span className="stat-label">📅 Upcoming</span>
+            </div>
+            <div className="stat-divider"></div>
+            <div className="stat-item">
+              <span className="stat-number">{completedSessions.length}</span>
+              <span className="stat-label">✅ Completed</span>
+            </div>
+            <div className="stat-divider"></div>
+            <div className="stat-item">
+              <span className="stat-number">{cancelledSessions.length}</span>
+              <span className="stat-label">❌ Cancelled</span>
+            </div>
+            <div className="stat-divider"></div>
+            <div className="stat-item">
+              <span className="stat-number">
+                {sessions.reduce((acc, s) => acc + (s.duration || 0), 0)}min
+              </span>
+              <span className="stat-label">⏱️ Total Time</span>
+            </div>
+          </div>
+        )}
+
+        {/* Filter Bar - Only show if sessions exist */}
+        {sessions.length > 0 && (
+          <div className="filter-bar">
+            <div className="filter-buttons">
+              <button 
+                className={`filter-btn ${filterStatus === 'all' ? 'active' : ''}`}
+                onClick={() => setFilterStatus('all')}
+              >
+                All ({sessions.length})
+              </button>
+              <button 
+                className={`filter-btn ${filterStatus === 'upcoming' ? 'active' : ''}`}
+                onClick={() => setFilterStatus('upcoming')}
+              >
+                Upcoming ({upcomingSessions.length})
+              </button>
+              <button 
+                className={`filter-btn ${filterStatus === 'completed' ? 'active' : ''}`}
+                onClick={() => setFilterStatus('completed')}
+              >
+                Completed ({completedSessions.length})
+              </button>
+              <button 
+                className={`filter-btn ${filterStatus === 'cancelled' ? 'active' : ''}`}
+                onClick={() => setFilterStatus('cancelled')}
+              >
+                Cancelled ({cancelledSessions.length})
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* Session List */}
+        {sessions.length === 0 ? (
+          <div className="empty-state">
+            <div className="empty-icon">📅</div>
+            <h3>No Sessions Booked Yet</h3>
+            <p>
+              You haven't booked any tutoring sessions. Browse our expert tutors and 
+              schedule your first session today!
+            </p>
+            <button 
+              className="empty-book-btn"
+              onClick={handleRedirectToTutors}
+            >
+              Find a Tutor
+            </button>
+          </div>
+        ) : (
+          <div className="sessions-grid">
+            {filteredSessions.map((session) => (
+              <div 
+                key={session.id} 
+                className={`session-card ${expandedSession === session.id ? 'expanded' : ''}`}
+              >
+                <div 
+                  className="session-card-header"
+                  onClick={() => handleSessionClick(session)}
+                >
+                  <div className="session-status-badge">
+                    <span className={`status-dot ${getStatusColor(session.status)}`}></span>
+                    <span className="status-label">{getStatusLabel(session.status)}</span>
+                  </div>
+                  
+                  <div className="session-info">
+                    <h3 className="session-title">{session.topic || 'Tutoring Session'}</h3>
+                    <div className="session-meta">
+                      <span className="session-tutor">
+                        <span className="meta-icon">👨‍🏫</span>
+                        {session.tutor?.name || 'Tutor'}
+                      </span>
+                      <span className="session-date">
+                        <span className="meta-icon">📅</span>
+                        {session.dateFormatted}
+                      </span>
+                      <span className="session-time">
+                        <span className="meta-icon">⏰</span>
+                        {session.timeFormatted}
+                      </span>
+                      <span className="session-duration">
+                        <span className="meta-icon">⏱️</span>
+                        {session.durationFormatted}
+                      </span>
+                    </div>
+                  </div>
+
+                  <div className="session-actions-preview">
+                    {session.status === 'upcoming' && (
+                      <button 
+                        className="session-action-btn join-btn"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleJoinSession(session);
+                        }}
+                      >
+                        Join
+                      </button>
+                    )}
+                    <button className="expand-btn">
+                      {expandedSession === session.id ? '▲' : '▼'}
+                    </button>
+                  </div>
+                </div>
+
+                {/* Expanded Details */}
+                {expandedSession === session.id && (
+                  <div className="session-details">
+                    <div className="details-grid">
+                      {/* Tutor Info */}
+                      <div className="detail-section tutor-info">
+                        <h4>👨‍🏫 Tutor Information</h4>
+                        <div className="tutor-detail-card">
+                          <div className="tutor-avatar">
+                            {session.tutor?.image ? (
+                              <img src={session.tutor.image} alt={session.tutor.name} />
+                            ) : (
+                              <span>{session.tutor?.name?.charAt(0) || 'T'}</span>
+                            )}
+                          </div>
+                          <div className="tutor-detail-info">
+                            <span className="tutor-detail-name">{session.tutor?.name || 'Tutor'}</span>
+                            <span className="tutor-detail-tier">🏅 {session.tutor?.tier || 'Gold'}</span>
+                            {session.tutor?.subjects && (
+                              <div className="tutor-detail-subjects">
+                                {session.tutor.subjects.map((subject, idx) => (
+                                  <span key={idx} className="subject-tag">{subject}</span>
+                                ))}
+                              </div>
+                            )}
+                            {session.tutor?.bio && (
+                              <p className="tutor-detail-bio">{session.tutor.bio}</p>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Session Details */}
+                      <div className="detail-section session-info-detail">
+                        <h4>📋 Session Details</h4>
+                        <div className="session-detail-items">
+                          <div className="detail-item">
+                            <span className="detail-label">Topic:</span>
+                            <span className="detail-value">{session.topic || 'General Tutoring'}</span>
+                          </div>
+                          <div className="detail-item">
+                            <span className="detail-label">Date:</span>
+                            <span className="detail-value">{session.dateFormatted}</span>
+                          </div>
+                          <div className="detail-item">
+                            <span className="detail-label">Time:</span>
+                            <span className="detail-value">{session.timeFormatted}</span>
+                          </div>
+                          <div className="detail-item">
+                            <span className="detail-label">Duration:</span>
+                            <span className="detail-value">{session.durationFormatted}</span>
+                          </div>
+                          {session.notes && (
+                            <div className="detail-item full-width">
+                              <span className="detail-label">Notes:</span>
+                              <span className="detail-value">{session.notes}</span>
+                            </div>
+                          )}
+                          {session.meetingLink && (
+                            <div className="detail-item full-width">
+                              <span className="detail-label">Meeting Link:</span>
+                              <span className="detail-value link-value">{session.meetingLink}</span>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="session-actions">
+                      {session.status === 'upcoming' && (
+                        <>
+                          <button 
+                            className="action-btn join-btn"
+                            onClick={() => handleJoinSession(session)}
+                          >
+                            <span className="btn-icon">▶️</span>
+                            Join Session
+                          </button>
+                          <button 
+                            className="action-btn reschedule-btn"
+                            onClick={() => handleReschedule(session)}
+                          >
+                            <span className="btn-icon">🔄</span>
+                            Reschedule
+                          </button>
+                          <button 
+                            className="action-btn cancel-btn"
+                            onClick={() => handleCancelSession(session)}
+                          >
+                            <span className="btn-icon">❌</span>
+                            Cancel
+                          </button>
+                        </>
+                      )}
+                      {session.status === 'completed' && (
+                        <button 
+                          className="action-btn review-btn"
+                          onClick={() => navigate(`/session/${session.id}/review`)}
+                        >
+                          <span className="btn-icon">⭐</span>
+                          Review Session
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+        )}
+
+        {/* Quick Stats Summary - Only if sessions exist */}
+        {sessions.length > 0 && (
+          <div className="quick-stats">
+            <div className="quick-stat-card">
+              <span className="quick-stat-icon">⭐</span>
+              <div className="quick-stat-info">
+                <span className="quick-stat-number">{sessions.filter(s => s.status === 'completed').length}</span>
+                <span className="quick-stat-label">Completed Sessions</span>
+              </div>
+            </div>
+            <div className="quick-stat-card">
+              <span className="quick-stat-icon">📚</span>
+              <div className="quick-stat-info">
+                <span className="quick-stat-number">{new Set(sessions.map(s => s.tutor?.id)).size}</span>
+                <span className="quick-stat-label">Unique Tutors</span>
+              </div>
+            </div>
+            <div className="quick-stat-card">
+              <span className="quick-stat-icon">⏱️</span>
+              <div className="quick-stat-info">
+                <span className="quick-stat-number">
+                  {Math.round(sessions.reduce((acc, s) => acc + (s.duration || 0), 0) / 60)}
+                </span>
+                <span className="quick-stat-label">Total Hours</span>
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* Redirect Popup */}
+      {showRedirectPopup && (
+        <div className="popup-overlay">
+          <div className="popup-backdrop" onClick={handleCancelPopup}></div>
+          <div className="popup-card">
+            <div className="popup-icon">🔔</div>
+            <h3 className="popup-title">No Sessions Booked</h3>
+            <p className="popup-message">
+              You haven't booked any tutoring sessions yet. You will be redirected to 
+              the tutors page to browse and book your first session.
+            </p>
+            <div className="popup-actions">
+              <button className="popup-btn cancel-btn" onClick={handleCancelPopup}>
+                Cancel
+              </button>
+              <button className="popup-btn proceed-btn" onClick={handleProceed}>
+                Proceed to Tutors
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};
+
+export default MySessions;

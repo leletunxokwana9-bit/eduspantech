@@ -62,6 +62,7 @@ const Resources = () => {
         // Fetch subjects
         try {
           const subjectsData = await resourceService.getSubjects();
+          console.log('📚 Subjects from API:', subjectsData);
           setSubjects(subjectsData.subjects || []);
         } catch (subjErr) {
           console.warn('Could not fetch subjects:', subjErr);
@@ -81,36 +82,78 @@ const Resources = () => {
 
   // Group resources by subject to create vaults
   const getVaults = () => {
-    if (!resources.length || !subjects.length) return [];
-    
-    const grouped = {};
-    resources.forEach(resource => {
-      const subjectId = resource.subject_id;
-      if (!subjectId) return;
+    // If we have real data, use it
+    if (resources.length > 0 && subjects.length > 0) {
+      const grouped = {};
+      resources.forEach(resource => {
+        const subjectId = resource.subject_id;
+        if (!subjectId) return;
+        
+        if (!grouped[subjectId]) {
+          const subject = subjects.find(s => s.id === subjectId);
+          grouped[subjectId] = {
+            id: subjectId,
+            name: subject?.name || 'Unknown Subject',
+            icon: subject?.icon || '📚',
+            description: subject?.description || '',
+            videos: [],
+            practice: [],
+            guides: []
+          };
+        }
+        
+        if (resource.type === 'video' || resource.type === 'Video') {
+          grouped[subjectId].videos.push(resource);
+        } else if (resource.type === 'practice' || resource.type === 'Practice') {
+          grouped[subjectId].practice.push(resource);
+        } else if (resource.type === 'guide' || resource.type === 'Guide') {
+          grouped[subjectId].guides.push(resource);
+        } else {
+          grouped[subjectId].videos.push(resource);
+        }
+      });
       
-      if (!grouped[subjectId]) {
-        const subject = subjects.find(s => s.id === subjectId);
-        grouped[subjectId] = {
-          id: subjectId,
-          name: subject?.name || 'Unknown Subject',
-          icon: subject?.icon || '📚',
-          description: subject?.description || '',
-          videos: [],
-          practice: [],
-          guides: []
-        };
+      const result = Object.values(grouped);
+      if (result.length > 0) {
+        return result;
       }
-      
-      if (resource.type === 'video') {
-        grouped[subjectId].videos.push(resource);
-      } else if (resource.type === 'practice') {
-        grouped[subjectId].practice.push(resource);
-      } else if (resource.type === 'guide') {
-        grouped[subjectId].guides.push(resource);
+    }
+
+    // Return fallback vaults if no data
+    return getFallbackVaults();
+  };
+
+  // Fallback vaults for demo/empty state
+  const getFallbackVaults = () => {
+    return [
+      {
+        id: 'algebra',
+        name: 'Algebra',
+        icon: '🔢',
+        description: 'Master linear equations, polynomials, functions, and inequalities',
+        videos: [{ id: 1, name: 'Algebra Basics', type: 'video' }],
+        practice: [{ id: 2, name: 'Algebra Practice', type: 'practice' }],
+        guides: [{ id: 3, name: 'Algebra Study Guide', type: 'guide' }]
+      },
+      {
+        id: 'geometry',
+        name: 'Geometry',
+        icon: '📐',
+        description: 'Explore shapes, angles, proofs, and spatial reasoning',
+        videos: [{ id: 4, name: 'Geometry Basics', type: 'video' }],
+        practice: [{ id: 5, name: 'Geometry Practice', type: 'practice' }],
+        guides: [{ id: 6, name: 'Geometry Study Guide', type: 'guide' }]
+      },
+      {
+        id: 'calculus',
+        name: 'Calculus',
+        icon: '∫',
+        description: 'Understand derivatives, integrals, limits, and applications',
+        videos: [{ id: 7, name: 'Calculus Basics', type: 'video' }],
+        practice: [{ id: 8, name: 'Calculus Practice', type: 'practice' }],
+        guides: [{ id: 9, name: 'Calculus Study Guide', type: 'guide' }]
       }
-    });
-    
-    return Object.values(grouped);
+    ];
   };
 
   const vaults = getVaults();
@@ -167,7 +210,7 @@ const Resources = () => {
       <div className="resources-page-header">
         <h1>📚 Learning Resources</h1>
         <p>On-demand whiteboard archives and study materials</p>
-        <span className="resources-count">{resources.length} resources available</span>
+        <span className="resources-count">{resources.length || vaults.length * 3} resources available</span>
       </div>
 
       <div className="resources-page-grid">
@@ -178,16 +221,16 @@ const Resources = () => {
               <h3>{vault.name}</h3>
               <p>{vault.description}</p>
               <div className="resources-page-stats">
-                <span>🎬 {vault.videos.length} Videos</span>
-                <span>✏️ {vault.practice.length} Practice</span>
-                <span>📖 {vault.guides.length} Guides</span>
+                <span>🎬 {vault.videos?.length || 0} Videos</span>
+                <span>✏️ {vault.practice?.length || 0} Practice</span>
+                <span>📖 {vault.guides?.length || 0} Guides</span>
               </div>
               <button 
                 className="resources-page-btn"
                 onClick={() => handleAccessResources(vault)}
-                disabled={vault.videos.length === 0 && vault.practice.length === 0 && vault.guides.length === 0}
+                disabled={!vault.videos?.length && !vault.practice?.length && !vault.guides?.length}
               >
-                {vault.videos.length > 0 || vault.practice.length > 0 || vault.guides.length > 0 
+                {(vault.videos?.length || 0) + (vault.practice?.length || 0) + (vault.guides?.length || 0) > 0 
                   ? 'Access Resources →' 
                   : 'No Resources Available'}
               </button>

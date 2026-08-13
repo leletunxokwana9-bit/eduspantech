@@ -41,6 +41,71 @@
   margin: 0;
 }
 
+/* ===== AUTH BANNER ===== */
+.pricing-auth-banner {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 12px 20px;
+  background: rgba(251, 191, 36, 0.1);
+  border: 1px solid rgba(251, 191, 36, 0.2);
+  border-radius: 12px;
+  color: #fbbf24;
+  max-width: 500px;
+  margin: 12px auto 0;
+  font-size: 15px;
+}
+
+.pricing-auth-banner button {
+  background: none;
+  border: none;
+  color: #fbbf24;
+  font-weight: 600;
+  cursor: pointer;
+  text-decoration: underline;
+  padding: 0;
+  font-size: 15px;
+}
+
+.pricing-auth-banner button:hover {
+  color: #fcd34d;
+}
+
+/* ===== CURRENT PLAN BANNER ===== */
+.current-plan-banner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 20px;
+  background: rgba(52, 211, 153, 0.1);
+  border: 1px solid rgba(52, 211, 153, 0.2);
+  border-radius: 12px;
+  color: #6ee7b7;
+  max-width: 600px;
+  margin: 12px auto 0;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.current-plan-banner strong {
+  color: #34d399;
+}
+
+.logout-btn {
+  padding: 6px 16px;
+  background: rgba(239, 68, 68, 0.15);
+  border: 1px solid rgba(239, 68, 68, 0.2);
+  border-radius: 8px;
+  color: #fca5a5;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.logout-btn:hover {
+  background: rgba(239, 68, 68, 0.25);
+}
+
 /* ===== BILLING TOGGLE ===== */
 .billing-toggle {
   display: inline-flex;
@@ -115,6 +180,12 @@
   box-shadow: 0 12px 40px rgba(124, 58, 237, 0.12);
 }
 
+/* ===== CURRENT PLAN CARD ===== */
+.pricing-page-card.current-plan {
+  border-color: #34d399 !important;
+  box-shadow: 0 0 30px rgba(52, 211, 153, 0.08);
+}
+
 /* ===== POPULAR BADGE ===== */
 .popular-badge {
   position: absolute;
@@ -128,6 +199,23 @@
   padding: 4px 16px;
   border-radius: 20px;
   box-shadow: 0 4px 12px rgba(79, 70, 229, 0.3);
+  letter-spacing: 0.3px;
+  white-space: nowrap;
+}
+
+/* ===== CURRENT BADGE ===== */
+.current-badge {
+  position: absolute;
+  top: -12px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: #34d399 !important;
+  color: #0a0e1a !important;
+  font-size: 12px;
+  font-weight: 700;
+  padding: 4px 16px;
+  border-radius: 20px;
+  box-shadow: 0 4px 12px rgba(52, 211, 153, 0.3);
   letter-spacing: 0.3px;
   white-space: nowrap;
 }
@@ -229,9 +317,14 @@
   justify-content: center;
 }
 
-.pricing-page-cta:hover {
+.pricing-page-cta:hover:not(:disabled) {
   background: rgba(255, 255, 255, 0.08) !important;
   transform: translateY(-2px);
+}
+
+.pricing-page-cta:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
 }
 
 .pricing-page-cta.popular-cta {
@@ -240,16 +333,27 @@
   box-shadow: 0 4px 16px rgba(79, 70, 229, 0.2);
 }
 
-.pricing-page-cta.popular-cta:hover {
+.pricing-page-cta.popular-cta:hover:not(:disabled) {
   box-shadow: 0 8px 25px rgba(79, 70, 229, 0.3);
   transform: translateY(-2px);
+}
+
+.pricing-page-cta.current-plan-btn {
+  background: rgba(52, 211, 153, 0.15) !important;
+  color: #6ee7b7 !important;
+  cursor: default;
+}
+
+.pricing-page-cta.current-plan-btn:hover {
+  transform: none;
+  box-shadow: none;
 }
 
 .pricing-page-cta svg {
   transition: transform 0.3s ease;
 }
 
-.pricing-page-cta:hover svg {
+.pricing-page-cta:hover:not(:disabled) svg {
   transform: translateX(4px);
 }
 
@@ -279,96 +383,7 @@
   color: #ef4444 !important;
 }
 
-/* ===== RESPONSIVE ===== */
-@media (max-width: 1024px) {
-  .pricing-page-grid {
-    grid-template-columns: repeat(2, 1fr);
-    gap: 20px;
-    max-width: 800px;
-  }
-
-  .pricing-page-card.popular {
-    order: -1;
-    grid-column: 1 / -1;
-    max-width: 400px;
-    margin: 0 auto;
-  }
-}
-
-@media (max-width: 768px) {
-  .pricing-page {
-    padding: 40px 16px 60px;
-  }
-
-  .pricing-page-header h1 {
-    font-size: 30px;
-  }
-
-  .pricing-page-header p {
-    font-size: 16px;
-  }
-
-  .pricing-page-grid {
-    grid-template-columns: 1fr;
-    max-width: 400px;
-  }
-
-  .pricing-page-card.popular {
-    grid-column: 1;
-    max-width: 100%;
-  }
-
-  .pricing-page-card {
-    padding: 28px 20px;
-  }
-
-  .pricing-page-plan-price {
-    font-size: 34px;
-  }
-
-  .billing-toggle {
-    flex-wrap: wrap;
-  }
-
-  .toggle-btn {
-    font-size: 13px;
-    padding: 6px 14px;
-  }
-}
-
-@media (max-width: 480px) {
-  .pricing-page {
-    padding: 24px 12px 40px;
-  }
-
-  .pricing-page-header h1 {
-    font-size: 26px;
-  }
-
-  .pricing-page-card {
-    padding: 24px 16px;
-  }
-
-  .pricing-page-plan-price {
-    font-size: 30px;
-  }
-
-  .pricing-page-cta {
-    font-size: 14px;
-    padding: 10px 24px;
-  }
-
-  .pricing-page-features li {
-    font-size: 13px;
-    padding: 4px 0;
-  }
-
-  .popular-badge {
-    font-size: 10px;
-    padding: 3px 12px;
-  }
-}
-/* ===== LOGIN PROMPT OVERLAY (Shared) ===== */
+/* ===== LOGIN PROMPT OVERLAY ===== */
 .login-prompt-overlay {
   position: fixed;
   top: 0;
@@ -509,10 +524,241 @@
   text-decoration: underline;
 }
 
-/* ===== LIGHT THEME ===== */
+/* ===== RESPONSIVE ===== */
+@media (max-width: 1024px) {
+  .pricing-page-grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 20px;
+    max-width: 800px;
+  }
+
+  .pricing-page-card.popular {
+    order: -1;
+    grid-column: 1 / -1;
+    max-width: 400px;
+    margin: 0 auto;
+  }
+
+  .pricing-page-card.current-plan.popular {
+    grid-column: 1 / -1;
+  }
+}
+
+@media (max-width: 768px) {
+  .pricing-page {
+    padding: 40px 16px 60px;
+  }
+
+  .pricing-page-header h1 {
+    font-size: 30px;
+  }
+
+  .pricing-page-header p {
+    font-size: 16px;
+  }
+
+  .pricing-page-grid {
+    grid-template-columns: 1fr;
+    max-width: 400px;
+  }
+
+  .pricing-page-card.popular {
+    grid-column: 1;
+    max-width: 100%;
+  }
+
+  .pricing-page-card {
+    padding: 28px 20px;
+  }
+
+  .pricing-page-plan-price {
+    font-size: 34px;
+  }
+
+  .billing-toggle {
+    flex-wrap: wrap;
+  }
+
+  .toggle-btn {
+    font-size: 13px;
+    padding: 6px 14px;
+  }
+
+  .current-plan-banner {
+    flex-direction: column;
+    text-align: center;
+    padding: 12px 16px;
+  }
+
+  .login-prompt-modal {
+    padding: 32px 24px;
+  }
+
+  .login-prompt-modal h3 {
+    font-size: 24px;
+  }
+}
+
+@media (max-width: 480px) {
+  .pricing-page {
+    padding: 24px 12px 40px;
+  }
+
+  .pricing-page-header h1 {
+    font-size: 26px;
+  }
+
+  .pricing-page-card {
+    padding: 24px 16px;
+  }
+
+  .pricing-page-plan-price {
+    font-size: 30px;
+  }
+
+  .pricing-page-cta {
+    font-size: 14px;
+    padding: 10px 24px;
+  }
+
+  .pricing-page-features li {
+    font-size: 13px;
+    padding: 4px 0;
+  }
+
+  .popular-badge {
+    font-size: 10px;
+    padding: 3px 12px;
+  }
+
+  .current-badge {
+    font-size: 10px;
+    padding: 3px 12px;
+  }
+
+  .login-prompt-modal {
+    padding: 24px 16px;
+  }
+
+  .login-prompt-modal h3 {
+    font-size: 20px;
+  }
+
+  .login-prompt-btn,
+  .login-prompt-cancel {
+    padding: 12px 20px;
+    font-size: 14px;
+  }
+}
+
+/* ===== LIGHT THEME SUPPORT ===== */
+[data-theme="light"] .pricing-page {
+  background: #f8fafc !important;
+}
+
+[data-theme="light"] .pricing-page-card {
+  background: #ffffff !important;
+  border-color: rgba(0, 0, 0, 0.06) !important;
+}
+
+[data-theme="light"] .pricing-page-plan-name {
+  color: #0f172a !important;
+}
+
+[data-theme="light"] .pricing-page-plan-price {
+  color: #0f172a !important;
+}
+
+[data-theme="light"] .pricing-page-plan-price span {
+  color: rgba(0, 0, 0, 0.5) !important;
+}
+
+[data-theme="light"] .pricing-page-plan-description {
+  color: rgba(0, 0, 0, 0.6) !important;
+}
+
+[data-theme="light"] .pricing-page-features li {
+  color: rgba(0, 0, 0, 0.7) !important;
+  border-bottom-color: rgba(0, 0, 0, 0.04) !important;
+}
+
+[data-theme="light"] .pricing-page-cta {
+  background: rgba(0, 0, 0, 0.04) !important;
+  color: #0f172a !important;
+}
+
+[data-theme="light"] .pricing-page-cta:hover:not(:disabled) {
+  background: rgba(0, 0, 0, 0.08) !important;
+}
+
+[data-theme="light"] .pricing-page-cta.popular-cta {
+  color: #ffffff !important;
+}
+
+[data-theme="light"] .pricing-page-cta.current-plan-btn {
+  color: #059669 !important;
+}
+
+[data-theme="light"] .pricing-page-plan-tier {
+  color: #4f46e5 !important;
+  background: rgba(79, 70, 229, 0.1);
+}
+
+[data-theme="light"] .pricing-page-note {
+  color: rgba(0, 0, 0, 0.3) !important;
+}
+
+[data-theme="light"] .toggle-btn {
+  color: rgba(0, 0, 0, 0.5) !important;
+}
+
+[data-theme="light"] .toggle-btn.active {
+  background: #ffffff !important;
+  color: #0f172a !important;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+}
+
+[data-theme="light"] .billing-toggle {
+  background: rgba(0, 0, 0, 0.04);
+}
+
+[data-theme="light"] .pricing-page-header p {
+  color: rgba(0, 0, 0, 0.6) !important;
+}
+
+[data-theme="light"] .pricing-auth-banner {
+  background: rgba(251, 191, 36, 0.08);
+  border-color: rgba(251, 191, 36, 0.15);
+  color: #92400e;
+}
+
+[data-theme="light"] .pricing-auth-banner button {
+  color: #92400e;
+}
+
+[data-theme="light"] .current-plan-banner {
+  background: rgba(52, 211, 153, 0.08);
+  border-color: rgba(52, 211, 153, 0.15);
+  color: #059669;
+}
+
+[data-theme="light"] .current-plan-banner strong {
+  color: #059669;
+}
+
+[data-theme="light"] .logout-btn {
+  background: rgba(239, 68, 68, 0.08);
+  border-color: rgba(239, 68, 68, 0.15);
+  color: #dc2626;
+}
+
+[data-theme="light"] .logout-btn:hover {
+  background: rgba(239, 68, 68, 0.15);
+}
+
 [data-theme="light"] .login-prompt-modal {
   background: #ffffff;
-  border: 1px solid rgba(0, 0, 0, 0.06);
+  border-color: rgba(0, 0, 0, 0.06);
 }
 
 [data-theme="light"] .login-prompt-modal h3 {
@@ -554,4 +800,8 @@
 
 [data-theme="light"] .login-prompt-register span:hover {
   color: #4338ca;
+}
+
+[data-theme="light"] .pricing-page-card.current-plan {
+  border-color: #059669 !important;
 }

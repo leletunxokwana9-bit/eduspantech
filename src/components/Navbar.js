@@ -537,12 +537,14 @@ function Navbar() {
                     <span>Dashboard</span>
                   </Link>
 
-                  <Link to="/subjects" className="dropdown-item" onClick={() => { closeUserDropdown(); playClick(); }}>
+                  {/* ===== MY COURSES - Now links to /my-courses ===== */}
+                  <Link to="/my-courses" className="dropdown-item" onClick={() => { closeUserDropdown(); playClick(); }}>
                     <FiAward className="dropdown-icon" />
                     <span>My Courses</span>
                   </Link>
 
-                  <Link to="/tutors" className="dropdown-item" onClick={() => { closeUserDropdown(); playClick(); }}>
+                  {/* ===== MY SESSIONS - Now links to /my-sessions ===== */}
+                  <Link to="/my-sessions" className="dropdown-item" onClick={() => { closeUserDropdown(); playClick(); }}>
                     <FiClock className="dropdown-icon" />
                     <span>My Sessions</span>
                   </Link>
@@ -631,6 +633,12 @@ function Navbar() {
                 </Link>
                 <Link to="/settings" className="mobile-settings" onClick={() => { closeMenu(); playClick(); }}>
                   <FiSettings /> Settings
+                </Link>
+                <Link to="/my-courses" className="mobile-my-courses" onClick={() => { closeMenu(); playClick(); }}>
+                  <FiAward /> My Courses
+                </Link>
+                <Link to="/my-sessions" className="mobile-my-sessions" onClick={() => { closeMenu(); playClick(); }}>
+                  <FiClock /> My Sessions
                 </Link>
                 <button className="mobile-logout" onClick={handleLogout}>
                   <FiLogOut /> Logout

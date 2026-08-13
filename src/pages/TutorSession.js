@@ -198,7 +198,6 @@ const TutorSession = () => {
 
   // ===== FEATURE 1: WebGL Watermark =====
   const [watermark, setWatermark] = useState({ text: '', position: { x: 10, y: 30 } });
-  // userUUID is stored in localStorage only - not needed in component state
   const [publicIP, setPublicIP] = useState('127.0.0.1');
   const [watermarkVisible] = useState(true);
 
@@ -244,7 +243,6 @@ const TutorSession = () => {
 
   // ===== FEATURE 10: Recording Indicator =====
   const [isRecording, setIsRecording] = useState(false);
-  // recordingTime is tracked via refs only - not needed in state
 
   // ===== STATE =====
   const [isMuted, setIsMuted] = useState(false);
@@ -328,7 +326,6 @@ const TutorSession = () => {
       uuid = generateUUID();
       localStorage.setItem('eduspantech_uuid', uuid);
     }
-    // uuid is stored but not used in component state
 
     getPublicIP().then(ip => {
       setPublicIP(ip);
@@ -445,10 +442,7 @@ const TutorSession = () => {
   // ===== RECORDING INDICATOR =====
   useEffect(() => {
     if (isRecording) {
-      recordingIntervalRef.current = setInterval(() => {
-        // Recording time is tracked but not displayed in UI
-        // Just keep the recording active indicator
-      }, 1000);
+      recordingIntervalRef.current = setInterval(() => {}, 1000);
     } else {
       if (recordingIntervalRef.current) {
         clearInterval(recordingIntervalRef.current);
@@ -501,7 +495,7 @@ const TutorSession = () => {
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
-  // Canvas setup - FIXED: No infinite loop
+  // Canvas setup
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
@@ -805,13 +799,38 @@ const TutorSession = () => {
     return `${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
   };
 
-  // ===== END SESSION =====
-  const endSession = () => {
+  // ===== END SESSION - FIXED =====
+  const endSession = async () => {
     const duration = Math.floor((Date.now() - sessionStats.startTime) / 1000);
     setSessionStats(prev => ({ ...prev, duration }));
+    
+    // Send end session request to backend
+    try {
+      const token = localStorage.getItem('accessToken');
+      const response = await fetch(`https://eduspantech-backend.onrender.com/api/v1/sessions/end`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          sessionId: location.state?.sessionId || 'temp_session',
+          duration: duration
+        })
+      });
+      
+      if (response.ok) {
+        console.log('✅ Session ended successfully');
+      }
+    } catch (error) {
+      console.error('Error ending session:', error);
+    }
+    
+    // Show summary
     setShowSummary(true);
   };
 
+  // ===== CLOSE SUMMARY AND NAVIGATE - FIXED =====
   const closeSummary = () => {
     setShowSummary(false);
     navigate('/dashboard');

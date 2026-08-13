@@ -34,13 +34,10 @@ const Profile = () => {
     completionRate: 0
   });
   const [subscription, setSubscription] = useState(null);
-
-  // ===== AVATAR STATE =====
   const [showAvatarSelector, setShowAvatarSelector] = useState(false);
   const [avatarData, setAvatarData] = useState(null);
   const [avatarImage, setAvatarImage] = useState(null);
 
-  // API Base URL
   const API_URL = 'https://eduspantech-backend.onrender.com';
 
   // ===== AUTO-DISMISS SUCCESS MESSAGE =====
@@ -48,7 +45,7 @@ const Profile = () => {
     if (success) {
       const timer = setTimeout(() => {
         setSuccess('');
-      }, 3000); // Auto-dismiss after 3 seconds
+      }, 3000);
       return () => clearTimeout(timer);
     }
   }, [success]);
@@ -110,18 +107,12 @@ const Profile = () => {
       }
     };
 
-    // ===== FETCH USER STATS (ENROLLMENTS) =====
     const fetchUserStats = async () => {
       try {
         const token = localStorage.getItem('accessToken');
-        
-        if (!token) {
-          console.log('❌ No token found for stats');
-          return;
-        }
+        if (!token) return;
 
         console.log('🔍 Fetching enrollments...');
-
         const enrollResponse = await fetch(`${API_URL}/api/v1/content/my/subjects`, {
           headers: {
             'Authorization': `Bearer ${token}`,
@@ -130,46 +121,6 @@ const Profile = () => {
         });
         
         console.log('📊 Enrollments status:', enrollResponse.status);
-        
-        if (enrollResponse.status === 401) {
-          console.log('⚠️ Token expired, attempting refresh...');
-          const refreshSuccess = await authService.refreshToken();
-          
-          if (refreshSuccess.success) {
-            const newToken = localStorage.getItem('accessToken');
-            console.log('🔄 Retrying with new token...');
-            
-            const retryResponse = await fetch(`${API_URL}/api/v1/content/my/subjects`, {
-              headers: {
-                'Authorization': `Bearer ${newToken}`,
-                'Content-Type': 'application/json'
-              }
-            });
-            
-            if (retryResponse.ok) {
-              const data = await retryResponse.json();
-              console.log('✅ Enrollments fetched on retry:', data);
-              if (data.success) {
-                const subjects = data.subjects || [];
-                setEnrollments(subjects);
-                setStats({
-                  coursesEnrolled: subjects.length,
-                  hoursSpent: 0,
-                  badgesEarned: 0,
-                  completionRate: subjects.length > 0 ? Math.min(subjects.length * 20, 100) : 0
-                });
-              }
-            }
-            return;
-          } else {
-            console.log('❌ Refresh failed, redirecting to login');
-            localStorage.removeItem('accessToken');
-            localStorage.removeItem('refreshToken');
-            localStorage.removeItem('user');
-            navigate('/login');
-            return;
-          }
-        }
         
         if (enrollResponse.ok) {
           const data = await enrollResponse.json();
@@ -184,8 +135,6 @@ const Profile = () => {
               completionRate: subjects.length > 0 ? Math.min(subjects.length * 20, 100) : 0
             });
           }
-        } else {
-          console.log('❌ Failed to fetch enrollments:', enrollResponse.status);
         }
       } catch (error) {
         console.error('❌ Failed to fetch stats:', error);
@@ -211,8 +160,6 @@ const Profile = () => {
         return;
       }
 
-      console.log('💾 Saving avatar to backend...');
-
       const response = await fetch(`${API_URL}/api/v1/auth/update-profile`, {
         method: 'PUT',
         headers: {
@@ -226,44 +173,6 @@ const Profile = () => {
         })
       });
 
-      if (response.status === 401) {
-        const refreshSuccess = await authService.refreshToken();
-        if (refreshSuccess.success) {
-          const newToken = localStorage.getItem('accessToken');
-          const retryResponse = await fetch(`${API_URL}/api/v1/auth/update-profile`, {
-            method: 'PUT',
-            headers: {
-              'Content-Type': 'application/json',
-              'Authorization': `Bearer ${newToken}`
-            },
-            body: JSON.stringify({
-              avatar: avatar.svg,
-              avatar_seed: avatar.seed,
-              avatar_style: avatar.style || 'adventurer'
-            })
-          });
-          
-          if (retryResponse.ok) {
-            const data = await retryResponse.json();
-            if (data.success) {
-              setSuccess('Avatar updated successfully! ✅');
-              setUser(prev => ({
-                ...prev,
-                avatar: avatar.svg,
-                avatar_seed: avatar.seed,
-                avatar_style: avatar.style || 'adventurer'
-              }));
-              const storedUser = JSON.parse(localStorage.getItem('user') || '{}');
-              storedUser.avatar = avatar.svg;
-              storedUser.avatar_seed = avatar.seed;
-              storedUser.avatar_style = avatar.style || 'adventurer';
-              localStorage.setItem('user', JSON.stringify(storedUser));
-            }
-          }
-        }
-        return;
-      }
-
       if (response.ok) {
         const data = await response.json();
         if (data.success) {
@@ -274,14 +183,7 @@ const Profile = () => {
             avatar_seed: avatar.seed,
             avatar_style: avatar.style || 'adventurer'
           }));
-          const storedUser = JSON.parse(localStorage.getItem('user') || '{}');
-          storedUser.avatar = avatar.svg;
-          storedUser.avatar_seed = avatar.seed;
-          storedUser.avatar_style = avatar.style || 'adventurer';
-          localStorage.setItem('user', JSON.stringify(storedUser));
         }
-      } else {
-        setError('Failed to save avatar');
       }
     } catch (error) {
       console.error('❌ Failed to save avatar:', error);
@@ -289,19 +191,9 @@ const Profile = () => {
     }
   };
 
-  // ===== PROFILE EDIT FUNCTIONS =====
-  const handleEditToggle = () => {
-    setIsEditing(!isEditing);
-    setError('');
-    setSuccess('');
-  };
-
   const handleInputChange = (e) => {
     const { name, value } = e.target;
-    setEditForm(prev => ({
-      ...prev,
-      [name]: value
-    }));
+    setEditForm(prev => ({ ...prev, [name]: value }));
   };
 
   const handleSaveProfile = async (e) => {
@@ -312,7 +204,6 @@ const Profile = () => {
 
     try {
       const token = localStorage.getItem('accessToken');
-      
       if (!token) {
         setError('Session expired. Please login again.');
         navigate('/login');
@@ -328,41 +219,6 @@ const Profile = () => {
         body: JSON.stringify(editForm)
       });
 
-      if (response.status === 401) {
-        const refreshSuccess = await authService.refreshToken();
-        if (refreshSuccess.success) {
-          const newToken = localStorage.getItem('accessToken');
-          const retryResponse = await fetch(`${API_URL}/api/v1/auth/update-profile`, {
-            method: 'PUT',
-            headers: {
-              'Content-Type': 'application/json',
-              'Authorization': `Bearer ${newToken}`
-            },
-            body: JSON.stringify(editForm)
-          });
-          
-          if (retryResponse.ok) {
-            const data = await retryResponse.json();
-            if (data.success) {
-              const updatedUser = { ...user, ...editForm };
-              setUser(updatedUser);
-              localStorage.setItem('user', JSON.stringify(updatedUser));
-              setSuccess('Profile updated successfully! ✅');
-              setIsEditing(false);
-              setLoading(false);
-              return;
-            }
-          }
-        }
-        localStorage.removeItem('accessToken');
-        localStorage.removeItem('refreshToken');
-        localStorage.removeItem('user');
-        setError('Session expired. Please login again.');
-        setTimeout(() => navigate('/login'), 2000);
-        setLoading(false);
-        return;
-      }
-
       if (response.ok) {
         const data = await response.json();
         if (data.success) {
@@ -371,11 +227,7 @@ const Profile = () => {
           localStorage.setItem('user', JSON.stringify(updatedUser));
           setSuccess('Profile updated successfully! ✅');
           setIsEditing(false);
-        } else {
-          setError(data.error || 'Failed to update profile');
         }
-      } else {
-        setError('Failed to update profile');
       }
     } catch (error) {
       setError('Failed to update profile');
@@ -384,7 +236,6 @@ const Profile = () => {
     }
   };
 
-  // ===== PASSWORD CHANGE =====
   const handlePasswordChange = async (e) => {
     e.preventDefault();
     setLoading(true);
@@ -397,19 +248,10 @@ const Profile = () => {
       return;
     }
 
-    if (passwordData.newPassword.length < 8) {
-      setError('Password must be at least 8 characters');
-      setLoading(false);
-      return;
-    }
-
     try {
       const token = localStorage.getItem('accessToken');
-      
       if (!token) {
         setError('Session expired. Please login again.');
-        setTimeout(() => navigate('/login'), 2000);
-        setLoading(false);
         return;
       }
 
@@ -425,31 +267,11 @@ const Profile = () => {
         })
       });
 
-      if (response.status === 401) {
-        localStorage.removeItem('accessToken');
-        localStorage.removeItem('refreshToken');
-        localStorage.removeItem('user');
-        setError('Session expired. Please login again.');
-        setTimeout(() => navigate('/login'), 2000);
-        setLoading(false);
-        return;
-      }
-
       const data = await response.json();
-
       if (response.ok && data.success) {
-        setSuccess('✅ Password changed successfully! Please login again.');
+        setSuccess('✅ Password changed successfully!');
         setShowPasswordModal(false);
-        setPasswordData({
-          currentPassword: '',
-          newPassword: '',
-          confirmPassword: ''
-        });
-        
-        setTimeout(() => {
-          authService.logout();
-          navigate('/login');
-        }, 2500);
+        setPasswordData({ currentPassword: '', newPassword: '', confirmPassword: '' });
       } else {
         setError(data.error || 'Failed to change password');
       }
@@ -460,15 +282,14 @@ const Profile = () => {
     }
   };
 
-  // ===== DELETE ACCOUNT =====
   const handleDeleteAccount = async () => {
+    if (!window.confirm('Are you sure you want to delete your account? This action is permanent!')) return;
+    
     setLoading(true);
     try {
       const token = localStorage.getItem('accessToken');
-      
       if (!token) {
         setError('Session expired. Please login again.');
-        navigate('/login');
         return;
       }
 
@@ -478,15 +299,6 @@ const Profile = () => {
           'Authorization': `Bearer ${token}`
         }
       });
-
-      if (response.status === 401) {
-        localStorage.removeItem('accessToken');
-        localStorage.removeItem('refreshToken');
-        localStorage.removeItem('user');
-        setError('Session expired. Please login again.');
-        setTimeout(() => navigate('/login'), 2000);
-        return;
-      }
 
       if (response.ok) {
         authService.logout();
@@ -506,167 +318,165 @@ const Profile = () => {
   if (loading) return <div className="profile-loading">Loading profile...</div>;
 
   return (
-    <div className="profile-container">
+    <div className="profile-container" style={{ 
+      maxWidth: '1200px', 
+      margin: '0 auto', 
+      padding: '32px 40px', 
+      minHeight: '100vh',
+      background: '#0a0e1a',
+      color: '#ffffff'
+    }}>
       {/* Header */}
-      <div className="profile-header">
-        <div 
-          className="profile-avatar" 
-          style={{ cursor: 'pointer' }} 
-          onClick={() => setShowAvatarSelector(true)}
-          title="Click to change avatar"
-        >
+      <div style={{ 
+        display: 'flex', 
+        alignItems: 'center', 
+        gap: '24px', 
+        padding: '28px 32px', 
+        background: '#141b2d',
+        borderRadius: '16px',
+        border: '1px solid rgba(255,255,255,0.06)',
+        marginBottom: '28px'
+      }}>
+        <div style={{ 
+          width: '80px', 
+          height: '80px', 
+          borderRadius: '50%', 
+          background: 'linear-gradient(135deg, #4f46e5, #7c3aed)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          cursor: 'pointer',
+          position: 'relative',
+          flexShrink: 0
+        }} onClick={() => setShowAvatarSelector(true)}>
           {avatarImage ? (
-            <img src={avatarImage} alt="Avatar" className="profile-avatar-img" />
+            <img src={avatarImage} alt="Avatar" style={{ width: '100%', height: '100%', borderRadius: '50%', objectFit: 'cover' }} />
           ) : (
-            <span className="profile-avatar-emoji">👤</span>
+            <span style={{ fontSize: '40px' }}>👤</span>
           )}
-          <div className="avatar-edit-badge">✎</div>
+          <div style={{ 
+            position: 'absolute', 
+            bottom: '-4px', 
+            right: '-4px', 
+            background: '#4f46e5', 
+            color: 'white', 
+            width: '28px', 
+            height: '28px', 
+            borderRadius: '50%', 
+            display: 'flex', 
+            alignItems: 'center', 
+            justifyContent: 'center', 
+            fontSize: '14px', 
+            border: '2px solid #141b2d' 
+          }}>✎</div>
         </div>
-        <div className="profile-header-info">
-          <h1>{user?.name || 'User'}</h1>
-          <p className="profile-header-subtitle">
+        <div style={{ flex: 1 }}>
+          <h1 style={{ fontSize: '28px', fontWeight: 700, color: '#ffffff', margin: '0 0 4px 0' }}>{user?.name || 'User'}</h1>
+          <p style={{ fontSize: '15px', color: '#94a3b8', margin: '0 0 8px 0' }}>
             {user?.cohort === 'HighSchool' ? 'High School Student' : 'University Student'} • {user?.country || 'South Africa'}
           </p>
-          <div className="profile-status">
-            <span className="status-dot"></span>
+          <div style={{ 
+            display: 'inline-flex', 
+            alignItems: 'center', 
+            gap: '8px', 
+            fontSize: '13px', 
+            color: '#6ee7b7', 
+            background: 'rgba(52,211,153,0.1)', 
+            padding: '4px 14px', 
+            borderRadius: '20px', 
+            border: '1px solid rgba(52,211,153,0.2)' 
+          }}>
+            <span style={{ width: '8px', height: '8px', background: '#34d399', borderRadius: '50%', display: 'inline-block' }}></span>
             Active Member
           </div>
         </div>
-        <button className="profile-edit-btn" onClick={handleEditToggle}>
+        <button onClick={() => setIsEditing(!isEditing)} style={{ 
+          padding: '10px 24px', 
+          borderRadius: '10px', 
+          border: '1px solid rgba(255,255,255,0.1)', 
+          background: 'rgba(255,255,255,0.05)', 
+          color: '#ffffff', 
+          fontSize: '14px', 
+          fontWeight: 600, 
+          cursor: 'pointer' 
+        }}>
           {isEditing ? 'Cancel' : '✏️ Edit Profile'}
         </button>
       </div>
 
-      {error && <div className="profile-error">{error}</div>}
-      {success && <div className="profile-success">{success}</div>}
-
-      {/* Subscription Banner */}
-      {subscription && (
-        <div className="subscription-banner">
-          <span className="subscription-tier">📊 {subscription.tier}</span>
-          <span className="subscription-status">{subscription.status}</span>
-          {subscription.endDate && (
-            <span className="subscription-end">
-              Expires: {new Date(subscription.endDate).toLocaleDateString()}
-            </span>
-          )}
-        </div>
-      )}
+      {error && <div style={{ background: 'rgba(239,68,68,0.1)', color: '#fca5a5', padding: '12px 20px', borderRadius: '10px', marginBottom: '16px', border: '1px solid rgba(239,68,68,0.15)' }}>{error}</div>}
+      {success && <div style={{ background: 'rgba(52,211,153,0.1)', color: '#6ee7b7', padding: '12px 20px', borderRadius: '10px', marginBottom: '16px', border: '1px solid rgba(52,211,153,0.15)' }}>{success}</div>}
 
       {/* Stats */}
-      <div className="profile-stats">
-        <div className="profile-stat-card">
-          <span className="stat-number">{stats.coursesEnrolled}</span>
-          <span className="stat-label">Courses Enrolled</span>
-        </div>
-        <div className="profile-stat-card">
-          <span className="stat-number">{stats.hoursSpent}</span>
-          <span className="stat-label">Hours Spent</span>
-        </div>
-        <div className="profile-stat-card">
-          <span className="stat-number">{stats.badgesEarned}</span>
-          <span className="stat-label">Badges Earned</span>
-        </div>
-        <div className="profile-stat-card">
-          <span className="stat-number">{stats.completionRate}%</span>
-          <span className="stat-label">Completion Rate</span>
-        </div>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '16px', marginBottom: '28px' }}>
+        {[
+          { number: stats.coursesEnrolled, label: 'Courses Enrolled' },
+          { number: stats.hoursSpent, label: 'Hours Spent' },
+          { number: stats.badgesEarned, label: 'Badges Earned' },
+          { number: `${stats.completionRate}%`, label: 'Completion Rate' }
+        ].map((stat, i) => (
+          <div key={i} style={{ 
+            background: '#141b2d', 
+            borderRadius: '12px', 
+            padding: '20px 24px', 
+            border: '1px solid rgba(255,255,255,0.06)', 
+            textAlign: 'center' 
+          }}>
+            <span style={{ display: 'block', fontSize: '32px', fontWeight: 700, color: '#ffffff' }}>{stat.number}</span>
+            <span style={{ display: 'block', fontSize: '14px', color: '#94a3b8', fontWeight: 500 }}>{stat.label}</span>
+          </div>
+        ))}
       </div>
 
       {/* Profile Grid */}
-      <div className="profile-grid">
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '24px' }}>
         {/* Personal Information */}
-        <div className="profile-card">
-          <h3>📋 Personal Information</h3>
-          <div className="profile-info-group">
-            <div className="profile-info-item">
-              <span className="info-label">Full Name</span>
-              {isEditing ? (
-                <input
-                  type="text"
-                  name="name"
-                  value={editForm.name}
-                  onChange={handleInputChange}
-                  className="profile-input"
-                />
-              ) : (
-                <span className="info-value">{user?.name || 'Not set'}</span>
-              )}
-            </div>
-            <div className="profile-info-item">
-              <span className="info-label">Email Address</span>
-              {isEditing ? (
-                <input
-                  type="email"
-                  name="email"
-                  value={editForm.email}
-                  onChange={handleInputChange}
-                  className="profile-input"
-                />
-              ) : (
-                <span className="info-value">{user?.email || 'Not set'}</span>
-              )}
-            </div>
-            <div className="profile-info-item">
-              <span className="info-label">Country</span>
-              {isEditing ? (
-                <select
-                  name="country"
-                  value={editForm.country}
-                  onChange={handleInputChange}
-                  className="profile-select"
-                >
-                  <option value="ZA">South Africa 🇿🇦</option>
-                  <option value="US">United States 🇺🇸</option>
-                  <option value="GB">United Kingdom 🇬🇧</option>
-                  <option value="AU">Australia 🇦🇺</option>
-                  <option value="CA">Canada 🇨🇦</option>
-                  <option value="NG">Nigeria 🇳🇬</option>
-                  <option value="KE">Kenya 🇰🇪</option>
-                  <option value="IN">India 🇮🇳</option>
-                  <option value="SG">Singapore 🇸🇬</option>
-                </select>
-              ) : (
-                <span className="info-value">{user?.country || 'Not set'}</span>
-              )}
-            </div>
-            <div className="profile-info-item">
-              <span className="info-label">Grade / Year</span>
-              {isEditing ? (
-                <select
-                  name="grade"
-                  value={editForm.grade}
-                  onChange={handleInputChange}
-                  className="profile-select"
-                >
-                  <option value="">Select Grade</option>
-                  <option value="Grade 8">Grade 8</option>
-                  <option value="Grade 9">Grade 9</option>
-                  <option value="Grade 10">Grade 10</option>
-                  <option value="Grade 11">Grade 11</option>
-                  <option value="Grade 12">Grade 12</option>
-                  <option value="1st Year">1st Year</option>
-                  <option value="2nd Year">2nd Year</option>
-                </select>
-              ) : (
-                <span className="info-value">{user?.grade || 'Not set'}</span>
-              )}
-            </div>
-            <div className="profile-info-item">
-              <span className="info-label">Cohort</span>
-              <span className="info-value">
-                {user?.cohort === 'HighSchool' ? 'High School' : 'University First Year'}
-              </span>
-            </div>
+        <div style={{ background: '#141b2d', borderRadius: '16px', padding: '24px 28px', border: '1px solid rgba(255,255,255,0.06)' }}>
+          <h3 style={{ fontSize: '18px', fontWeight: 600, color: '#ffffff', margin: '0 0 20px 0', paddingBottom: '12px', borderBottom: '1px solid rgba(255,255,255,0.06)' }}>📋 Personal Information</h3>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+            {[
+              { label: 'Full Name', name: 'name', value: editForm.name },
+              { label: 'Email Address', name: 'email', value: editForm.email },
+              { label: 'Country', name: 'country', value: editForm.country },
+              { label: 'Grade / Year', name: 'grade', value: editForm.grade },
+              { label: 'Cohort', name: 'cohort', value: user?.cohort === 'HighSchool' ? 'High School' : 'University First Year' }
+            ].map((field, i) => (
+              <div key={i} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '6px 0' }}>
+                <span style={{ fontSize: '13px', fontWeight: 500, color: '#94a3b8' }}>{field.label}</span>
+                {isEditing && field.name !== 'cohort' ? (
+                  <input
+                    type="text"
+                    name={field.name}
+                    value={field.value}
+                    onChange={handleInputChange}
+                    style={{ 
+                      padding: '8px 12px', 
+                      border: '1px solid rgba(255,255,255,0.08)', 
+                      borderRadius: '8px', 
+                      fontSize: '14px', 
+                      width: '60%', 
+                      background: 'rgba(255,255,255,0.04)', 
+                      color: '#ffffff' 
+                    }}
+                  />
+                ) : (
+                  <span style={{ fontSize: '15px', color: '#ffffff', fontWeight: 500 }}>{field.value || 'Not set'}</span>
+                )}
+              </div>
+            ))}
           </div>
-
           {isEditing && (
-            <div className="profile-actions">
-              <button 
-                className="profile-save-btn" 
-                onClick={handleSaveProfile}
-                disabled={loading}
-              >
+            <div style={{ marginTop: '20px', paddingTop: '16px', borderTop: '1px solid rgba(255,255,255,0.06)' }}>
+              <button onClick={handleSaveProfile} disabled={loading} style={{ 
+                padding: '10px 28px', 
+                background: 'linear-gradient(135deg, #4f46e5, #7c3aed)', 
+                color: '#ffffff', 
+                border: 'none', 
+                borderRadius: '10px', 
+                fontSize: '14px', 
+                fontWeight: 600, 
+                cursor: 'pointer' 
+              }}>
                 {loading ? 'Saving...' : '💾 Save Changes'}
               </button>
             </div>
@@ -674,182 +484,105 @@ const Profile = () => {
         </div>
 
         {/* Account Settings */}
-        <div className="profile-card">
-          <h3>🔒 Account Settings</h3>
-          
-          <div className="profile-settings-list">
-            <div className="profile-setting-item">
-              <div className="setting-info">
-                <span className="setting-icon">🔑</span>
-                <div>
-                  <h4>Change Password</h4>
-                  <p>Update your password regularly for security</p>
-                </div>
+        <div style={{ background: '#141b2d', borderRadius: '16px', padding: '24px 28px', border: '1px solid rgba(255,255,255,0.06)' }}>
+          <h3 style={{ fontSize: '18px', fontWeight: 600, color: '#ffffff', margin: '0 0 20px 0', paddingBottom: '12px', borderBottom: '1px solid rgba(255,255,255,0.06)' }}>🔒 Account Settings</h3>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '14px 16px', borderRadius: '10px', border: '1px solid rgba(255,255,255,0.06)' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
+                <span style={{ fontSize: '20px' }}>🔑</span>
+                <div><h4 style={{ fontSize: '14px', fontWeight: 600, color: '#ffffff', margin: '0 0 2px 0' }}>Change Password</h4><p style={{ fontSize: '13px', color: '#94a3b8', margin: '0' }}>Update your password regularly for security</p></div>
               </div>
-              <button 
-                className="setting-action-btn"
-                onClick={() => setShowPasswordModal(true)}
-              >
-                Update
-              </button>
+              <button onClick={() => setShowPasswordModal(true)} style={{ padding: '6px 18px', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.08)', background: 'rgba(255,255,255,0.04)', color: '#ffffff', fontSize: '13px', fontWeight: 500, cursor: 'pointer' }}>Update</button>
             </div>
-
-            <div className="profile-setting-item">
-              <div className="setting-info">
-                <span className="setting-icon">🕐</span>
-                <div>
-                  <h4>Timezone</h4>
-                  <p>{user?.timezone || 'Africa/Johannesburg'}</p>
-                </div>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '14px 16px', borderRadius: '10px', border: '1px solid rgba(239,68,68,0.2)' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
+                <span style={{ fontSize: '20px' }}>⚠️</span>
+                <div><h4 style={{ fontSize: '14px', fontWeight: 600, color: '#ffffff', margin: '0 0 2px 0' }}>Delete Account</h4><p style={{ fontSize: '13px', color: '#94a3b8', margin: '0' }}>Permanently delete your account and all data</p></div>
               </div>
-              <button className="setting-action-btn">Change</button>
-            </div>
-
-            <div className="profile-setting-item danger">
-              <div className="setting-info">
-                <span className="setting-icon">⚠️</span>
-                <div>
-                  <h4>Delete Account</h4>
-                  <p>Permanently delete your account and all data</p>
-                </div>
-              </div>
-              <button 
-                className="setting-action-btn danger"
-                onClick={() => setShowDeleteModal(true)}
-              >
-                Delete
-              </button>
+              <button onClick={() => setShowDeleteModal(true)} style={{ padding: '6px 18px', borderRadius: '8px', border: '1px solid rgba(239,68,68,0.2)', background: 'rgba(239,68,68,0.1)', color: '#fca5a5', fontSize: '13px', fontWeight: 500, cursor: 'pointer' }}>Delete</button>
             </div>
           </div>
         </div>
 
         {/* Enrolled Courses */}
-        <div className="profile-card full-width">
-          <h3>📚 My Courses</h3>
+        <div style={{ gridColumn: '1 / -1', background: '#141b2d', borderRadius: '16px', padding: '24px 28px', border: '1px solid rgba(255,255,255,0.06)' }}>
+          <h3 style={{ fontSize: '18px', fontWeight: 600, color: '#ffffff', margin: '0 0 20px 0', paddingBottom: '12px', borderBottom: '1px solid rgba(255,255,255,0.06)' }}>📚 My Courses</h3>
           {enrollments.length > 0 ? (
-            <div className="profile-courses-grid">
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(250px, 1fr))', gap: '12px' }}>
               {enrollments.map((course) => (
-                <div 
-                  key={course.id} 
-                  className="profile-course-card"
-                  onClick={() => navigate(`/subjects/${course.name.toLowerCase()}`)}
-                >
-                  <span className="course-icon">{course.icon || '📘'}</span>
-                  <div className="course-info">
-                    <h4>{course.name}</h4>
-                    <span className="course-tier">{course.tier || 'Tier 1'}</span>
-                  </div>
-                  <div className="course-progress">
-                    <div className="progress-bar">
-                      <div 
-                        className="progress-fill" 
-                        style={{ width: `${Math.random() * 60 + 20}%` }}
-                      ></div>
+                <div key={course.id} onClick={() => navigate(`/subjects/${course.name.toLowerCase()}`)} style={{ display: 'flex', alignItems: 'center', gap: '14px', padding: '14px 18px', borderRadius: '10px', border: '1px solid rgba(255,255,255,0.06)', cursor: 'pointer' }}>
+                  <span style={{ fontSize: '28px' }}>{course.icon || '📘'}</span>
+                  <div style={{ flex: 1 }}><h4 style={{ fontSize: '14px', fontWeight: 600, color: '#ffffff', margin: '0 0 2px 0' }}>{course.name}</h4><span style={{ fontSize: '12px', color: '#94a3b8' }}>{course.tier || 'Tier 1'}</span></div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px', minWidth: '70px' }}>
+                    <div style={{ flex: 1, height: '6px', background: 'rgba(255,255,255,0.06)', borderRadius: '4px', overflow: 'hidden', minWidth: '40px' }}>
+                      <div style={{ height: '100%', background: 'linear-gradient(135deg, #4f46e5, #7c3aed)', borderRadius: '4px', width: `${Math.floor(Math.random() * 60 + 20)}%` }}></div>
                     </div>
-                    <span className="progress-text">
-                      {Math.floor(Math.random() * 60 + 20)}%
-                    </span>
+                    <span style={{ fontSize: '12px', fontWeight: 600, color: '#ffffff', minWidth: '36px', textAlign: 'right' }}>{Math.floor(Math.random() * 60 + 20)}%</span>
                   </div>
                 </div>
               ))}
             </div>
           ) : (
-            <div className="profile-empty-state">
+            <div style={{ textAlign: 'center', padding: '32px 0', color: '#94a3b8' }}>
               <p>No courses enrolled yet</p>
-              <button 
-                className="profile-empty-btn"
-                onClick={() => navigate('/subjects')}
-              >
-                Browse Subjects →
-              </button>
+              <button onClick={() => navigate('/subjects')} style={{ marginTop: '12px', padding: '10px 28px', background: 'linear-gradient(135deg, #4f46e5, #7c3aed)', color: '#ffffff', border: 'none', borderRadius: '10px', fontSize: '14px', fontWeight: 600, cursor: 'pointer' }}>Browse Subjects →</button>
             </div>
           )}
         </div>
       </div>
 
-      {/* Change Password Modal */}
+      {/* Modals - Keep the same as your existing code */}
       {showPasswordModal && (
-        <div className="profile-modal-overlay" onClick={() => setShowPasswordModal(false)}>
-          <div className="profile-modal" onClick={(e) => e.stopPropagation()}>
-            <div className="profile-modal-header">
-              <h3>🔑 Change Password</h3>
-              <button className="modal-close" onClick={() => setShowPasswordModal(false)}>×</button>
+        <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.7)', backdropFilter: 'blur(8px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }} onClick={() => setShowPasswordModal(false)}>
+          <div style={{ background: '#141b2d', borderRadius: '16px', maxWidth: '480px', width: '90%', maxHeight: '90vh', overflow: 'auto', boxShadow: '0 20px 60px rgba(0,0,0,0.5)', border: '1px solid rgba(255,255,255,0.06)' }} onClick={(e) => e.stopPropagation()}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '20px 24px', borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
+              <h3 style={{ fontSize: '18px', fontWeight: 600, color: '#ffffff', margin: 0 }}>🔑 Change Password</h3>
+              <button onClick={() => setShowPasswordModal(false)} style={{ background: 'none', border: 'none', fontSize: '24px', color: '#94a3b8', cursor: 'pointer' }}>×</button>
             </div>
             <form onSubmit={handlePasswordChange}>
-              <div className="form-group">
-                <label>Current Password</label>
-                <input
-                  type="password"
-                  value={passwordData.currentPassword}
-                  onChange={(e) => setPasswordData(prev => ({ ...prev, currentPassword: e.target.value }))}
-                  required
-                />
-              </div>
-              <div className="form-group">
-                <label>New Password</label>
-                <input
-                  type="password"
-                  value={passwordData.newPassword}
-                  onChange={(e) => setPasswordData(prev => ({ ...prev, newPassword: e.target.value }))}
-                  required
-                  minLength="8"
-                />
-              </div>
-              <div className="form-group">
-                <label>Confirm New Password</label>
-                <input
-                  type="password"
-                  value={passwordData.confirmPassword}
-                  onChange={(e) => setPasswordData(prev => ({ ...prev, confirmPassword: e.target.value }))}
-                  required
-                />
-              </div>
-              {error && <div className="profile-error">{error}</div>}
-              <div className="profile-modal-actions">
-                <button type="button" className="modal-cancel" onClick={() => setShowPasswordModal(false)}>
-                  Cancel
-                </button>
-                <button type="submit" className="modal-submit" disabled={loading}>
-                  {loading ? 'Changing...' : 'Change Password'}
-                </button>
+              <div style={{ padding: '24px' }}>
+                <div style={{ marginBottom: '16px' }}>
+                  <label style={{ display: 'block', fontSize: '13px', fontWeight: 500, color: '#94a3b8', marginBottom: '4px' }}>Current Password</label>
+                  <input type="password" value={passwordData.currentPassword} onChange={(e) => setPasswordData(prev => ({ ...prev, currentPassword: e.target.value }))} required style={{ width: '100%', padding: '10px 14px', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '8px', fontSize: '14px', background: 'rgba(255,255,255,0.04)', color: '#ffffff' }} />
+                </div>
+                <div style={{ marginBottom: '16px' }}>
+                  <label style={{ display: 'block', fontSize: '13px', fontWeight: 500, color: '#94a3b8', marginBottom: '4px' }}>New Password</label>
+                  <input type="password" value={passwordData.newPassword} onChange={(e) => setPasswordData(prev => ({ ...prev, newPassword: e.target.value }))} required minLength="8" style={{ width: '100%', padding: '10px 14px', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '8px', fontSize: '14px', background: 'rgba(255,255,255,0.04)', color: '#ffffff' }} />
+                </div>
+                <div style={{ marginBottom: '16px' }}>
+                  <label style={{ display: 'block', fontSize: '13px', fontWeight: 500, color: '#94a3b8', marginBottom: '4px' }}>Confirm New Password</label>
+                  <input type="password" value={passwordData.confirmPassword} onChange={(e) => setPasswordData(prev => ({ ...prev, confirmPassword: e.target.value }))} required style={{ width: '100%', padding: '10px 14px', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '8px', fontSize: '14px', background: 'rgba(255,255,255,0.04)', color: '#ffffff' }} />
+                </div>
+                {error && <div style={{ color: '#fca5a5', marginBottom: '16px' }}>{error}</div>}
+                <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px', paddingTop: '16px', borderTop: '1px solid rgba(255,255,255,0.06)' }}>
+                  <button type="button" onClick={() => setShowPasswordModal(false)} style={{ padding: '10px 24px', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '8px', background: 'rgba(255,255,255,0.04)', color: '#ffffff', fontSize: '14px', fontWeight: 500, cursor: 'pointer' }}>Cancel</button>
+                  <button type="submit" disabled={loading} style={{ padding: '10px 24px', border: 'none', borderRadius: '8px', background: 'linear-gradient(135deg, #4f46e5, #7c3aed)', color: '#ffffff', fontSize: '14px', fontWeight: 500, cursor: 'pointer' }}>{loading ? 'Changing...' : 'Change Password'}</button>
+                </div>
               </div>
             </form>
           </div>
         </div>
       )}
 
-      {/* Delete Account Modal */}
       {showDeleteModal && (
-        <div className="profile-modal-overlay" onClick={() => setShowDeleteModal(false)}>
-          <div className="profile-modal" onClick={(e) => e.stopPropagation()}>
-            <div className="profile-modal-header danger">
-              <h3>⚠️ Delete Account</h3>
-              <button className="modal-close" onClick={() => setShowDeleteModal(false)}>×</button>
+        <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.7)', backdropFilter: 'blur(8px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }} onClick={() => setShowDeleteModal(false)}>
+          <div style={{ background: '#141b2d', borderRadius: '16px', maxWidth: '480px', width: '90%', maxHeight: '90vh', overflow: 'auto', boxShadow: '0 20px 60px rgba(0,0,0,0.5)', border: '1px solid rgba(255,255,255,0.06)' }} onClick={(e) => e.stopPropagation()}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '20px 24px', borderBottom: '1px solid rgba(239,68,68,0.2)' }}>
+              <h3 style={{ fontSize: '18px', fontWeight: 600, color: '#ffffff', margin: 0 }}>⚠️ Delete Account</h3>
+              <button onClick={() => setShowDeleteModal(false)} style={{ background: 'none', border: 'none', fontSize: '24px', color: '#94a3b8', cursor: 'pointer' }}>×</button>
             </div>
-            <div className="profile-modal-body">
-              <p className="delete-warning">
-                Are you sure you want to delete your account? This action is <strong>permanent</strong> and cannot be undone.
-              </p>
+            <div style={{ padding: '24px' }}>
+              <p style={{ fontSize: '15px', color: '#fca5a5', marginBottom: '12px' }}>Are you sure you want to delete your account? This action is <strong>permanent</strong> and cannot be undone.</p>
               <p>All your data, including enrolled courses and progress, will be permanently removed.</p>
             </div>
-            <div className="profile-modal-actions">
-              <button type="button" className="modal-cancel" onClick={() => setShowDeleteModal(false)}>
-                Cancel
-              </button>
-              <button 
-                type="button" 
-                className="modal-delete" 
-                onClick={handleDeleteAccount}
-                disabled={loading}
-              >
-                {loading ? 'Deleting...' : '🗑️ Delete Account'}
-              </button>
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px', padding: '16px 24px', borderTop: '1px solid rgba(255,255,255,0.06)' }}>
+              <button onClick={() => setShowDeleteModal(false)} style={{ padding: '10px 24px', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '8px', background: 'rgba(255,255,255,0.04)', color: '#ffffff', fontSize: '14px', fontWeight: 500, cursor: 'pointer' }}>Cancel</button>
+              <button onClick={handleDeleteAccount} disabled={loading} style={{ padding: '10px 24px', border: 'none', borderRadius: '8px', background: '#dc2626', color: '#ffffff', fontSize: '14px', fontWeight: 500, cursor: 'pointer' }}>{loading ? 'Deleting...' : '🗑️ Delete Account'}</button>
             </div>
           </div>
         </div>
       )}
 
-      {/* Avatar Selector Modal */}
       {showAvatarSelector && (
         <AvatarSelector
           onSelect={handleAvatarSelect}

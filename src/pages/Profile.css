@@ -1,4 +1,4 @@
-/* Profile.css - Fixed Dark Theme with Proper Contrast */
+/* Profile.css - Complete Dark Theme - NO WHITE BACKGROUNDS */
 
 /* ===== PROFILE CONTAINER ===== */
 .profile-container {
@@ -157,7 +157,7 @@
   border: 1px solid rgba(52, 211, 153, 0.15) !important;
 }
 
-/* ===== STATS ===== */
+/* ===== STATS - DARK BACKGROUND ===== */
 .profile-stats {
   display: grid;
   grid-template-columns: repeat(4, 1fr);

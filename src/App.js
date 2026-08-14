@@ -1,3 +1,8 @@
+// ============================================
+// EduSpantech App - Version 2.1.0
+// Build: 2026-08-13 - Forced cache bust
+// ============================================
+
 // src/App.js
 import React, { Suspense, lazy } from 'react';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
@@ -42,7 +47,6 @@ const MyCourses = lazy(() =>
     })
     .catch(err => {
       console.error('❌ Failed to load MyCourses:', err);
-      // Return a fallback component
       return {
         default: () => (
           <div style={{

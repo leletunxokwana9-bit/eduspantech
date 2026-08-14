@@ -85,6 +85,7 @@ const Resources = () => {
     // If we have real data, use it
     if (resources.length > 0 && subjects.length > 0) {
       const grouped = {};
+      
       resources.forEach(resource => {
         const subjectId = resource.subject_id;
         if (!subjectId) return;
@@ -102,13 +103,16 @@ const Resources = () => {
           };
         }
         
-        if (resource.type === 'video' || resource.type === 'Video') {
+        // Classify by type
+        const type = resource.type?.toLowerCase() || '';
+        if (type === 'video') {
           grouped[subjectId].videos.push(resource);
-        } else if (resource.type === 'practice' || resource.type === 'Practice') {
+        } else if (type === 'practice') {
           grouped[subjectId].practice.push(resource);
-        } else if (resource.type === 'guide' || resource.type === 'Guide') {
+        } else if (type === 'guide') {
           grouped[subjectId].guides.push(resource);
         } else {
+          // Default fallback
           grouped[subjectId].videos.push(resource);
         }
       });
@@ -123,35 +127,49 @@ const Resources = () => {
     return getFallbackVaults();
   };
 
-  // Fallback vaults for demo/empty state
+  // Fallback vaults for demo/empty state (only shown if no data)
   const getFallbackVaults = () => {
+    // If we have subjects but no resources, use subjects
+    if (subjects.length > 0) {
+      return subjects.map(subject => ({
+        id: subject.id,
+        name: subject.name,
+        icon: subject.icon || '📚',
+        description: subject.description || '',
+        videos: [],
+        practice: [],
+        guides: []
+      }));
+    }
+
+    // Hardcoded fallback
     return [
       {
         id: 'algebra',
         name: 'Algebra',
         icon: '🔢',
         description: 'Master linear equations, polynomials, functions, and inequalities',
-        videos: [{ id: 1, name: 'Algebra Basics', type: 'video' }],
-        practice: [{ id: 2, name: 'Algebra Practice', type: 'practice' }],
-        guides: [{ id: 3, name: 'Algebra Study Guide', type: 'guide' }]
+        videos: [],
+        practice: [],
+        guides: []
       },
       {
         id: 'geometry',
         name: 'Geometry',
         icon: '📐',
         description: 'Explore shapes, angles, proofs, and spatial reasoning',
-        videos: [{ id: 4, name: 'Geometry Basics', type: 'video' }],
-        practice: [{ id: 5, name: 'Geometry Practice', type: 'practice' }],
-        guides: [{ id: 6, name: 'Geometry Study Guide', type: 'guide' }]
+        videos: [],
+        practice: [],
+        guides: []
       },
       {
         id: 'calculus',
         name: 'Calculus',
         icon: '∫',
         description: 'Understand derivatives, integrals, limits, and applications',
-        videos: [{ id: 7, name: 'Calculus Basics', type: 'video' }],
-        practice: [{ id: 8, name: 'Calculus Practice', type: 'practice' }],
-        guides: [{ id: 9, name: 'Calculus Study Guide', type: 'guide' }]
+        videos: [],
+        practice: [],
+        guides: []
       }
     ];
   };
@@ -205,37 +223,42 @@ const Resources = () => {
     );
   }
 
+  const totalResources = resources.length;
+
   return (
     <div className="resources-page">
       <div className="resources-page-header">
         <h1>📚 Learning Resources</h1>
         <p>On-demand whiteboard archives and study materials</p>
-        <span className="resources-count">{resources.length || vaults.length * 3} resources available</span>
+        <span className="resources-count">{totalResources} resources available</span>
       </div>
 
       <div className="resources-page-grid">
         {vaults.length > 0 ? (
-          vaults.map((vault) => (
-            <div key={vault.id} className="resources-page-card">
-              <div className="resources-page-icon">{vault.icon}</div>
-              <h3>{vault.name}</h3>
-              <p>{vault.description}</p>
-              <div className="resources-page-stats">
-                <span>🎬 {vault.videos?.length || 0} Videos</span>
-                <span>✏️ {vault.practice?.length || 0} Practice</span>
-                <span>📖 {vault.guides?.length || 0} Guides</span>
+          vaults.map((vault) => {
+            const total = (vault.videos?.length || 0) + (vault.practice?.length || 0) + (vault.guides?.length || 0);
+            return (
+              <div key={vault.id} className="resources-page-card">
+                <div className="resources-page-icon">{vault.icon}</div>
+                <h3>{vault.name}</h3>
+                <p>{vault.description}</p>
+                <div className="resources-page-stats">
+                  <span>🎬 {vault.videos?.length || 0} Videos</span>
+                  <span>✏️ {vault.practice?.length || 0} Practice</span>
+                  <span>📖 {vault.guides?.length || 0} Guides</span>
+                </div>
+                <button 
+                  className="resources-page-btn"
+                  onClick={() => handleAccessResources(vault)}
+                  disabled={total === 0}
+                >
+                  {total > 0 
+                    ? `Access Resources →` 
+                    : 'No Resources Available'}
+                </button>
               </div>
-              <button 
-                className="resources-page-btn"
-                onClick={() => handleAccessResources(vault)}
-                disabled={!vault.videos?.length && !vault.practice?.length && !vault.guides?.length}
-              >
-                {(vault.videos?.length || 0) + (vault.practice?.length || 0) + (vault.guides?.length || 0) > 0 
-                  ? 'Access Resources →' 
-                  : 'No Resources Available'}
-              </button>
-            </div>
-          ))
+            );
+          })
         ) : (
           <div className="resources-page-empty">
             <span>📚</span>

@@ -22,6 +22,9 @@ const Tutors = () => {
   const [selectedTutor, setSelectedTutor] = useState(null);
   const [showLoginPrompt, setShowLoginPrompt] = useState(false);
   const [totalTutors, setTotalTutors] = useState(0);
+  const [showTutorModal, setShowTutorModal] = useState(false);
+  const [viewingTutor, setViewingTutor] = useState(null);
+  const [showFullProfile, setShowFullProfile] = useState(false);
 
   useEffect(() => {
     checkAuth();
@@ -60,18 +63,31 @@ const Tutors = () => {
   };
 
   // ============================================
-  // RENDER AVATAR - SAME LOGIC AS NAVBAR
+  // RENDER AVATAR
   // ============================================
   const renderAvatar = (tutor) => {
-    // If tutor has an avatar, show it
-    if (tutor?.avatar) {
+    if (!tutor.avatar) {
+      return '🧑‍🏫';
+    }
+
+    const isImage = tutor.avatar.startsWith('data:image') || 
+                    tutor.avatar.startsWith('http://') || 
+                    tutor.avatar.startsWith('https://');
+
+    if (isImage) {
+      let imageUrl = tutor.avatar;
+      if (imageUrl.startsWith('http')) {
+        const separator = imageUrl.includes('?') ? '&' : '?';
+        imageUrl = `${imageUrl}${separator}t=${Date.now()}`;
+      }
+
       return (
         <img 
-          src={tutor.avatar} 
+          src={imageUrl} 
           alt={tutor.name} 
           className="tutor-avatar-img"
+          loading="lazy"
           onError={(e) => {
-            // If image fails, show emoji fallback
             e.target.style.display = 'none';
             const parent = e.target.parentElement;
             if (parent) {
@@ -85,9 +101,46 @@ const Tutors = () => {
         />
       );
     }
-    
-    // No avatar - show emoji
+
     return '🧑‍🏫';
+  };
+
+  // ============================================
+  // HANDLE TUTOR CARD CLICK - SHOW MODAL
+  // ============================================
+  const handleTutorCardClick = (tutor) => {
+    setViewingTutor(tutor);
+    setShowTutorModal(true);
+    setShowFullProfile(false);
+  };
+
+  // ============================================
+  // HANDLE VIEW FULL PROFILE
+  // ============================================
+  const handleViewFullProfile = () => {
+    setShowFullProfile(true);
+  };
+
+  // ============================================
+  // HANDLE BOOK FROM MODAL
+  // ============================================
+  const handleBookFromModal = () => {
+    if (!isAuthenticated) {
+      setShowTutorModal(false);
+      setSelectedTutor(viewingTutor);
+      setShowLoginPrompt(true);
+      return;
+    }
+
+    setShowTutorModal(false);
+    setSelectedTutor(viewingTutor);
+    setBooking({
+      tutorId: viewingTutor.id,
+      date: '',
+      duration: 60,
+      topic: viewingTutor.subjects?.[0] || 'Mathematics'
+    });
+    setShowBookingModal(true);
   };
 
   const handleBookSession = (tutor) => {
@@ -141,6 +194,112 @@ const Tutors = () => {
     navigate('/login', { state: { from: '/tutors' } });
   };
 
+  // ============================================
+  // TUTOR MODAL/POPUP
+  // ============================================
+  const TutorModal = () => {
+    if (!viewingTutor) return null;
+
+    return (
+      <div className="tutor-modal-overlay" onClick={() => setShowTutorModal(false)}>
+        <div className="tutor-modal" onClick={(e) => e.stopPropagation()}>
+          <button className="tutor-modal-close" onClick={() => setShowTutorModal(false)}>×</button>
+          
+          {!showFullProfile ? (
+            // ===== QUICK VIEW =====
+            <div className="tutor-modal-content">
+              <div className="tutor-modal-avatar">
+                {viewingTutor.avatar ? (
+                  <img src={viewingTutor.avatar} alt={viewingTutor.name} />
+                ) : (
+                  '🧑‍🏫'
+                )}
+              </div>
+              <h2 className="tutor-modal-name">{viewingTutor.name}</h2>
+              <span className="tutor-modal-tier">{viewingTutor.tier}</span>
+              
+              <div className="tutor-modal-subjects">
+                {viewingTutor.subjects?.map((subject, idx) => (
+                  <span key={idx} className="subject-tag">{subject}</span>
+                ))}
+              </div>
+
+              {viewingTutor.bio && (
+                <p className="tutor-modal-bio">{viewingTutor.bio}</p>
+              )}
+
+              <div className="tutor-modal-actions">
+                <button className="modal-btn primary" onClick={handleBookFromModal}>
+                  📚 Book Session
+                </button>
+                <button className="modal-btn secondary" onClick={handleViewFullProfile}>
+                  👤 View Full Profile
+                </button>
+                <button className="modal-btn cancel" onClick={() => setShowTutorModal(false)}>
+                  Cancel
+                </button>
+              </div>
+            </div>
+          ) : (
+            // ===== FULL PROFILE VIEW =====
+            <div className="tutor-modal-full-profile">
+              <button className="back-btn" onClick={() => setShowFullProfile(false)}>
+                ← Back
+              </button>
+              
+              <div className="full-profile-header">
+                <div className="full-profile-avatar">
+                  {viewingTutor.avatar ? (
+                    <img src={viewingTutor.avatar} alt={viewingTutor.name} />
+                  ) : (
+                    '🧑‍🏫'
+                  )}
+                </div>
+                <div className="full-profile-info">
+                  <h2>{viewingTutor.name}</h2>
+                  <span className="full-profile-tier">{viewingTutor.tier}</span>
+                  <p className="full-profile-email">{viewingTutor.email}</p>
+                </div>
+              </div>
+
+              <div className="full-profile-body">
+                <div className="profile-section">
+                  <h3>📖 Subjects</h3>
+                  <div className="profile-subjects">
+                    {viewingTutor.subjects?.map((subject, idx) => (
+                      <span key={idx} className="subject-tag">{subject}</span>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="profile-section">
+                  <h3>📝 About</h3>
+                  <p>{viewingTutor.bio || 'Experienced mathematics tutor dedicated to helping students succeed.'}</p>
+                </div>
+
+                <div className="profile-section">
+                  <h3>⏰ Availability</h3>
+                  <p>{viewingTutor.shift?.name || 'Various shifts available'}</p>
+                  <p className="shift-time">{viewingTutor.shift?.time || 'Flexible hours'}</p>
+                </div>
+
+                <div className="profile-section">
+                  <h3>🏅 Experience Level</h3>
+                  <p>{viewingTutor.tier}</p>
+                </div>
+
+                <button className="modal-btn primary full-profile-book" onClick={handleBookFromModal}>
+                  📚 Book Session
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+    );
+  };
+
+  // ===== LOGIN PROMPT =====
   const LoginPrompt = () => (
     <div className="login-prompt-overlay" onClick={() => setShowLoginPrompt(false)}>
       <div className="login-prompt-modal" onClick={(e) => e.stopPropagation()}>
@@ -163,6 +322,7 @@ const Tutors = () => {
     </div>
   );
 
+  // ===== BOOKING MODAL =====
   const BookingModal = () => (
     <div className="booking-modal-overlay" onClick={() => setShowBookingModal(false)}>
       <div className="booking-modal" onClick={(e) => e.stopPropagation()}>
@@ -256,6 +416,7 @@ const Tutors = () => {
     <div className="tutors-page">
       {showLoginPrompt && <LoginPrompt />}
       {showBookingModal && <BookingModal />}
+      {showTutorModal && <TutorModal />}
 
       <div className="tutors-page-header">
         <h1>👨‍🏫 Our Expert Tutors</h1>
@@ -283,7 +444,11 @@ const Tutors = () => {
               <div className="tutors-page-tutor-list">
                 {shift.tutors && shift.tutors.length > 0 ? (
                   shift.tutors.map((tutor) => (
-                    <div key={tutor.id} className="tutors-page-tutor-card">
+                    <div 
+                      key={tutor.id} 
+                      className="tutors-page-tutor-card"
+                      onClick={() => handleTutorCardClick(tutor)}
+                    >
                       <div className="tutors-page-tutor-avatar">
                         {renderAvatar(tutor)}
                       </div>
@@ -300,7 +465,10 @@ const Tutors = () => {
                       </div>
                       <button 
                         className="book-session-btn"
-                        onClick={() => handleBookSession(tutor)}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleBookSession(tutor);
+                        }}
                       >
                         📚 Book Session
                       </button>

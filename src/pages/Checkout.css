@@ -321,26 +321,68 @@
   border: 1px solid rgba(255, 255, 255, 0.06) !important;
 }
 
-/* ===== TERMS ===== */
+/* ===== TERMS CHECKBOX - FIXED VISIBLE ===== */
 .terms-checkbox {
-  margin: 8px 0;
+  margin: 16px 0 12px 0;
 }
 
 .checkbox-label {
   display: flex;
   align-items: flex-start;
-  gap: 10px;
+  gap: 12px;
   font-size: 14px;
-  color: #94a3b8 !important;
+  color: rgba(255, 255, 255, 0.8) !important;
   cursor: pointer;
+  line-height: 1.6;
 }
 
+/* REPLACE HIDDEN CHECKBOX WITH CUSTOM ONE */
 .checkbox-label input[type="checkbox"] {
-  width: 18px;
-  height: 18px;
+  appearance: none;
+  -webkit-appearance: none;
+  width: 20px;
+  height: 20px;
+  min-width: 20px;
+  min-height: 20px;
+  border: 2px solid #ffffff;
+  border-radius: 4px;
+  background: #0a0e1a;
+  cursor: pointer;
+  position: relative;
   margin-top: 2px;
-  accent-color: #4f46e5;
   flex-shrink: 0;
+  transition: all 0.2s ease;
+}
+
+.checkbox-label input[type="checkbox"]:checked {
+  background: #4f46e5;
+  border-color: #4f46e5;
+}
+
+.checkbox-label input[type="checkbox"]:checked::after {
+  content: '✓';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  color: white;
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.checkbox-label input[type="checkbox"]:focus {
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.4);
+}
+
+.checkbox-label:hover input[type="checkbox"] {
+  border-color: #818cf8;
+}
+
+.checkbox-label span {
+  color: rgba(255, 255, 255, 0.8) !important;
+  font-size: 14px;
+  line-height: 1.6;
 }
 
 .terms-link {
@@ -348,6 +390,11 @@
   cursor: pointer;
   font-weight: 600;
   text-decoration: underline;
+  background: none;
+  border: none;
+  padding: 0 2px;
+  font-size: 14px;
+  display: inline;
 }
 
 .terms-link:hover {
@@ -614,6 +661,15 @@
   .step-line {
     width: 20px;
   }
+  .checkbox-label {
+    font-size: 13px;
+  }
+  .checkbox-label input[type="checkbox"] {
+    width: 18px;
+    height: 18px;
+    min-width: 18px;
+    min-height: 18px;
+  }
 }
 
 @media (max-width: 480px) {
@@ -627,6 +683,19 @@
   }
   .payment-methods {
     grid-template-columns: 1fr;
+  }
+  .checkbox-label {
+    font-size: 12px;
+    gap: 10px;
+  }
+  .checkbox-label input[type="checkbox"] {
+    width: 16px;
+    height: 16px;
+    min-width: 16px;
+    min-height: 16px;
+  }
+  .terms-link {
+    font-size: 12px;
   }
 }
 
@@ -646,4 +715,227 @@
 
 .checkout-page::-webkit-scrollbar-thumb:hover {
   background: rgba(255, 255, 255, 0.25);
+}
+
+/* ===== LIGHT THEME ===== */
+[data-theme="light"] .checkout-page {
+  background: #f8fafc !important;
+}
+
+[data-theme="light"] .checkout-header h1 {
+  background: linear-gradient(135deg, #0f172a, #4f46e5);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+[data-theme="light"] .checkout-header p {
+  color: rgba(0, 0, 0, 0.6) !important;
+}
+
+[data-theme="light"] .checkout-section {
+  background: #ffffff !important;
+  border: 1px solid rgba(0, 0, 0, 0.06) !important;
+}
+
+[data-theme="light"] .checkout-section h3 {
+  color: #0f172a !important;
+}
+
+[data-theme="light"] .selected-plan-card {
+  background: rgba(0, 0, 0, 0.02) !important;
+  border: 1px solid rgba(0, 0, 0, 0.06) !important;
+}
+
+[data-theme="light"] .plan-info h4 {
+  color: #0f172a !important;
+}
+
+[data-theme="light"] .plan-description {
+  color: rgba(0, 0, 0, 0.6) !important;
+}
+
+[data-theme="light"] .plan-price-mini .price {
+  color: #0f172a !important;
+}
+
+[data-theme="light"] .plan-price-mini .period {
+  color: rgba(0, 0, 0, 0.6) !important;
+}
+
+[data-theme="light"] .form-group label {
+  color: rgba(0, 0, 0, 0.6) !important;
+}
+
+[data-theme="light"] .form-group input,
+[data-theme="light"] .form-group select {
+  background: #f8fafc !important;
+  border: 1px solid rgba(0, 0, 0, 0.06) !important;
+  color: #0f172a !important;
+}
+
+[data-theme="light"] .form-group input::placeholder {
+  color: rgba(0, 0, 0, 0.3);
+}
+
+[data-theme="light"] .payment-method {
+  background: #f8fafc !important;
+  border: 2px solid rgba(0, 0, 0, 0.06) !important;
+  color: rgba(0, 0, 0, 0.6) !important;
+}
+
+[data-theme="light"] .payment-method.selected {
+  border-color: #4f46e5 !important;
+  background: rgba(79, 70, 229, 0.05) !important;
+  color: #0f172a !important;
+}
+
+[data-theme="light"] .payment-info {
+  background: rgba(0, 0, 0, 0.02) !important;
+  color: rgba(0, 0, 0, 0.6) !important;
+}
+
+[data-theme="light"] .summary-card {
+  background: #ffffff !important;
+  border: 1px solid rgba(0, 0, 0, 0.06) !important;
+}
+
+[data-theme="light"] .summary-card h3 {
+  color: #0f172a !important;
+}
+
+[data-theme="light"] .summary-plan-name .plan-name {
+  color: #0f172a !important;
+}
+
+[data-theme="light"] .summary-plan-name .plan-tier {
+  color: rgba(0, 0, 0, 0.6) !important;
+  background: rgba(0, 0, 0, 0.04) !important;
+}
+
+[data-theme="light"] .summary-plan-price .price {
+  color: #0f172a !important;
+}
+
+[data-theme="light"] .summary-plan-price .period {
+  color: rgba(0, 0, 0, 0.6) !important;
+}
+
+[data-theme="light"] .summary-feature {
+  color: rgba(0, 0, 0, 0.6) !important;
+}
+
+[data-theme="light"] .summary-total {
+  color: #0f172a !important;
+}
+
+[data-theme="light"] .total-price {
+  color: #4f46e5 !important;
+}
+
+[data-theme="light"] .summary-refund {
+  color: rgba(0, 0, 0, 0.4) !important;
+}
+
+[data-theme="light"] .security-badge {
+  color: rgba(0, 0, 0, 0.4) !important;
+}
+
+[data-theme="light"] .step-number {
+  background: #f1f5f9 !important;
+  color: #94a3b8 !important;
+}
+
+[data-theme="light"] .step-item.active .step-number {
+  background: linear-gradient(135deg, #4f46e5, #7c3aed) !important;
+  color: #ffffff !important;
+}
+
+[data-theme="light"] .step-label {
+  color: #94a3b8 !important;
+}
+
+[data-theme="light"] .step-item.active .step-label {
+  color: #0f172a !important;
+}
+
+[data-theme="light"] .checkout-back {
+  color: #4f46e5 !important;
+}
+
+[data-theme="light"] .checkout-back:hover {
+  color: #4338ca !important;
+}
+
+/* ===== LIGHT THEME TERMS CHECKBOX ===== */
+[data-theme="light"] .checkbox-label {
+  color: rgba(0, 0, 0, 0.7) !important;
+}
+
+[data-theme="light"] .checkbox-label input[type="checkbox"] {
+  border-color: #0f172a;
+  background: #ffffff;
+}
+
+[data-theme="light"] .checkbox-label input[type="checkbox"]:checked {
+  background: #4f46e5;
+  border-color: #4f46e5;
+}
+
+[data-theme="light"] .checkbox-label input[type="checkbox"]:checked::after {
+  color: white;
+}
+
+[data-theme="light"] .checkbox-label:hover input[type="checkbox"] {
+  border-color: #4f46e5;
+}
+
+[data-theme="light"] .checkbox-label span {
+  color: rgba(0, 0, 0, 0.7) !important;
+}
+
+[data-theme="light"] .terms-link {
+  color: #4f46e5 !important;
+}
+
+[data-theme="light"] .terms-link:hover {
+  color: #4338ca !important;
+}
+
+[data-theme="light"] .section h2 {
+  color: #0f172a !important;
+}
+
+[data-theme="light"] .section p {
+  color: rgba(0, 0, 0, 0.6) !important;
+}
+
+[data-theme="light"] .last-updated {
+  color: rgba(0, 0, 0, 0.4) !important;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.06) !important;
+}
+
+[data-theme="light"] .checkout-error-message {
+  background: rgba(239, 68, 68, 0.05) !important;
+  color: #dc2626 !important;
+}
+
+[data-theme="light"] .mini-feature {
+  color: rgba(0, 0, 0, 0.6) !important;
+  background: rgba(0, 0, 0, 0.02) !important;
+  border: 1px solid rgba(0, 0, 0, 0.06) !important;
+}
+
+[data-theme="light"] .card-details {
+  background: rgba(0, 0, 0, 0.02) !important;
+  border: 1px solid rgba(0, 0, 0, 0.06) !important;
+}
+
+[data-theme="light"] .checkout-loading,
+[data-theme="light"] .checkout-empty {
+  color: rgba(0, 0, 0, 0.6) !important;
+}
+
+[data-theme="light"] .checkout-error {
+  color: #dc2626 !important;
 }

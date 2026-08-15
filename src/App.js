@@ -37,6 +37,8 @@ import Help from './pages/Help';
 import Practice from './pages/Practice';
 import VerifyEmail from './pages/VerifyEmail';
 import ChatWidget from './components/ChatWidget';
+import TutorDashboard from './pages/TutorDashboard';
+import AddTutor from './pages/Admin/AddTutor';
 
 // ===== LAZY LOAD MY COURSES & SESSIONS WITH ERROR BOUNDARY =====
 const MyCourses = lazy(() => 
@@ -169,6 +171,9 @@ function App() {
                   <Suspense fallback={<PageLoader />}>
                     <Routes>
                       {/* ===== CUSTOM ROUTES FIRST ===== */}
+                      <Route path="/admin/add-tutor" element={<AddTutor />} />
+                      <Route path="/tutor/dashboard" element={<TutorDashboard />} />
+                      <Route path="/tutor/session/:sessionId" element={<TutorSession />} />
                       <Route path="/my-sessions" element={<MySessions />} />
                       <Route path="/my-courses" element={<MyCourses />} />
                       <Route path="/verify-email" element={<VerifyEmail />} />

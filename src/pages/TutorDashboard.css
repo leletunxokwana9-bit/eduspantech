@@ -1,0 +1,540 @@
+/* src/pages/TutorDashboard.css */
+.tutor-dashboard {
+  min-height: 100vh;
+  background: #0a0e1a;
+  color: #ffffff;
+  padding: 20px;
+}
+
+/* ===== HEADER ===== */
+.tutor-dashboard-header {
+  background: linear-gradient(135deg, #141b2d, #1a1a3e);
+  border-radius: 16px;
+  padding: 24px 32px;
+  margin-bottom: 24px;
+  border: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.tutor-dashboard-header-content {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  flex-wrap: wrap;
+}
+
+/* ===== TUTOR AVATAR WITH PHOTO SUPPORT ===== */
+.tutor-avatar {
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #059669, #10b981);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 28px;
+  font-weight: 700;
+  color: #ffffff;
+  flex-shrink: 0;
+  overflow: hidden;
+}
+
+.tutor-avatar-img {
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  object-fit: cover;
+}
+
+.tutor-avatar-initial {
+  font-size: 28px;
+  font-weight: 700;
+  color: #ffffff;
+}
+
+.tutor-info {
+  flex: 1;
+}
+
+.tutor-info h1 {
+  font-size: 24px;
+  font-weight: 700;
+  color: #ffffff;
+  margin: 0 0 4px 0;
+}
+
+.tutor-info p {
+  color: #94a3b8;
+  margin: 0;
+}
+
+.tutor-header-actions {
+  display: flex;
+  gap: 12px;
+}
+
+.btn-secondary {
+  padding: 8px 20px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 8px;
+  color: #ffffff;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.btn-secondary:hover {
+  background: rgba(255, 255, 255, 0.1);
+}
+
+/* ===== STATS ===== */
+.tutor-stats {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 16px;
+  margin-bottom: 24px;
+}
+
+.stat-card {
+  background: #141b2d;
+  border-radius: 12px;
+  padding: 18px 20px;
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  transition: all 0.3s ease;
+}
+
+.stat-card:hover {
+  border-color: #10b981;
+  transform: translateY(-2px);
+  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.3);
+}
+
+.stat-icon {
+  font-size: 32px;
+}
+
+.stat-info {
+  display: flex;
+  flex-direction: column;
+}
+
+.stat-number {
+  font-size: 24px;
+  font-weight: 700;
+  color: #ffffff;
+}
+
+.stat-label {
+  font-size: 13px;
+  color: #94a3b8;
+}
+
+/* ===== SESSIONS ===== */
+.tutor-sessions {
+  background: #141b2d;
+  border-radius: 16px;
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  padding: 24px 28px;
+}
+
+.sessions-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 16px;
+  margin-bottom: 20px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.sessions-header h2 {
+  font-size: 20px;
+  font-weight: 700;
+  color: #ffffff;
+  margin: 0;
+}
+
+.session-tabs {
+  display: flex;
+  gap: 4px;
+  background: rgba(255, 255, 255, 0.04);
+  padding: 4px;
+  border-radius: 10px;
+}
+
+.tab-btn {
+  padding: 8px 16px;
+  border: none;
+  border-radius: 8px;
+  background: transparent;
+  color: #94a3b8;
+  font-weight: 500;
+  font-size: 13px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.tab-btn:hover {
+  color: #ffffff;
+}
+
+.tab-btn.active {
+  background: #4f46e5;
+  color: #ffffff;
+}
+
+/* ===== SESSION CARDS ===== */
+.sessions-list {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.session-card {
+  background: rgba(255, 255, 255, 0.02);
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.04);
+  padding: 16px 20px;
+  transition: all 0.3s ease;
+}
+
+.session-card:hover {
+  border-color: rgba(255, 255, 255, 0.1);
+}
+
+.session-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+}
+
+.session-student {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.student-avatar {
+  font-size: 28px;
+}
+
+.session-student h4 {
+  font-size: 15px;
+  font-weight: 600;
+  color: #ffffff;
+  margin: 0;
+}
+
+.student-id {
+  font-size: 12px;
+  color: #64748b;
+  margin: 2px 0 0 0;
+}
+
+.session-status {
+  padding: 4px 12px;
+  border-radius: 12px;
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: capitalize;
+}
+
+.session-status.upcoming {
+  background: rgba(79, 70, 229, 0.2);
+  color: #818cf8;
+}
+
+.session-status.in-progress {
+  background: rgba(34, 197, 94, 0.2);
+  color: #4ade80;
+}
+
+.session-status.completed {
+  background: rgba(14, 165, 233, 0.2);
+  color: #60a5fa;
+}
+
+.session-status.cancelled {
+  background: rgba(239, 68, 68, 0.2);
+  color: #f87171;
+}
+
+.session-card-body {
+  margin-bottom: 12px;
+}
+
+.session-details {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+}
+
+.detail-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  color: #94a3b8;
+}
+
+.detail-icon {
+  font-size: 14px;
+}
+
+.session-notes {
+  font-size: 13px;
+  color: #94a3b8;
+  margin: 8px 0 0 0;
+  padding: 8px 12px;
+  background: rgba(255, 255, 255, 0.03);
+  border-radius: 6px;
+}
+
+.session-card-actions {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  padding-top: 12px;
+  border-top: 1px solid rgba(255, 255, 255, 0.04);
+}
+
+.btn-start,
+.btn-resume {
+  padding: 8px 20px;
+  border: none;
+  border-radius: 8px;
+  background: linear-gradient(135deg, #4f46e5, #7c3aed);
+  color: #ffffff;
+  font-weight: 600;
+  font-size: 13px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.btn-start:hover,
+.btn-resume:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(79, 70, 229, 0.3);
+}
+
+.btn-cancel {
+  padding: 8px 20px;
+  border: 1px solid rgba(239, 68, 68, 0.3);
+  border-radius: 8px;
+  background: transparent;
+  color: #f87171;
+  font-weight: 600;
+  font-size: 13px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.btn-cancel:hover {
+  background: rgba(239, 68, 68, 0.1);
+}
+
+.session-completed-badge {
+  color: #4ade80;
+  font-weight: 600;
+}
+
+.session-cancelled-badge {
+  color: #f87171;
+  font-weight: 600;
+}
+
+/* ===== EMPTY STATE ===== */
+.empty-sessions {
+  text-align: center;
+  padding: 60px 20px;
+}
+
+.empty-icon {
+  font-size: 48px;
+  display: block;
+  margin-bottom: 16px;
+}
+
+.empty-sessions h3 {
+  font-size: 20px;
+  color: #ffffff;
+  margin-bottom: 8px;
+}
+
+.empty-sessions p {
+  color: #94a3b8;
+}
+
+.empty-sub {
+  font-size: 14px;
+  color: #64748b;
+  margin-top: 4px;
+}
+
+/* ===== LOADING ===== */
+.tutor-dashboard-loading {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 60vh;
+  gap: 16px;
+}
+
+.loading-spinner {
+  width: 40px;
+  height: 40px;
+  border: 3px solid rgba(255, 255, 255, 0.1);
+  border-top: 3px solid #4f46e5;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+/* ===== LIGHT THEME ===== */
+[data-theme="light"] .tutor-dashboard {
+  background: #f8fafc;
+}
+
+[data-theme="light"] .tutor-dashboard-header {
+  background: #ffffff;
+  border-color: rgba(0, 0, 0, 0.06);
+}
+
+[data-theme="light"] .tutor-info h1 {
+  color: #0f172a;
+}
+
+[data-theme="light"] .tutor-info p {
+  color: #64748b;
+}
+
+[data-theme="light"] .tutor-avatar {
+  background: linear-gradient(135deg, #059669, #10b981);
+}
+
+[data-theme="light"] .stat-card {
+  background: #ffffff;
+  border-color: rgba(0, 0, 0, 0.06);
+}
+
+[data-theme="light"] .stat-number {
+  color: #0f172a;
+}
+
+[data-theme="light"] .tutor-sessions {
+  background: #ffffff;
+  border-color: rgba(0, 0, 0, 0.06);
+}
+
+[data-theme="light"] .sessions-header h2 {
+  color: #0f172a;
+}
+
+[data-theme="light"] .tab-btn {
+  color: #94a3b8;
+}
+
+[data-theme="light"] .tab-btn:hover {
+  color: #0f172a;
+}
+
+[data-theme="light"] .tab-btn.active {
+  color: #ffffff;
+}
+
+[data-theme="light"] .session-card {
+  background: rgba(0, 0, 0, 0.02);
+}
+
+[data-theme="light"] .session-student h4 {
+  color: #0f172a;
+}
+
+[data-theme="light"] .detail-item {
+  color: #64748b;
+}
+
+[data-theme="light"] .empty-sessions h3 {
+  color: #0f172a;
+}
+
+[data-theme="light"] .btn-secondary {
+  color: #0f172a;
+  border-color: rgba(0, 0, 0, 0.1);
+}
+
+[data-theme="light"] .btn-secondary:hover {
+  background: rgba(0, 0, 0, 0.05);
+}
+
+/* ===== RESPONSIVE ===== */
+@media (max-width: 768px) {
+  .tutor-dashboard {
+    padding: 12px;
+  }
+  
+  .tutor-dashboard-header {
+    padding: 16px 20px;
+  }
+  
+  .tutor-dashboard-header-content {
+    flex-direction: column;
+    text-align: center;
+  }
+  
+  .tutor-stats {
+    grid-template-columns: 1fr 1fr;
+  }
+  
+  .sessions-header {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+  
+  .session-tabs {
+    width: 100%;
+    overflow-x: auto;
+  }
+  
+  .tab-btn {
+    flex: 1;
+    text-align: center;
+    white-space: nowrap;
+  }
+  
+  .session-card-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 8px;
+  }
+  
+  .session-details {
+    flex-direction: column;
+    gap: 6px;
+  }
+}
+
+@media (max-width: 480px) {
+  .tutor-stats {
+    grid-template-columns: 1fr;
+  }
+  
+  .session-card-actions {
+    flex-direction: column;
+  }
+  
+  .btn-start,
+  .btn-resume,
+  .btn-cancel {
+    width: 100%;
+    text-align: center;
+  }
+}

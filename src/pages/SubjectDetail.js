@@ -17,6 +17,8 @@ const SubjectDetail = () => {
   const [user, setUser] = useState(null);
   const [subscription, setSubscription] = useState(null);
   const [isCheckingAuth, setIsCheckingAuth] = useState(true);
+  const [showLoginPrompt, setShowLoginPrompt] = useState(false);
+  const [selectedSubject, setSelectedSubject] = useState(null);
 
   // ===== SOUND HOOK =====
   const { 
@@ -27,7 +29,6 @@ const SubjectDetail = () => {
     playEnrollFail, 
     playAlreadyEnrolled,
     playEnrollComplete,
-    playPaymentSuccess,
     playSubscriptionCreated,
     playSuccess,
     playNotification
@@ -165,14 +166,45 @@ const SubjectDetail = () => {
     return regions[getRegion()] || 'us-east-1';
   };
 
-  // ===== ENROLLMENT FUNCTION WITH SOUNDS =====
+  // ===== HANDLE LOGIN REDIRECT =====
+  const handleLoginRedirect = () => {
+    playClick();
+    navigate('/login', { state: { from: `/subjects/${subjectName}` } });
+  };
+
+  // ===== LOGIN PROMPT MODAL =====
+  const LoginPrompt = () => (
+    <div className="login-prompt-overlay" onClick={() => setShowLoginPrompt(false)}>
+      <div className="login-prompt-modal" onClick={(e) => e.stopPropagation()}>
+        <button className="login-prompt-close" onClick={() => setShowLoginPrompt(false)}>×</button>
+        <div className="login-prompt-icon">🔒</div>
+        <h3>Login Required</h3>
+        <p>Please log in to enroll in <strong>{selectedSubject?.name || subject?.name}</strong>.</p>
+        <div className="login-prompt-actions">
+          <button className="login-prompt-btn" onClick={handleLoginRedirect}>
+            Login Now →
+          </button>
+          <button className="login-prompt-cancel" onClick={() => setShowLoginPrompt(false)}>
+            Cancel
+          </button>
+        </div>
+        <p className="login-prompt-register">
+          Don't have an account? <span onClick={() => navigate('/register')}>Register here</span>
+        </p>
+      </div>
+    </div>
+  );
+
+  // ===== ENROLLMENT FUNCTION WITH LOGIN CHECK =====
   const handleEnroll = async () => {
     // Play click sound
     playClick();
 
+    // ✅ Check authentication first - show login popup if not logged in
     if (!authService.isAuthenticated()) {
+      setSelectedSubject(subject);
+      setShowLoginPrompt(true);
       playNotification();
-      navigate('/login', { state: { redirect: `/subjects/${subjectName}` } });
       return;
     }
 
@@ -186,13 +218,15 @@ const SubjectDetail = () => {
         if (userData) {
           setUser(userData);
         } else {
+          setSelectedSubject(subject);
+          setShowLoginPrompt(true);
           playNotification();
-          navigate('/login', { state: { redirect: `/subjects/${subjectName}` } });
           return;
         }
       } catch (error) {
+        setSelectedSubject(subject);
+        setShowLoginPrompt(true);
         playNotification();
-        navigate('/login', { state: { redirect: `/subjects/${subjectName}` } });
         return;
       }
     }
@@ -499,6 +533,9 @@ const SubjectDetail = () => {
 
   return (
     <div className="subject-detail-container">
+      {/* Login Prompt Modal */}
+      {showLoginPrompt && <LoginPrompt />}
+
       {/* Header */}
       <div className="subject-detail-header">
         <div className="subject-title-section">
@@ -557,10 +594,10 @@ const SubjectDetail = () => {
         </div>
       )}
 
-      {/* If not logged in, show login prompt */}
+      {/* If not logged in, show subtle login hint (not a redirect) */}
       {!user && !isCheckingAuth && (
-        <div className="login-prompt">
-          <p>🔐 Please <button className="login-link" onClick={() => { playClick(); navigate('/login', { state: { redirect: `/subjects/${subjectName}` } }); }}>login</button> to enroll in this subject.</p>
+        <div className="login-prompt-hint">
+          <p>🔐 Please <button className="login-link" onClick={() => { playClick(); setShowLoginPrompt(true); }}>login</button> to enroll in this subject.</p>
         </div>
       )}
 

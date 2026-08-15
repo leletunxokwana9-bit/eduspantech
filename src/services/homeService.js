@@ -1,18 +1,23 @@
 // src/services/homeService.js
-const API_URL = 'https://eduspantech-backend.onrender.com';
+import { API_BASE_URL } from './api';
+
+const API_URL = API_BASE_URL || 
+  (process.env.NODE_ENV === 'production' 
+    ? 'https://eduspantech-backend.onrender.com/api' 
+    : 'http://localhost:5000/api');
 
 export const homeService = {
   getHomeData: async () => {
     try {
-      console.log('🌐 Fetching subjects from API:', `${API_URL}/api/v1/content/subjects`);
+      console.log('🌐 Fetching subjects from API:', `${API_URL}/content/subjects`);
       
-      const response = await fetch(`${API_URL}/api/v1/content/subjects`);
+      const response = await fetch(`${API_URL}/content/subjects`);
       if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
       
       const data = await response.json();
       console.log('✅ Subjects fetched successfully:', data);
       
-      // ✅ Ensure subjects is always an array
+      // Ensure subjects is always an array
       let subjects = [];
       if (data && data.subjects) {
         subjects = Array.isArray(data.subjects) ? data.subjects : [];
@@ -70,7 +75,7 @@ export const homeService = {
             longDescription: subject.longDescription || subject.description || '',
             color: subject.color || '#4f46e5',
             topics: subject.topics || [],
-            resources: [
+            resources: subject.resources || [
               { 
                 id: 1, 
                 name: `${subject.name} Study Guide`, 
@@ -291,7 +296,7 @@ export const homeService = {
 
   getDashboardData: async (userId) => {
     try {
-      const response = await fetch(`${API_URL}/api/v1/dashboard/${userId}`);
+      const response = await fetch(`${API_URL}/dashboard/${userId}`);
       if (!response.ok) throw new Error('Failed to fetch dashboard');
       return response.json();
     } catch (error) {
@@ -302,7 +307,7 @@ export const homeService = {
 
   getUserProgress: async (userId) => {
     try {
-      const response = await fetch(`${API_URL}/api/v1/users/${userId}/progress`);
+      const response = await fetch(`${API_URL}/users/${userId}/progress`);
       if (!response.ok) throw new Error('Failed to fetch progress');
       return response.json();
     } catch (error) {
@@ -314,7 +319,7 @@ export const homeService = {
   getCourses: async (filters) => {
     try {
       const params = new URLSearchParams(filters);
-      const response = await fetch(`${API_URL}/api/v1/courses?${params}`);
+      const response = await fetch(`${API_URL}/courses?${params}`);
       if (!response.ok) throw new Error('Failed to fetch courses');
       return response.json();
     } catch (error) {

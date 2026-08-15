@@ -1,8 +1,9 @@
-// src/pages/Profile.js - Clean working version
-import React, { useState, useEffect } from 'react';
+// src/pages/Profile.js - COMPLETELY FIXED with avatar for both students and tutors
+import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { authService } from '../services/authService';
+import authService from '../services/authService';
 import AvatarSelector from '../components/AvatarSelector';
+import './Profile.css';
 
 const Profile = () => {
   const navigate = useNavigate();
@@ -11,6 +12,7 @@ const Profile = () => {
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
   const [isEditing, setIsEditing] = useState(false);
+  const [isTutor, setIsTutor] = useState(false);
   const [editForm, setEditForm] = useState({
     name: '',
     email: '',
@@ -36,8 +38,15 @@ const Profile = () => {
   const [showAvatarSelector, setShowAvatarSelector] = useState(false);
   const [avatarData, setAvatarData] = useState(null);
   const [avatarImage, setAvatarImage] = useState(null);
+  
+  // ===== TUTOR PHOTO UPLOAD STATE =====
+  const [profilePhoto, setProfilePhoto] = useState(null);
+  const [photoUploading, setPhotoUploading] = useState(false);
+  const [photoError, setPhotoError] = useState('');
+  const fileInputRef = useRef(null);
 
-  const API_URL = 'https://eduspantech-backend.onrender.com';
+  // ===== FIXED: No /v1 in API URL =====
+  const API_URL = 'https://eduspantech-backend.onrender.com/api';
 
   // ===== AUTO-DISMISS SUCCESS MESSAGE =====
   useEffect(() => {
@@ -67,18 +76,32 @@ const Profile = () => {
           console.log('✅ User data loaded:', userData.name);
           setUser(userData);
           
+          // Check if user is a tutor
+          const isTutorAccount = userData.is_tutor === true || userData.role === 'tutor';
+          setIsTutor(isTutorAccount);
+          
+          // ============================================
+          // FIX: Use avatar for BOTH students AND tutors
+          // ============================================
           if (userData.avatar) {
-            setAvatarImage(userData.avatar);
-            setAvatarData({
-              id: userData.avatar_seed || 'default',
-              seed: userData.avatar_seed || 'default',
-              style: userData.avatar_style || 'adventurer'
-            });
+            if (isTutorAccount) {
+              // TUTOR: Use avatar (which contains the uploaded photo or UI avatar)
+              setProfilePhoto(userData.avatar);
+            } else {
+              // STUDENT: Use avatar
+              setAvatarImage(userData.avatar);
+              setAvatarData({
+                id: userData.avatar_seed || 'default',
+                seed: userData.avatar_seed || 'default',
+                style: userData.avatar_style || 'adventurer'
+              });
+            }
           }
 
-          if (userData.subscription || userData.tier) {
+          // Set subscription
+          if (userData.subscription || userData.subscriptionTier) {
             setSubscription({
-              tier: userData.tier || userData.subscription?.tier || 'Silver',
+              tier: userData.subscriptionTier || userData.subscription?.tier || 'SILVER',
               status: userData.subscriptionStatus || userData.subscription?.status || 'active',
               endDate: userData.subscriptionEnd || userData.subscription?.end_date
             });
@@ -112,7 +135,7 @@ const Profile = () => {
         if (!token) return;
 
         console.log('🔍 Fetching enrollments...');
-        const enrollResponse = await fetch(`${API_URL}/api/v1/content/my/subjects`, {
+        const enrollResponse = await fetch(`${API_URL}/content/my/subjects`, {
           headers: {
             'Authorization': `Bearer ${token}`,
             'Content-Type': 'application/json'
@@ -141,9 +164,9 @@ const Profile = () => {
     };
 
     fetchUserData();
-  }, [navigate]);
+  }, [navigate, API_URL]);
 
-  // ===== AVATAR FUNCTIONS =====
+  // ===== STUDENT AVATAR FUNCTIONS =====
   const handleAvatarSelect = async (avatar) => {
     setAvatarData(avatar);
     setAvatarImage(avatar.svg);
@@ -159,7 +182,7 @@ const Profile = () => {
         return;
       }
 
-      const response = await fetch(`${API_URL}/api/v1/auth/update-profile`, {
+      const response = await fetch(`${API_URL}/auth/profile`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
@@ -183,6 +206,9 @@ const Profile = () => {
             avatar_style: avatar.style || 'adventurer'
           }));
         }
+      } else {
+        const errorData = await response.json();
+        setError(errorData.error || 'Failed to save avatar');
       }
     } catch (error) {
       console.error('❌ Failed to save avatar:', error);
@@ -190,11 +216,86 @@ const Profile = () => {
     }
   };
 
+  // ============================================
+  // TUTOR PHOTO UPLOAD - FIXED to use 'avatar'
+  // ============================================
+  const handlePhotoUpload = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    // Validate file type
+    if (!file.type.startsWith('image/')) {
+      setPhotoError('❌ Please upload an image file (JPG, PNG, WEBP)');
+      return;
+    }
+
+    // Validate file size (max 5MB)
+    if (file.size > 5 * 1024 * 1024) {
+      setPhotoError('❌ Image must be under 5MB');
+      return;
+    }
+
+    setPhotoUploading(true);
+    setPhotoError('');
+
+    try {
+      const reader = new FileReader();
+      reader.readAsDataURL(file);
+      reader.onload = async () => {
+        const base64Image = reader.result;
+        
+        const token = localStorage.getItem('accessToken');
+        // ============================================
+        // FIX: Use 'avatar' not 'profile_photo'
+        // ============================================
+        const response = await fetch(`${API_URL}/auth/profile`, {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+          },
+          body: JSON.stringify({
+            avatar: base64Image  // ← FIXED: Use 'avatar'
+          })
+        });
+
+        if (response.ok) {
+          const data = await response.json();
+          if (data.success) {
+            setProfilePhoto(base64Image);
+            setSuccess('✅ Photo uploaded successfully!');
+            setUser(prev => ({
+              ...prev,
+              avatar: base64Image
+            }));
+            // Update local storage
+            const storedUser = JSON.parse(localStorage.getItem('user') || '{}');
+            storedUser.avatar = base64Image;
+            localStorage.setItem('user', JSON.stringify(storedUser));
+          }
+        } else {
+          const errorData = await response.json();
+          setPhotoError(errorData.error || '❌ Failed to upload photo');
+        }
+        setPhotoUploading(false);
+      };
+    } catch (error) {
+      console.error('❌ Photo upload error:', error);
+      setPhotoError('❌ Error uploading photo');
+      setPhotoUploading(false);
+    }
+  };
+
+  const triggerFileInput = () => {
+    fileInputRef.current?.click();
+  };
+
   const handleInputChange = (e) => {
     const { name, value } = e.target;
     setEditForm(prev => ({ ...prev, [name]: value }));
   };
 
+  // ===== SAVE PROFILE =====
   const handleSaveProfile = async (e) => {
     e.preventDefault();
     setLoading(true);
@@ -209,7 +310,7 @@ const Profile = () => {
         return;
       }
 
-      const response = await fetch(`${API_URL}/api/v1/auth/update-profile`, {
+      const response = await fetch(`${API_URL}/auth/profile`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
@@ -227,6 +328,9 @@ const Profile = () => {
           setSuccess('Profile updated successfully! ✅');
           setIsEditing(false);
         }
+      } else {
+        const errorData = await response.json();
+        setError(errorData.error || 'Failed to update profile');
       }
     } catch (error) {
       setError('Failed to update profile');
@@ -235,6 +339,7 @@ const Profile = () => {
     }
   };
 
+  // ===== PASSWORD CHANGE =====
   const handlePasswordChange = async (e) => {
     e.preventDefault();
     setLoading(true);
@@ -254,7 +359,7 @@ const Profile = () => {
         return;
       }
 
-      const response = await fetch(`${API_URL}/api/v1/auth/change-password`, {
+      const response = await fetch(`${API_URL}/auth/change-password`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -281,6 +386,7 @@ const Profile = () => {
     }
   };
 
+  // ===== DELETE ACCOUNT =====
   const handleDeleteAccount = async () => {
     if (!window.confirm('Are you sure you want to delete your account? This action is permanent!')) return;
     
@@ -292,7 +398,7 @@ const Profile = () => {
         return;
       }
 
-      const response = await fetch(`${API_URL}/api/v1/auth/delete-account`, {
+      const response = await fetch(`${API_URL}/auth/account`, {
         method: 'DELETE',
         headers: {
           'Authorization': `Bearer ${token}`
@@ -314,7 +420,7 @@ const Profile = () => {
     }
   };
 
-  // Styles
+  // ===== STYLES =====
   const containerStyle = {
     maxWidth: '1200px',
     margin: '0 auto',
@@ -383,43 +489,99 @@ const Profile = () => {
     <div style={containerStyle}>
       {/* Header */}
       <div style={headerStyle}>
+        {/* ===== AVATAR CONTAINER WITH OVERLAPPING BADGE ===== */}
         <div style={{ 
           width: '80px', 
           height: '80px', 
           borderRadius: '50%', 
-          background: 'linear-gradient(135deg, #4f46e5, #7c3aed)',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          cursor: 'pointer',
           position: 'relative',
-          flexShrink: 0
-        }} onClick={() => setShowAvatarSelector(true)}>
-          {avatarImage ? (
-            <img src={avatarImage} alt="Avatar" style={{ width: '100%', height: '100%', borderRadius: '50%', objectFit: 'cover' }} />
-          ) : (
-            <span style={{ fontSize: '40px' }}>👤</span>
-          )}
+          flexShrink: 0,
+          overflow: 'visible',
+          cursor: 'pointer'
+        }} 
+        onClick={isTutor ? triggerFileInput : () => setShowAvatarSelector(true)}
+        >
+          {/* Image Container - clipped to circle */}
+          <div style={{
+            width: '100%',
+            height: '100%',
+            borderRadius: '50%',
+            overflow: 'hidden',
+            background: isTutor ? 'linear-gradient(135deg, #059669, #10b981)' : 'linear-gradient(135deg, #4f46e5, #7c3aed)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center'
+          }}>
+            {isTutor ? (
+              profilePhoto ? (
+                <img 
+                  src={profilePhoto} 
+                  alt={user?.name || 'Tutor'} 
+                  style={{ width: '100%', height: '100%', objectFit: 'cover' }} 
+                />
+              ) : (
+                <span style={{ fontSize: '36px' }}>👨‍🏫</span>
+              )
+            ) : (
+              avatarImage ? (
+                <img 
+                  src={avatarImage} 
+                  alt={user?.name || 'User'} 
+                  style={{ width: '100%', height: '100%', objectFit: 'cover' }} 
+                />
+              ) : (
+                <span style={{ fontSize: '40px' }}>👤</span>
+              )
+            )}
+          </div>
+          
+          {/* ===== EDIT BADGE - OVERLAPPING BOTTOM-RIGHT CORNER ===== */}
           <div style={{ 
             position: 'absolute', 
             bottom: '-4px', 
             right: '-4px', 
-            background: '#4f46e5', 
+            background: isTutor ? '#10b981' : '#4f46e5', 
             color: 'white', 
-            width: '28px', 
-            height: '28px', 
+            width: '32px', 
+            height: '32px', 
             borderRadius: '50%', 
             display: 'flex', 
             alignItems: 'center', 
             justifyContent: 'center', 
-            fontSize: '14px', 
-            border: '2px solid #141b2d' 
-          }}>✎</div>
+            fontSize: '16px', 
+            border: '3px solid #141b2d',
+            boxShadow: '0 2px 10px rgba(0,0,0,0.4)',
+            zIndex: 5,
+            transition: 'transform 0.2s ease'
+          }}
+          onMouseEnter={(e) => e.currentTarget.style.transform = 'scale(1.1)'}
+          onMouseLeave={(e) => e.currentTarget.style.transform = 'scale(1)'}
+          >
+            {isTutor ? '📸' : '✎'}
+          </div>
         </div>
+
         <div style={{ flex: 1 }}>
-          <h1 style={{ fontSize: '28px', fontWeight: 700, color: '#ffffff', margin: '0 0 4px 0' }}>{user?.name || 'User'}</h1>
+          <h1 style={{ fontSize: '28px', fontWeight: 700, color: '#ffffff', margin: '0 0 4px 0' }}>
+            {user?.name || 'User'}
+            {isTutor && (
+              <span style={{ 
+                fontSize: '14px', 
+                fontWeight: 600, 
+                color: '#34d399', 
+                background: 'rgba(52,211,153,0.15)', 
+                padding: '2px 12px', 
+                borderRadius: '12px', 
+                marginLeft: '12px',
+                border: '1px solid rgba(52,211,153,0.2)'
+              }}>
+                👨‍🏫 Tutor
+              </span>
+            )}
+          </h1>
           <p style={{ fontSize: '15px', color: '#94a3b8', margin: '0 0 8px 0' }}>
-            {user?.cohort === 'HighSchool' ? 'High School Student' : 'University Student'} • {user?.country || 'South Africa'}
+            {isTutor ? 'Professional Mathematics Tutor' : (user?.cohort === 'HighSchool' ? 'High School Student' : 'University Student')} 
+            {' • '}{user?.country || 'South Africa'}
           </p>
           <div style={{ 
             display: 'inline-flex', 
@@ -430,11 +592,24 @@ const Profile = () => {
             background: 'rgba(52,211,153,0.1)', 
             padding: '4px 14px', 
             borderRadius: '20px', 
-            border: '1px solid rgba(52,211,153,0.2)' 
+            border: '1px solid rgba(52,211,153,0.2)'
           }}>
             <span style={{ width: '8px', height: '8px', background: '#34d399', borderRadius: '50%', display: 'inline-block' }}></span>
-            Active Member
+            {isTutor ? 'Active Tutor' : 'Active Member'}
           </div>
+          {isTutor && profilePhoto && profilePhoto.includes('ui-avatars.com') && (
+            <div style={{ 
+              marginTop: '8px',
+              fontSize: '12px',
+              color: '#fbbf24',
+              background: 'rgba(251,191,36,0.1)',
+              padding: '4px 12px',
+              borderRadius: '8px',
+              border: '1px solid rgba(251,191,36,0.15)'
+            }}>
+              ⏳ Upload your real photo (click the camera icon)
+            </div>
+          )}
         </div>
         <button onClick={() => setIsEditing(!isEditing)} style={{ 
           padding: '10px 24px', 
@@ -450,6 +625,18 @@ const Profile = () => {
         </button>
       </div>
 
+      {/* Hidden file input for tutor photo upload */}
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept="image/*"
+        onChange={handlePhotoUpload}
+        style={{ display: 'none' }}
+      />
+
+      {/* Photo upload status messages */}
+      {photoError && <div style={{ background: 'rgba(239,68,68,0.1)', color: '#fca5a5', padding: '12px 20px', borderRadius: '10px', marginBottom: '16px', border: '1px solid rgba(239,68,68,0.15)' }}>{photoError}</div>}
+      {photoUploading && <div style={{ background: 'rgba(52,211,153,0.1)', color: '#6ee7b7', padding: '12px 20px', borderRadius: '10px', marginBottom: '16px', border: '1px solid rgba(52,211,153,0.15)' }}>📤 Uploading photo...</div>}
       {error && <div style={{ background: 'rgba(239,68,68,0.1)', color: '#fca5a5', padding: '12px 20px', borderRadius: '10px', marginBottom: '16px', border: '1px solid rgba(239,68,68,0.15)' }}>{error}</div>}
       {success && <div style={{ background: 'rgba(52,211,153,0.1)', color: '#6ee7b7', padding: '12px 20px', borderRadius: '10px', marginBottom: '16px', border: '1px solid rgba(52,211,153,0.15)' }}>{success}</div>}
 
@@ -472,14 +659,16 @@ const Profile = () => {
       <div style={gridStyle}>
         {/* Personal Information */}
         <div style={cardStyle}>
-          <h3 style={{ fontSize: '18px', fontWeight: 600, color: '#ffffff', margin: '0 0 20px 0', paddingBottom: '12px', borderBottom: '1px solid rgba(255,255,255,0.06)' }}>📋 Personal Information</h3>
+          <h3 style={{ fontSize: '18px', fontWeight: 600, color: '#ffffff', margin: '0 0 20px 0', paddingBottom: '12px', borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
+            {isTutor ? '📋 Tutor Information' : '📋 Personal Information'}
+          </h3>
           <div>
             {[
               { label: 'Full Name', name: 'name', value: editForm.name },
               { label: 'Email Address', name: 'email', value: editForm.email },
               { label: 'Country', name: 'country', value: editForm.country },
-              { label: 'Grade / Year', name: 'grade', value: editForm.grade },
-              { label: 'Cohort', name: 'cohort', value: user?.cohort === 'HighSchool' ? 'High School' : 'University First Year' }
+              { label: isTutor ? 'Expertise Level' : 'Grade / Year', name: 'grade', value: editForm.grade },
+              { label: 'Role', name: 'cohort', value: isTutor ? 'Tutor' : (user?.cohort === 'HighSchool' ? 'High School Student' : 'University First Year') }
             ].map((field, i) => (
               <div key={i} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '6px 0' }}>
                 <span style={{ fontSize: '13px', fontWeight: 500, color: '#94a3b8' }}>{field.label}</span>
@@ -525,7 +714,9 @@ const Profile = () => {
 
         {/* Account Settings */}
         <div style={cardStyle}>
-          <h3 style={{ fontSize: '18px', fontWeight: 600, color: '#ffffff', margin: '0 0 20px 0', paddingBottom: '12px', borderBottom: '1px solid rgba(255,255,255,0.06)' }}>🔒 Account Settings</h3>
+          <h3 style={{ fontSize: '18px', fontWeight: 600, color: '#ffffff', margin: '0 0 20px 0', paddingBottom: '12px', borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
+            🔒 Account Settings
+          </h3>
           <div>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '14px 16px', borderRadius: '10px', border: '1px solid rgba(255,255,255,0.06)' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
@@ -550,34 +741,36 @@ const Profile = () => {
           </div>
         </div>
 
-        {/* Enrolled Courses */}
-        <div style={cardFullStyle}>
-          <h3 style={{ fontSize: '18px', fontWeight: 600, color: '#ffffff', margin: '0 0 20px 0', paddingBottom: '12px', borderBottom: '1px solid rgba(255,255,255,0.06)' }}>📚 My Courses</h3>
-          {enrollments.length > 0 ? (
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(250px, 1fr))', gap: '12px' }}>
-              {enrollments.map((course) => (
-                <div key={course.id} onClick={() => navigate(`/subjects/${course.name.toLowerCase()}`)} style={{ display: 'flex', alignItems: 'center', gap: '14px', padding: '14px 18px', borderRadius: '10px', border: '1px solid rgba(255,255,255,0.06)', cursor: 'pointer' }}>
-                  <span style={{ fontSize: '28px' }}>{course.icon || '📘'}</span>
-                  <div style={{ flex: 1 }}>
-                    <h4 style={{ fontSize: '14px', fontWeight: 600, color: '#ffffff', margin: '0 0 2px 0' }}>{course.name}</h4>
-                    <span style={{ fontSize: '12px', color: '#94a3b8' }}>{course.tier || 'Tier 1'}</span>
-                  </div>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px', minWidth: '70px' }}>
-                    <div style={{ flex: 1, height: '6px', background: 'rgba(255,255,255,0.06)', borderRadius: '4px', overflow: 'hidden', minWidth: '40px' }}>
-                      <div style={{ height: '100%', background: 'linear-gradient(135deg, #4f46e5, #7c3aed)', borderRadius: '4px', width: `${Math.floor(Math.random() * 60 + 20)}%` }}></div>
+        {/* Enrolled Courses (only for students) */}
+        {!isTutor && (
+          <div style={cardFullStyle}>
+            <h3 style={{ fontSize: '18px', fontWeight: 600, color: '#ffffff', margin: '0 0 20px 0', paddingBottom: '12px', borderBottom: '1px solid rgba(255,255,255,0.06)' }}>📚 My Courses</h3>
+            {enrollments.length > 0 ? (
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(250px, 1fr))', gap: '12px' }}>
+                {enrollments.map((course) => (
+                  <div key={course.id} onClick={() => navigate(`/subjects/${course.name.toLowerCase()}`)} style={{ display: 'flex', alignItems: 'center', gap: '14px', padding: '14px 18px', borderRadius: '10px', border: '1px solid rgba(255,255,255,0.06)', cursor: 'pointer' }}>
+                    <span style={{ fontSize: '28px' }}>{course.icon || '📘'}</span>
+                    <div style={{ flex: 1 }}>
+                      <h4 style={{ fontSize: '14px', fontWeight: 600, color: '#ffffff', margin: '0 0 2px 0' }}>{course.name}</h4>
+                      <span style={{ fontSize: '12px', color: '#94a3b8' }}>{course.tier || 'Tier 1'}</span>
                     </div>
-                    <span style={{ fontSize: '12px', fontWeight: 600, color: '#ffffff', minWidth: '36px', textAlign: 'right' }}>{Math.floor(Math.random() * 60 + 20)}%</span>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px', minWidth: '70px' }}>
+                      <div style={{ flex: 1, height: '6px', background: 'rgba(255,255,255,0.06)', borderRadius: '4px', overflow: 'hidden', minWidth: '40px' }}>
+                        <div style={{ height: '100%', background: 'linear-gradient(135deg, #4f46e5, #7c3aed)', borderRadius: '4px', width: `${Math.floor(Math.random() * 60 + 20)}%` }}></div>
+                      </div>
+                      <span style={{ fontSize: '12px', fontWeight: 600, color: '#ffffff', minWidth: '36px', textAlign: 'right' }}>{Math.floor(Math.random() * 60 + 20)}%</span>
+                    </div>
                   </div>
-                </div>
-              ))}
-            </div>
-          ) : (
-            <div style={{ textAlign: 'center', padding: '32px 0', color: '#94a3b8' }}>
-              <p>No courses enrolled yet</p>
-              <button onClick={() => navigate('/subjects')} style={{ marginTop: '12px', padding: '10px 28px', background: 'linear-gradient(135deg, #4f46e5, #7c3aed)', color: '#ffffff', border: 'none', borderRadius: '10px', fontSize: '14px', fontWeight: 600, cursor: 'pointer' }}>Browse Subjects →</button>
-            </div>
-          )}
-        </div>
+                ))}
+              </div>
+            ) : (
+              <div style={{ textAlign: 'center', padding: '32px 0', color: '#94a3b8' }}>
+                <p>No courses enrolled yet</p>
+                <button onClick={() => navigate('/subjects')} style={{ marginTop: '12px', padding: '10px 28px', background: 'linear-gradient(135deg, #4f46e5, #7c3aed)', color: '#ffffff', border: 'none', borderRadius: '10px', fontSize: '14px', fontWeight: 600, cursor: 'pointer' }}>Browse Subjects →</button>
+              </div>
+            )}
+          </div>
+        )}
       </div>
 
       {/* Modals */}
@@ -632,7 +825,8 @@ const Profile = () => {
         </div>
       )}
 
-      {showAvatarSelector && (
+      {/* Avatar Selector (Students only) */}
+      {!isTutor && showAvatarSelector && (
         <AvatarSelector
           onSelect={handleAvatarSelect}
           currentAvatar={avatarData}

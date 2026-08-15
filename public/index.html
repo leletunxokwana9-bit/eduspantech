@@ -60,6 +60,56 @@
     }
     </script>
   </head>
+  
+  <!-- ===== GLOBAL POLYFILL FOR [SENSITIVE] ===== -->
+  <script>
+    (function() {
+      console.log('🔧 Global polyfill running...');
+      
+      // ✅ Set actual values
+      const API_URL = 'https://eduspantech-backend.onrender.com/api/v1';
+      const SUPABASE_URL = 'https://dokwmteucrhajourpthf.supabase.co';
+      const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRva3dtdGV1Y3JoYWpvdXJwdGhmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODM4NTc2NzgsImV4cCI6MjA5OTQzMzY3OH0.R7hQVGrZTSdWeiyL3Ve6Wk00OuWKpZkCeWnZLbGY-hg';
+      
+      // ✅ Set environment variables for the browser
+      if (!window.process) {
+        window.process = { env: {} };
+      }
+      if (!window.process.env) {
+        window.process.env = {};
+      }
+      
+      // Always set these, even if they exist
+      window.process.env.REACT_APP_API_URL = API_URL;
+      window.process.env.REACT_APP_SUPABASE_URL = SUPABASE_URL;
+      window.process.env.REACT_APP_SUPABASE_ANON_KEY = SUPABASE_KEY;
+      
+      // ✅ Override global references
+      window.__API_URL = API_URL;
+      window.__SUPABASE_URL = SUPABASE_URL;
+      window.__SUPABASE_KEY = SUPABASE_KEY;
+      
+      // ✅ If [SENSITIVE] is used as a global variable, override it
+      if (typeof window['[SENSITIVE]'] !== 'undefined') {
+        console.log('🔧 Overriding window.[SENSITIVE]');
+        window['[SENSITIVE]'] = API_URL;
+      }
+      
+      // ✅ Override any other possible placeholder names
+      if (typeof window.SENSITIVE !== 'undefined') {
+        window.SENSITIVE = API_URL;
+      }
+      if (typeof window.API_URL_PLACEHOLDER !== 'undefined') {
+        window.API_URL_PLACEHOLDER = API_URL;
+      }
+      
+      console.log('✅ Global polyfill completed');
+      console.log('📋 API URL set to:', API_URL);
+      console.log('📋 Supabase URL set to:', SUPABASE_URL);
+      console.log('📋 Supabase Key exists:', !!SUPABASE_KEY);
+    })();
+  </script>
+  
   <body>
     <noscript>
       <div style="text-align:center;padding:50px;font-family:Arial,sans-serif;">

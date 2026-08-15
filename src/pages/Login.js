@@ -1,3 +1,4 @@
+// src/pages/Login.js
 import React, { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { authService } from '../services/authService';
@@ -13,6 +14,43 @@ const Login = () => {
   const [needsVerification, setNeedsVerification] = useState(false);
   const [unverifiedEmail, setUnverifiedEmail] = useState('');
   const [resendSuccess, setResendSuccess] = useState(false);
+  const [loginRole, setLoginRole] = useState('student');
+  const [roleError, setRoleError] = useState('');
+
+  // ============================================
+  // ROBUST TUTOR CHECK - HANDLES ALL CASES
+  // ============================================
+  const checkIsTutor = (userData) => {
+    if (!userData) return false;
+    
+    console.log('🔍 CHECKING USER DATA:', userData);
+    console.log('🔍 is_tutor:', userData.is_tutor);
+    console.log('🔍 role:', userData.role);
+    
+    // Check if data is nested
+    let data = userData;
+    if (userData.user) {
+      console.log('🔍 Data is nested in user object');
+      data = userData.user;
+      console.log('🔍 Nested is_tutor:', data.is_tutor);
+      console.log('🔍 Nested role:', data.role);
+    }
+    
+    // Check multiple possible fields
+    const isTutor = 
+      data.is_tutor === true ||
+      data.is_tutor === 'true' ||
+      data.role === 'tutor' ||
+      data.role === 'TUTOR' ||
+      data.role === 'instructor' ||
+      data.userType === 'tutor' ||
+      data.type === 'tutor' ||
+      (data.roles && data.roles.includes('tutor'));
+    
+    console.log('🔍 FINAL RESULT - isTutor:', isTutor);
+    
+    return isTutor;
+  };
 
   useEffect(() => {
     const checkAuth = async () => {
@@ -21,13 +59,22 @@ const Login = () => {
         try {
           const user = await authService.getCurrentUser();
           if (user) {
-            navigate('/dashboard');
+            const isTutor = checkIsTutor(user);
+            
+            console.log('🔍 checkAuth - isTutor:', isTutor);
+            
+            if (isTutor) {
+              navigate('/tutor/dashboard');
+            } else {
+              navigate('/dashboard');
+            }
             return;
           }
         } catch (err) {
           localStorage.removeItem('accessToken');
           localStorage.removeItem('refreshToken');
           localStorage.removeItem('user');
+          localStorage.removeItem('userRole');
         }
       }
     };
@@ -39,24 +86,82 @@ const Login = () => {
     setLoading(true);
     setError('');
     setNeedsVerification(false);
+    setRoleError('');
 
     try {
       const response = await authService.login(email, password);
       
-      if (response.success) {
-        navigate('/dashboard');
-      } else {
-        // ✅ Check if error is due to unverified email
-        if (response.needsVerification) {
+      console.log('🔍 LOGIN RESPONSE:', response);
+      
+      // Check if login was successful
+      if (!response || !response.success) {
+        if (response?.needsVerification) {
           setNeedsVerification(true);
           setUnverifiedEmail(email);
           setError('Please verify your email before logging in.');
         } else {
-          setError(response.error || 'Login failed. Please try again.');
+          setError(response?.error || 'Login failed. Please try again.');
         }
+        setLoading(false);
+        return;
       }
+
+      const userData = response.user;
+      
+      // ============================================
+      // CHECK IF USER IS A TUTOR
+      // ============================================
+      const isTutor = checkIsTutor(userData);
+      
+      console.log('🔍 Login Debug - FINAL:', {
+        isTutor: isTutor,
+        loginRole: loginRole,
+        email: email
+      });
+
+      // ============================================
+      // BLOCK: Tutor trying to login as Student
+      // ============================================
+      if (loginRole === 'student' && isTutor) {
+        console.log('🚫 BLOCKED: Tutor trying to login as Student');
+        setRoleError('❌ This is a TUTOR account. Please select "Tutor" to login.');
+        setLoading(false);
+        localStorage.removeItem('accessToken');
+        localStorage.removeItem('refreshToken');
+        localStorage.removeItem('user');
+        localStorage.removeItem('userRole');
+        return;
+      }
+      
+      // ============================================
+      // BLOCK: Student trying to login as Tutor
+      // ============================================
+      if (loginRole === 'tutor' && !isTutor) {
+        console.log('🚫 BLOCKED: Student trying to login as Tutor');
+        setRoleError('❌ This is a STUDENT account. Please select "Student" to login.');
+        setLoading(false);
+        localStorage.removeItem('accessToken');
+        localStorage.removeItem('refreshToken');
+        localStorage.removeItem('user');
+        localStorage.removeItem('userRole');
+        return;
+      }
+
+      // ============================================
+      // SUCCESS: Valid login with correct role
+      // ============================================
+      console.log('✅ SUCCESS: Login as:', isTutor ? 'TUTOR' : 'STUDENT');
+      localStorage.setItem('userRole', isTutor ? 'tutor' : 'student');
+      
+      // Navigate based on ACTUAL role
+      if (isTutor) {
+        navigate('/tutor/dashboard');
+      } else {
+        navigate('/dashboard');
+      }
+      
     } catch (err) {
-      // ✅ Check if error message contains verification hint
+      console.error('Login error:', err);
       if (err.message && err.message.toLowerCase().includes('verify')) {
         setNeedsVerification(true);
         setUnverifiedEmail(email);
@@ -69,7 +174,6 @@ const Login = () => {
     }
   };
 
-  // ✅ Resend verification email
   const handleResendVerification = async () => {
     try {
       setLoading(true);
@@ -87,9 +191,14 @@ const Login = () => {
     }
   };
 
+  const handleRoleChange = (role) => {
+    setLoginRole(role);
+    setRoleError('');
+    setError('');
+  };
+
   return (
     <div className="login-wrapper">
-      {/* Background with mathematical elements */}
       <div className="login-bg">
         <div className="math-symbols">
           <span className="math-symbol">∫</span>
@@ -107,7 +216,6 @@ const Login = () => {
       </div>
 
       <div className="login-container">
-        {/* Left Panel - Brand Story */}
         <div className="login-left">
           <div className="brand-content">
             <div className="brand-logo">
@@ -141,7 +249,6 @@ const Login = () => {
           </div>
         </div>
 
-        {/* Right Panel - Login Form */}
         <div className="login-right">
           <div className="login-card">
             <div className="login-header">
@@ -149,7 +256,32 @@ const Login = () => {
               <p>Sign in to continue your mathematics journey</p>
             </div>
 
-            {/* ✅ Show verification notice */}
+            {/* Role Selection Tabs */}
+            <div className="role-tabs">
+              <button
+                className={`role-tab ${loginRole === 'student' ? 'active' : ''}`}
+                onClick={() => handleRoleChange('student')}
+              >
+                <span className="role-icon">👨‍🎓</span>
+                Student
+              </button>
+              <button
+                className={`role-tab ${loginRole === 'tutor' ? 'active' : ''}`}
+                onClick={() => handleRoleChange('tutor')}
+              >
+                <span className="role-icon">👨‍🏫</span>
+                Tutor
+              </button>
+            </div>
+
+            {/* Role Error Message */}
+            {roleError && (
+              <div className="login-role-error">
+                <span className="error-icon">⚠️</span>
+                {roleError}
+              </div>
+            )}
+
             {needsVerification && (
               <div className="login-verification-notice">
                 <div className="verification-icon">📧</div>
@@ -175,7 +307,7 @@ const Login = () => {
               </div>
             )}
 
-            {error && !needsVerification && (
+            {error && !needsVerification && !roleError && (
               <div className="login-error">
                 <span className="error-icon">✕</span>
                 {error}
@@ -234,7 +366,7 @@ const Login = () => {
                     Signing in...
                   </>
                 ) : (
-                  'Sign In →'
+                  loginRole === 'tutor' ? 'Sign in as Tutor →' : 'Sign In →'
                 )}
               </button>
             </form>

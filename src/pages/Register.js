@@ -1,3 +1,4 @@
+// src/pages/Register.js
 import React, { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { authService } from '../services/authService';
@@ -15,6 +16,7 @@ const Register = () => {
     cohort: 'HighSchool',
     country: 'ZA',
     grade: '',
+    gradeValue: '', // Store the actual integer value
     agreeToTerms: false
   });
   const [loading, setLoading] = useState(false);
@@ -35,24 +37,51 @@ const Register = () => {
         try {
           const user = await authService.getCurrentUser();
           if (user) {
-            navigate('/dashboard');
+            const role = localStorage.getItem('userRole') || 'student';
+            if (role === 'tutor') {
+              navigate('/tutor/dashboard');
+            } else {
+              navigate('/dashboard');
+            }
             return;
           }
         } catch (err) {
           localStorage.removeItem('accessToken');
           localStorage.removeItem('refreshToken');
           localStorage.removeItem('user');
+          localStorage.removeItem('userRole');
         }
       }
     };
     checkAuth();
   }, [navigate]);
 
+  // Show message that only students can register
+  useEffect(() => {
+    const urlParams = new URLSearchParams(window.location.search);
+    if (urlParams.get('type') === 'tutor') {
+      alert('📚 Tutor accounts are created by the admin team. Please contact support if you are a tutor.');
+      navigate('/register');
+    }
+  }, [navigate]);
+
+  // ============================================
+  // FIX: Return integer values for grade
+  // ============================================
   const getGradeOptions = () => {
     if (formData.cohort === 'HighSchool') {
-      return ['Grade 8', 'Grade 9', 'Grade 10', 'Grade 11', 'Grade 12'];
+      return [
+        { label: 'Grade 8', value: 8 },
+        { label: 'Grade 9', value: 9 },
+        { label: 'Grade 10', value: 10 },
+        { label: 'Grade 11', value: 11 },
+        { label: 'Grade 12', value: 12 }
+      ];
     } else {
-      return ['1st Year', '2nd Year'];
+      return [
+        { label: '1st Year', value: 1 },
+        { label: '2nd Year', value: 2 }
+      ];
     }
   };
 
@@ -61,6 +90,19 @@ const Register = () => {
     setFormData({
       ...formData,
       [name]: type === 'checkbox' ? checked : value
+    });
+  };
+
+  // ============================================
+  // FIX: Handle grade selection with integer value
+  // ============================================
+  const handleGradeChange = (e) => {
+    const value = e.target.value;
+    const selectedGrade = getGradeOptions().find(g => g.label === value);
+    setFormData({
+      ...formData,
+      grade: value,           // Display label
+      gradeValue: selectedGrade ? selectedGrade.value : ''  // Integer value for backend
     });
   };
 
@@ -87,6 +129,15 @@ const Register = () => {
       return;
     }
 
+    // ============================================
+    // FIX: Use gradeValue (integer) not grade (string)
+    // ============================================
+    if (!formData.gradeValue) {
+      setError('Please select your grade');
+      setLoading(false);
+      return;
+    }
+
     try {
       const registrationData = {
         name: formData.fullName,
@@ -94,17 +145,18 @@ const Register = () => {
         password: formData.password,
         cohort: formData.cohort,
         country: formData.country,
-        grade: formData.grade,
-        cohort_flag: formData.cohort === 'HighSchool' ? 'HighSchool' : 'UniversityFirstYear'
+        grade: formData.gradeValue,  // ← FIXED: Send integer value
+        cohort_flag: formData.cohort === 'HighSchool' ? 'HighSchool' : 'UniversityFirstYear',
+        role: 'student'
       };
+
+      console.log('📤 Registration data:', registrationData);
 
       const response = await authService.register(registrationData);
       
       if (response.success) {
-        // ✅ Show verification message instead of auto-login
         setRegisteredEmail(formData.email);
         setRegistrationSuccess(true);
-        // Clear form
         setFormData({
           fullName: '',
           email: '',
@@ -113,6 +165,7 @@ const Register = () => {
           cohort: 'HighSchool',
           country: 'ZA',
           grade: '',
+          gradeValue: '',
           agreeToTerms: false
         });
         setStep(1);
@@ -120,6 +173,7 @@ const Register = () => {
         setError(response.error || 'Registration failed. Please try again.');
       }
     } catch (err) {
+      console.error('Registration error:', err);
       setError(err.message || 'Registration failed. Please try again.');
     } finally {
       setLoading(false);
@@ -206,7 +260,7 @@ const Register = () => {
     );
   };
 
-  // ✅ Show verification success screen
+  // Show verification success screen
   if (registrationSuccess) {
     return (
       <div className="register-wrapper">
@@ -314,7 +368,6 @@ const Register = () => {
 
   return (
     <div className="register-wrapper">
-      {/* Background with mathematical elements */}
       <div className="register-bg">
         <div className="math-symbols">
           <span className="math-symbol">∫</span>
@@ -332,7 +385,6 @@ const Register = () => {
       </div>
 
       <div className="register-container">
-        {/* Left Panel - Brand Story */}
         <div className="register-left">
           <div className="brand-content">
             <div className="brand-logo">
@@ -363,15 +415,30 @@ const Register = () => {
                 <span className="stat-label">Expert Tutors</span>
               </div>
             </div>
+
+            {/* Tutor Registration Note */}
+            <div className="tutor-note">
+              <div className="tutor-note-icon">👨‍🏫</div>
+              <div className="tutor-note-content">
+                <h4>Are you a Tutor?</h4>
+                <p>
+                  Tutor accounts are created by our admin team. 
+                  If you're interested in joining as a tutor, please 
+                  <Link to="/contact"> contact us</Link> with your qualifications.
+                </p>
+              </div>
+            </div>
           </div>
         </div>
 
-        {/* Right Panel - Registration Form */}
         <div className="register-right">
           <div className="register-card">
             <div className="register-header">
-              <h2>Create Account</h2>
+              <h2>Student Registration</h2>
               <p>Join EduSpantech and start your mathematics journey</p>
+              <div className="register-badge">
+                <span>🎓 For Students Only</span>
+              </div>
             </div>
 
             {error && (
@@ -448,13 +515,15 @@ const Register = () => {
                     <select
                       name="grade"
                       value={formData.grade}
-                      onChange={handleChange}
+                      onChange={handleGradeChange}
                       required
                       disabled={loading}
                     >
                       <option value="">Select your grade</option>
                       {getGradeOptions().map((g) => (
-                        <option key={g} value={g}>{g}</option>
+                        <option key={g.value} value={g.label}>
+                          {g.label}
+                        </option>
                       ))}
                     </select>
                   </div>

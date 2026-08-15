@@ -839,3 +839,96 @@
     display: none;
   }
 }
+
+/* ===== TUTOR NOTE ===== */
+.tutor-note {
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+  margin-top: 24px;
+  padding: 16px 18px;
+  background: rgba(79, 70, 229, 0.08);
+  border-radius: 12px;
+  border: 1px solid rgba(79, 70, 229, 0.12);
+}
+
+.tutor-note-icon {
+  font-size: 28px;
+  flex-shrink: 0;
+}
+
+.tutor-note-content h4 {
+  font-size: 14px;
+  font-weight: 600;
+  color: #ffffff;
+  margin: 0 0 4px 0;
+}
+
+.tutor-note-content p {
+  font-size: 13px;
+  color: rgba(255, 255, 255, 0.6);
+  margin: 0;
+  line-height: 1.5;
+}
+
+.tutor-note-content p a {
+  color: #818cf8;
+  text-decoration: underline;
+  font-weight: 500;
+}
+
+.tutor-note-content p a:hover {
+  color: #a5b4fc;
+}
+
+/* ===== REGISTER BADGE ===== */
+.register-badge {
+  display: inline-block;
+  margin-top: 8px;
+  padding: 4px 14px;
+  background: rgba(79, 70, 229, 0.12);
+  border-radius: 20px;
+  border: 1px solid rgba(79, 70, 229, 0.15);
+}
+
+.register-badge span {
+  font-size: 12px;
+  font-weight: 500;
+  color: #818cf8;
+}
+
+/* ===== LIGHT THEME ===== */
+[data-theme="light"] .tutor-note {
+  background: rgba(79, 70, 229, 0.04);
+  border-color: rgba(79, 70, 229, 0.08);
+}
+
+[data-theme="light"] .tutor-note-content h4 {
+  color: #0f172a;
+}
+
+[data-theme="light"] .tutor-note-content p {
+  color: rgba(0, 0, 0, 0.6);
+}
+
+[data-theme="light"] .tutor-note-content p a {
+  color: #4f46e5;
+}
+
+[data-theme="light"] .register-badge {
+  background: rgba(79, 70, 229, 0.06);
+  border-color: rgba(79, 70, 229, 0.1);
+}
+
+[data-theme="light"] .register-badge span {
+  color: #4f46e5;
+}
+
+/* ===== RESPONSIVE ===== */
+@media (max-width: 768px) {
+  .tutor-note {
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+  }
+}

@@ -79,12 +79,8 @@ const ChatWidget = () => {
         setIsMinimized(true);
     };
 
-    const handleClose = () => {
-        setIsOpen(false);
-        setIsMinimized(false);
-        setIsVisible(false);
-        sessionStorage.setItem('eduspantech_chat_closed', 'true');
-    };
+    // ===== NO CLOSE FUNCTION - ONLY MINIMIZE =====
+    // The close button is removed - chat can only be minimized
 
     const handleOpen = () => {
         if (!isVisible) return;
@@ -194,8 +190,9 @@ const ChatWidget = () => {
                             </div>
                         </div>
                         <div className="chat-header-actions">
+                            {/* ONLY MINIMIZE BUTTON - NO CLOSE BUTTON */}
                             <button className="chat-minimize" onClick={handleMinimize}>−</button>
-                            <button className="chat-close" onClick={handleClose}>✕</button>
+                            {/* CLOSE BUTTON REMOVED */}
                         </div>
                     </div>
 

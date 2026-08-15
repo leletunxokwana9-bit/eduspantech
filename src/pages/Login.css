@@ -739,3 +739,152 @@
 [data-theme="dark"] .resend-success {
   color: var(--success-color-dark, #6ee7b7);
 }
+
+/* ===== ROLE TABS ===== */
+.role-tabs {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 20px;
+  background: rgba(255, 255, 255, 0.04);
+  border-radius: 12px;
+  padding: 4px;
+  border: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.role-tab {
+  flex: 1;
+  padding: 10px 16px;
+  border: none;
+  border-radius: 10px;
+  background: transparent;
+  color: rgba(255, 255, 255, 0.5);
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+
+.role-tab .role-icon {
+  font-size: 18px;
+}
+
+.role-tab:hover {
+  color: rgba(255, 255, 255, 0.7);
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.role-tab.active {
+  background: linear-gradient(135deg, #4f46e5, #7c3aed);
+  color: #ffffff;
+  box-shadow: 0 4px 15px rgba(79, 70, 229, 0.3);
+}
+
+[data-theme="light"] .role-tabs {
+  background: rgba(0, 0, 0, 0.03);
+  border-color: rgba(0, 0, 0, 0.06);
+}
+
+[data-theme="light"] .role-tab {
+  color: rgba(0, 0, 0, 0.4);
+}
+
+[data-theme="light"] .role-tab:hover {
+  color: rgba(0, 0, 0, 0.7);
+  background: rgba(0, 0, 0, 0.02);
+}
+
+[data-theme="light"] .role-tab.active {
+  color: #ffffff;
+}
+
+/* ===== ROLE ERROR ===== */
+.login-role-error {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 16px;
+  background: rgba(239, 68, 68, 0.1);
+  border-radius: 8px;
+  border: 1px solid rgba(239, 68, 68, 0.15);
+  color: #fca5a5;
+  font-size: 14px;
+  margin-bottom: 16px;
+}
+
+.login-role-error .error-icon {
+  font-size: 18px;
+}
+
+/* ===== ROLE TABS - update hover state ===== */
+.role-tab {
+  flex: 1;
+  padding: 10px 16px;
+  border: none;
+  border-radius: 10px;
+  background: transparent;
+  color: rgba(255, 255, 255, 0.5);
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+
+.role-tab .role-icon {
+  font-size: 18px;
+}
+
+.role-tab:hover {
+  color: rgba(255, 255, 255, 0.7);
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.role-tab.active {
+  background: linear-gradient(135deg, #4f46e5, #7c3aed);
+  color: #ffffff;
+  box-shadow: 0 4px 15px rgba(79, 70, 229, 0.3);
+}
+
+/* ===== LIGHT THEME ===== */
+[data-theme="light"] .login-role-error {
+  background: rgba(239, 68, 68, 0.05);
+  border-color: rgba(239, 68, 68, 0.1);
+  color: #dc2626;
+}
+
+[data-theme="light"] .role-tab {
+  color: rgba(0, 0, 0, 0.4);
+}
+
+[data-theme="light"] .role-tab:hover {
+  color: rgba(0, 0, 0, 0.7);
+  background: rgba(0, 0, 0, 0.02);
+}
+
+[data-theme="light"] .role-tab.active {
+  color: #ffffff;
+}
+
+/* ===== RESPONSIVE ===== */
+@media (max-width: 480px) {
+  .role-tab {
+    font-size: 12px;
+    padding: 8px 12px;
+  }
+  
+  .role-tab .role-icon {
+    font-size: 16px;
+  }
+  
+  .login-role-error {
+    font-size: 13px;
+    padding: 10px 14px;
+  }
+}

@@ -35,7 +35,7 @@ const Tutors = () => {
   };
 
   // ============================================
-  // FETCH REAL TUTORS FROM DATABASE
+  // FETCH REAL TUTORS FROM API
   // ============================================
   const fetchTutors = async () => {
     try {
@@ -46,18 +46,19 @@ const Tutors = () => {
       const result = await tutorService.getTutors();
       console.log('📚 API Response:', result);
       
-      if (result.success) {
-        // The API returns tutors grouped by shift
-        const groupedTutors = result.tutors || [];
-        setTutors(groupedTutors);
+      if (result.success && result.tutors) {
+        setTutors(result.tutors);
         setTotalTutors(result.totalTutors || 0);
-        console.log('✅ Loaded tutors:', groupedTutors.length, 'shifts');
+        console.log('✅ Loaded', result.tutors.length, 'shifts with tutors');
       } else {
         setError(result.error || 'Failed to load tutors');
+        // Fallback to empty array
+        setTutors([]);
       }
     } catch (err) {
       console.error('❌ Error fetching tutors:', err);
       setError(err.message || 'Failed to load tutors');
+      setTutors([]);
     } finally {
       setLoading(false);
     }
@@ -241,7 +242,7 @@ const Tutors = () => {
       </div>
 
       <div className="tutors-page-grid">
-        {tutors.length > 0 ? (
+        {tutors && tutors.length > 0 ? (
           tutors.map((shift) => (
             <div key={shift.id || shift.name} className="tutors-page-shift">
               <div className="tutors-page-shift-header">

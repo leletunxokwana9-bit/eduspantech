@@ -15,7 +15,7 @@ const MySessions = () => {
   const [expandedSession, setExpandedSession] = useState(null);
   const [filterStatus, setFilterStatus] = useState('all');
 
-  const API_URL = 'https://eduspantech-backend.onrender.com';
+  const API_URL = 'https://eduspantech-backend.onrender.com/api';
 
   useEffect(() => {
     const fetchUserAndSessions = async () => {
@@ -42,65 +42,92 @@ const MySessions = () => {
     try {
       const token = localStorage.getItem('accessToken');
       
-      const response = await fetch(`${API_URL}/api/v1/sessions/user`, {
+      // ============================================
+      // FIX: Use /api/sessions (not /api/v1/sessions/user)
+      // ============================================
+      const response = await fetch(`${API_URL}/sessions`, {
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'
         }
       });
 
+      console.log('📡 Fetching sessions from:', `${API_URL}/sessions`);
+      console.log('📡 Response status:', response.status);
+
       if (response.ok) {
         const data = await response.json();
-        if (data.success && data.sessions && data.sessions.length > 0) {
-          const enrichedSessions = await Promise.all(
-            data.sessions.map(async (session) => {
-              let tutor = null;
-              try {
-                const tutorResponse = await fetch(`${API_URL}/api/v1/tutors/${session.tutorId}`, {
-                  headers: {
-                    'Authorization': `Bearer ${token}`
-                  }
-                });
-                if (tutorResponse.ok) {
-                  const tutorData = await tutorResponse.json();
-                  tutor = tutorData.tutor || tutorData;
-                }
-              } catch (e) {
-                console.error('Failed to fetch tutor details:', e);
-              }
-
-              const now = new Date();
-              const sessionDate = new Date(session.date);
-              const sessionEnd = new Date(sessionDate.getTime() + (session.duration || 60) * 60000);
-              
-              let status = session.status || 'upcoming';
-              if (status === 'upcoming' && sessionEnd < now) {
-                status = 'completed';
-              } else if (status === 'upcoming' && sessionDate < now && sessionEnd > now) {
-                status = 'ongoing';
-              }
-
-              return {
-                ...session,
-                tutor: tutor || null,
-                status,
-                dateFormatted: formatDate(session.date),
-                timeFormatted: formatTime(session.date),
-                durationFormatted: formatDuration(session.duration || 60)
-              };
-            })
-          );
-
-          setSessions(enrichedSessions);
+        console.log('✅ Sessions data:', data);
+        
+        // Handle different response formats
+        let sessionsList = [];
+        if (data.success && data.sessions) {
+          sessionsList = data.sessions;
+        } else if (Array.isArray(data)) {
+          sessionsList = data;
+        } else if (data.data && Array.isArray(data.data)) {
+          sessionsList = data.data;
         } else {
-          setSessions([]);
+          sessionsList = [];
         }
+
+        // Enrich sessions with tutor details
+        const enrichedSessions = await Promise.all(
+          sessionsList.map(async (session) => {
+            let tutor = null;
+            try {
+              const tutorResponse = await fetch(`${API_URL}/tutors/${session.tutor_id || session.tutorId}`, {
+                headers: {
+                  'Authorization': `Bearer ${token}`
+                }
+              });
+              if (tutorResponse.ok) {
+                const tutorData = await tutorResponse.json();
+                tutor = tutorData.tutor || tutorData;
+              }
+            } catch (e) {
+              console.error('Failed to fetch tutor details:', e);
+            }
+
+            // Convert to frontend format
+            const sessionDate = new Date(session.start_time || session.date);
+            const duration = session.duration || 60;
+            const sessionEnd = new Date(sessionDate.getTime() + duration * 60000);
+            const now = new Date();
+            
+            let status = session.status || 'upcoming';
+            if (status === 'upcoming' && sessionEnd < now) {
+              status = 'completed';
+            } else if (status === 'upcoming' && sessionDate < now && sessionEnd > now) {
+              status = 'ongoing';
+            }
+
+            return {
+              id: session.id,
+              tutorId: session.tutor_id || session.tutorId,
+              date: session.start_time || session.date,
+              duration: duration,
+              topic: session.topic || 'Tutoring Session',
+              notes: session.notes || '',
+              meetingLink: session.meeting_link || session.meetingLink || '',
+              status: status,
+              tutor: tutor || null,
+              dateFormatted: formatDate(session.start_time || session.date),
+              timeFormatted: formatTime(session.start_time || session.date),
+              durationFormatted: formatDuration(duration)
+            };
+          })
+        );
+
+        setSessions(enrichedSessions);
+        console.log('✅ Enriched sessions:', enrichedSessions.length);
       } else {
+        const errorData = await response.json();
+        console.error('❌ Failed to fetch sessions:', errorData);
         setSessions([]);
-        console.error('Failed to fetch sessions:', response.status);
       }
     } catch (error) {
-      console.error('Failed to fetch sessions:', error);
+      console.error('❌ Failed to fetch sessions:', error);
       setSessions([]);
     }
   };
@@ -199,7 +226,7 @@ const MySessions = () => {
 
     try {
       const token = localStorage.getItem('accessToken');
-      const response = await fetch(`${API_URL}/api/v1/sessions/${session.id}/cancel`, {
+      const response = await fetch(`${API_URL}/sessions/${session.id}/cancel`, {
         method: 'PUT',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -289,7 +316,6 @@ const MySessions = () => {
                 }
               </p>
             </div>
-            {/* Only show "Book New Session" if user has sessions */}
             {sessions.length > 0 && (
               <div className="header-right">
                 <button 
@@ -304,7 +330,7 @@ const MySessions = () => {
           </div>
         </div>
 
-        {/* Stats Summary - Only show if sessions exist */}
+        {/* Stats Summary */}
         {sessions.length > 0 && (
           <div className="sessions-stats">
             <div className="stat-item">
@@ -331,7 +357,7 @@ const MySessions = () => {
           </div>
         )}
 
-        {/* Filter Bar - Only show if sessions exist */}
+        {/* Filter Bar */}
         {sessions.length > 0 && (
           <div className="filter-bar">
             <div className="filter-buttons">
@@ -546,7 +572,7 @@ const MySessions = () => {
           </div>
         )}
 
-        {/* Quick Stats Summary - Only if sessions exist */}
+        {/* Quick Stats Summary */}
         {sessions.length > 0 && (
           <div className="quick-stats">
             <div className="quick-stat-card">

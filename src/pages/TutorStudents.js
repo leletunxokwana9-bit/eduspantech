@@ -57,7 +57,7 @@ const TutorStudents = () => {
         const data = await response.json();
         setStudents(data.students || []);
       } else {
-        // Fallback - show demo data with avatars
+        // Fallback - show demo data with real avatars
         setStudents([
           { 
             id: 1, 
@@ -113,23 +113,29 @@ const TutorStudents = () => {
   };
 
   // ============================================
-  // RENDER STUDENT AVATAR
+  // RENDER STUDENT AVATAR - SHOW REAL AVATARS
   // ============================================
   const renderStudentAvatar = (student) => {
-    // Check if student has an avatar
-    if (student?.avatar) {
+    // Check if student has an avatar (base64 or URL)
+    const hasAvatar = student?.avatar && (
+      student.avatar.startsWith('data:image') || 
+      student.avatar.startsWith('http://') || 
+      student.avatar.startsWith('https://')
+    );
+
+    if (hasAvatar) {
       return (
         <img 
           src={student.avatar} 
           alt={student.name} 
           className="student-avatar-img"
           onError={(e) => {
-            // If image fails, show initial fallback
+            // If image fails, show initials fallback
             e.target.style.display = 'none';
             const parent = e.target.parentElement;
             if (parent) {
               parent.textContent = student.name.charAt(0).toUpperCase();
-              parent.style.fontSize = '20px';
+              parent.style.fontSize = '18px';
               parent.style.fontWeight = '600';
               parent.style.display = 'flex';
               parent.style.alignItems = 'center';

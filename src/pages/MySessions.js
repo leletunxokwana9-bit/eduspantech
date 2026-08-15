@@ -38,13 +38,21 @@ const MySessions = () => {
     fetchUserAndSessions();
   }, [navigate]);
 
+  // ============================================
+  // FETCH SESSIONS - FIXED
+  // ============================================
   const fetchUserSessions = async () => {
     try {
       const token = localStorage.getItem('accessToken');
       
-      // ============================================
-      // FIX: Use /api/sessions (not /api/v1/sessions/user)
-      // ============================================
+      if (!token) {
+        console.log('No token found, skipping session fetch');
+        setSessions([]);
+        return;
+      }
+
+      console.log('📡 Fetching sessions from:', `${API_URL}/sessions`);
+      
       const response = await fetch(`${API_URL}/sessions`, {
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -52,13 +60,12 @@ const MySessions = () => {
         }
       });
 
-      console.log('📡 Fetching sessions from:', `${API_URL}/sessions`);
       console.log('📡 Response status:', response.status);
 
       if (response.ok) {
         const data = await response.json();
         console.log('✅ Sessions data:', data);
-        
+
         // Handle different response formats
         let sessionsList = [];
         if (data.success && data.sessions) {
@@ -67,53 +74,97 @@ const MySessions = () => {
           sessionsList = data;
         } else if (data.data && Array.isArray(data.data)) {
           sessionsList = data.data;
+        } else if (data.sessions) {
+          sessionsList = data.sessions;
         } else {
           sessionsList = [];
         }
+
+        console.log('📋 Sessions list length:', sessionsList.length);
 
         // Enrich sessions with tutor details
         const enrichedSessions = await Promise.all(
           sessionsList.map(async (session) => {
             let tutor = null;
-            try {
-              const tutorResponse = await fetch(`${API_URL}/tutors/${session.tutor_id || session.tutorId}`, {
-                headers: {
-                  'Authorization': `Bearer ${token}`
+            
+            // Get tutor details from users table
+            if (session.tutor_id) {
+              try {
+                // First try to get from users table
+                const userResponse = await fetch(`${API_URL}/auth/me`, {
+                  headers: {
+                    'Authorization': `Bearer ${token}`
+                  }
+                });
+                
+                // Try to get tutor from tutors table
+                const tutorResponse = await fetch(`${API_URL}/tutors/${session.tutor_id}`, {
+                  headers: {
+                    'Authorization': `Bearer ${token}`
+                  }
+                });
+                
+                if (tutorResponse.ok) {
+                  const tutorData = await tutorResponse.json();
+                  tutor = tutorData.tutor || tutorData;
+                } else {
+                  // Fallback: try to get from users table
+                  const fallbackResponse = await fetch(`${API_URL}/users/${session.tutor_id}`, {
+                    headers: {
+                      'Authorization': `Bearer ${token}`
+                    }
+                  });
+                  if (fallbackResponse.ok) {
+                    const fallbackData = await fallbackResponse.json();
+                    tutor = fallbackData.user || fallbackData;
+                  }
                 }
-              });
-              if (tutorResponse.ok) {
-                const tutorData = await tutorResponse.json();
-                tutor = tutorData.tutor || tutorData;
+              } catch (e) {
+                console.error('Failed to fetch tutor details:', e);
               }
-            } catch (e) {
-              console.error('Failed to fetch tutor details:', e);
             }
 
-            // Convert to frontend format
-            const sessionDate = new Date(session.start_time || session.date);
-            const duration = session.duration || 60;
-            const sessionEnd = new Date(sessionDate.getTime() + duration * 60000);
+            // Calculate duration from start/end times
+            let duration = 60;
+            if (session.start_time && session.end_time) {
+              const start = new Date(session.start_time);
+              const end = new Date(session.end_time);
+              duration = Math.round((end - start) / 60000);
+            }
+
+            // Determine status
             const now = new Date();
-            
+            const startTime = new Date(session.start_time);
+            const endTime = new Date(session.end_time);
             let status = session.status || 'upcoming';
-            if (status === 'upcoming' && sessionEnd < now) {
-              status = 'completed';
-            } else if (status === 'upcoming' && sessionDate < now && sessionEnd > now) {
-              status = 'ongoing';
+            
+            if (status === 'active' || status === 'upcoming') {
+              if (endTime < now) {
+                status = 'completed';
+              } else if (startTime < now && endTime > now) {
+                status = 'ongoing';
+              } else {
+                status = 'upcoming';
+              }
             }
 
             return {
               id: session.id,
-              tutorId: session.tutor_id || session.tutorId,
-              date: session.start_time || session.date,
+              tutorId: session.tutor_id,
+              userId: session.user_id,
+              tutor: tutor,
+              date: session.start_time,
+              start_time: session.start_time,
+              end_time: session.end_time,
               duration: duration,
+              status: status,
+              roomId: session.room_id,
+              region: session.region,
               topic: session.topic || 'Tutoring Session',
               notes: session.notes || '',
               meetingLink: session.meeting_link || session.meetingLink || '',
-              status: status,
-              tutor: tutor || null,
-              dateFormatted: formatDate(session.start_time || session.date),
-              timeFormatted: formatTime(session.start_time || session.date),
+              dateFormatted: formatDate(session.start_time),
+              timeFormatted: formatTime(session.start_time),
               durationFormatted: formatDuration(duration)
             };
           })

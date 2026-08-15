@@ -1,6 +1,7 @@
 // src/config/api.js
 
-const API_URL = 'https://eduspantech-backend.onrender.com';
+const API_BASE_URL = process.env.REACT_APP_API_URL || 'https://eduspantech-backend.onrender.com/api';
+
 export const API = {
   baseURL: API_BASE_URL,
   
@@ -12,6 +13,8 @@ export const API = {
     refresh: `${API_BASE_URL}/auth/refresh`,
     me: `${API_BASE_URL}/auth/me`,
     shiftCheck: `${API_BASE_URL}/auth/shift/check`,
+    verifyEmail: `${API_BASE_URL}/auth/verify-email`,
+    resendVerification: `${API_BASE_URL}/auth/resend-verification`,
   },
   
   // Content endpoints
@@ -22,6 +25,14 @@ export const API = {
     syllabus: (subjectId) => `${API_BASE_URL}/content/syllabus/${subjectId}`,
     enroll: (subjectId) => `${API_BASE_URL}/content/subjects/${subjectId}/enroll`,
     mySubjects: `${API_BASE_URL}/content/my/subjects`,
+  },
+  
+  // Tutor endpoints
+  tutors: {
+    all: `${API_BASE_URL}/tutors`,
+    byId: (id) => `${API_BASE_URL}/tutors/${id}`,
+    byShift: (shiftName) => `${API_BASE_URL}/tutors/shift/${shiftName}`,
+    available: `${API_BASE_URL}/tutors/available`,
   },
   
   // Subscription endpoints
@@ -37,6 +48,8 @@ export const API = {
     start: `${API_BASE_URL}/session/start`,
     end: (id) => `${API_BASE_URL}/session/end/${id}`,
     history: `${API_BASE_URL}/session/history`,
+    book: `${API_BASE_URL}/sessions/book`,
+    mySessions: `${API_BASE_URL}/sessions/my`,
   },
   
   // Dashboard endpoints

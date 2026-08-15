@@ -3,7 +3,6 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { tutorService } from '../services/tutorService';
 import sessionService from '../services/sessionService';
-import { authService } from '../services/authService';
 import './Tutors.css';
 
 const Tutors = () => {
@@ -34,9 +33,6 @@ const Tutors = () => {
     setIsAuthenticated(!!token);
   };
 
-  // ============================================
-  // FETCH REAL TUTORS FROM API
-  // ============================================
   const fetchTutors = async () => {
     try {
       setLoading(true);
@@ -64,25 +60,18 @@ const Tutors = () => {
   };
 
   // ============================================
-  // RENDER AVATAR - SHOW REAL PHOTO IF AVAILABLE
+  // RENDER AVATAR - SAME LOGIC AS NAVBAR
   // ============================================
   const renderAvatar = (tutor) => {
-    // Check if tutor has a real profile photo
-    const hasAvatar = tutor.avatar && (
-      tutor.avatar.startsWith('data:image') || 
-      tutor.avatar.startsWith('http://') || 
-      tutor.avatar.startsWith('https://')
-    );
-
-    if (hasAvatar) {
+    // If tutor has an avatar, show it
+    if (tutor?.avatar) {
       return (
         <img 
           src={tutor.avatar} 
           alt={tutor.name} 
           className="tutor-avatar-img"
-          loading="lazy"
           onError={(e) => {
-            // If image fails, fallback to emoji
+            // If image fails, show emoji fallback
             e.target.style.display = 'none';
             const parent = e.target.parentElement;
             if (parent) {
@@ -96,8 +85,8 @@ const Tutors = () => {
         />
       );
     }
-
-    // Default: show emoji avatar (this will use the existing CSS styling)
+    
+    // No avatar - show emoji
     return '🧑‍🏫';
   };
 

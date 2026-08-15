@@ -52,7 +52,6 @@ const Tutors = () => {
         console.log('✅ Loaded', result.tutors.length, 'shifts with tutors');
       } else {
         setError(result.error || 'Failed to load tutors');
-        // Fallback to empty array
         setTutors([]);
       }
     } catch (err) {
@@ -62,6 +61,44 @@ const Tutors = () => {
     } finally {
       setLoading(false);
     }
+  };
+
+  // ============================================
+  // RENDER AVATAR - SUPPORTS REAL PHOTOS
+  // ============================================
+  const renderAvatar = (tutor) => {
+    if (!tutor.avatar) {
+      return '🧑‍🏫';
+    }
+    
+    // Check if it's an image (base64 or URL)
+    const isImage = tutor.avatar.startsWith('data:image') || 
+                    tutor.avatar.startsWith('http') ||
+                    tutor.avatar.startsWith('https');
+    
+    if (isImage) {
+      return (
+        <img 
+          src={tutor.avatar} 
+          alt={tutor.name} 
+          className="tutor-avatar-img"
+          onError={(e) => {
+            // If image fails to load, show emoji fallback
+            e.target.style.display = 'none';
+            const parent = e.target.parentElement;
+            if (parent) {
+              parent.textContent = '🧑‍🏫';
+              parent.style.fontSize = '28px';
+              parent.style.display = 'flex';
+              parent.style.alignItems = 'center';
+              parent.style.justifyContent = 'center';
+            }
+          }}
+        />
+      );
+    }
+    
+    return '🧑‍🏫';
   };
 
   const handleBookSession = (tutor) => {
@@ -259,11 +296,7 @@ const Tutors = () => {
                   shift.tutors.map((tutor) => (
                     <div key={tutor.id} className="tutors-page-tutor-card">
                       <div className="tutors-page-tutor-avatar">
-                        {tutor.avatar ? (
-                          <img src={tutor.avatar} alt={tutor.name} className="tutor-avatar-img" />
-                        ) : (
-                          '🧑‍🏫'
-                        )}
+                        {renderAvatar(tutor)}
                       </div>
                       <div className="tutors-page-tutor-info">
                         <div className="tutors-page-tutor-name-row">

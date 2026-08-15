@@ -63,45 +63,45 @@ const Tutors = () => {
   };
 
   // ============================================
-  // RENDER AVATAR
+  // RENDER AVATAR - SHOW REAL OR DEFAULT
   // ============================================
   const renderAvatar = (tutor) => {
-    if (!tutor.avatar) {
-      return '🧑‍🏫';
-    }
+    // If tutor has an avatar (base64 or URL)
+    if (tutor?.avatar) {
+      const isImage = tutor.avatar.startsWith('data:image') || 
+                      tutor.avatar.startsWith('http://') || 
+                      tutor.avatar.startsWith('https://');
 
-    const isImage = tutor.avatar.startsWith('data:image') || 
-                    tutor.avatar.startsWith('http://') || 
-                    tutor.avatar.startsWith('https://');
+      if (isImage) {
+        let imageUrl = tutor.avatar;
+        if (imageUrl.startsWith('http')) {
+          const separator = imageUrl.includes('?') ? '&' : '?';
+          imageUrl = `${imageUrl}${separator}t=${Date.now()}`;
+        }
 
-    if (isImage) {
-      let imageUrl = tutor.avatar;
-      if (imageUrl.startsWith('http')) {
-        const separator = imageUrl.includes('?') ? '&' : '?';
-        imageUrl = `${imageUrl}${separator}t=${Date.now()}`;
+        return (
+          <img 
+            src={imageUrl} 
+            alt={tutor.name} 
+            className="tutor-avatar-img"
+            loading="lazy"
+            onError={(e) => {
+              e.target.style.display = 'none';
+              const parent = e.target.parentElement;
+              if (parent) {
+                parent.textContent = '🧑‍🏫';
+                parent.style.fontSize = '28px';
+                parent.style.display = 'flex';
+                parent.style.alignItems = 'center';
+                parent.style.justifyContent = 'center';
+              }
+            }}
+          />
+        );
       }
-
-      return (
-        <img 
-          src={imageUrl} 
-          alt={tutor.name} 
-          className="tutor-avatar-img"
-          loading="lazy"
-          onError={(e) => {
-            e.target.style.display = 'none';
-            const parent = e.target.parentElement;
-            if (parent) {
-              parent.textContent = '🧑‍🏫';
-              parent.style.fontSize = '28px';
-              parent.style.display = 'flex';
-              parent.style.alignItems = 'center';
-              parent.style.justifyContent = 'center';
-            }
-          }}
-        />
-      );
     }
-
+    
+    // Default avatar (emoji)
     return '🧑‍🏫';
   };
 
@@ -195,7 +195,7 @@ const Tutors = () => {
   };
 
   // ============================================
-  // TUTOR MODAL/POPUP
+  // TUTOR MODAL/POPUP - NO HARDCODED DATA
   // ============================================
   const TutorModal = () => {
     if (!viewingTutor) return null;
@@ -209,21 +209,25 @@ const Tutors = () => {
             // ===== QUICK VIEW =====
             <div className="tutor-modal-content">
               <div className="tutor-modal-avatar">
-                {viewingTutor.avatar ? (
-                  <img src={viewingTutor.avatar} alt={viewingTutor.name} />
-                ) : (
-                  '🧑‍🏫'
-                )}
+                {renderAvatar(viewingTutor)}
               </div>
               <h2 className="tutor-modal-name">{viewingTutor.name}</h2>
-              <span className="tutor-modal-tier">{viewingTutor.tier}</span>
               
-              <div className="tutor-modal-subjects">
-                {viewingTutor.subjects?.map((subject, idx) => (
-                  <span key={idx} className="subject-tag">{subject}</span>
-                ))}
-              </div>
+              {/* Only show tier if it exists */}
+              {viewingTutor.tier && (
+                <span className="tutor-modal-tier">{viewingTutor.tier}</span>
+              )}
+              
+              {/* Only show subjects if they exist */}
+              {viewingTutor.subjects && viewingTutor.subjects.length > 0 && (
+                <div className="tutor-modal-subjects">
+                  {viewingTutor.subjects.map((subject, idx) => (
+                    <span key={idx} className="subject-tag">{subject}</span>
+                  ))}
+                </div>
+              )}
 
+              {/* Only show bio if it exists */}
               {viewingTutor.bio && (
                 <p className="tutor-modal-bio">{viewingTutor.bio}</p>
               )}
@@ -249,44 +253,58 @@ const Tutors = () => {
               
               <div className="full-profile-header">
                 <div className="full-profile-avatar">
-                  {viewingTutor.avatar ? (
-                    <img src={viewingTutor.avatar} alt={viewingTutor.name} />
-                  ) : (
-                    '🧑‍🏫'
-                  )}
+                  {renderAvatar(viewingTutor)}
                 </div>
                 <div className="full-profile-info">
                   <h2>{viewingTutor.name}</h2>
-                  <span className="full-profile-tier">{viewingTutor.tier}</span>
-                  <p className="full-profile-email">{viewingTutor.email}</p>
+                  {viewingTutor.tier && (
+                    <span className="full-profile-tier">{viewingTutor.tier}</span>
+                  )}
+                  {viewingTutor.email && (
+                    <p className="full-profile-email">{viewingTutor.email}</p>
+                  )}
                 </div>
               </div>
 
               <div className="full-profile-body">
-                <div className="profile-section">
-                  <h3>📖 Subjects</h3>
-                  <div className="profile-subjects">
-                    {viewingTutor.subjects?.map((subject, idx) => (
-                      <span key={idx} className="subject-tag">{subject}</span>
-                    ))}
+                {/* Subjects */}
+                {viewingTutor.subjects && viewingTutor.subjects.length > 0 && (
+                  <div className="profile-section">
+                    <h3>📖 Subjects</h3>
+                    <div className="profile-subjects">
+                      {viewingTutor.subjects.map((subject, idx) => (
+                        <span key={idx} className="subject-tag">{subject}</span>
+                      ))}
+                    </div>
                   </div>
-                </div>
+                )}
 
-                <div className="profile-section">
-                  <h3>📝 About</h3>
-                  <p>{viewingTutor.bio || 'Experienced mathematics tutor dedicated to helping students succeed.'}</p>
-                </div>
+                {/* Bio/About */}
+                {viewingTutor.bio && (
+                  <div className="profile-section">
+                    <h3>📝 About</h3>
+                    <p>{viewingTutor.bio}</p>
+                  </div>
+                )}
 
-                <div className="profile-section">
-                  <h3>⏰ Availability</h3>
-                  <p>{viewingTutor.shift?.name || 'Various shifts available'}</p>
-                  <p className="shift-time">{viewingTutor.shift?.time || 'Flexible hours'}</p>
-                </div>
+                {/* Shift/Availability */}
+                {viewingTutor.shift && (
+                  <div className="profile-section">
+                    <h3>⏰ Availability</h3>
+                    <p>{viewingTutor.shift.name || 'Various shifts'}</p>
+                    {viewingTutor.shift.time && (
+                      <p className="shift-time">{viewingTutor.shift.time}</p>
+                    )}
+                  </div>
+                )}
 
-                <div className="profile-section">
-                  <h3>🏅 Experience Level</h3>
-                  <p>{viewingTutor.tier}</p>
-                </div>
+                {/* Tier - show as experience level */}
+                {viewingTutor.tier && (
+                  <div className="profile-section">
+                    <h3>🏅 Experience Level</h3>
+                    <p>{viewingTutor.tier}</p>
+                  </div>
+                )}
 
                 <button className="modal-btn primary full-profile-book" onClick={handleBookFromModal}>
                   📚 Book Session
@@ -455,13 +473,20 @@ const Tutors = () => {
                       <div className="tutors-page-tutor-info">
                         <div className="tutors-page-tutor-name-row">
                           <h4>{tutor.name}</h4>
-                          <span className="tutors-page-tutor-tier">{tutor.tier}</span>
+                          {tutor.tier && (
+                            <span className="tutors-page-tutor-tier">{tutor.tier}</span>
+                          )}
                         </div>
-                        <div className="tutors-page-tutor-subjects">
-                          {tutor.subjects?.map((subject, idx) => (
-                            <span key={idx}>{subject}</span>
-                          ))}
-                        </div>
+                        {tutor.subjects && tutor.subjects.length > 0 && (
+                          <div className="tutors-page-tutor-subjects">
+                            {tutor.subjects.slice(0, 3).map((subject, idx) => (
+                              <span key={idx}>{subject}</span>
+                            ))}
+                            {tutor.subjects.length > 3 && (
+                              <span>+{tutor.subjects.length - 3}</span>
+                            )}
+                          </div>
+                        )}
                       </div>
                       <button 
                         className="book-session-btn"

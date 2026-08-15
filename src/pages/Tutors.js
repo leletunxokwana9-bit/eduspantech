@@ -64,20 +64,17 @@ const Tutors = () => {
   };
 
   // ============================================
-  // RENDER AVATAR - SUPPORTS BASE64 IMAGES
+  // RENDER AVATAR - SHOW REAL PHOTO IF AVAILABLE
   // ============================================
   const renderAvatar = (tutor) => {
-    // If no avatar, show emoji
-    if (!tutor.avatar) {
-      return '🧑‍🏫';
-    }
-    
-    // Check if it's a base64 image (starts with data:image)
-    const isBase64 = tutor.avatar.startsWith('data:image');
-    const isUrl = tutor.avatar.startsWith('http://') || tutor.avatar.startsWith('https://');
-    
-    // If it's an image (base64 or URL), render it
-    if (isBase64 || isUrl) {
+    // Check if tutor has a real profile photo
+    const hasAvatar = tutor.avatar && (
+      tutor.avatar.startsWith('data:image') || 
+      tutor.avatar.startsWith('http://') || 
+      tutor.avatar.startsWith('https://')
+    );
+
+    if (hasAvatar) {
       return (
         <img 
           src={tutor.avatar} 
@@ -85,7 +82,7 @@ const Tutors = () => {
           className="tutor-avatar-img"
           loading="lazy"
           onError={(e) => {
-            // If image fails to load, show emoji fallback
+            // If image fails, fallback to emoji
             e.target.style.display = 'none';
             const parent = e.target.parentElement;
             if (parent) {
@@ -99,8 +96,8 @@ const Tutors = () => {
         />
       );
     }
-    
-    // Fallback for any other format
+
+    // Default: show emoji avatar (this will use the existing CSS styling)
     return '🧑‍🏫';
   };
 

@@ -64,24 +64,26 @@ const Tutors = () => {
   };
 
   // ============================================
-  // RENDER AVATAR - SUPPORTS REAL PHOTOS
+  // RENDER AVATAR - SUPPORTS BASE64 IMAGES
   // ============================================
   const renderAvatar = (tutor) => {
+    // If no avatar, show emoji
     if (!tutor.avatar) {
       return '🧑‍🏫';
     }
     
-    // Check if it's an image (base64 or URL)
-    const isImage = tutor.avatar.startsWith('data:image') || 
-                    tutor.avatar.startsWith('http') ||
-                    tutor.avatar.startsWith('https');
+    // Check if it's a base64 image (starts with data:image)
+    const isBase64 = tutor.avatar.startsWith('data:image');
+    const isUrl = tutor.avatar.startsWith('http://') || tutor.avatar.startsWith('https://');
     
-    if (isImage) {
+    // If it's an image (base64 or URL), render it
+    if (isBase64 || isUrl) {
       return (
         <img 
           src={tutor.avatar} 
           alt={tutor.name} 
           className="tutor-avatar-img"
+          loading="lazy"
           onError={(e) => {
             // If image fails to load, show emoji fallback
             e.target.style.display = 'none';
@@ -98,6 +100,7 @@ const Tutors = () => {
       );
     }
     
+    // Fallback for any other format
     return '🧑‍🏫';
   };
 

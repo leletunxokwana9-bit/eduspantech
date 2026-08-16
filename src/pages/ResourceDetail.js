@@ -23,7 +23,7 @@ const ResourceDetail = () => {
 
   const videoId = id || resourceId;
 
-  // ✅ Helper function to get clean description from JSON content
+  // Helper function to get clean description
   const getPracticeDescription = (content) => {
     if (!content) return 'Practice problems with step-by-step solutions.';
     
@@ -38,7 +38,7 @@ const ResourceDetail = () => {
     return content.length > 100 ? content.substring(0, 100) + '...' : content;
   };
 
-  // ✅ Helper function to get problem count
+  // Helper function to get problem count
   const getProblemCount = (content) => {
     if (!content) return 0;
     try {
@@ -52,20 +52,34 @@ const ResourceDetail = () => {
     return 0;
   };
 
+  // ✅ FIXED: Fetch data with proper error handling
   useEffect(() => {
     const fetchData = async () => {
       try {
         setLoading(true);
+        setError(null);
         
-        const data = await resourceService.getAllResources();
-        console.log('📚 All resources from API:', data);
-        setAllResources(data.resources || []);
+        // ✅ Fetch resources directly from API
+        const resourcesResponse = await fetch(`${API_BASE_URL}/content/resources`);
+        if (!resourcesResponse.ok) {
+          throw new Error(`Failed to fetch resources: ${resourcesResponse.status}`);
+        }
+        const resourcesData = await resourcesResponse.json();
+        console.log('📚 All resources from API:', resourcesData);
         
+        const resources = resourcesData.resources || [];
+        setAllResources(resources);
+        
+        // ✅ Fetch subjects
         const subjectsResponse = await fetch(`${API_BASE_URL}/content/subjects`);
+        if (!subjectsResponse.ok) {
+          throw new Error(`Failed to fetch subjects: ${subjectsResponse.status}`);
+        }
         const subjectsData = await subjectsResponse.json();
         const subjectsList = subjectsData.subjects || [];
         setSubjects(subjectsList);
         
+        // Check authentication
         const isAuthenticated = authService.isAuthenticated();
         if (isAuthenticated) {
           const userData = await authService.getCurrentUserWithSubscription();
@@ -77,10 +91,12 @@ const ResourceDetail = () => {
           }
         }
         
-        const vaults = getVaultsFromResources(data.resources || [], subjectsList);
+        // ✅ Build vaults from resources
+        const vaults = getVaultsFromResources(resources, subjectsList);
         
+        // ✅ Handle video redirect
         if (videoId) {
-          const foundVideo = data.resources?.find(r => r.id === videoId && r.type === 'video');
+          const foundVideo = resources.find(r => r.id === videoId && r.type === 'video');
           if (foundVideo) {
             setSelectedVideo(foundVideo);
             const subject = subjectsList.find(s => s.id === foundVideo.subject_id);
@@ -89,42 +105,75 @@ const ResourceDetail = () => {
               if (foundVault) setVault(foundVault);
             }
             setLoading(false);
-            setError(null);
             return;
           }
         }
         
+        // ✅ Handle vault navigation
         if (vaultName) {
           const slug = vaultName.toLowerCase().replace(/\s+/g, '-');
           const foundVault = vaults.find(v => {
             const vaultSlug = v.name.toLowerCase().replace(/\s+/g, '-');
             return vaultSlug === slug;
           });
+          
           if (foundVault) {
             setVault(foundVault);
           } else {
+            // Try partial match
             const partialMatch = vaults.find(v => 
               v.name.toLowerCase().includes(vaultName.toLowerCase()) ||
               vaultName.toLowerCase().includes(v.name.toLowerCase())
             );
-            if (partialMatch) setVault(partialMatch);
-            else setVault(null);
+            if (partialMatch) {
+              setVault(partialMatch);
+            } else {
+              // ✅ If no vault found, create one with all resources
+              const allVideos = resources.filter(r => r.type === 'video');
+              const allPractice = resources.filter(r => r.type === 'practice');
+              const allGuides = resources.filter(r => r.type === 'guide');
+              
+              setVault({
+                id: null,
+                name: vaultName,
+                icon: '📚',
+                description: `Resources for ${vaultName}`,
+                videos: allVideos,
+                practice: allPractice,
+                guides: allGuides
+              });
+            }
           }
         } else {
-          setVault(null);
+          // ✅ No vault name - show all resources
+          const allVideos = resources.filter(r => r.type === 'video');
+          const allPractice = resources.filter(r => r.type === 'practice');
+          const allGuides = resources.filter(r => r.type === 'guide');
+          
+          setVault({
+            id: null,
+            name: 'All Resources',
+            icon: '📚',
+            description: 'All available learning resources',
+            videos: allVideos,
+            practice: allPractice,
+            guides: allGuides
+          });
         }
         
         setError(null);
       } catch (err) {
         console.error('❌ Error fetching resources:', err);
-        setError('Failed to load resources');
+        setError('Failed to load resources: ' + err.message);
       } finally {
         setLoading(false);
       }
     };
+    
     fetchData();
   }, [vaultName, videoId]);
 
+  // ✅ FIXED: Build vaults from resources
   const getVaultsFromResources = (resources, subjectsList) => {
     if (!resources || !resources.length) return [];
     
@@ -275,7 +324,7 @@ const ResourceDetail = () => {
 
           <div className="video-info">
             <h3>{selectedVideo.name}</h3>
-            <p>{selectedVideo.content || 'No description available'}</p>
+            <p>{selectedVideo.description || 'No description available'}</p>
             <div className="video-meta">
               <span className="meta-tag">📚 {vault?.name || 'Unknown'}</span>
               {isYouTubeVideo && <span className="meta-tag">🎬 YouTube</span>}
@@ -345,18 +394,26 @@ const ResourceDetail = () => {
     return null;
   }
 
+  // ✅ FIXED: Ensure vault has all required properties
+  const safeVault = {
+    videos: vault?.videos || [],
+    practice: vault?.practice || [],
+    guides: vault?.guides || [],
+    ...vault
+  };
+
   return (
     <div className="resource-detail-container">
       <div className="resource-detail-header">
         <button className="back-btn" onClick={() => navigate('/resources')}>
           ← All Resources
         </button>
-        <h1>{vault?.icon} {vault?.name}</h1>
-        <p>{vault?.description}</p>
+        <h1>{safeVault.icon || '📚'} {safeVault.name}</h1>
+        <p>{safeVault.description}</p>
         <div className="vault-stats">
-          <span>🎬 {vault?.videos?.length || 0} Videos</span>
-          <span>✏️ {vault?.practice?.length || 0} Practice</span>
-          <span>📖 {vault?.guides?.length || 0} Guides</span>
+          <span>🎬 {safeVault.videos.length} Videos</span>
+          <span>✏️ {safeVault.practice.length} Practice</span>
+          <span>📖 {safeVault.guides.length} Guides</span>
         </div>
       </div>
 
@@ -365,26 +422,26 @@ const ResourceDetail = () => {
           className={`tab-btn ${activeTab === 'videos' ? 'active' : ''}`}
           onClick={() => setActiveTab('videos')}
         >
-          🎬 Videos ({vault?.videos?.length || 0})
+          🎬 Videos ({safeVault.videos.length})
         </button>
         <button 
           className={`tab-btn ${activeTab === 'practice' ? 'active' : ''}`}
           onClick={() => setActiveTab('practice')}
         >
-          ✏️ Practice ({vault?.practice?.length || 0})
+          ✏️ Practice ({safeVault.practice.length})
         </button>
         <button 
           className={`tab-btn ${activeTab === 'guides' ? 'active' : ''}`}
           onClick={() => setActiveTab('guides')}
         >
-          📖 Guides ({vault?.guides?.length || 0})
+          📖 Guides ({safeVault.guides.length})
         </button>
       </div>
 
       {activeTab === 'videos' && (
         <div className="videos-grid">
-          {vault?.videos && vault.videos.length > 0 ? (
-            vault.videos.map((video) => {
+          {safeVault.videos.length > 0 ? (
+            safeVault.videos.map((video) => {
               const thumbnail = getYouTubeThumbnail(video.url);
               const isYouTubeVideo = isYouTube(video.url);
               
@@ -429,7 +486,7 @@ const ResourceDetail = () => {
                   </div>
                   <div className="video-card-info">
                     <h4>{video.name}</h4>
-                    <p>{video.content?.substring(0, 80)}...</p>
+                    <p>{video.description?.substring(0, 80) || ''}</p>
                     <div className="video-card-meta">
                       <span className="type">Video</span>
                     </div>
@@ -448,8 +505,8 @@ const ResourceDetail = () => {
 
       {activeTab === 'practice' && (
         <div className="practice-grid">
-          {vault?.practice && vault.practice.length > 0 ? (
-            vault.practice.map((item) => {
+          {safeVault.practice.length > 0 ? (
+            safeVault.practice.map((item) => {
               const problemCount = getProblemCount(item.content);
               const description = getPracticeDescription(item.content);
               
@@ -486,13 +543,13 @@ const ResourceDetail = () => {
 
       {activeTab === 'guides' && (
         <div className="guides-grid">
-          {vault?.guides && vault.guides.length > 0 ? (
-            vault.guides.map((guide) => (
+          {safeVault.guides.length > 0 ? (
+            safeVault.guides.map((guide) => (
               <div key={guide.id} className="guide-card">
                 <div className="guide-card-icon">📖</div>
                 <div className="guide-card-info">
                   <h4>{guide.name}</h4>
-                  <p>{guide.content}</p>
+                  <p>{guide.description}</p>
                 </div>
                 <button className="view-btn">View Guide →</button>
               </div>

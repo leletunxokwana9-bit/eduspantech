@@ -354,9 +354,9 @@ const Login = () => {
                   <span className="checkmark"></span>
                   Remember me
                 </label>
-                <a href="/forgot-password" className="forgot-link">
+                <Link to="/forgot-password" className="forgot-link">
                   Forgot password?
-                </a>
+                </Link>
               </div>
 
               <button type="submit" disabled={loading} className="login-button">

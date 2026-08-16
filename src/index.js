@@ -13,7 +13,8 @@ import reportWebVitals from './reportWebVitals';
 // Set environment variables if not already set
 if (typeof process !== 'undefined' && process.env) {
   if (!process.env.REACT_APP_API_URL) {
-    process.env.REACT_APP_API_URL = 'https://eduspantech-backend.onrender.com/api/v1';
+    // ✅ FIXED: Removed /v1 from the URL
+    process.env.REACT_APP_API_URL = 'https://eduspantech-backend.onrender.com/api';
   }
   if (!process.env.REACT_APP_SUPABASE_URL) {
     process.env.REACT_APP_SUPABASE_URL = 'https://dokwmteucrhajourpthf.supabase.co';
@@ -37,13 +38,15 @@ window.fetch = function(url, options) {
     // Replace [SENSITIVE] with actual API URL
     if (url.includes('[SENSITIVE]')) {
       console.log('🔧 Fetch interceptor: Replacing [SENSITIVE] in URL');
-      const apiUrl = process.env.REACT_APP_API_URL || 'https://eduspantech-backend.onrender.com/api/v1';
+      // ✅ FIXED: Removed /v1 from the fallback URL
+      const apiUrl = process.env.REACT_APP_API_URL || 'https://eduspantech-backend.onrender.com/api';
       url = url.replace(/\[SENSITIVE\]/g, apiUrl);
       console.log('🔧 New URL:', url);
     }
     // Also handle any other placeholder patterns
     if (url.includes('[API_URL]')) {
-      const apiUrl = process.env.REACT_APP_API_URL || 'https://eduspantech-backend.onrender.com/api/v1';
+      // ✅ FIXED: Removed /v1 from the fallback URL
+      const apiUrl = process.env.REACT_APP_API_URL || 'https://eduspantech-backend.onrender.com/api';
       url = url.replace(/\[API_URL\]/g, apiUrl);
     }
     if (url.includes('[SUPABASE_URL]')) {

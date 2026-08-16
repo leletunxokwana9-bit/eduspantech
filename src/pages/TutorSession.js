@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useSessionSettings } from '../context/SessionSettingsContext';
 import SessionSettings from '../components/SessionSettings/SessionSettings';
+import { API_BASE_URL } from '../services/api';
 import './TutorSession.css';
 
 // ===== SOUND GENERATOR =====
@@ -843,7 +844,8 @@ const TutorSession = () => {
       const token = localStorage.getItem('accessToken');
       const sessionId = location.state?.sessionId || 'temp_session';
 
-      const response = await fetch('https://eduspantech-backend.onrender.com/api/ratings', {
+      // ✅ FIXED: Use API_BASE_URL instead of hardcoded URL
+      const response = await fetch(`${API_BASE_URL}/ratings`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -921,7 +923,8 @@ const TutorSession = () => {
     // Send end session request to backend
     try {
       const token = localStorage.getItem('accessToken');
-      const response = await fetch('https://eduspantech-backend.onrender.com/api/v1/sessions/end', {
+      // ✅ FIXED: Use API_BASE_URL instead of hardcoded URL
+      const response = await fetch(`${API_BASE_URL}/sessions/end`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,

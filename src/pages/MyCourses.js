@@ -2,6 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { authService } from '../services/authService';
+import { API_BASE_URL } from '../services/api';
 import './MyCourses.css';
 
 const MyCourses = () => {
@@ -13,8 +14,6 @@ const MyCourses = () => {
   const [showRedirectPopup, setShowRedirectPopup] = useState(false);
   const [selectedCourse, setSelectedCourse] = useState(null);
   const [expandedCourse, setExpandedCourse] = useState(null);
-
-  const API_URL = 'https://eduspantech-backend.onrender.com';
 
   useEffect(() => {
     const fetchUserAndCourses = async () => {
@@ -41,7 +40,8 @@ const MyCourses = () => {
     try {
       const token = localStorage.getItem('accessToken');
       
-      const response = await fetch(`${API_URL}/api/v1/content/my/subjects`, {
+      // ✅ FIXED: Using API_BASE_URL from api.js (no /v1)
+      const response = await fetch(`${API_BASE_URL}/content/my/subjects`, {
         headers: {
           'Authorization': `Bearer ${token}`
         }
@@ -71,8 +71,9 @@ const MyCourses = () => {
       const updatedCourses = await Promise.all(
         courses.map(async (course) => {
           try {
+            // ✅ FIXED: Using API_BASE_URL (no /v1)
             const progressResponse = await fetch(
-              `${API_URL}/api/v1/content/my/subjects/${course.id}/progress`,
+              `${API_BASE_URL}/content/my/subjects/${course.id}/progress`,
               {
                 headers: {
                   'Authorization': `Bearer ${token}`

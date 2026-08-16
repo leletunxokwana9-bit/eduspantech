@@ -4,7 +4,8 @@ import './ChatWidget.css';
 
 const ChatWidget = () => {
     // ===== CONFIG =====
-    const API_URL = 'https://eduspantech-backend.onrender.com/api/v1/chat';
+    import { API_BASE_URL } from '../services/api';
+    const API_URL = `${API_BASE_URL}/chat`;
     const SITE_URL = 'https://www.eduspantech.com';
     const WELCOME_MESSAGE = "Hi! 👋 I'm your EduSpanTech learning assistant. I can help you find courses, assess your skills, or navigate the site. What would you like to explore?";
 

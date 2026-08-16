@@ -3,6 +3,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { authService } from '../services/authService';
 import { useTheme } from '../context/ThemeContext';
+import { API_BASE_URL } from '../services/api';
 import './Settings.css';
 
 const Settings = () => {
@@ -58,8 +59,6 @@ const Settings = () => {
     screenReaderOptimized: false,
     textToSpeech: false
   });
-
-  const API_URL = 'https://eduspantech-backend.onrender.com';
 
   // Auto-dismiss success message
   useEffect(() => {
@@ -140,7 +139,8 @@ const Settings = () => {
       // Save to backend if needed
       const token = localStorage.getItem('accessToken');
       if (token) {
-        const response = await fetch(`${API_URL}/api/v1/auth/update-profile`, {
+        // ✅ FIXED: Using API_BASE_URL (no /v1)
+        const response = await fetch(`${API_BASE_URL}/auth/update-profile`, {
           method: 'PUT',
           headers: {
             'Content-Type': 'application/json',

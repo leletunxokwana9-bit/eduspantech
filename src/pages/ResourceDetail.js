@@ -5,7 +5,7 @@ import { resourceService } from '../services/resourceService';
 import { authService } from '../services/authService';
 import './ResourceDetail.css';
 
-const API_BASE_URL = process.env.REACT_APP_API_URL || 'https://eduspantech-backend.onrender.com/api/v1';
+import { API_BASE_URL } from '../services/api';
 
 const ResourceDetail = () => {
   const { vaultName, resourceId, id } = useParams();

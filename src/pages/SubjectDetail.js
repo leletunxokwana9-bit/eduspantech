@@ -5,8 +5,7 @@ import { authService } from '../services/authService';
 import { useSound } from '../context/SoundContext';
 import './SubjectDetail.css';
 
-const API_BASE_URL = process.env.REACT_APP_API_URL || 'https://eduspantech-backend.onrender.com/api/v1';
-
+import { API_BASE_URL } from '../services/api';
 const SubjectDetail = () => {
   const { subjectName } = useParams();
   const navigate = useNavigate();

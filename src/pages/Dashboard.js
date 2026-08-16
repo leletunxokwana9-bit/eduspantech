@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { authService } from '../services/authService';
+import { API_BASE_URL } from '../services/api';
 import './Dashboard.css';
 
 const Dashboard = () => {
@@ -15,9 +16,6 @@ const Dashboard = () => {
     hoursSpent: 0,
     badgesEarned: 0
   });
-
-  // API URL - Changed to Render backend
-  const API_URL = 'https://eduspantech-backend.onrender.com';
 
   useEffect(() => {
     const fetchUser = async () => {
@@ -56,8 +54,8 @@ const Dashboard = () => {
     try {
       const token = localStorage.getItem('accessToken');
       
-      // 1. Fetch all subjects
-      const subjectsResponse = await fetch(`${API_URL}/api/v1/content/subjects`, {
+      // ✅ FIXED: Using API_BASE_URL without /v1
+      const subjectsResponse = await fetch(`${API_BASE_URL}/content/subjects`, {
         headers: {
           'Authorization': `Bearer ${token}`
         }
@@ -70,8 +68,8 @@ const Dashboard = () => {
         }
       }
 
-      // 2. Fetch user's enrollments (REAL data)
-      const enrollResponse = await fetch(`${API_URL}/api/v1/content/my/subjects`, {
+      // ✅ FIXED: Using API_BASE_URL without /v1
+      const enrollResponse = await fetch(`${API_BASE_URL}/content/my/subjects`, {
         headers: {
           'Authorization': `Bearer ${token}`
         }

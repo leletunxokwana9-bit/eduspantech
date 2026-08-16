@@ -121,10 +121,10 @@ const EMOJIS = [
 ];
 
 // ============================================
-// ✅ RENDER TUTOR AVATAR - SAME AS TUTORS PAGE
+// ✅ RENDER TUTOR AVATAR - FIXED
 // ============================================
 const renderTutorAvatar = (tutor) => {
-  if (!tutor) return '🧑‍🏫';
+  if (!tutor) return null;
 
   const photoUrl = tutor.avatar || tutor.profileImage;
   
@@ -137,42 +137,12 @@ const renderTutorAvatar = (tutor) => {
         loading="lazy"
         onError={(e) => {
           e.target.style.display = 'none';
-          const parent = e.target.parentElement;
-          if (parent) {
-            const initials = tutor.name
-              .split(' ')
-              .map(word => word[0])
-              .join('')
-              .toUpperCase()
-              .slice(0, 2);
-            
-            const colors = ['#1a73e8', '#e91e63', '#ff6f00', '#7b1fa2', '#0d47a1', '#00695c', '#bf360c', '#4a148c', '#1a237e', '#880e4f', '#004d40'];
-            const hash = tutor.name.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
-            const color = colors[hash % colors.length];
-            
-            const fallbackDiv = document.createElement('div');
-            fallbackDiv.className = 'tutor-avatar-default';
-            fallbackDiv.style.cssText = `
-              width: 100%;
-              height: 100%;
-              border-radius: 50%;
-              background: ${color};
-              color: white;
-              display: flex;
-              align-items: center;
-              justify-content: center;
-              font-size: 18px;
-              font-weight: bold;
-              text-transform: uppercase;
-            `;
-            fallbackDiv.textContent = initials;
-            parent.appendChild(fallbackDiv);
-          }
         }}
       />
     );
   }
   
+  // Fallback to initials
   const initials = tutor.name
     .split(' ')
     .map(word => word[0])
@@ -207,7 +177,7 @@ const renderTutorAvatar = (tutor) => {
 };
 
 // ============================================
-// ✅ HELPERS - FIXED getPublicIP with caching
+// ✅ HELPERS - FIXED
 // ============================================
 const getCurrentTime = () => {
   return new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
@@ -221,9 +191,7 @@ const generateUUID = () => {
   });
 };
 
-// ✅ FIXED: Get public IP with caching and timeout
 const getPublicIP = async () => {
-  // Check if we already have a cached IP
   const cachedIP = localStorage.getItem('public_ip');
   if (cachedIP) {
     return cachedIP;
@@ -243,7 +211,6 @@ const getPublicIP = async () => {
     console.log('⚠️ Could not fetch public IP:', error.message);
   }
   
-  // Fallback to localhost
   return '127.0.0.1';
 };
 
@@ -360,7 +327,7 @@ const TutorSession = () => {
   const [sessionEnded, setSessionEnded] = useState(false);
 
   // ============================================
-  // ✅ CHECK IF USER IS TUTOR OR STUDENT
+  // CHECK IF USER IS TUTOR OR STUDENT
   // ============================================
   const [isTutorUser, setIsTutorUser] = useState(false);
   const [currentUser, setCurrentUser] = useState(null);
@@ -466,7 +433,7 @@ const TutorSession = () => {
     img.src = dataUrl;
   }, [watermark, watermarkVisible]);
 
-  // ===== INIT - FIXED =====
+  // ===== INIT =====
   useEffect(() => {
     let uuid = localStorage.getItem('eduspantech_uuid');
     if (!uuid) {
@@ -726,7 +693,7 @@ const TutorSession = () => {
   }, [canvasHistory, historyIndex, maxHistory]);
 
   // ============================================
-  // ✅ WHITEBOARD - DISABLED FOR STUDENTS
+  // WHITEBOARD - DISABLED FOR STUDENTS
   // ============================================
   const startDrawing = (e) => {
     if (!isTutorUser) {
@@ -957,7 +924,7 @@ const TutorSession = () => {
   };
 
   // ============================================
-  // ✅ RATING FUNCTIONS
+  // RATING FUNCTIONS
   // ============================================
   const handleRatingChange = (category, value) => {
     setRatingData(prev => ({
@@ -1007,7 +974,6 @@ const TutorSession = () => {
         setRatingSubmitted(true);
         setRatingLoading(false);
         
-        // ✅ Update tutor rating in the database
         await updateTutorRating(tutor?.id, ratingData.overall);
         
         setTimeout(() => {
@@ -1026,7 +992,6 @@ const TutorSession = () => {
     }
   };
 
-  // ✅ Update tutor rating in database
   const updateTutorRating = async (tutorId, newRating) => {
     try {
       const token = localStorage.getItem('accessToken');
@@ -1083,7 +1048,7 @@ const TutorSession = () => {
   };
 
   // ============================================
-  // ✅ END SESSION - FIXED
+  // END SESSION - FIXED
   // ============================================
   const endSession = async () => {
     if (sessionEnded) return;
@@ -1092,35 +1057,44 @@ const TutorSession = () => {
     setSessionStats(prev => ({ ...prev, duration }));
     setSessionEnded(true);
     
-    // Send end session request to backend
     try {
       const token = localStorage.getItem('accessToken');
-      const response = await fetch(`${API_BASE_URL}/sessions/end`, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          sessionId: location.state?.sessionId || 'temp_session',
-          duration: duration
-        })
-      });
+      const sessionId = location.state?.sessionId || 'temp_session';
       
-      if (response.ok) {
-        console.log('✅ Session ended successfully');
+      // Try to get session ID from URL
+      const pathParts = window.location.pathname.split('/');
+      const urlSessionId = pathParts[pathParts.length - 1];
+      const finalSessionId = sessionId !== 'temp_session' ? sessionId : urlSessionId;
+      
+      if (finalSessionId && finalSessionId !== 'temp_session') {
+        const response = await fetch(`${API_BASE_URL}/sessions/end`, {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            sessionId: finalSessionId,
+            duration: duration
+          })
+        });
+        
+        if (response.ok) {
+          console.log('✅ Session ended successfully');
+        } else {
+          console.log('⚠️ Session end API returned error');
+        }
       }
     } catch (error) {
       console.error('Error ending session:', error);
     }
     
-    // ✅ Show rating modal
     setShowRatingModal(true);
     setShowSummary(false);
   };
 
   // ============================================
-  // ✅ RATING MODAL
+  // RATING MODAL
   // ============================================
   const RatingModal = () => (
     <div className="rating-modal-overlay">

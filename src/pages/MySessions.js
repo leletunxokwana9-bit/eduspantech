@@ -53,7 +53,7 @@ const MySessions = () => {
   }, [navigate]);
 
   // ============================================
-  // FETCH SESSIONS
+  // FETCH SESSIONS - FIXED WITH CORRECT COLUMNS
   // ============================================
   const fetchUserSessions = async () => {
     try {
@@ -118,35 +118,48 @@ const MySessions = () => {
               }
             }
 
-            let duration = 60;
-            if (session.start_time && session.end_time) {
-              const start = new Date(session.start_time);
+            // ✅ FIX: Use 'date' column (not 'start_time')
+            const sessionDate = session.date || session.created_at;
+            
+            // Calculate duration
+            let duration = session.duration || 60;
+            if (session.end_time && session.date) {
+              const start = new Date(session.date);
               const end = new Date(session.end_time);
               duration = Math.round((end - start) / 60000);
             }
 
+            // Determine status
             const now = new Date();
-            const startTime = new Date(session.start_time);
-            const endTime = new Date(session.end_time);
+            const startTime = session.date ? new Date(session.date) : null;
+            const endTime = session.end_time ? new Date(session.end_time) : null;
             let status = session.status || 'upcoming';
             
-            if (status === 'active' || status === 'upcoming') {
-              if (endTime < now) {
+            if (status === 'upcoming' || status === 'active') {
+              if (endTime && endTime < now) {
                 status = 'completed';
-              } else if (startTime < now && endTime > now) {
+              } else if (startTime && startTime < now && endTime && endTime > now) {
                 status = 'ongoing';
-              } else {
-                status = 'upcoming';
+              } else if (startTime && startTime < now && !endTime) {
+                status = 'active';
               }
             }
+
+            console.log('📊 Session data:', {
+              id: session.id,
+              date: session.date,
+              end_time: session.end_time,
+              duration: session.duration,
+              status: session.status,
+              topic: session.topic
+            });
 
             return {
               id: session.id,
               tutorId: session.tutor_id,
               userId: session.user_id,
               tutor: tutor,
-              date: session.start_time,
-              start_time: session.start_time,
+              date: sessionDate,
               end_time: session.end_time,
               duration: duration,
               status: status,
@@ -155,8 +168,8 @@ const MySessions = () => {
               topic: session.topic || 'Tutoring Session',
               notes: session.notes || '',
               meetingLink: session.meeting_link || session.meetingLink || '',
-              dateFormatted: formatDate(session.start_time),
-              timeFormatted: formatTime(session.start_time),
+              dateFormatted: sessionDate ? formatDate(sessionDate) : 'TBD',
+              timeFormatted: sessionDate ? formatTime(sessionDate) : 'TBD',
               durationFormatted: formatDuration(duration)
             };
           })
@@ -267,8 +280,9 @@ const MySessions = () => {
   // FORMAT HELPERS
   // ============================================
   const formatDate = (dateString) => {
-    if (!dateString) return 'N/A';
+    if (!dateString) return 'TBD';
     const date = new Date(dateString);
+    if (isNaN(date.getTime())) return 'TBD';
     return date.toLocaleDateString('en-US', {
       weekday: 'short',
       month: 'short',
@@ -278,8 +292,9 @@ const MySessions = () => {
   };
 
   const formatTime = (dateString) => {
-    if (!dateString) return 'N/A';
+    if (!dateString) return 'TBD';
     const date = new Date(dateString);
+    if (isNaN(date.getTime())) return 'TBD';
     return date.toLocaleTimeString('en-US', {
       hour: '2-digit',
       minute: '2-digit'

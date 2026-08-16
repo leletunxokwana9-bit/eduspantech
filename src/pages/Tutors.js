@@ -214,7 +214,7 @@ const Tutors = () => {
   };
 
   // ============================================
-  // TUTOR MODAL - CONDITIONAL RENDERING
+  // TUTOR MODAL - FULL PROFILE WITH ALL FIELDS
   // ============================================
   const TutorModal = () => {
     if (!viewingTutor) return null;
@@ -245,12 +245,10 @@ const Tutors = () => {
               </div>
               <h2 className="tutor-modal-name">{viewingTutor.name}</h2>
               
-              {/* Tier - Only show if exists */}
               {viewingTutor.tier && (
                 <span className="tutor-modal-tier">{viewingTutor.tier}</span>
               )}
               
-              {/* Subjects - Only show if exists */}
               {viewingTutor.subjects && viewingTutor.subjects.length > 0 && (
                 <div className="tutor-modal-subjects">
                   {viewingTutor.subjects.map((subject, idx) => (
@@ -259,12 +257,10 @@ const Tutors = () => {
                 </div>
               )}
 
-              {/* Bio - Only show if exists */}
               {viewingTutor.bio && (
                 <p className="tutor-modal-bio">{viewingTutor.bio}</p>
               )}
 
-              {/* Shift - Only show if exists */}
               {shiftName && (
                 <div className="tutor-modal-shift">
                   <span className="shift-label">⏰ {shiftName}</span>
@@ -284,7 +280,9 @@ const Tutors = () => {
               </div>
             </div>
           ) : (
-            // ===== FULL PROFILE VIEW - CONDITIONAL =====
+            // ============================================
+            // FULL PROFILE VIEW - ALL FIELDS
+            // ============================================
             <div className="tutor-modal-full-profile">
               <button className="back-btn" onClick={() => setShowFullProfile(false)}>
                 ← Back
@@ -296,13 +294,9 @@ const Tutors = () => {
                 </div>
                 <div className="full-profile-info">
                   <h2>{viewingTutor.name}</h2>
-                  
-                  {/* Tier - Only show if exists */}
                   {viewingTutor.tier && (
                     <span className="full-profile-tier">{viewingTutor.tier}</span>
                   )}
-                  
-                  {/* Email - Only show if exists */}
                   {viewingTutor.email && (
                     <p className="full-profile-email">{viewingTutor.email}</p>
                   )}
@@ -310,15 +304,15 @@ const Tutors = () => {
               </div>
 
               <div className="full-profile-body">
-                {/* Bio/About - Only show if exists */}
+                {/* ===== BIO / ABOUT ME ===== */}
                 {viewingTutor.bio && (
                   <div className="profile-section">
-                    <h3>📝 About</h3>
+                    <h3>📝 About Me</h3>
                     <p>{viewingTutor.bio}</p>
                   </div>
                 )}
 
-                {/* Subjects - Only show if exists */}
+                {/* ===== SUBJECTS ===== */}
                 {viewingTutor.subjects && viewingTutor.subjects.length > 0 && (
                   <div className="profile-section">
                     <h3>📖 Subjects</h3>
@@ -330,7 +324,7 @@ const Tutors = () => {
                   </div>
                 )}
 
-                {/* Shift/Availability - Only show if exists */}
+                {/* ===== SHIFT / AVAILABILITY ===== */}
                 {shiftName && (
                   <div className="profile-section">
                     <h3>⏰ Availability</h3>
@@ -341,7 +335,7 @@ const Tutors = () => {
                   </div>
                 )}
 
-                {/* Education - Only show if exists */}
+                {/* ===== EDUCATION ===== */}
                 {viewingTutor.education && (
                   <div className="profile-section">
                     <h3>🎓 Education</h3>
@@ -349,7 +343,7 @@ const Tutors = () => {
                   </div>
                 )}
 
-                {/* Years Experience - Only show if exists */}
+                {/* ===== YEARS OF EXPERIENCE ===== */}
                 {viewingTutor.yearsExperience > 0 && (
                   <div className="profile-section">
                     <h3>📅 Experience</h3>
@@ -357,7 +351,15 @@ const Tutors = () => {
                   </div>
                 )}
 
-                {/* LinkedIn - Only show if exists */}
+                {/* ===== PHONE ===== */}
+                {viewingTutor.phone && (
+                  <div className="profile-section">
+                    <h3>📞 Contact</h3>
+                    <p>{viewingTutor.phone}</p>
+                  </div>
+                )}
+
+                {/* ===== LINKEDIN ===== */}
                 {viewingTutor.linkedin && (
                   <div className="profile-section">
                     <h3>🔗 Connect</h3>
@@ -367,7 +369,7 @@ const Tutors = () => {
                   </div>
                 )}
 
-                {/* Website - Only show if exists */}
+                {/* ===== WEBSITE ===== */}
                 {viewingTutor.website && (
                   <div className="profile-section">
                     <h3>🌐 Website</h3>

@@ -1,4 +1,4 @@
-// src/pages/Profile.js - COMPLETELY DYNAMIC - NO HARDCODED DATA
+// src/pages/Profile.js - CLEAN LAYOUT WITH FIXED SAVE
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import authService from '../services/authService';
@@ -14,11 +14,9 @@ const Profile = () => {
   const [isEditing, setIsEditing] = useState(false);
   const [isTutor, setIsTutor] = useState(false);
   
-  // ===== DYNAMIC DATA FROM API =====
   const [subjectOptions, setSubjectOptions] = useState([]);
   const [shiftOptions, setShiftOptions] = useState([]);
   
-  // ===== EDIT FORM =====
   const [editForm, setEditForm] = useState({
     name: '',
     email: '',
@@ -44,7 +42,6 @@ const Profile = () => {
   const [showPasswordModal, setShowPasswordModal] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   
-  // ===== STUDENT-ONLY STATS =====
   const [enrollments, setEnrollments] = useState([]);
   const [studentStats, setStudentStats] = useState({
     coursesEnrolled: 0,
@@ -53,7 +50,6 @@ const Profile = () => {
     completionRate: 0
   });
   
-  // ===== TUTOR-ONLY STATS =====
   const [tutorStats, setTutorStats] = useState({
     totalSessions: 0,
     studentsTaught: 0,
@@ -66,7 +62,6 @@ const Profile = () => {
   const [avatarData, setAvatarData] = useState(null);
   const [avatarImage, setAvatarImage] = useState(null);
   
-  // ===== PHOTO UPLOAD STATE =====
   const [profilePhoto, setProfilePhoto] = useState(null);
   const [photoUploading, setPhotoUploading] = useState(false);
   const [photoError, setPhotoError] = useState('');
@@ -74,7 +69,6 @@ const Profile = () => {
 
   const API_URL = 'https://eduspantech-backend.onrender.com/api';
 
-  // ===== AUTO-DISMISS SUCCESS MESSAGE =====
   useEffect(() => {
     if (success) {
       const timer = setTimeout(() => {
@@ -84,11 +78,10 @@ const Profile = () => {
     }
   }, [success]);
 
-  // ===== FETCH SUBJECTS AND SHIFTS FROM API =====
+  // ===== FETCH SUBJECTS AND SHIFTS =====
   useEffect(() => {
     const fetchOptions = async () => {
       try {
-        // Fetch subjects from API
         const subjectsResponse = await fetch(`${API_URL}/content/subjects`);
         if (subjectsResponse.ok) {
           const data = await subjectsResponse.json();
@@ -97,7 +90,6 @@ const Profile = () => {
           }
         }
 
-        // Fetch shifts from API
         const shiftsResponse = await fetch(`${API_URL}/shifts`);
         if (shiftsResponse.ok) {
           const data = await shiftsResponse.json();
@@ -122,20 +114,14 @@ const Profile = () => {
           return;
         }
 
-        console.log('🔍 Fetching user data...');
-        
         const userData = await authService.getCurrentUserWithSubscription();
         
         if (userData) {
-          console.log('✅ User data loaded:', userData.name);
           setUser(userData);
           
           const isTutorAccount = userData.is_tutor === true || userData.role === 'tutor';
           setIsTutor(isTutorAccount);
           
-          // ============================================
-          // AVATAR - Use avatar for BOTH students AND tutors
-          // ============================================
           if (userData.avatar) {
             if (isTutorAccount) {
               setProfilePhoto(userData.avatar);
@@ -149,7 +135,6 @@ const Profile = () => {
             }
           }
 
-          // Set subscription
           if (userData.subscription || userData.subscriptionTier) {
             setSubscription({
               tier: userData.subscriptionTier || userData.subscription?.tier || 'SILVER',
@@ -158,9 +143,6 @@ const Profile = () => {
             });
           }
           
-          // ============================================
-          // SET EDIT FORM WITH USER DATA (NO HARDCODING)
-          // ============================================
           setEditForm({
             name: userData.name || '',
             email: userData.email || '',
@@ -178,16 +160,12 @@ const Profile = () => {
             website: userData.website || ''
           });
           
-          // ============================================
-          // FETCH ROLE-SPECIFIC STATS
-          // ============================================
           if (isTutorAccount) {
             await fetchTutorStats();
           } else {
             await fetchStudentStats();
           }
         } else {
-          console.log('❌ No user data, redirecting to login');
           navigate('/login');
         }
       } catch (err) {
@@ -199,13 +177,11 @@ const Profile = () => {
       }
     };
 
-    // ===== STUDENT STATS =====
     const fetchStudentStats = async () => {
       try {
         const token = localStorage.getItem('accessToken');
         if (!token) return;
 
-        console.log('🔍 Fetching student stats...');
         const enrollResponse = await fetch(`${API_URL}/content/my/subjects`, {
           headers: {
             'Authorization': `Bearer ${token}`,
@@ -231,14 +207,11 @@ const Profile = () => {
       }
     };
 
-    // ===== TUTOR STATS =====
     const fetchTutorStats = async () => {
       try {
         const token = localStorage.getItem('accessToken');
         if (!token) return;
 
-        console.log('🔍 Fetching tutor stats...');
-        
         const sessionsResponse = await fetch(`${API_URL}/sessions`, {
           headers: {
             'Authorization': `Bearer ${token}`,
@@ -269,7 +242,7 @@ const Profile = () => {
   }, [navigate, API_URL]);
 
   // ============================================
-  // HANDLE INPUT CHANGE
+  // HANDLERS
   // ============================================
   const handleInputChange = (e) => {
     const { name, value } = e.target;
@@ -287,7 +260,6 @@ const Profile = () => {
     });
   };
 
-  // ===== STUDENT AVATAR FUNCTIONS =====
   const handleAvatarSelect = async (avatar) => {
     setAvatarData(avatar);
     setAvatarImage(avatar.svg);
@@ -337,9 +309,6 @@ const Profile = () => {
     }
   };
 
-  // ============================================
-  // TUTOR PHOTO UPLOAD
-  // ============================================
   const handlePhotoUpload = async (e) => {
     const file = e.target.files[0];
     if (!file) return;
@@ -405,7 +374,9 @@ const Profile = () => {
     fileInputRef.current?.click();
   };
 
-  // ===== SAVE PROFILE =====
+  // ============================================
+  // SAVE PROFILE - FIXED
+  // ============================================
   const handleSaveProfile = async (e) => {
     e.preventDefault();
     setLoading(true);
@@ -420,36 +391,80 @@ const Profile = () => {
         return;
       }
 
+      // ============================================
+      // FIX: Map frontend fields to backend expected fields
+      // ============================================
+      const payload = {
+        name: editForm.name,
+        email: editForm.email,
+        country: editForm.country,
+        timezone: editForm.timezone,
+        grade: editForm.grade ? parseInt(editForm.grade) : 0,
+        // Tutor fields - using camelCase as backend expects
+        bio: editForm.bio || '',
+        phone: editForm.phone || '',
+        education: editForm.education || '',
+        yearsExperience: parseInt(editForm.yearsExperience) || 0,
+        linkedin: editForm.linkedin || '',
+        website: editForm.website || '',
+        tier: editForm.tier || '',
+        subjects: editForm.subjects || [],
+        shiftId: editForm.shiftId || ''
+      };
+
+      console.log('📤 Saving profile with payload:', payload);
+
       const response = await fetch(`${API_URL}/auth/profile`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${token}`
         },
-        body: JSON.stringify(editForm)
+        body: JSON.stringify(payload)
       });
 
-      if (response.ok) {
-        const data = await response.json();
-        if (data.success) {
-          const updatedUser = { ...user, ...editForm };
-          setUser(updatedUser);
-          localStorage.setItem('user', JSON.stringify(updatedUser));
-          setSuccess('Profile updated successfully! ✅');
-          setIsEditing(false);
-        }
+      const data = await response.json();
+      console.log('📥 Save response:', data);
+
+      if (response.ok && data.success) {
+        // Update user state with new data
+        const updatedUser = { ...user, ...data.user };
+        setUser(updatedUser);
+        
+        // Update local storage
+        localStorage.setItem('user', JSON.stringify(updatedUser));
+        
+        // Update edit form with new data
+        setEditForm({
+          name: data.user.name || '',
+          email: data.user.email || '',
+          country: data.user.country || '',
+          timezone: data.user.timezone || '',
+          grade: data.user.grade || '',
+          bio: data.user.bio || '',
+          tier: data.user.tutor_tier || data.user.tier || '',
+          subjects: data.user.tutor_subjects || [],
+          shiftId: data.user.tutor_shift_id || '',
+          yearsExperience: data.user.years_experience || 0,
+          education: data.user.education || '',
+          phone: data.user.phone || '',
+          linkedin: data.user.linkedin || '',
+          website: data.user.website || ''
+        });
+
+        setSuccess('✅ Profile updated successfully!');
+        setIsEditing(false);
       } else {
-        const errorData = await response.json();
-        setError(errorData.error || 'Failed to update profile');
+        setError(data.error || 'Failed to update profile');
       }
     } catch (error) {
-      setError('Failed to update profile');
+      console.error('❌ Save error:', error);
+      setError('Failed to update profile: ' + error.message);
     } finally {
       setLoading(false);
     }
   };
 
-  // ===== PASSWORD CHANGE =====
   const handlePasswordChange = async (e) => {
     e.preventDefault();
     setLoading(true);
@@ -496,7 +511,6 @@ const Profile = () => {
     }
   };
 
-  // ===== DELETE ACCOUNT =====
   const handleDeleteAccount = async () => {
     if (!window.confirm('Are you sure you want to delete your account? This action is permanent!')) return;
     
@@ -528,313 +542,6 @@ const Profile = () => {
       setLoading(false);
       setShowDeleteModal(false);
     }
-  };
-
-  // ============================================
-  // RENDER TUTOR PROFILE FIELDS - DYNAMIC
-  // ============================================
-  const renderTutorFields = () => {
-    if (!isTutor) return null;
-
-    return (
-      <div style={{ 
-        gridColumn: '1 / -1',
-        background: '#141b2d',
-        borderRadius: '16px',
-        padding: '24px 28px',
-        border: '1px solid rgba(255,255,255,0.06)'
-      }}>
-        <h3 style={{ fontSize: '18px', fontWeight: 600, color: '#ffffff', margin: '0 0 20px 0', paddingBottom: '12px', borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
-          👨‍🏫 Tutor Profile
-        </h3>
-        
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
-          {/* Bio - Full Width */}
-          <div style={{ gridColumn: '1 / -1' }}>
-            <label style={{ display: 'block', fontSize: '13px', fontWeight: 500, color: '#94a3b8', marginBottom: '4px' }}>
-              📝 About Me
-            </label>
-            {isEditing ? (
-              <textarea
-                name="bio"
-                value={editForm.bio || ''}
-                onChange={handleInputChange}
-                placeholder="Tell students about yourself..."
-                rows="4"
-                style={{ 
-                  width: '100%', 
-                  padding: '12px 14px', 
-                  border: '1px solid rgba(255,255,255,0.08)', 
-                  borderRadius: '8px', 
-                  fontSize: '14px', 
-                  background: 'rgba(255,255,255,0.04)', 
-                  color: '#ffffff',
-                  fontFamily: 'inherit',
-                  resize: 'vertical'
-                }}
-              />
-            ) : (
-              <p style={{ fontSize: '15px', color: '#e2e8f0', lineHeight: '1.6' }}>
-                {editForm.bio || 'No bio provided yet.'}
-              </p>
-            )}
-          </div>
-
-          {/* Tier - Dynamic from API */}
-          <div>
-            <label style={{ display: 'block', fontSize: '13px', fontWeight: 500, color: '#94a3b8', marginBottom: '4px' }}>
-              🏅 Tier / Level
-            </label>
-            {isEditing ? (
-              <select
-                name="tier"
-                value={editForm.tier || ''}
-                onChange={handleInputChange}
-                style={{ 
-                  width: '100%', 
-                  padding: '10px 14px', 
-                  border: '1px solid rgba(255,255,255,0.08)', 
-                  borderRadius: '8px', 
-                  fontSize: '14px', 
-                  background: 'rgba(255,255,255,0.04)', 
-                  color: '#ffffff'
-                }}
-              >
-                <option value="">Select Tier</option>
-                <option value="TIER_1">TIER_1 - Grades 8-9</option>
-                <option value="TIER_2">TIER_2 - Grades 10-11</option>
-                <option value="TIER_3">TIER_3 - Grade 12 & Tertiary</option>
-              </select>
-            ) : (
-              <span style={{ fontSize: '15px', color: '#ffffff', fontWeight: 500 }}>
-                {editForm.tier || 'Not set'}
-              </span>
-            )}
-          </div>
-
-          {/* Shift - Dynamic from API */}
-          <div>
-            <label style={{ display: 'block', fontSize: '13px', fontWeight: 500, color: '#94a3b8', marginBottom: '4px' }}>
-              ⏰ Shift
-            </label>
-            {isEditing ? (
-              <select
-                name="shiftId"
-                value={editForm.shiftId || ''}
-                onChange={handleInputChange}
-                style={{ 
-                  width: '100%', 
-                  padding: '10px 14px', 
-                  border: '1px solid rgba(255,255,255,0.08)', 
-                  borderRadius: '8px', 
-                  fontSize: '14px', 
-                  background: 'rgba(255,255,255,0.04)', 
-                  color: '#ffffff'
-                }}
-              >
-                <option value="">Select Shift</option>
-                {shiftOptions.map(shift => (
-                  <option key={shift.id} value={shift.id}>
-                    {shift.name} ({shift.sast_start} - {shift.sast_end})
-                  </option>
-                ))}
-              </select>
-            ) : (
-              <span style={{ fontSize: '15px', color: '#ffffff', fontWeight: 500 }}>
-                {shiftOptions.find(s => s.id === editForm.shiftId)?.name || 'Not set'}
-              </span>
-            )}
-          </div>
-
-          {/* Subjects - Dynamic from API */}
-          <div style={{ gridColumn: '1 / -1' }}>
-            <label style={{ display: 'block', fontSize: '13px', fontWeight: 500, color: '#94a3b8', marginBottom: '4px' }}>
-              📖 Subjects Taught
-            </label>
-            {isEditing ? (
-              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', padding: '8px 0' }}>
-                {subjectOptions.map(subject => (
-                  <label key={subject} style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '13px', color: '#e2e8f0', cursor: 'pointer' }}>
-                    <input
-                      type="checkbox"
-                      checked={(editForm.subjects || []).includes(subject)}
-                      onChange={() => handleSubjectToggle(subject)}
-                      style={{ accentColor: '#4f46e5' }}
-                    />
-                    {subject}
-                  </label>
-                ))}
-              </div>
-            ) : (
-              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
-                {(editForm.subjects || []).length > 0 ? (
-                  (editForm.subjects || []).map(subject => (
-                    <span key={subject} style={{ 
-                      fontSize: '12px', 
-                      padding: '4px 14px', 
-                      borderRadius: '12px', 
-                      background: 'rgba(79,70,229,0.15)', 
-                      color: '#a5b4fc',
-                      border: '1px solid rgba(79,70,229,0.15)'
-                    }}>
-                      {subject}
-                    </span>
-                  ))
-                ) : (
-                  <span style={{ color: '#94a3b8' }}>No subjects added yet</span>
-                )}
-              </div>
-            )}
-          </div>
-
-          {/* Years Experience */}
-          <div>
-            <label style={{ display: 'block', fontSize: '13px', fontWeight: 500, color: '#94a3b8', marginBottom: '4px' }}>
-              📅 Years of Experience
-            </label>
-            {isEditing ? (
-              <input
-                type="number"
-                name="yearsExperience"
-                value={editForm.yearsExperience || 0}
-                onChange={handleInputChange}
-                min="0"
-                max="50"
-                style={{ 
-                  width: '100%', 
-                  padding: '10px 14px', 
-                  border: '1px solid rgba(255,255,255,0.08)', 
-                  borderRadius: '8px', 
-                  fontSize: '14px', 
-                  background: 'rgba(255,255,255,0.04)', 
-                  color: '#ffffff'
-                }}
-              />
-            ) : (
-              <span style={{ fontSize: '15px', color: '#ffffff', fontWeight: 500 }}>
-                {editForm.yearsExperience || 0} years
-              </span>
-            )}
-          </div>
-
-          {/* Education */}
-          <div>
-            <label style={{ display: 'block', fontSize: '13px', fontWeight: 500, color: '#94a3b8', marginBottom: '4px' }}>
-              🎓 Education
-            </label>
-            {isEditing ? (
-              <input
-                type="text"
-                name="education"
-                value={editForm.education || ''}
-                onChange={handleInputChange}
-                placeholder="e.g., BSc Mathematics, University of Cape Town"
-                style={{ 
-                  width: '100%', 
-                  padding: '10px 14px', 
-                  border: '1px solid rgba(255,255,255,0.08)', 
-                  borderRadius: '8px', 
-                  fontSize: '14px', 
-                  background: 'rgba(255,255,255,0.04)', 
-                  color: '#ffffff'
-                }}
-              />
-            ) : (
-              <span style={{ fontSize: '15px', color: '#ffffff', fontWeight: 500 }}>
-                {editForm.education || 'Not specified'}
-              </span>
-            )}
-          </div>
-
-          {/* Phone */}
-          <div>
-            <label style={{ display: 'block', fontSize: '13px', fontWeight: 500, color: '#94a3b8', marginBottom: '4px' }}>
-              📞 Phone Number
-            </label>
-            {isEditing ? (
-              <input
-                type="tel"
-                name="phone"
-                value={editForm.phone || ''}
-                onChange={handleInputChange}
-                placeholder="+27 82 123 4567"
-                style={{ 
-                  width: '100%', 
-                  padding: '10px 14px', 
-                  border: '1px solid rgba(255,255,255,0.08)', 
-                  borderRadius: '8px', 
-                  fontSize: '14px', 
-                  background: 'rgba(255,255,255,0.04)', 
-                  color: '#ffffff'
-                }}
-              />
-            ) : (
-              <span style={{ fontSize: '15px', color: '#ffffff', fontWeight: 500 }}>
-                {editForm.phone || 'Not set'}
-              </span>
-            )}
-          </div>
-
-          {/* LinkedIn */}
-          <div>
-            <label style={{ display: 'block', fontSize: '13px', fontWeight: 500, color: '#94a3b8', marginBottom: '4px' }}>
-              🔗 LinkedIn
-            </label>
-            {isEditing ? (
-              <input
-                type="url"
-                name="linkedin"
-                value={editForm.linkedin || ''}
-                onChange={handleInputChange}
-                placeholder="https://linkedin.com/in/your-profile"
-                style={{ 
-                  width: '100%', 
-                  padding: '10px 14px', 
-                  border: '1px solid rgba(255,255,255,0.08)', 
-                  borderRadius: '8px', 
-                  fontSize: '14px', 
-                  background: 'rgba(255,255,255,0.04)', 
-                  color: '#ffffff'
-                }}
-              />
-            ) : (
-              <span style={{ fontSize: '15px', color: '#ffffff', fontWeight: 500 }}>
-                {editForm.linkedin || 'Not set'}
-              </span>
-            )}
-          </div>
-
-          {/* Website */}
-          <div>
-            <label style={{ display: 'block', fontSize: '13px', fontWeight: 500, color: '#94a3b8', marginBottom: '4px' }}>
-              🌐 Website
-            </label>
-            {isEditing ? (
-              <input
-                type="url"
-                name="website"
-                value={editForm.website || ''}
-                onChange={handleInputChange}
-                placeholder="https://yourwebsite.com"
-                style={{ 
-                  width: '100%', 
-                  padding: '10px 14px', 
-                  border: '1px solid rgba(255,255,255,0.08)', 
-                  borderRadius: '8px', 
-                  fontSize: '14px', 
-                  background: 'rgba(255,255,255,0.04)', 
-                  color: '#ffffff'
-                }}
-              />
-            ) : (
-              <span style={{ fontSize: '15px', color: '#ffffff', fontWeight: 500 }}>
-                {editForm.website || 'Not set'}
-              </span>
-            )}
-          </div>
-        </div>
-      </div>
-    );
   };
 
   // ============================================
@@ -896,6 +603,46 @@ const Profile = () => {
     border: '1px solid rgba(255,255,255,0.06)'
   };
 
+  const sectionTitleStyle = {
+    fontSize: '18px',
+    fontWeight: 600,
+    color: '#ffffff',
+    margin: '0 0 20px 0',
+    paddingBottom: '12px',
+    borderBottom: '1px solid rgba(255,255,255,0.06)'
+  };
+
+  const labelStyle = {
+    display: 'block',
+    fontSize: '13px',
+    fontWeight: 500,
+    color: '#94a3b8',
+    marginBottom: '4px'
+  };
+
+  const valueStyle = {
+    fontSize: '15px',
+    color: '#ffffff',
+    fontWeight: 500
+  };
+
+  const inputStyle = {
+    width: '100%',
+    padding: '10px 14px',
+    border: '1px solid rgba(255,255,255,0.08)',
+    borderRadius: '8px',
+    fontSize: '14px',
+    background: 'rgba(255,255,255,0.04)',
+    color: '#ffffff'
+  };
+
+  const fieldRowStyle = {
+    display: 'flex',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: '6px 0'
+  };
+
   if (loading) {
     return (
       <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '60vh', color: '#94a3b8' }}>
@@ -904,9 +651,6 @@ const Profile = () => {
     );
   }
 
-  // ============================================
-  // DETERMINE WHICH STATS TO SHOW
-  // ============================================
   const statsToShow = isTutor ? [
     { number: tutorStats.totalSessions, label: 'Total Sessions' },
     { number: tutorStats.studentsTaught, label: 'Students Taught' },
@@ -921,7 +665,7 @@ const Profile = () => {
 
   return (
     <div style={containerStyle}>
-      {/* Header */}
+      {/* ===== HEADER ===== */}
       <div style={headerStyle}>
         <div style={{ 
           width: '80px', 
@@ -1043,7 +787,6 @@ const Profile = () => {
         </button>
       </div>
 
-      {/* Hidden file input for tutor photo upload */}
       <input
         ref={fileInputRef}
         type="file"
@@ -1052,13 +795,13 @@ const Profile = () => {
         style={{ display: 'none' }}
       />
 
-      {/* Status messages */}
+      {/* ===== STATUS MESSAGES ===== */}
       {photoError && <div style={{ background: 'rgba(239,68,68,0.1)', color: '#fca5a5', padding: '12px 20px', borderRadius: '10px', marginBottom: '16px', border: '1px solid rgba(239,68,68,0.15)' }}>{photoError}</div>}
       {photoUploading && <div style={{ background: 'rgba(52,211,153,0.1)', color: '#6ee7b7', padding: '12px 20px', borderRadius: '10px', marginBottom: '16px', border: '1px solid rgba(52,211,153,0.15)' }}>📤 Uploading photo...</div>}
       {error && <div style={{ background: 'rgba(239,68,68,0.1)', color: '#fca5a5', padding: '12px 20px', borderRadius: '10px', marginBottom: '16px', border: '1px solid rgba(239,68,68,0.15)' }}>{error}</div>}
       {success && <div style={{ background: 'rgba(52,211,153,0.1)', color: '#6ee7b7', padding: '12px 20px', borderRadius: '10px', marginBottom: '16px', border: '1px solid rgba(52,211,153,0.15)' }}>{success}</div>}
 
-      {/* Stats */}
+      {/* ===== STATS ===== */}
       <div style={statsGridStyle}>
         {statsToShow.map((stat, i) => (
           <div key={i} style={statCardStyle}>
@@ -1068,11 +811,11 @@ const Profile = () => {
         ))}
       </div>
 
-      {/* Profile Grid */}
+      {/* ===== PROFILE GRID ===== */}
       <div style={gridStyle}>
-        {/* Personal Information */}
+        {/* ===== PERSONAL INFORMATION ===== */}
         <div style={cardStyle}>
-          <h3 style={{ fontSize: '18px', fontWeight: 600, color: '#ffffff', margin: '0 0 20px 0', paddingBottom: '12px', borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
+          <h3 style={sectionTitleStyle}>
             {isTutor ? '📋 Tutor Information' : '📋 Personal Information'}
           </h3>
           <div>
@@ -1083,7 +826,7 @@ const Profile = () => {
               { label: isTutor ? 'Expertise Level' : 'Grade / Year', name: 'grade', value: editForm.grade },
               { label: 'Role', name: 'cohort', value: isTutor ? 'Tutor' : (user?.cohort === 'HighSchool' ? 'High School Student' : 'University First Year') }
             ].map((field, i) => (
-              <div key={i} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '6px 0' }}>
+              <div key={i} style={fieldRowStyle}>
                 <span style={{ fontSize: '13px', fontWeight: 500, color: '#94a3b8' }}>{field.label}</span>
                 {isEditing && field.name !== 'cohort' ? (
                   <input
@@ -1091,45 +834,19 @@ const Profile = () => {
                     name={field.name}
                     value={field.value}
                     onChange={handleInputChange}
-                    style={{ 
-                      padding: '8px 12px', 
-                      border: '1px solid rgba(255,255,255,0.08)', 
-                      borderRadius: '8px', 
-                      fontSize: '14px', 
-                      width: '60%', 
-                      background: 'rgba(255,255,255,0.04)', 
-                      color: '#ffffff' 
-                    }}
+                    style={inputStyle}
                   />
                 ) : (
-                  <span style={{ fontSize: '15px', color: '#ffffff', fontWeight: 500 }}>{field.value || 'Not set'}</span>
+                  <span style={valueStyle}>{field.value || 'Not set'}</span>
                 )}
               </div>
             ))}
           </div>
-          {isEditing && (
-            <div style={{ marginTop: '16px', paddingTop: '16px', borderTop: '1px solid rgba(255,255,255,0.06)' }}>
-              <button onClick={handleSaveProfile} disabled={loading} style={{ 
-                padding: '10px 28px', 
-                background: 'linear-gradient(135deg, #4f46e5, #7c3aed)', 
-                color: '#ffffff', 
-                border: 'none', 
-                borderRadius: '10px', 
-                fontSize: '14px', 
-                fontWeight: 600, 
-                cursor: 'pointer' 
-              }}>
-                {loading ? 'Saving...' : '💾 Save Changes'}
-              </button>
-            </div>
-          )}
         </div>
 
-        {/* Account Settings */}
+        {/* ===== ACCOUNT SETTINGS ===== */}
         <div style={cardStyle}>
-          <h3 style={{ fontSize: '18px', fontWeight: 600, color: '#ffffff', margin: '0 0 20px 0', paddingBottom: '12px', borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
-            🔒 Account Settings
-          </h3>
+          <h3 style={sectionTitleStyle}>🔒 Account Settings</h3>
           <div>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '14px 16px', borderRadius: '10px', border: '1px solid rgba(255,255,255,0.06)' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
@@ -1155,16 +872,243 @@ const Profile = () => {
         </div>
 
         {/* ============================================
-            TUTOR PROFILE FIELDS - DYNAMIC
+            TUTOR PROFILE - CLEAN SECTION
             ============================================ */}
-        {renderTutorFields()}
+        {isTutor && (
+          <div style={cardFullStyle}>
+            <h3 style={sectionTitleStyle}>👨‍🏫 Tutor Profile</h3>
+            
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
+              {/* Bio - Full Width */}
+              <div style={{ gridColumn: '1 / -1' }}>
+                <label style={labelStyle}>📝 About Me</label>
+                {isEditing ? (
+                  <textarea
+                    name="bio"
+                    value={editForm.bio || ''}
+                    onChange={handleInputChange}
+                    placeholder="Tell students about yourself..."
+                    rows="4"
+                    style={{ 
+                      ...inputStyle,
+                      fontFamily: 'inherit',
+                      resize: 'vertical'
+                    }}
+                  />
+                ) : (
+                  <p style={{ fontSize: '15px', color: '#e2e8f0', lineHeight: '1.6' }}>
+                    {editForm.bio || 'No bio provided yet.'}
+                  </p>
+                )}
+              </div>
+
+              {/* Tier */}
+              <div>
+                <label style={labelStyle}>🏅 Tier / Level</label>
+                {isEditing ? (
+                  <select
+                    name="tier"
+                    value={editForm.tier || ''}
+                    onChange={handleInputChange}
+                    style={inputStyle}
+                  >
+                    <option value="">Select Tier</option>
+                    <option value="TIER_1">TIER_1 - Grades 8-9</option>
+                    <option value="TIER_2">TIER_2 - Grades 10-11</option>
+                    <option value="TIER_3">TIER_3 - Grade 12 & Tertiary</option>
+                  </select>
+                ) : (
+                  <span style={valueStyle}>{editForm.tier || 'Not set'}</span>
+                )}
+              </div>
+
+              {/* Shift */}
+              <div>
+                <label style={labelStyle}>⏰ Shift</label>
+                {isEditing ? (
+                  <select
+                    name="shiftId"
+                    value={editForm.shiftId || ''}
+                    onChange={handleInputChange}
+                    style={inputStyle}
+                  >
+                    <option value="">Select Shift</option>
+                    {shiftOptions.map(shift => (
+                      <option key={shift.id} value={shift.id}>
+                        {shift.name} ({shift.sast_start} - {shift.sast_end})
+                      </option>
+                    ))}
+                  </select>
+                ) : (
+                  <span style={valueStyle}>
+                    {shiftOptions.find(s => s.id === editForm.shiftId)?.name || 'Not set'}
+                  </span>
+                )}
+              </div>
+
+              {/* Subjects - Full Width */}
+              <div style={{ gridColumn: '1 / -1' }}>
+                <label style={labelStyle}>📖 Subjects Taught</label>
+                {isEditing ? (
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', padding: '8px 0' }}>
+                    {subjectOptions.map(subject => (
+                      <label key={subject} style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '13px', color: '#e2e8f0', cursor: 'pointer' }}>
+                        <input
+                          type="checkbox"
+                          checked={(editForm.subjects || []).includes(subject)}
+                          onChange={() => handleSubjectToggle(subject)}
+                          style={{ accentColor: '#4f46e5' }}
+                        />
+                        {subject}
+                      </label>
+                    ))}
+                  </div>
+                ) : (
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
+                    {(editForm.subjects || []).length > 0 ? (
+                      (editForm.subjects || []).map(subject => (
+                        <span key={subject} style={{ 
+                          fontSize: '12px', 
+                          padding: '4px 14px', 
+                          borderRadius: '12px', 
+                          background: 'rgba(79,70,229,0.15)', 
+                          color: '#a5b4fc',
+                          border: '1px solid rgba(79,70,229,0.15)'
+                        }}>
+                          {subject}
+                        </span>
+                      ))
+                    ) : (
+                      <span style={{ color: '#94a3b8' }}>No subjects added yet</span>
+                    )}
+                  </div>
+                )}
+              </div>
+
+              {/* Years Experience */}
+              <div>
+                <label style={labelStyle}>📅 Years of Experience</label>
+                {isEditing ? (
+                  <input
+                    type="number"
+                    name="yearsExperience"
+                    value={editForm.yearsExperience || 0}
+                    onChange={handleInputChange}
+                    min="0"
+                    max="50"
+                    style={inputStyle}
+                  />
+                ) : (
+                  <span style={valueStyle}>{editForm.yearsExperience || 0} years</span>
+                )}
+              </div>
+
+              {/* Education */}
+              <div>
+                <label style={labelStyle}>🎓 Education</label>
+                {isEditing ? (
+                  <input
+                    type="text"
+                    name="education"
+                    value={editForm.education || ''}
+                    onChange={handleInputChange}
+                    placeholder="e.g., BSc Mathematics, University of Cape Town"
+                    style={inputStyle}
+                  />
+                ) : (
+                  <span style={valueStyle}>{editForm.education || 'Not specified'}</span>
+                )}
+              </div>
+
+              {/* Phone */}
+              <div>
+                <label style={labelStyle}>📞 Phone Number</label>
+                {isEditing ? (
+                  <input
+                    type="tel"
+                    name="phone"
+                    value={editForm.phone || ''}
+                    onChange={handleInputChange}
+                    placeholder="+27 82 123 4567"
+                    style={inputStyle}
+                  />
+                ) : (
+                  <span style={valueStyle}>{editForm.phone || 'Not set'}</span>
+                )}
+              </div>
+
+              {/* LinkedIn */}
+              <div>
+                <label style={labelStyle}>🔗 LinkedIn</label>
+                {isEditing ? (
+                  <input
+                    type="url"
+                    name="linkedin"
+                    value={editForm.linkedin || ''}
+                    onChange={handleInputChange}
+                    placeholder="https://linkedin.com/in/your-profile"
+                    style={inputStyle}
+                  />
+                ) : (
+                  <span style={valueStyle}>{editForm.linkedin || 'Not set'}</span>
+                )}
+              </div>
+
+              {/* Website */}
+              <div>
+                <label style={labelStyle}>🌐 Website</label>
+                {isEditing ? (
+                  <input
+                    type="url"
+                    name="website"
+                    value={editForm.website || ''}
+                    onChange={handleInputChange}
+                    placeholder="https://yourwebsite.com"
+                    style={inputStyle}
+                  />
+                ) : (
+                  <span style={valueStyle}>{editForm.website || 'Not set'}</span>
+                )}
+              </div>
+            </div>
+
+            {/* ===== SAVE BUTTON - ONLY HERE ===== */}
+            {isEditing && (
+              <div style={{ 
+                marginTop: '24px', 
+                paddingTop: '20px', 
+                borderTop: '1px solid rgba(255,255,255,0.06)',
+                display: 'flex',
+                justifyContent: 'flex-end'
+              }}>
+                <button 
+                  onClick={handleSaveProfile} 
+                  disabled={loading}
+                  style={{ 
+                    padding: '12px 40px', 
+                    background: 'linear-gradient(135deg, #4f46e5, #7c3aed)', 
+                    color: '#ffffff', 
+                    border: 'none', 
+                    borderRadius: '10px', 
+                    fontSize: '16px', 
+                    fontWeight: 600, 
+                    cursor: 'pointer',
+                    transition: 'all 0.3s ease'
+                  }}
+                >
+                  {loading ? 'Saving...' : '💾 Save Changes'}
+                </button>
+              </div>
+            )}
+          </div>
+        )}
 
         {/* ============================================
-            ENROLLED COURSES - STUDENTS ONLY
+            STUDENT: ENROLLED COURSES
             ============================================ */}
         {!isTutor && (
           <div style={cardFullStyle}>
-            <h3 style={{ fontSize: '18px', fontWeight: 600, color: '#ffffff', margin: '0 0 20px 0', paddingBottom: '12px', borderBottom: '1px solid rgba(255,255,255,0.06)' }}>📚 My Courses</h3>
+            <h3 style={sectionTitleStyle}>📚 My Courses</h3>
             {enrollments.length > 0 ? (
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(250px, 1fr))', gap: '12px' }}>
                 {enrollments.map((course) => (
@@ -1193,18 +1137,16 @@ const Profile = () => {
         )}
 
         {/* ============================================
-            TUTOR SESSIONS - TUTORS ONLY
+            TUTOR: RECENT SESSIONS
             ============================================ */}
         {isTutor && (
           <div style={cardFullStyle}>
-            <h3 style={{ fontSize: '18px', fontWeight: 600, color: '#ffffff', margin: '0 0 20px 0', paddingBottom: '12px', borderBottom: '1px solid rgba(255,255,255,0.06)' }}>📋 Recent Sessions</h3>
+            <h3 style={sectionTitleStyle}>📋 Recent Sessions</h3>
             {tutorStats.totalSessions > 0 ? (
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(250px, 1fr))', gap: '12px' }}>
-                <div style={{ textAlign: 'center', padding: '20px', color: '#94a3b8' }}>
-                  <p style={{ fontSize: '14px' }}>You have taught {tutorStats.totalSessions} sessions</p>
-                  <p style={{ fontSize: '13px', color: '#64748b' }}>View all sessions in your dashboard</p>
-                  <button onClick={() => navigate('/tutor/dashboard')} style={{ marginTop: '12px', padding: '10px 28px', background: 'linear-gradient(135deg, #059669, #10b981)', color: '#ffffff', border: 'none', borderRadius: '10px', fontSize: '14px', fontWeight: 600, cursor: 'pointer' }}>Go to Dashboard →</button>
-                </div>
+              <div style={{ textAlign: 'center', padding: '20px', color: '#94a3b8' }}>
+                <p style={{ fontSize: '14px' }}>You have taught {tutorStats.totalSessions} sessions</p>
+                <p style={{ fontSize: '13px', color: '#64748b' }}>View all sessions in your dashboard</p>
+                <button onClick={() => navigate('/tutor/dashboard')} style={{ marginTop: '12px', padding: '10px 28px', background: 'linear-gradient(135deg, #059669, #10b981)', color: '#ffffff', border: 'none', borderRadius: '10px', fontSize: '14px', fontWeight: 600, cursor: 'pointer' }}>Go to Dashboard →</button>
               </div>
             ) : (
               <div style={{ textAlign: 'center', padding: '32px 0', color: '#94a3b8' }}>
@@ -1216,7 +1158,9 @@ const Profile = () => {
         )}
       </div>
 
-      {/* Modals */}
+      {/* ============================================
+          MODALS
+          ============================================ */}
       {showPasswordModal && (
         <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.7)', backdropFilter: 'blur(8px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }} onClick={() => setShowPasswordModal(false)}>
           <div style={{ background: '#141b2d', borderRadius: '16px', maxWidth: '480px', width: '90%', maxHeight: '90vh', overflow: 'auto', boxShadow: '0 20px 60px rgba(0,0,0,0.5)', border: '1px solid rgba(255,255,255,0.06)' }} onClick={(e) => e.stopPropagation()}>
@@ -1228,15 +1172,15 @@ const Profile = () => {
               <div style={{ padding: '24px' }}>
                 <div style={{ marginBottom: '16px' }}>
                   <label style={{ display: 'block', fontSize: '13px', fontWeight: 500, color: '#94a3b8', marginBottom: '4px' }}>Current Password</label>
-                  <input type="password" value={passwordData.currentPassword} onChange={(e) => setPasswordData(prev => ({ ...prev, currentPassword: e.target.value }))} required style={{ width: '100%', padding: '10px 14px', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '8px', fontSize: '14px', background: 'rgba(255,255,255,0.04)', color: '#ffffff' }} />
+                  <input type="password" value={passwordData.currentPassword} onChange={(e) => setPasswordData(prev => ({ ...prev, currentPassword: e.target.value }))} required style={inputStyle} />
                 </div>
                 <div style={{ marginBottom: '16px' }}>
                   <label style={{ display: 'block', fontSize: '13px', fontWeight: 500, color: '#94a3b8', marginBottom: '4px' }}>New Password</label>
-                  <input type="password" value={passwordData.newPassword} onChange={(e) => setPasswordData(prev => ({ ...prev, newPassword: e.target.value }))} required minLength="8" style={{ width: '100%', padding: '10px 14px', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '8px', fontSize: '14px', background: 'rgba(255,255,255,0.04)', color: '#ffffff' }} />
+                  <input type="password" value={passwordData.newPassword} onChange={(e) => setPasswordData(prev => ({ ...prev, newPassword: e.target.value }))} required minLength="8" style={inputStyle} />
                 </div>
                 <div style={{ marginBottom: '16px' }}>
                   <label style={{ display: 'block', fontSize: '13px', fontWeight: 500, color: '#94a3b8', marginBottom: '4px' }}>Confirm New Password</label>
-                  <input type="password" value={passwordData.confirmPassword} onChange={(e) => setPasswordData(prev => ({ ...prev, confirmPassword: e.target.value }))} required style={{ width: '100%', padding: '10px 14px', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '8px', fontSize: '14px', background: 'rgba(255,255,255,0.04)', color: '#ffffff' }} />
+                  <input type="password" value={passwordData.confirmPassword} onChange={(e) => setPasswordData(prev => ({ ...prev, confirmPassword: e.target.value }))} required style={inputStyle} />
                 </div>
                 {error && <div style={{ color: '#fca5a5', marginBottom: '16px' }}>{error}</div>}
                 <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px', paddingTop: '16px', borderTop: '1px solid rgba(255,255,255,0.06)' }}>
@@ -1268,7 +1212,7 @@ const Profile = () => {
         </div>
       )}
 
-      {/* Avatar Selector (Students only) */}
+      {/* ===== AVATAR SELECTOR ===== */}
       {!isTutor && showAvatarSelector && (
         <AvatarSelector
           onSelect={handleAvatarSelect}

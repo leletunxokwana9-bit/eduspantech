@@ -328,14 +328,14 @@ const MySessions = () => {
   // ============================================
   // ✅ CUSTOM POPUP HELPERS
   // ============================================
-  const showPopup = (title, message, type = 'info') => {
+  const showSuccessPopupMessage = (title, message) => {
     setPopupTitle(title);
     setPopupMessage(message);
-    setPopupType(type);
+    setPopupType('success');
     setShowSuccessPopup(true);
   };
 
-  const showErrorPopup = (message) => {
+  const showErrorPopupMessage = (message) => {
     setPopupTitle('❌ Error');
     setPopupMessage(message);
     setPopupType('error');
@@ -366,7 +366,6 @@ const MySessions = () => {
       });
 
       if (response.ok) {
-        // Update local state
         setSessions(prev => 
           prev.map(s => 
             s.id === sessionToCancel.id 
@@ -377,19 +376,18 @@ const MySessions = () => {
         
         setShowCancelPopup(false);
         setSessionToCancel(null);
-        showPopup('✅ Session Cancelled', 'Your session has been cancelled successfully.', 'success');
+        showSuccessPopupMessage('✅ Session Cancelled', 'Your session has been cancelled successfully.');
         
-        // Refresh sessions after a moment
         setTimeout(() => {
           fetchUserSessions();
         }, 1000);
       } else {
         const errorData = await response.json();
-        showErrorPopup(errorData.error || 'Failed to cancel session. Please try again.');
+        showErrorPopupMessage(errorData.error || 'Failed to cancel session. Please try again.');
       }
     } catch (error) {
       console.error('Error cancelling session:', error);
-      showErrorPopup('An error occurred. Please try again.');
+      showErrorPopupMessage('An error occurred. Please try again.');
     } finally {
       setActionLoading(false);
     }
@@ -410,7 +408,7 @@ const MySessions = () => {
     if (!sessionToReschedule) return;
     
     if (!rescheduleDate) {
-      showErrorPopup('Please select a new date and time.');
+      showErrorPopupMessage('Please select a new date and time.');
       return;
     }
 
@@ -419,7 +417,6 @@ const MySessions = () => {
     try {
       const token = localStorage.getItem('accessToken');
       
-      // First cancel the existing session
       const cancelResponse = await fetch(`${API_BASE_URL}/sessions/${sessionToReschedule.id}/cancel`, {
         method: 'PUT',
         headers: {
@@ -429,12 +426,11 @@ const MySessions = () => {
       });
 
       if (!cancelResponse.ok) {
-        showErrorPopup('Failed to cancel the existing session. Please try again.');
+        showErrorPopupMessage('Failed to cancel the existing session. Please try again.');
         setActionLoading(false);
         return;
       }
 
-      // Book a new session with the same tutor
       const bookResponse = await fetch(`${API_BASE_URL}/sessions`, {
         method: 'POST',
         headers: {
@@ -454,18 +450,17 @@ const MySessions = () => {
       if (bookResponse.ok) {
         setShowReschedulePopup(false);
         setSessionToReschedule(null);
-        showPopup('✅ Session Rescheduled', 'Your session has been rescheduled successfully!', 'success');
+        showSuccessPopupMessage('✅ Session Rescheduled', 'Your session has been rescheduled successfully!');
         
-        // Refresh sessions
         setTimeout(() => {
           fetchUserSessions();
         }, 1000);
       } else {
-        showErrorPopup(bookData.error || 'Failed to reschedule session. Please try again.');
+        showErrorPopupMessage(bookData.error || 'Failed to reschedule session. Please try again.');
       }
     } catch (error) {
       console.error('Error rescheduling session:', error);
-      showErrorPopup('An error occurred. Please try again.');
+      showErrorPopupMessage('An error occurred. Please try again.');
     } finally {
       setActionLoading(false);
     }

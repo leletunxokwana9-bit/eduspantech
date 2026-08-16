@@ -120,7 +120,95 @@ const EMOJIS = [
   '📚', '📖', '📕', '📗', '📘', '📙', '📓', '📒', '📃', '📜', '📄', '📰', '📑', '🔖', '🏷️', '💰', '💵', '💴', '💶', '💷', '🪙', '💳', '🧾', '💎', '⚖️', '🪝', '🔧', '🔩', '⚙️', '🗜️', '⚗️', '🧪', '🧫', '🧬', '🔬', '🔭', '📡', '💉', '🩸', '💊', '🩹', '🩺', '🧴', '🧵', '🧶', '🪡', '🧥', '🥼', '🦺', '👔', '👕', '👖', '🧣', '🧤', '🧦', '👗', '👘', '🥻', '🩱', '🩲', '🩳', '👙', '👚', '👛', '👜', '👝', '🎒', '👞', '👟', '🥾', '🥿', '👠', '👡', '🩰', '👢', '👑', '👒', '🎩', '🎓', '🧢', '⛑️', '📿', '💄', '💍'
 ];
 
-// ===== HELPERS =====
+// ============================================
+// ✅ RENDER TUTOR AVATAR - SAME AS TUTORS PAGE
+// ============================================
+const renderTutorAvatar = (tutor) => {
+  if (!tutor) return '🧑‍🏫';
+
+  const photoUrl = tutor.avatar || tutor.profileImage;
+  
+  if (photoUrl) {
+    return (
+      <img 
+        src={photoUrl} 
+        alt={tutor.name} 
+        className="tutor-avatar-img"
+        loading="lazy"
+        onError={(e) => {
+          e.target.style.display = 'none';
+          const parent = e.target.parentElement;
+          if (parent) {
+            const initials = tutor.name
+              .split(' ')
+              .map(word => word[0])
+              .join('')
+              .toUpperCase()
+              .slice(0, 2);
+            
+            const colors = ['#1a73e8', '#e91e63', '#ff6f00', '#7b1fa2', '#0d47a1', '#00695c', '#bf360c', '#4a148c', '#1a237e', '#880e4f', '#004d40'];
+            const hash = tutor.name.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
+            const color = colors[hash % colors.length];
+            
+            const fallbackDiv = document.createElement('div');
+            fallbackDiv.className = 'tutor-avatar-default';
+            fallbackDiv.style.cssText = `
+              width: 100%;
+              height: 100%;
+              border-radius: 50%;
+              background: ${color};
+              color: white;
+              display: flex;
+              align-items: center;
+              justify-content: center;
+              font-size: 18px;
+              font-weight: bold;
+              text-transform: uppercase;
+            `;
+            fallbackDiv.textContent = initials;
+            parent.appendChild(fallbackDiv);
+          }
+        }}
+      />
+    );
+  }
+  
+  const initials = tutor.name
+    .split(' ')
+    .map(word => word[0])
+    .join('')
+    .toUpperCase()
+    .slice(0, 2);
+  
+  const colors = ['#1a73e8', '#e91e63', '#ff6f00', '#7b1fa2', '#0d47a1', '#00695c', '#bf360c', '#4a148c', '#1a237e', '#880e4f', '#004d40'];
+  const hash = tutor.name.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
+  const color = colors[hash % colors.length];
+  
+  return (
+    <div 
+      className="tutor-avatar-default"
+      style={{
+        width: '100%',
+        height: '100%',
+        borderRadius: '50%',
+        background: color,
+        color: 'white',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        fontSize: '18px',
+        fontWeight: 'bold',
+        textTransform: 'uppercase'
+      }}
+    >
+      {initials}
+    </div>
+  );
+};
+
+// ============================================
+// ✅ HELPERS - FIXED getPublicIP with caching
+// ============================================
 const getCurrentTime = () => {
   return new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 };
@@ -133,20 +221,30 @@ const generateUUID = () => {
   });
 };
 
+// ✅ FIXED: Get public IP with caching and timeout
 const getPublicIP = async () => {
-  try {
-    const response = await fetch('https://ipapi.co/json/');
-    const data = await response.json();
-    return data.ip || '127.0.0.1';
-  } catch {
-    try {
-      const response = await fetch('https://api.ipify.org?format=json');
-      const data = await response.json();
-      return data.ip || '127.0.0.1';
-    } catch {
-      return '127.0.0.1';
-    }
+  // Check if we already have a cached IP
+  const cachedIP = localStorage.getItem('public_ip');
+  if (cachedIP) {
+    return cachedIP;
   }
+
+  try {
+    const response = await fetch('https://api.ipify.org?format=json', {
+      signal: AbortSignal.timeout(3000)
+    });
+    if (response.ok) {
+      const data = await response.json();
+      const ip = data.ip || '127.0.0.1';
+      localStorage.setItem('public_ip', ip);
+      return ip;
+    }
+  } catch (error) {
+    console.log('⚠️ Could not fetch public IP:', error.message);
+  }
+  
+  // Fallback to localhost
+  return '127.0.0.1';
 };
 
 const getShiftInfo = () => {
@@ -245,7 +343,7 @@ const TutorSession = () => {
   const [isRecording, setIsRecording] = useState(false);
 
   // ============================================
-  // RATING FEATURE - NEW
+  // RATING FEATURE
   // ============================================
   const [showRatingModal, setShowRatingModal] = useState(false);
   const [ratingData, setRatingData] = useState({
@@ -259,6 +357,39 @@ const TutorSession = () => {
   const [ratingSubmitted, setRatingSubmitted] = useState(false);
   const [ratingLoading, setRatingLoading] = useState(false);
   const [hoveredStar, setHoveredStar] = useState(0);
+  const [sessionEnded, setSessionEnded] = useState(false);
+
+  // ============================================
+  // ✅ CHECK IF USER IS TUTOR OR STUDENT
+  // ============================================
+  const [isTutorUser, setIsTutorUser] = useState(false);
+  const [currentUser, setCurrentUser] = useState(null);
+
+  useEffect(() => {
+    const checkUserRole = async () => {
+      try {
+        const token = localStorage.getItem('accessToken');
+        if (token) {
+          const response = await fetch(`${API_BASE_URL}/auth/me`, {
+            headers: {
+              'Authorization': `Bearer ${token}`
+            }
+          });
+          if (response.ok) {
+            const data = await response.json();
+            const user = data.user || data;
+            setCurrentUser(user);
+            const isTutor = user.is_tutor === true || user.role === 'tutor';
+            setIsTutorUser(isTutor);
+            console.log('👤 User role:', isTutor ? 'Tutor' : 'Student');
+          }
+        }
+      } catch (error) {
+        console.error('Failed to check user role:', error);
+      }
+    };
+    checkUserRole();
+  }, []);
 
   // ===== STATE =====
   const [isMuted, setIsMuted] = useState(false);
@@ -271,7 +402,7 @@ const TutorSession = () => {
   const [isHandRaised, setIsHandRaised] = useState(false);
   const [showChat, setShowChat] = useState(false);
   const [isMobile, setIsMobile] = useState(window.innerWidth <= 768);
-  const [participants] = useState([
+  const [participants, setParticipants] = useState([
     { id: 'tutor', name: tutor?.name || 'Tutor', role: 'tutor', online: true },
     { id: 'student', name: 'You', role: 'student', online: true },
   ]);
@@ -335,7 +466,7 @@ const TutorSession = () => {
     img.src = dataUrl;
   }, [watermark, watermarkVisible]);
 
-  // ===== INIT =====
+  // ===== INIT - FIXED =====
   useEffect(() => {
     let uuid = localStorage.getItem('eduspantech_uuid');
     if (!uuid) {
@@ -594,8 +725,13 @@ const TutorSession = () => {
     setHistoryIndex(newHistory.length - 1);
   }, [canvasHistory, historyIndex, maxHistory]);
 
-  // ===== WHITEBOARD =====
+  // ============================================
+  // ✅ WHITEBOARD - DISABLED FOR STUDENTS
+  // ============================================
   const startDrawing = (e) => {
+    if (!isTutorUser) {
+      return;
+    }
     if (tokens < 1) {
       alert('Rate limit exceeded. Please wait a moment.');
       return;
@@ -616,7 +752,7 @@ const TutorSession = () => {
   };
 
   const draw = (e) => {
-    if (!isDrawingRef.current) return;
+    if (!isDrawingRef.current || !isTutorUser) return;
     const canvas = canvasRef.current;
     const ctx = canvas.getContext('2d');
     const rect = canvas.getBoundingClientRect();
@@ -638,6 +774,9 @@ const TutorSession = () => {
   };
 
   const clearWhiteboard = () => {
+    if (!isTutorUser) {
+      return;
+    }
     const canvas = canvasRef.current;
     const ctx = canvas.getContext('2d');
     ctx.clearRect(0, 0, canvas.width, canvas.height);
@@ -647,6 +786,7 @@ const TutorSession = () => {
 
   // ===== UNDO/REDO =====
   const undo = () => {
+    if (!isTutorUser) return;
     if (historyIndex > 0) {
       const newIndex = historyIndex - 1;
       setHistoryIndex(newIndex);
@@ -655,6 +795,7 @@ const TutorSession = () => {
   };
 
   const redo = () => {
+    if (!isTutorUser) return;
     if (historyIndex < canvasHistory.length - 1) {
       const newIndex = historyIndex + 1;
       setHistoryIndex(newIndex);
@@ -816,7 +957,7 @@ const TutorSession = () => {
   };
 
   // ============================================
-  // RATING FUNCTIONS
+  // ✅ RATING FUNCTIONS
   // ============================================
   const handleRatingChange = (category, value) => {
     setRatingData(prev => ({
@@ -844,7 +985,6 @@ const TutorSession = () => {
       const token = localStorage.getItem('accessToken');
       const sessionId = location.state?.sessionId || 'temp_session';
 
-      // ✅ FIXED: Use API_BASE_URL instead of hardcoded URL
       const response = await fetch(`${API_BASE_URL}/ratings`, {
         method: 'POST',
         headers: {
@@ -866,6 +1006,10 @@ const TutorSession = () => {
       if (response.ok) {
         setRatingSubmitted(true);
         setRatingLoading(false);
+        
+        // ✅ Update tutor rating in the database
+        await updateTutorRating(tutor?.id, ratingData.overall);
+        
         setTimeout(() => {
           setShowRatingModal(false);
           navigate('/dashboard');
@@ -879,6 +1023,29 @@ const TutorSession = () => {
       console.error('Rating submission error:', error);
       alert('Failed to submit rating. Please try again.');
       setRatingLoading(false);
+    }
+  };
+
+  // ✅ Update tutor rating in database
+  const updateTutorRating = async (tutorId, newRating) => {
+    try {
+      const token = localStorage.getItem('accessToken');
+      const response = await fetch(`${API_BASE_URL}/tutors/${tutorId}/rating`, {
+        method: 'PUT',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          rating: newRating
+        })
+      });
+      
+      if (response.ok) {
+        console.log('✅ Tutor rating updated successfully');
+      }
+    } catch (error) {
+      console.error('Failed to update tutor rating:', error);
     }
   };
 
@@ -915,15 +1082,19 @@ const TutorSession = () => {
     navigate('/dashboard');
   };
 
-  // ===== END SESSION =====
+  // ============================================
+  // ✅ END SESSION - FIXED
+  // ============================================
   const endSession = async () => {
+    if (sessionEnded) return;
+    
     const duration = Math.floor((Date.now() - sessionStats.startTime) / 1000);
     setSessionStats(prev => ({ ...prev, duration }));
+    setSessionEnded(true);
     
     // Send end session request to backend
     try {
       const token = localStorage.getItem('accessToken');
-      // ✅ FIXED: Use API_BASE_URL instead of hardcoded URL
       const response = await fetch(`${API_BASE_URL}/sessions/end`, {
         method: 'POST',
         headers: {
@@ -943,12 +1114,14 @@ const TutorSession = () => {
       console.error('Error ending session:', error);
     }
     
-    // Show rating modal instead of summary
+    // ✅ Show rating modal
     setShowRatingModal(true);
     setShowSummary(false);
   };
 
-  // ===== RATING MODAL =====
+  // ============================================
+  // ✅ RATING MODAL
+  // ============================================
   const RatingModal = () => (
     <div className="rating-modal-overlay">
       <div className="rating-modal">
@@ -960,7 +1133,6 @@ const TutorSession = () => {
         <div className="rating-modal-body">
           {!ratingSubmitted ? (
             <>
-              {/* Overall Rating */}
               <div className="rating-category">
                 <label>Overall Experience</label>
                 <div className="stars-container">
@@ -971,7 +1143,6 @@ const TutorSession = () => {
                 </div>
               </div>
 
-              {/* Communication */}
               <div className="rating-category">
                 <label>💬 Communication</label>
                 <div className="stars-container">
@@ -979,7 +1150,6 @@ const TutorSession = () => {
                 </div>
               </div>
 
-              {/* Knowledge */}
               <div className="rating-category">
                 <label>📚 Subject Knowledge</label>
                 <div className="stars-container">
@@ -987,7 +1157,6 @@ const TutorSession = () => {
                 </div>
               </div>
 
-              {/* Teaching */}
               <div className="rating-category">
                 <label>📖 Teaching Style</label>
                 <div className="stars-container">
@@ -995,7 +1164,6 @@ const TutorSession = () => {
                 </div>
               </div>
 
-              {/* Punctuality */}
               <div className="rating-category">
                 <label>⏰ Punctuality</label>
                 <div className="stars-container">
@@ -1003,7 +1171,6 @@ const TutorSession = () => {
                 </div>
               </div>
 
-              {/* Review */}
               <div className="rating-review">
                 <label>Write a Review (Optional)</label>
                 <textarea
@@ -1047,7 +1214,9 @@ const TutorSession = () => {
     </div>
   );
 
-  // ===== RENDER =====
+  // ============================================
+  // RENDER
+  // ============================================
   if (!tutor) {
     return (
       <div className="session-loading">
@@ -1096,70 +1265,69 @@ const TutorSession = () => {
               💬 <span className="chat-badge">{messages.filter(m => m.type !== 'system').length}</span>
             </button>
           )}
-          <button className="btn-end" onClick={endSession}>End Session</button>
+          <button className="btn-end" onClick={endSession} disabled={sessionEnded}>End Session</button>
         </div>
       </header>
 
       <div className={`session-grid ${showChat ? 'chat-open' : ''}`}>
-        {/* MAIN CONTENT */}
         <div className="session-main" style={{ position: 'relative' }}>
-          {/* Floating Tutor Card */}
           <div className="floating-tutor-card">
             <div className="tutor-avatar-small">
-              {tutor.image ? (
-                <img src={tutor.image} alt={tutor.name} />
-              ) : (
-                <span>{tutor.name?.charAt(0) || 'T'}</span>
-              )}
+              {renderTutorAvatar(tutor)}
               <span className="tutor-status-dot-small"></span>
             </div>
             <div className="tutor-card-info">
               <span className="tutor-card-name">{tutor.name}</span>
-              <span className="tutor-card-role">Tutor</span>
+              <span className="tutor-card-role">{isTutorUser ? 'Tutor' : 'Student'}</span>
             </div>
             <div className="tutor-card-controls">
               <button className={`tutor-control-btn ${isMuted ? 'muted' : ''}`} onClick={() => setIsMuted(!isMuted)} title="Mute">
                 {isMuted ? '🔇' : '🔊'}
               </button>
-              <button className={`tutor-control-btn ${isHandRaised ? 'raised' : ''}`} onClick={toggleRaiseHand} title="Raise Hand">
-                {isHandRaised ? '🙋' : '🤚'}
-              </button>
+              {!isTutorUser && (
+                <button className={`tutor-control-btn ${isHandRaised ? 'raised' : ''}`} onClick={toggleRaiseHand} title="Raise Hand">
+                  {isHandRaised ? '🙋' : '🤚'}
+                </button>
+              )}
             </div>
           </div>
 
-          {/* Video-Free Overlay */}
           <div className="video-free-overlay">
             <span>🎧 Audio Only</span>
             <span className="video-free-sub">15MB/hr • Ultra-Low Bandwidth</span>
           </div>
 
-          {/* Token Indicator */}
           <div className="token-indicator-float" title={`${tokens} tokens remaining`}>
             <span className={`token-dot ${tokens < 3 ? 'low' : tokens < 8 ? 'medium' : 'high'}`}></span>
             <span className="token-count">{tokens}</span>
           </div>
 
-          {/* Whiteboard */}
           <div className="whiteboard-area" style={{ height: '100%' }}>
             <div className="whiteboard-header">
-              <h4>✏️ Interactive Whiteboard</h4>
+              <h4>✏️ Interactive Whiteboard {!isTutorUser && <span style={{ fontSize: '11px', color: '#ef4444' }}>(View Only)</span>}</h4>
               <div className="whiteboard-tools">
-                <button className={`tool-btn ${currentTool === 'pen' ? 'active' : ''}`} onClick={() => setCurrentTool('pen')} title="Pen">✏️</button>
-                <button className={`tool-btn ${currentTool === 'eraser' ? 'active' : ''}`} onClick={() => setCurrentTool('eraser')} title="Eraser">🧹</button>
-                <button className={`tool-btn ${currentTool === 'shape' ? 'active' : ''}`} onClick={() => setCurrentTool('shape')} title="Shape">⬛</button>
-                <button className={`tool-btn ${currentTool === 'text' ? 'active' : ''}`} onClick={() => setCurrentTool('text')} title="Text">T</button>
-                <button className={`tool-btn ${showGrid ? 'active' : ''}`} onClick={() => setShowGrid(!showGrid)} title="Grid">⊞</button>
-                <button className="tool-btn" onClick={() => setZoomLevel(Math.min(2, zoomLevel + 0.1))} title="Zoom In">➕</button>
-                <button className="tool-btn" onClick={() => setZoomLevel(Math.max(0.5, zoomLevel - 0.1))} title="Zoom Out">➖</button>
-                <input type="color" value={selectedColor} onChange={(e) => setSelectedColor(e.target.value)} className="color-picker" title="Color" />
-                <select value={strokeWidth} onChange={(e) => setStrokeWidth(Number(e.target.value))} className="stroke-select">
-                  <option value={2}>Thin</option>
-                  <option value={4}>Medium</option>
-                  <option value={6}>Thick</option>
-                </select>
-                <button className="tool-btn" onClick={undo} title="Undo (Ctrl+Z)">↩️</button>
-                <button className="tool-btn" onClick={redo} title="Redo (Ctrl+Y)">↪️</button>
-                <button className="tool-btn clear" onClick={clearWhiteboard} title="Clear">🗑️</button>
+                {isTutorUser ? (
+                  <>
+                    <button className={`tool-btn ${currentTool === 'pen' ? 'active' : ''}`} onClick={() => setCurrentTool('pen')} title="Pen">✏️</button>
+                    <button className={`tool-btn ${currentTool === 'eraser' ? 'active' : ''}`} onClick={() => setCurrentTool('eraser')} title="Eraser">🧹</button>
+                    <button className={`tool-btn ${currentTool === 'shape' ? 'active' : ''}`} onClick={() => setCurrentTool('shape')} title="Shape">⬛</button>
+                    <button className={`tool-btn ${currentTool === 'text' ? 'active' : ''}`} onClick={() => setCurrentTool('text')} title="Text">T</button>
+                    <button className={`tool-btn ${showGrid ? 'active' : ''}`} onClick={() => setShowGrid(!showGrid)} title="Grid">⊞</button>
+                    <button className="tool-btn" onClick={() => setZoomLevel(Math.min(2, zoomLevel + 0.1))} title="Zoom In">➕</button>
+                    <button className="tool-btn" onClick={() => setZoomLevel(Math.max(0.5, zoomLevel - 0.1))} title="Zoom Out">➖</button>
+                    <input type="color" value={selectedColor} onChange={(e) => setSelectedColor(e.target.value)} className="color-picker" title="Color" />
+                    <select value={strokeWidth} onChange={(e) => setStrokeWidth(Number(e.target.value))} className="stroke-select">
+                      <option value={2}>Thin</option>
+                      <option value={4}>Medium</option>
+                      <option value={6}>Thick</option>
+                    </select>
+                    <button className="tool-btn" onClick={undo} title="Undo (Ctrl+Z)">↩️</button>
+                    <button className="tool-btn" onClick={redo} title="Redo (Ctrl+Y)">↪️</button>
+                    <button className="tool-btn clear" onClick={clearWhiteboard} title="Clear">🗑️</button>
+                  </>
+                ) : (
+                  <span style={{ fontSize: '12px', color: 'var(--text-muted)' }}>👀 View Only</span>
+                )}
               </div>
             </div>
             <div className="whiteboard-wrapper" style={{ transform: `scale(${zoomLevel})`, height: 'calc(100% - 40px)' }}>
@@ -1172,29 +1340,30 @@ const TutorSession = () => {
                 onTouchStart={startDrawing}
                 onTouchMove={draw}
                 onTouchEnd={stopDrawing}
+                style={{ cursor: isTutorUser ? 'crosshair' : 'default' }}
               />
             </div>
           </div>
 
-          {/* Bottom Control Dock */}
           <div className="bottom-control-dock">
             <button className={`dock-btn ${isMuted ? 'active' : ''}`} onClick={() => setIsMuted(!isMuted)} title="Mute">
               {isMuted ? '🔇' : '🔊'}
             </button>
-            <button className={`dock-btn ${isHandRaised ? 'raised' : ''}`} onClick={toggleRaiseHand} title="Raise Hand">
-              {isHandRaised ? '🙋' : '🤚'}
-            </button>
+            {!isTutorUser && (
+              <button className={`dock-btn ${isHandRaised ? 'raised' : ''}`} onClick={toggleRaiseHand} title="Raise Hand">
+                {isHandRaised ? '🙋' : '🤚'}
+              </button>
+            )}
             <button className={`dock-btn ${isScreenSharing ? 'active' : ''}`} onClick={() => setIsScreenSharing(!isScreenSharing)} title="Share Screen">
               {isScreenSharing ? '🖥️' : '🖥️'}
             </button>
             <button className={`dock-btn ${isRecording ? 'active recording' : ''}`} onClick={() => setIsRecording(!isRecording)} title="Recording">
               {isRecording ? '⏹' : '⏺'}
             </button>
-            <button className="dock-btn leave-btn" onClick={endSession} title="Leave Session">Leave</button>
+            <button className="dock-btn leave-btn" onClick={endSession} disabled={sessionEnded} title="Leave Session">Leave</button>
           </div>
         </div>
 
-        {/* SIDEBAR - CHAT */}
         <div className={`session-sidebar ${isMobile ? 'mobile-sidebar' : ''} ${showChat ? 'mobile-open' : ''}`}>
           <div className="participants-list">
             <h4>👥 Participants</h4>
@@ -1238,7 +1407,7 @@ const TutorSession = () => {
                     <>
                       <div className="message-avatar">
                         {msg.sender === 'tutor' ? (
-                          tutor?.image ? <img src={tutor.image} alt={tutor.name} className="message-avatar-img" /> : <span className="message-avatar-emoji">🧑‍🏫</span>
+                          renderTutorAvatar(tutor)
                         ) : (
                           <span className="message-avatar-emoji">👤</span>
                         )}
@@ -1256,7 +1425,7 @@ const TutorSession = () => {
               ))}
               {isTyping && (
                 <div className="typing-indicator">
-                  {tutor?.image ? <img src={tutor.image} alt={tutor.name} className="typing-avatar-img" /> : <span>🧑‍🏫</span>}
+                  {renderTutorAvatar(tutor)}
                   <span className="typing-dots"><span>.</span><span>.</span><span>.</span></span>
                 </div>
               )}

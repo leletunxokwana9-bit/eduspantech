@@ -119,9 +119,10 @@ const EMOJIS = [
 ];
 
 // ============================================
-// ✅ RENDER TUTOR AVATAR - SAFE VERSION
+// ✅ RENDER TUTOR AVATAR - COMPLETELY SAFE
 // ============================================
 const renderTutorAvatar = (tutor) => {
+  // If no tutor, return a safe default
   if (!tutor) {
     return (
       <div className="tutor-avatar-default" style={{ 
@@ -141,7 +142,8 @@ const renderTutorAvatar = (tutor) => {
 
   const photoUrl = tutor.avatar || tutor.profileImage;
   
-  if (photoUrl) {
+  // If there's a photo URL, show it
+  if (photoUrl && typeof photoUrl === 'string') {
     return (
       <img 
         src={photoUrl} 
@@ -150,23 +152,25 @@ const renderTutorAvatar = (tutor) => {
         loading="lazy"
         style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: '50%' }}
         onError={(e) => {
+          // Hide the image on error - parent will show fallback
           e.target.style.display = 'none';
         }}
       />
     );
   }
   
+  // Fallback to initials
   const name = tutor.name || 'Tutor';
   const initials = name
     .split(' ')
-    .map(word => word[0] || '')
+    .map(word => (word && word[0]) || '')
     .join('')
     .toUpperCase()
     .slice(0, 2);
   
   const colors = ['#1a73e8', '#e91e63', '#ff6f00', '#7b1fa2', '#0d47a1', '#00695c', '#bf360c', '#4a148c', '#1a237e', '#880e4f', '#004d40'];
-  const hash = name.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
-  const color = colors[hash % colors.length] || '#4f46e5';
+  const hash = name.split('').reduce((acc, char) => acc + (char.charCodeAt(0) || 0), 0);
+  const color = colors[Math.abs(hash) % colors.length] || '#4f46e5';
   
   return (
     <div 
@@ -207,9 +211,7 @@ const generateUUID = () => {
 
 const getPublicIP = async () => {
   const cachedIP = localStorage.getItem('public_ip');
-  if (cachedIP) {
-    return cachedIP;
-  }
+  if (cachedIP) return cachedIP;
   try {
     const response = await fetch('https://api.ipify.org?format=json', {
       signal: AbortSignal.timeout(3000)
@@ -230,14 +232,12 @@ const getShiftInfo = () => {
   const now = new Date();
   const sastTime = new Date(now.toLocaleString('en-US', { timeZone: 'Africa/Johannesburg' }));
   const hours = sastTime.getHours();
-  
   const shifts = [
     { name: 'Asia-Pacific Axis', start: 8, end: 15, hubs: ['Sydney', 'Tokyo'] },
     { name: 'South Asian / Indian Corridor', start: 12, end: 19.5, hubs: ['Singapore', 'Mumbai'] },
     { name: 'Africa / Europe Core', start: 16, end: 23, hubs: ['Cape Town', 'Ireland'] },
     { name: 'Pan-American Axis', start: 21, end: 28, hubs: ['São Paulo', 'N. Virginia', 'Oregon'] }
   ];
-  
   for (const shift of shifts) {
     if (hours >= shift.start && hours < shift.end) {
       return { ...shift, active: true };
@@ -258,9 +258,8 @@ const getRegionFromIP = (ip) => {
     { code: 'sa-east-1', name: 'São Paulo', lat: -23.5505, lng: -46.6333 },
     { code: 'us-west-2', name: 'Oregon', lat: 45.5152, lng: -122.6784 }
   ];
-  
   const hash = ip.split('.').reduce((acc, num) => acc + parseInt(num), 0);
-  return regions[hash % regions.length];
+  return regions[Math.abs(hash) % regions.length];
 };
 
 // ============================================
@@ -349,9 +348,7 @@ const TutorSession = () => {
         const token = localStorage.getItem('accessToken');
         if (token) {
           const response = await fetch(`${API_BASE_URL}/auth/me`, {
-            headers: {
-              'Authorization': `Bearer ${token}`
-            }
+            headers: { 'Authorization': `Bearer ${token}` }
           });
           if (response.ok) {
             const data = await response.json();
@@ -403,7 +400,6 @@ const TutorSession = () => {
     const canvas = canvasRef.current;
     if (!canvas) return;
     const ctx = canvas.getContext('2d');
-    
     if (watermarkVisible) {
       ctx.save();
       ctx.globalAlpha = 0.25;
@@ -415,7 +411,6 @@ const TutorSession = () => {
       ctx.fillText(watermark.text, x, y);
       ctx.restore();
     }
-    
     canvasDataRef.current = ctx.getImageData(0, 0, canvas.width, canvas.height);
   }, [watermark, watermarkVisible]);
 
@@ -473,21 +468,15 @@ const TutorSession = () => {
             x: 10 + Math.random() * maxX,
             y: 30 + Math.random() * maxY
           };
-          return {
-            ...prev,
-            position: newPos
-          };
+          return { ...prev, position: newPos };
         });
         setTimeout(() => drawWatermark(), 50);
       }
     }, 60000);
 
     return () => {
-      if (watermarkIntervalRef.current) {
-        clearInterval(watermarkIntervalRef.current);
-      }
+      if (watermarkIntervalRef.current) clearInterval(watermarkIntervalRef.current);
     };
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [drawWatermark]);
 
   // ===== TOKEN BUCKET =====
@@ -498,17 +487,11 @@ const TutorSession = () => {
       const newTokens = Math.min(maxTokens, tokens + (delta * tokenFillRate));
       setTokens(Math.floor(newTokens));
       setLastTokenUpdate(now);
-      
-      if (newTokens < 3 && newTokens > 0) {
-        SoundGenerator.generateTokenLowSound();
-      }
+      if (newTokens < 3 && newTokens > 0) SoundGenerator.generateTokenLowSound();
     };
-
     tokenIntervalRef.current = setInterval(updateTokens, 1000);
     return () => {
-      if (tokenIntervalRef.current) {
-        clearInterval(tokenIntervalRef.current);
-      }
+      if (tokenIntervalRef.current) clearInterval(tokenIntervalRef.current);
     };
   }, [tokens, lastTokenUpdate, maxTokens, tokenFillRate]);
 
@@ -517,30 +500,21 @@ const TutorSession = () => {
     const updateShift = () => {
       const shift = getShiftInfo();
       setShiftInfo(shift);
-      
       if (shift.active) {
         const now = new Date();
         const sastTime = new Date(now.toLocaleString('en-US', { timeZone: 'Africa/Johannesburg' }));
         const hours = sastTime.getHours() + sastTime.getMinutes() / 60;
         const end = shift.end;
         const remaining = Math.max(0, (end - hours) * 60);
-        
-        if (remaining < 30 && remaining > 0) {
-          setIsShiftOverlapping(true);
-        } else {
-          setIsShiftOverlapping(false);
-        }
+        setIsShiftOverlapping(remaining < 30 && remaining > 0);
       } else {
         setIsShiftOverlapping(false);
       }
     };
-
     updateShift();
     shiftIntervalRef.current = setInterval(updateShift, 30000);
     return () => {
-      if (shiftIntervalRef.current) {
-        clearInterval(shiftIntervalRef.current);
-      }
+      if (shiftIntervalRef.current) clearInterval(shiftIntervalRef.current);
     };
   }, []);
 
@@ -549,16 +523,10 @@ const TutorSession = () => {
     const updateLatency = () => {
       const newLatency = 5 + Math.random() * 55;
       setLatency(Math.round(newLatency));
-      
-      if (newLatency < 30) {
-        setConnectionQuality('excellent');
-      } else if (newLatency < 50) {
-        setConnectionQuality('good');
-      } else {
-        setConnectionQuality('poor');
-      }
+      if (newLatency < 30) setConnectionQuality('excellent');
+      else if (newLatency < 50) setConnectionQuality('good');
+      else setConnectionQuality('poor');
     };
-
     const interval = setInterval(updateLatency, 5000);
     return () => clearInterval(interval);
   }, []);
@@ -574,9 +542,7 @@ const TutorSession = () => {
       }
     }
     return () => {
-      if (recordingIntervalRef.current) {
-        clearInterval(recordingIntervalRef.current);
-      }
+      if (recordingIntervalRef.current) clearInterval(recordingIntervalRef.current);
     };
   }, [isRecording]);
 
@@ -592,11 +558,8 @@ const TutorSession = () => {
   // ===== EFFECTS =====
   useEffect(() => {
     setMessages(getMockMessages());
-    const interval = setInterval(() => {
-      setTimeElapsed(prev => prev + 1);
-    }, 1000);
+    const interval = setInterval(() => setTimeElapsed(prev => prev + 1), 1000);
     return () => clearInterval(interval);
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [tutor]);
 
   useEffect(() => {
@@ -604,9 +567,7 @@ const TutorSession = () => {
   }, [messages]);
 
   useEffect(() => {
-    if (chatInputRef.current) {
-      chatInputRef.current.focus();
-    }
+    chatInputRef.current?.focus();
   }, []);
 
   useEffect(() => {
@@ -623,7 +584,6 @@ const TutorSession = () => {
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
-    
     const ctx = canvas.getContext('2d');
     ctx.lineWidth = strokeWidth;
     ctx.lineCap = 'round';
@@ -636,14 +596,12 @@ const TutorSession = () => {
       const dpr = window.devicePixelRatio || 1;
       const newWidth = rect.width;
       const newHeight = rect.height;
-      
       if (canvas.width !== newWidth * dpr || canvas.height !== newHeight * dpr) {
         canvas.width = newWidth * dpr;
         canvas.height = newHeight * dpr;
         canvas.style.width = newWidth + 'px';
         canvas.style.height = newHeight + 'px';
         ctx.scale(dpr, dpr);
-        
         if (canvasDataRef.current) {
           ctx.putImageData(canvasDataRef.current, 0, 0);
         } else {
@@ -651,14 +609,10 @@ const TutorSession = () => {
         }
       }
     };
-    
     const handleResize = () => {
-      if (resizeTimeoutRef.current) {
-        cancelAnimationFrame(resizeTimeoutRef.current);
-      }
+      if (resizeTimeoutRef.current) cancelAnimationFrame(resizeTimeoutRef.current);
       resizeTimeoutRef.current = requestAnimationFrame(resizeCanvas);
     };
-    
     resizeCanvas();
     window.addEventListener('resize', handleResize);
     return () => {
@@ -668,52 +622,38 @@ const TutorSession = () => {
         resizeTimeoutRef.current = null;
       }
     };
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [strokeWidth, selectedColor, drawWatermark]);
 
   useEffect(() => {
-    const handleResize = () => {
-      setIsMobile(window.innerWidth <= 768);
-    };
+    const handleResize = () => setIsMobile(window.innerWidth <= 768);
     window.addEventListener('resize', handleResize);
     return () => window.removeEventListener('resize', handleResize);
   }, []);
 
   useEffect(() => {
-    if (!isMobile) {
-      setShowChat(false);
-    }
+    if (!isMobile) setShowChat(false);
   }, [isMobile]);
 
   // ===== SAVE CANVAS STATE =====
   const saveCanvasState = useCallback(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
-    
     const dataUrl = canvas.toDataURL();
     const newHistory = canvasHistory.slice(0, historyIndex + 1);
     newHistory.push(dataUrl);
-    
-    if (newHistory.length > maxHistory) {
-      newHistory.shift();
-    }
-    
+    if (newHistory.length > maxHistory) newHistory.shift();
     setCanvasHistory(newHistory);
     setHistoryIndex(newHistory.length - 1);
   }, [canvasHistory, historyIndex, maxHistory]);
 
-  // ============================================
-  // WHITEBOARD - DISABLED FOR STUDENTS
-  // ============================================
+  // ===== WHITEBOARD =====
   const startDrawing = (e) => {
     if (!isTutorUser) return;
     if (tokens < 1) {
       alert('Rate limit exceeded. Please wait a moment.');
       return;
     }
-    
     setTokens(prev => prev - 1);
-    
     const canvas = canvasRef.current;
     const rect = canvas.getBoundingClientRect();
     const clientX = e.clientX || e.touches?.[0]?.clientX || 0;
@@ -722,7 +662,6 @@ const TutorSession = () => {
     const y = clientY - rect.top;
     isDrawingRef.current = true;
     lastPosRef.current = { x, y };
-    
     setSessionStats(prev => ({ ...prev, whiteboardActions: prev.whiteboardActions + 1 }));
   };
 
@@ -735,7 +674,6 @@ const TutorSession = () => {
     const clientY = e.clientY || e.touches?.[0]?.clientY || 0;
     const x = clientX - rect.left;
     const y = clientY - rect.top;
-
     ctx.beginPath();
     ctx.moveTo(lastPosRef.current.x, lastPosRef.current.y);
     ctx.lineTo(x, y);
@@ -757,7 +695,6 @@ const TutorSession = () => {
     saveCanvasState();
   };
 
-  // ===== UNDO/REDO =====
   const undo = () => {
     if (!isTutorUser) return;
     if (historyIndex > 0) {
@@ -779,25 +716,17 @@ const TutorSession = () => {
   // ===== KEYBOARD SHORTCUTS =====
   useEffect(() => {
     const handleKeyDown = (e) => {
-      if (e.ctrlKey && e.key === 'z' && !e.shiftKey) {
-        e.preventDefault();
-        undo();
-      }
-      if (e.ctrlKey && e.key === 'y') {
-        e.preventDefault();
-        redo();
-      }
+      if (e.ctrlKey && e.key === 'z' && !e.shiftKey) { e.preventDefault(); undo(); }
+      if (e.ctrlKey && e.key === 'y') { e.preventDefault(); redo(); }
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [historyIndex, canvasHistory]);
 
   // ===== CHAT =====
   const sendMessage = (e) => {
     e?.preventDefault();
     if (!newMessage.trim()) return;
-
     const message = {
       id: Date.now(),
       sender: 'student',
@@ -806,29 +735,21 @@ const TutorSession = () => {
       time: getCurrentTime(),
       type: 'text',
     };
-
     setMessages(prev => [...prev, message]);
     setNewMessage('');
     setShowEmojiPicker(false);
-    
     setSessionStats(prev => ({ ...prev, messagesSent: prev.messagesSent + 1 }));
-
     setIsTyping(true);
     SoundGenerator.generateTypingSound();
-    
     let typingCount = 0;
     const typingInterval = setInterval(() => {
       SoundGenerator.generateTypingSound();
       typingCount++;
-      if (typingCount >= 3) {
-        clearInterval(typingInterval);
-      }
+      if (typingCount >= 3) clearInterval(typingInterval);
     }, 400);
-
     setTimeout(() => {
       setIsTyping(false);
       clearInterval(typingInterval);
-      
       const responses = [
         "That's a great question! Let me explain...",
         "I see what you mean. Let me help you with that.",
@@ -839,7 +760,6 @@ const TutorSession = () => {
         "Here's a tip that might help.",
         "Great work! Keep going."
       ];
-      
       const reply = {
         id: Date.now() + 1,
         sender: 'tutor',
@@ -848,7 +768,6 @@ const TutorSession = () => {
         time: getCurrentTime(),
         type: 'text',
       };
-      
       setMessages(prev => [...prev, reply]);
       SoundGenerator.generateMessageSound();
     }, 2500);
@@ -867,20 +786,15 @@ const TutorSession = () => {
     chatInputRef.current?.focus();
   };
 
-  // ===== RAISE HAND =====
   const toggleRaiseHand = () => {
     const newState = !isHandRaised;
     setIsHandRaised(newState);
-    
     if (newState) {
       SoundGenerator.generateRaiseHandSound();
-      
       const newQueue = [...handRaiseQueue, { id: Date.now(), name: 'You', time: getCurrentTime() }];
       setHandRaiseQueue(newQueue);
       setHandRaisePosition(newQueue.length);
-      
       setSessionStats(prev => ({ ...prev, handRaises: prev.handRaises + 1 }));
-      
       const message = {
         id: Date.now(),
         sender: 'system',
@@ -890,12 +804,10 @@ const TutorSession = () => {
         type: 'system',
       };
       setMessages(prev => [...prev, message]);
-      
       setTimeout(() => {
         setIsHandRaised(false);
         setHandRaiseQueue(prev => prev.filter(item => item.id !== Date.now() - 1));
         setHandRaisePosition(null);
-        
         const lowerMessage = {
           id: Date.now() + 1,
           sender: 'system',
@@ -909,7 +821,6 @@ const TutorSession = () => {
     } else {
       setHandRaiseQueue(prev => prev.filter(item => item.name !== 'You'));
       setHandRaisePosition(null);
-      
       const message = {
         id: Date.now(),
         sender: 'system',
@@ -922,28 +833,19 @@ const TutorSession = () => {
     }
   };
 
-  // ===== FORMAT TIME =====
   const formatTime = (seconds) => {
     const mins = Math.floor(seconds / 60);
     const secs = seconds % 60;
     return `${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
   };
 
-  // ============================================
-  // RATING FUNCTIONS
-  // ============================================
+  // ===== RATING FUNCTIONS =====
   const handleRatingChange = (category, value) => {
-    setRatingData(prev => ({
-      ...prev,
-      [category]: value
-    }));
+    setRatingData(prev => ({ ...prev, [category]: value }));
   };
 
   const handleReviewChange = (e) => {
-    setRatingData(prev => ({
-      ...prev,
-      review: e.target.value
-    }));
+    setRatingData(prev => ({ ...prev, review: e.target.value }));
   };
 
   const submitRating = async () => {
@@ -951,13 +853,10 @@ const TutorSession = () => {
       alert('Please rate the overall experience');
       return;
     }
-
     setRatingLoading(true);
-
     try {
       const token = localStorage.getItem('accessToken');
       const sessionId = location.state?.sessionId || 'temp_session';
-
       const response = await fetch(`${API_BASE_URL}/ratings`, {
         method: 'POST',
         headers: {
@@ -975,13 +874,10 @@ const TutorSession = () => {
           punctuality: ratingData.punctuality || 0
         })
       });
-
       if (response.ok) {
         setRatingSubmitted(true);
         setRatingLoading(false);
-        
         await updateTutorRating(tutor?.id, ratingData.overall);
-        
         setTimeout(() => {
           setShowRatingModal(false);
           navigate('/dashboard');
@@ -1007,14 +903,9 @@ const TutorSession = () => {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'
         },
-        body: JSON.stringify({
-          rating: newRating
-        })
+        body: JSON.stringify({ rating: newRating })
       });
-      
-      if (response.ok) {
-        console.log('✅ Tutor rating updated successfully');
-      }
+      if (response.ok) console.log('✅ Tutor rating updated successfully');
     } catch (error) {
       console.error('Failed to update tutor rating:', error);
     }
@@ -1024,7 +915,6 @@ const TutorSession = () => {
     const stars = [];
     const hover = category === 'overall' ? hoveredStar : 0;
     const value = category === 'overall' ? (hover || rating) : rating;
-
     for (let i = 1; i <= 5; i++) {
       stars.push(
         <span
@@ -1047,7 +937,6 @@ const TutorSession = () => {
     return stars;
   };
 
-  // ===== SKIP RATING =====
   const skipRating = () => {
     setShowRatingModal(false);
     navigate('/dashboard');
@@ -1058,24 +947,17 @@ const TutorSession = () => {
   // ============================================
   const endSession = async () => {
     if (sessionEnded) return;
-    
     const duration = Math.floor((Date.now() - sessionStats.startTime) / 1000);
     setSessionStats(prev => ({ ...prev, duration }));
     setSessionEnded(true);
-    
-    // Always show rating modal immediately
     setShowRatingModal(true);
     setShowSummary(false);
-    
-    // Try to end the session in the backend (don't wait for it)
     try {
       const token = localStorage.getItem('accessToken');
       const sessionId = location.state?.sessionId || 'temp_session';
-      
       const pathParts = window.location.pathname.split('/');
       const urlSessionId = pathParts[pathParts.length - 1];
       const finalSessionId = sessionId !== 'temp_session' ? sessionId : urlSessionId;
-      
       if (finalSessionId && finalSessionId !== 'temp_session' && finalSessionId !== 'TutorSession') {
         const response = await fetch(`${API_BASE_URL}/sessions/end`, {
           method: 'POST',
@@ -1088,16 +970,10 @@ const TutorSession = () => {
             duration: duration
           })
         });
-        
-        if (response.ok) {
-          console.log('✅ Session ended successfully');
-        } else {
-          console.log('⚠️ Session end API returned error, but session is closed locally');
-        }
+        if (response.ok) console.log('✅ Session ended successfully');
       }
     } catch (error) {
       console.error('Error ending session:', error);
-      // Continue - session is already ended locally
     }
   };
 
@@ -1111,7 +987,6 @@ const TutorSession = () => {
           <h2>⭐ Rate Your Session</h2>
           <p>How was your session with {tutor?.name}?</p>
         </div>
-
         <div className="rating-modal-body">
           {!ratingSubmitted ? (
             <>
@@ -1124,35 +999,30 @@ const TutorSession = () => {
                   </span>
                 </div>
               </div>
-
               <div className="rating-category">
                 <label>💬 Communication</label>
                 <div className="stars-container">
                   {renderStars(ratingData.communication, 'communication')}
                 </div>
               </div>
-
               <div className="rating-category">
                 <label>📚 Subject Knowledge</label>
                 <div className="stars-container">
                   {renderStars(ratingData.knowledge, 'knowledge')}
                 </div>
               </div>
-
               <div className="rating-category">
                 <label>📖 Teaching Style</label>
                 <div className="stars-container">
                   {renderStars(ratingData.teaching, 'teaching')}
                 </div>
               </div>
-
               <div className="rating-category">
                 <label>⏰ Punctuality</label>
                 <div className="stars-container">
                   {renderStars(ratingData.punctuality, 'punctuality')}
                 </div>
               </div>
-
               <div className="rating-review">
                 <label>Write a Review (Optional)</label>
                 <textarea
@@ -1171,7 +1041,6 @@ const TutorSession = () => {
             </div>
           )}
         </div>
-
         <div className="rating-modal-footer">
           {!ratingSubmitted ? (
             <>
@@ -1229,9 +1098,7 @@ const TutorSession = () => {
           </div>
         </div>
         <div className="session-header-right">
-          <span className="video-free-badge" title="Video is permanently disabled for optimal performance (15MB/hr)">
-            🎧 Audio + Whiteboard
-          </span>
+          <span className="video-free-badge">🎧 Audio + Whiteboard</span>
           {shiftInfo.active && (
             <span className={`shift-timer ${isShiftOverlapping ? 'overlapping' : ''}`}>
               {shiftInfo.name} {isShiftOverlapping && '⏰ Overlap'}
@@ -1388,11 +1255,7 @@ const TutorSession = () => {
                   ) : (
                     <>
                       <div className="message-avatar">
-                        {msg.sender === 'tutor' ? (
-                          renderTutorAvatar(tutor)
-                        ) : (
-                          <span className="message-avatar-emoji">👤</span>
-                        )}
+                        {msg.sender === 'tutor' ? renderTutorAvatar(tutor) : <span className="message-avatar-emoji">👤</span>}
                       </div>
                       <div className="message-bubble">
                         <div className="message-header">

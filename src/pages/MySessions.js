@@ -2,6 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { authService } from '../services/authService';
+import { API_BASE_URL } from '../services/api';
 import './MySessions.css';
 
 const MySessions = () => {
@@ -14,8 +15,6 @@ const MySessions = () => {
   const [selectedSession, setSelectedSession] = useState(null);
   const [expandedSession, setExpandedSession] = useState(null);
   const [filterStatus, setFilterStatus] = useState('all');
-
-  const API_URL = 'https://eduspantech-backend.onrender.com/api';
 
   useEffect(() => {
     const fetchUserAndSessions = async () => {
@@ -39,7 +38,7 @@ const MySessions = () => {
   }, [navigate]);
 
   // ============================================
-  // FETCH SESSIONS - FIXED
+  // FETCH SESSIONS
   // ============================================
   const fetchUserSessions = async () => {
     try {
@@ -51,9 +50,9 @@ const MySessions = () => {
         return;
       }
 
-      console.log('📡 Fetching sessions from:', `${API_URL}/sessions`);
+      console.log('📡 Fetching sessions from:', `${API_BASE_URL}/sessions`);
       
-      const response = await fetch(`${API_URL}/sessions`, {
+      const response = await fetch(`${API_BASE_URL}/sessions`, {
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'
@@ -66,7 +65,6 @@ const MySessions = () => {
         const data = await response.json();
         console.log('✅ Sessions data:', data);
 
-        // Handle different response formats
         let sessionsList = [];
         if (data.success && data.sessions) {
           sessionsList = data.sessions;
@@ -82,36 +80,31 @@ const MySessions = () => {
 
         console.log('📋 Sessions list length:', sessionsList.length);
 
-        // Enrich sessions with tutor details
+        // ✅ Fetch tutor details from API
         const enrichedSessions = await Promise.all(
           sessionsList.map(async (session) => {
             let tutor = null;
             
-            // Get tutor details from users table
             if (session.tutor_id) {
               try {
-                // First try to get from users table
-                const userResponse = await fetch(`${API_URL}/auth/me`, {
+                // ✅ Fetch tutor from /api/tutors
+                const tutorResponse = await fetch(`${API_BASE_URL}/tutors/${session.tutor_id}`, {
                   headers: {
-                    'Authorization': `Bearer ${token}`
-                  }
-                });
-                
-                // Try to get tutor from tutors table
-                const tutorResponse = await fetch(`${API_URL}/tutors/${session.tutor_id}`, {
-                  headers: {
-                    'Authorization': `Bearer ${token}`
+                    'Authorization': `Bearer ${token}`,
+                    'Content-Type': 'application/json'
                   }
                 });
                 
                 if (tutorResponse.ok) {
                   const tutorData = await tutorResponse.json();
                   tutor = tutorData.tutor || tutorData;
+                  console.log('✅ Tutor found:', tutor?.name);
                 } else {
                   // Fallback: try to get from users table
-                  const fallbackResponse = await fetch(`${API_URL}/users/${session.tutor_id}`, {
+                  const fallbackResponse = await fetch(`${API_BASE_URL}/users/${session.tutor_id}`, {
                     headers: {
-                      'Authorization': `Bearer ${token}`
+                      'Authorization': `Bearer ${token}`,
+                      'Content-Type': 'application/json'
                     }
                   });
                   if (fallbackResponse.ok) {
@@ -124,7 +117,6 @@ const MySessions = () => {
               }
             }
 
-            // Calculate duration from start/end times
             let duration = 60;
             if (session.start_time && session.end_time) {
               const start = new Date(session.start_time);
@@ -132,7 +124,6 @@ const MySessions = () => {
               duration = Math.round((end - start) / 60000);
             }
 
-            // Determine status
             const now = new Date();
             const startTime = new Date(session.start_time);
             const endTime = new Date(session.end_time);
@@ -181,6 +172,99 @@ const MySessions = () => {
       console.error('❌ Failed to fetch sessions:', error);
       setSessions([]);
     }
+  };
+
+  // ============================================
+  // ✅ RENDER TUTOR AVATAR - SAME AS TUTORS PAGE
+  // ============================================
+  const renderTutorAvatar = (tutor) => {
+    if (!tutor) return '🧑‍🏫';
+
+    // Check if tutor has a real photo
+    const photoUrl = tutor.avatar || tutor.profileImage;
+    
+    // ✅ If there's a real photo, show it
+    if (photoUrl) {
+      return (
+        <img 
+          src={photoUrl} 
+          alt={tutor.name} 
+          className="tutor-avatar-img"
+          loading="lazy"
+          onError={(e) => {
+            e.target.style.display = 'none';
+            const parent = e.target.parentElement;
+            if (parent) {
+              // Show default avatar with initials
+              const initials = tutor.name
+                .split(' ')
+                .map(word => word[0])
+                .join('')
+                .toUpperCase()
+                .slice(0, 2);
+              
+              const colors = ['#1a73e8', '#e91e63', '#ff6f00', '#7b1fa2', '#0d47a1', '#00695c', '#bf360c', '#4a148c', '#1a237e', '#880e4f', '#004d40'];
+              const hash = tutor.name.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
+              const color = colors[hash % colors.length];
+              
+              const fallbackDiv = document.createElement('div');
+              fallbackDiv.className = 'tutor-avatar-default';
+              fallbackDiv.style.cssText = `
+                width: 48px;
+                height: 48px;
+                border-radius: 50%;
+                background: ${color};
+                color: white;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                font-size: 18px;
+                font-weight: bold;
+                text-transform: uppercase;
+                flex-shrink: 0;
+              `;
+              fallbackDiv.textContent = initials;
+              parent.appendChild(fallbackDiv);
+            }
+          }}
+        />
+      );
+    }
+    
+    // ✅ NO real photo - show default avatar with initials (same as Tutors page)
+    const initials = tutor.name
+      .split(' ')
+      .map(word => word[0])
+      .join('')
+      .toUpperCase()
+      .slice(0, 2);
+    
+    // Generate consistent color based on tutor's name
+    const colors = ['#1a73e8', '#e91e63', '#ff6f00', '#7b1fa2', '#0d47a1', '#00695c', '#bf360c', '#4a148c', '#1a237e', '#880e4f', '#004d40'];
+    const hash = tutor.name.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
+    const color = colors[hash % colors.length];
+    
+    return (
+      <div 
+        className="tutor-avatar-default"
+        style={{
+          width: '48px',
+          height: '48px',
+          borderRadius: '50%',
+          background: color,
+          color: 'white',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          fontSize: '18px',
+          fontWeight: 'bold',
+          textTransform: 'uppercase',
+          flexShrink: 0
+        }}
+      >
+        {initials}
+      </div>
+    );
   };
 
   const formatDate = (dateString) => {
@@ -277,7 +361,7 @@ const MySessions = () => {
 
     try {
       const token = localStorage.getItem('accessToken');
-      const response = await fetch(`${API_URL}/sessions/${session.id}/cancel`, {
+      const response = await fetch(`${API_BASE_URL}/sessions/${session.id}/cancel`, {
         method: 'PUT',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -516,16 +600,12 @@ const MySessions = () => {
                 {expandedSession === session.id && (
                   <div className="session-details">
                     <div className="details-grid">
-                      {/* Tutor Info */}
+                      {/* Tutor Info with Avatar */}
                       <div className="detail-section tutor-info">
                         <h4>👨‍🏫 Tutor Information</h4>
                         <div className="tutor-detail-card">
                           <div className="tutor-avatar">
-                            {session.tutor?.image ? (
-                              <img src={session.tutor.image} alt={session.tutor.name} />
-                            ) : (
-                              <span>{session.tutor?.name?.charAt(0) || 'T'}</span>
-                            )}
+                            {renderTutorAvatar(session.tutor)}
                           </div>
                           <div className="tutor-detail-info">
                             <span className="tutor-detail-name">{session.tutor?.name || 'Tutor'}</span>

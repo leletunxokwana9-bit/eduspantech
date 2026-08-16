@@ -1,8 +1,9 @@
-// src/pages/Profile.js - CLEAN LAYOUT WITH FIXED SAVE
+// src/pages/Profile.js - CLEAN LAYOUT WITH FIXED SAVE AND DYNAMIC RATING
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import authService from '../services/authService';
 import AvatarSelector from '../components/AvatarSelector';
+import { API_BASE_URL } from '../services/api';
 import './Profile.css';
 
 const Profile = () => {
@@ -67,8 +68,6 @@ const Profile = () => {
   const [photoError, setPhotoError] = useState('');
   const fileInputRef = useRef(null);
 
-  const API_URL = 'https://eduspantech-backend.onrender.com/api';
-
   useEffect(() => {
     if (success) {
       const timer = setTimeout(() => {
@@ -82,7 +81,7 @@ const Profile = () => {
   useEffect(() => {
     const fetchOptions = async () => {
       try {
-        const subjectsResponse = await fetch(`${API_URL}/content/subjects`);
+        const subjectsResponse = await fetch(`${API_BASE_URL}/content/subjects`);
         if (subjectsResponse.ok) {
           const data = await subjectsResponse.json();
           if (data.success && data.subjects) {
@@ -90,7 +89,7 @@ const Profile = () => {
           }
         }
 
-        const shiftsResponse = await fetch(`${API_URL}/shifts`);
+        const shiftsResponse = await fetch(`${API_BASE_URL}/shifts`);
         if (shiftsResponse.ok) {
           const data = await shiftsResponse.json();
           if (data.success && data.shifts) {
@@ -102,7 +101,7 @@ const Profile = () => {
       }
     };
     fetchOptions();
-  }, [API_URL]);
+  }, []);
 
   // ===== FETCH USER DATA =====
   useEffect(() => {
@@ -161,7 +160,7 @@ const Profile = () => {
           });
           
           if (isTutorAccount) {
-            await fetchTutorStats();
+            await fetchTutorStats(userData);
           } else {
             await fetchStudentStats();
           }
@@ -182,7 +181,7 @@ const Profile = () => {
         const token = localStorage.getItem('accessToken');
         if (!token) return;
 
-        const enrollResponse = await fetch(`${API_URL}/content/my/subjects`, {
+        const enrollResponse = await fetch(`${API_BASE_URL}/content/my/subjects`, {
           headers: {
             'Authorization': `Bearer ${token}`,
             'Content-Type': 'application/json'
@@ -207,12 +206,16 @@ const Profile = () => {
       }
     };
 
-    const fetchTutorStats = async () => {
+    // ✅ FIXED: Fetch tutor stats with dynamic rating from user data
+    const fetchTutorStats = async (userData) => {
       try {
         const token = localStorage.getItem('accessToken');
         if (!token) return;
 
-        const sessionsResponse = await fetch(`${API_URL}/sessions`, {
+        // ✅ Get rating from user data (database)
+        const rating = userData?.tutor_rating || userData?.rating || 4.5;
+
+        const sessionsResponse = await fetch(`${API_BASE_URL}/sessions`, {
           headers: {
             'Authorization': `Bearer ${token}`,
             'Content-Type': 'application/json'
@@ -230,16 +233,31 @@ const Profile = () => {
             totalSessions: sessions.length,
             studentsTaught: uniqueStudents.size,
             totalEarnings: completedSessions.length * 100,
-            avgRating: 4.5
+            avgRating: rating
+          });
+        } else {
+          setTutorStats({
+            totalSessions: 0,
+            studentsTaught: 0,
+            totalEarnings: 0,
+            avgRating: rating
           });
         }
       } catch (error) {
         console.error('❌ Failed to fetch tutor stats:', error);
+        // Fallback: use rating from user data
+        const rating = userData?.tutor_rating || userData?.rating || 4.5;
+        setTutorStats({
+          totalSessions: 0,
+          studentsTaught: 0,
+          totalEarnings: 0,
+          avgRating: rating
+        });
       }
     };
 
     fetchUserData();
-  }, [navigate, API_URL]);
+  }, [navigate]);
 
   // ============================================
   // HANDLERS
@@ -275,7 +293,7 @@ const Profile = () => {
         return;
       }
 
-      const response = await fetch(`${API_URL}/auth/profile`, {
+      const response = await fetch(`${API_BASE_URL}/auth/profile`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
@@ -333,7 +351,7 @@ const Profile = () => {
         const base64Image = reader.result;
         
         const token = localStorage.getItem('accessToken');
-        const response = await fetch(`${API_URL}/auth/profile`, {
+        const response = await fetch(`${API_BASE_URL}/auth/profile`, {
           method: 'PUT',
           headers: {
             'Content-Type': 'application/json',
@@ -391,16 +409,12 @@ const Profile = () => {
         return;
       }
 
-      // ============================================
-      // FIX: Map frontend fields to backend expected fields
-      // ============================================
       const payload = {
         name: editForm.name,
         email: editForm.email,
         country: editForm.country,
         timezone: editForm.timezone,
         grade: editForm.grade ? parseInt(editForm.grade) : 0,
-        // Tutor fields - using camelCase as backend expects
         bio: editForm.bio || '',
         phone: editForm.phone || '',
         education: editForm.education || '',
@@ -414,7 +428,7 @@ const Profile = () => {
 
       console.log('📤 Saving profile with payload:', payload);
 
-      const response = await fetch(`${API_URL}/auth/profile`, {
+      const response = await fetch(`${API_BASE_URL}/auth/profile`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
@@ -427,14 +441,11 @@ const Profile = () => {
       console.log('📥 Save response:', data);
 
       if (response.ok && data.success) {
-        // Update user state with new data
         const updatedUser = { ...user, ...data.user };
         setUser(updatedUser);
         
-        // Update local storage
         localStorage.setItem('user', JSON.stringify(updatedUser));
         
-        // Update edit form with new data
         setEditForm({
           name: data.user.name || '',
           email: data.user.email || '',
@@ -484,7 +495,7 @@ const Profile = () => {
         return;
       }
 
-      const response = await fetch(`${API_URL}/auth/change-password`, {
+      const response = await fetch(`${API_BASE_URL}/auth/change-password`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -522,7 +533,7 @@ const Profile = () => {
         return;
       }
 
-      const response = await fetch(`${API_URL}/auth/account`, {
+      const response = await fetch(`${API_BASE_URL}/auth/account`, {
         method: 'DELETE',
         headers: {
           'Authorization': `Bearer ${token}`

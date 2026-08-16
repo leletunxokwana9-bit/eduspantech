@@ -17,6 +17,7 @@ const ChatWidget = () => {
     const [isFirstMessage, setIsFirstMessage] = useState(true);
     const [sessionId, setSessionId] = useState(null);
     const [isTyping, setIsTyping] = useState(false);
+    const [consentGiven, setConsentGiven] = useState(false);
     const [chatId] = useState(() => `chat-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`);
 
     // ===== REFS =====
@@ -24,59 +25,51 @@ const ChatWidget = () => {
     const inputRef = useRef(null);
     const chatContainerRef = useRef(null);
 
-    // ===== NAVIGATION CONFIG =====
+    // ============================================
+    // NAVIGATION CONFIG
+    // ============================================
     const navConfig = {
         courses: {
             keywords: ['courses', 'programs', 'learning', 'study', 'certification', 'training', 'classes', 'learn', 'education', 'subjects'],
-            url: '/courses',
-            label: 'Courses & Programs',
+            url: '/subjects',
+            label: 'Browse Subjects',
             message: "I can help you explore our courses and programs! Let me take you to our course catalog where you can find the perfect learning path for your goals."
         },
-        assessment: {
-            keywords: ['assessment', 'skill assessment', 'evaluate', 'test', 'quiz', 'knowledge check', 'evaluate my skills', 'skill test', 'self-assessment'],
-            url: '/assessment',
-            label: 'Skill Assessment',
-            message: "Ready to assess your skills? Let me take you to our skill assessment where you can evaluate your current knowledge and identify areas for growth."
-        },
-        booking: {
-            keywords: ['book session', 'tutoring', 'mentor', 'one-on-one', 'consultation', 'schedule', 'book a session', 'meet with', 'tutor', 'mentorship'],
+        tutors: {
+            keywords: ['tutor', 'tutors', 'book session', 'tutoring', 'mentor', 'one-on-one', 'consultation', 'schedule', 'meet with', 'mentorship'],
             url: '/tutors',
             label: 'Book a Session',
             message: "I can help you book a session with one of our expert mentors! Let me take you to the booking page where you can schedule a time that works for you."
+        },
+        pricing: {
+            keywords: ['pricing', 'plans', 'cost', 'price', 'subscription', 'pay', 'payment', 'monthly', 'annual', 'silver', 'gold', 'platinum'],
+            url: '/pricing',
+            label: 'View Plans',
+            message: "Let me take you to our pricing page where you can see all our plans and choose the one that fits your learning needs!"
+        },
+        help: {
+            keywords: ['help', 'support', 'faq', 'questions', 'contact', 'assistance', 'troubleshoot', 'issue', 'problem'],
+            url: '/help',
+            label: 'Help & Support',
+            message: "I'll take you to our help center where you can find answers to common questions and get the support you need."
+        },
+        dashboard: {
+            keywords: ['dashboard', 'my courses', 'my sessions', 'progress', 'my learning', 'account'],
+            url: '/dashboard',
+            label: 'Dashboard',
+            message: "Let me take you to your dashboard where you can see your courses, sessions, and learning progress!"
         },
         resources: {
             keywords: ['resources', 'materials', 'study guides', 'templates', 'tools', 'learning materials', 'downloads', 'guides', 'e-books'],
             url: '/resources',
             label: 'Learning Resources',
             message: "Explore our extensive collection of learning resources, study guides, and tools! Let me take you to the resources page."
-        },
-        community: {
-            keywords: ['community', 'forum', 'discussion', 'network', 'peers', 'collaborate', 'study group', 'connect', 'students', 'discuss'],
-            url: '/community',
-            label: 'Community Hub',
-            message: "Join our vibrant learning community! Let me take you to the Community Hub where you can connect with peers, discuss ideas, and collaborate."
-        },
-        faq: {
-            keywords: ['faq', 'questions', 'help', 'support', 'answers', 'frequently asked', 'how to', 'assistance', 'troubleshoot'],
-            url: '/faq',
-            label: 'FAQ & Support',
-            message: "I can take you to our FAQ section where you'll find answers to common questions about our programs and services."
-        },
-        blog: {
-            keywords: ['blog', 'articles', 'insights', 'tips', 'learning tips', 'edtech', 'education news', 'updates', 'trends'],
-            url: '/blog',
-            label: 'Blog & Insights',
-            message: "Check out our blog for educational insights, learning tips, and the latest in education technology!"
-        },
-        contact: {
-            keywords: ['contact', 'reach out', 'email', 'call', 'phone', 'support', 'help desk', 'talk to someone', 'message', 'get in touch'],
-            url: '/contact',
-            label: 'Contact Us',
-            message: "I'll take you to our contact page where you can reach out to our team for personalized support."
         }
     };
 
-    // ===== HELPERS =====
+    // ============================================
+    // HELPERS
+    // ============================================
     const scrollToBottom = () => {
         setTimeout(() => {
             messagesEndRef.current?.scrollIntoView({ behavior: 'smooth', block: 'end' });
@@ -95,7 +88,9 @@ const ChatWidget = () => {
         });
     };
 
-    // ===== NAVIGATION DETECTION =====
+    // ============================================
+    // DETECT NAVIGATION
+    // ============================================
     const detectNavigation = (text) => {
         const lowerText = text.toLowerCase();
         for (const [key, config] of Object.entries(navConfig)) {
@@ -108,9 +103,40 @@ const ChatWidget = () => {
         return null;
     };
 
-    // ===== SEND MESSAGE =====
+    // ============================================
+    // HANDLE CONSENT
+    // ============================================
+    const handleConsent = () => {
+        setConsentGiven(true);
+        localStorage.setItem('chat_consent', 'true');
+    };
+
+    // ============================================
+    // HANDLE QUICK ACTION
+    // ============================================
+    const handleQuickAction = (action) => {
+        const config = navConfig[action];
+        if (config) {
+            const message = {
+                id: Date.now(),
+                text: config.message,
+                sender: 'bot',
+                time: formatTime(),
+                navigation: {
+                    url: config.url,
+                    label: config.label
+                }
+            };
+            setMessages(prev => [...prev, message]);
+            scrollToBottom();
+        }
+    };
+
+    // ============================================
+    // SEND MESSAGE
+    // ============================================
     const sendMessage = async (messageText) => {
-        if (!messageText.trim()) return;
+        if (!messageText.trim() || !consentGiven) return;
 
         const userMessage = {
             id: Date.now(),
@@ -212,12 +238,16 @@ const ChatWidget = () => {
         }
     };
 
-    // ===== HANDLE NAVIGATION CLICK =====
+    // ============================================
+    // HANDLE NAVIGATION
+    // ============================================
     const handleNavigate = (url) => {
         window.location.href = url;
     };
 
-    // ===== TOGGLE CHAT =====
+    // ============================================
+    // TOGGLE CHAT
+    // ============================================
     const toggleChat = () => {
         setIsOpen(!isOpen);
         if (!isOpen) {
@@ -228,7 +258,9 @@ const ChatWidget = () => {
         }
     };
 
-    // ===== KEYBOARD SHORTCUT =====
+    // ============================================
+    // KEYBOARD SHORTCUT
+    // ============================================
     useEffect(() => {
         const handleKeyDown = (e) => {
             if ((e.ctrlKey || e.metaKey) && e.key === 'k') {
@@ -243,10 +275,18 @@ const ChatWidget = () => {
         return () => window.removeEventListener('keydown', handleKeyDown);
     }, [isOpen]);
 
-    // ===== INITIALIZE =====
+    // ============================================
+    // INITIALIZE
+    // ============================================
     useEffect(() => {
         if (!sessionId) {
             setSessionId(generateUUID());
+        }
+
+        // Check for saved consent
+        const savedConsent = localStorage.getItem('chat_consent');
+        if (savedConsent === 'true') {
+            setConsentGiven(true);
         }
 
         // Add welcome message
@@ -262,41 +302,37 @@ const ChatWidget = () => {
         console.log(`✅ ChatWidget [${chatId}] loaded`);
     }, []);
 
-    // ===== RENDER =====
+    // ============================================
+    // RENDER
+    // ============================================
     return (
         <div className="chat-widget-container">
-            {/* Chat Toggle Button */}
+            {/* Chat Bubble - Floating Button */}
             <button
-                className="chat-toggle-btn"
+                className="chat-bubble"
                 onClick={toggleChat}
                 aria-label="Toggle chat"
             >
-                {isOpen ? (
-                    <span className="chat-close-icon">✕</span>
-                ) : (
-                    <span className="chat-open-icon">💬</span>
-                )}
-                <span className="chat-toggle-label">
-                    {isOpen ? 'Close' : 'Chat'}
-                </span>
+                {isOpen ? '✕' : '💬'}
+                <span className="bubble-dot"></span>
             </button>
 
-            {/* Chat Window */}
+            {/* Chat Panel */}
             {isOpen && (
-                <div className="chat-window" ref={chatContainerRef}>
+                <div className="chat-panel">
                     {/* Header */}
                     <div className="chat-header">
-                        <div className="chat-header-info">
-                            <span className="chat-avatar">🤖</span>
-                            <div>
-                                <span className="chat-title">EduSpanTech Assistant</span>
-                                <span className="chat-status">Online</span>
+                        <div className="chat-header-left">
+                            <div className="chat-avatar">🤖</div>
+                            <div className="chat-header-info">
+                                <h3>EduSpanTech Assistant</h3>
+                                <span>Online</span>
                             </div>
                         </div>
                         <div className="chat-header-actions">
                             <button
-                                className="chat-minimize-btn"
-                                onClick={() => setIsOpen(false)}
+                                className="chat-minimize"
+                                onClick={toggleChat}
                                 aria-label="Minimize"
                             >
                                 ─
@@ -304,74 +340,80 @@ const ChatWidget = () => {
                         </div>
                     </div>
 
+                    {/* Consent */}
+                    <div className={`chat-consent ${consentGiven ? 'hidden' : ''}`}>
+                        <p>By using this chat, you agree to our Terms of Service.</p>
+                        <button onClick={handleConsent}>Accept</button>
+                    </div>
+
                     {/* Messages */}
                     <div className="chat-messages" ref={messagesEndRef}>
                         {messages.map((msg, index) => (
-                            <div key={msg.id || index} className={`chat-message ${msg.sender}`}>
-                                <div className="chat-message-content">
-                                    <div className="chat-message-bubble">
-                                        <p>{msg.text}</p>
-                                        {msg.navigation && (
-                                            <button
-                                                className="chat-nav-btn"
-                                                onClick={() => handleNavigate(msg.navigation.url)}
-                                            >
-                                                {msg.navigation.label} →
-                                            </button>
-                                        )}
-                                        {msg.isError && (
-                                            <span className="chat-error-indicator">⚠️</span>
-                                        )}
-                                    </div>
-                                    <span className="chat-message-time">{msg.time}</span>
-                                </div>
+                            <div key={index} className={`message ${msg.sender}`}>
+                                {msg.text}
+                                {msg.navigation && (
+                                    <button
+                                        className="chat-nav-btn"
+                                        onClick={() => handleNavigate(msg.navigation.url)}
+                                        style={{
+                                            display: 'block',
+                                            marginTop: '8px',
+                                            padding: '6px 16px',
+                                            background: 'linear-gradient(135deg, #4f46e5, #7c3aed)',
+                                            color: 'white',
+                                            border: 'none',
+                                            borderRadius: '8px',
+                                            cursor: 'pointer',
+                                            fontSize: '13px',
+                                            fontWeight: 500
+                                        }}
+                                    >
+                                        {msg.navigation.label} →
+                                    </button>
+                                )}
                             </div>
                         ))}
                         {isTyping && (
-                            <div className="chat-message bot typing">
-                                <div className="chat-message-content">
-                                    <div className="chat-message-bubble typing-indicator">
-                                        <span>●</span>
-                                        <span>●</span>
-                                        <span>●</span>
-                                    </div>
+                            <div className="message bot">
+                                <div className="typing-dots">
+                                    <span></span>
+                                    <span></span>
+                                    <span></span>
                                 </div>
                             </div>
                         )}
-                        <div ref={messagesEndRef} />
+                    </div>
+
+                    {/* Quick Actions */}
+                    <div className={`quick-actions ${!consentGiven ? 'hidden' : ''}`}>
+                        <button onClick={() => handleQuickAction('courses')}>📚 Courses</button>
+                        <button onClick={() => handleQuickAction('tutors')}>👨‍🏫 Tutors</button>
+                        <button onClick={() => handleQuickAction('pricing')}>💰 Pricing</button>
+                        <button onClick={() => handleQuickAction('help')}>❓ Help</button>
                     </div>
 
                     {/* Input */}
-                    <div className="chat-input-area">
-                        <div className="chat-input-wrapper">
-                            <input
-                                ref={inputRef}
-                                type="text"
-                                className="chat-input"
-                                placeholder="Ask me anything..."
-                                value={inputValue}
-                                onChange={(e) => setInputValue(e.target.value)}
-                                onKeyDown={(e) => {
-                                    if (e.key === 'Enter' && !e.shiftKey) {
-                                        e.preventDefault();
-                                        sendMessage(inputValue);
-                                    }
-                                }}
-                                disabled={isLoading}
-                            />
-                            <button
-                                className="chat-send-btn"
-                                onClick={() => sendMessage(inputValue)}
-                                disabled={isLoading || !inputValue.trim()}
-                            >
-                                {isLoading ? '⏳' : '➤'}
-                            </button>
-                        </div>
-                        <div className="chat-footer">
-                            <span className="chat-footer-text">
-                                Press <kbd>Ctrl + K</kbd> to toggle
-                            </span>
-                        </div>
+                    <div className="chat-input-row">
+                        <input
+                            ref={inputRef}
+                            type="text"
+                            placeholder="Ask me anything..."
+                            value={inputValue}
+                            onChange={(e) => setInputValue(e.target.value)}
+                            onKeyDown={(e) => {
+                                if (e.key === 'Enter' && !e.shiftKey) {
+                                    e.preventDefault();
+                                    sendMessage(inputValue);
+                                }
+                            }}
+                            disabled={!consentGiven}
+                        />
+                        <button
+                            onClick={() => sendMessage(inputValue)}
+                            disabled={!consentGiven || !inputValue.trim()}
+                        >
+                            Send
+                        </button>
                     </div>
                 </div>
             )}

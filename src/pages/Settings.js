@@ -16,7 +16,7 @@ const Settings = () => {
   const [isTutor, setIsTutor] = useState(false);
   const [user, setUser] = useState(null);
 
-  // ✅ Dynamic data from API
+  // Dynamic data from API
   const [subjectOptions, setSubjectOptions] = useState([]);
   const [shiftOptions, setShiftOptions] = useState([]);
   const [tierOptions, setTierOptions] = useState([]);
@@ -24,17 +24,17 @@ const Settings = () => {
 
   // Settings state
   const [settings, setSettings] = useState({
-    // Appearance
+    // Appearance - Both Student & Tutor
     theme: theme || 'dark',
     fontSize: 'medium',
     reduceAnimations: false,
     
-    // Language & Region
+    // Language & Region - Both
     language: 'en',
     dateFormat: 'DD/MM/YYYY',
     currency: 'ZAR',
     
-    // Notifications
+    // Notifications - Both (but different categories)
     notifications: {
       sessionReminders: true,
       tutorMessages: true,
@@ -44,31 +44,39 @@ const Settings = () => {
       achievements: true
     },
     
-    // Learning Preferences
-    defaultCurriculum: '',
-    defaultGrade: '',
-    autoPlayTutorials: true,
-    showHints: true,
-    difficultyLevel: 'intermediate',
-    showSolutions: 'after_attempt',
-    
-    // Session Preferences
-    preferredSessionTime: 'evening',
-    sessionDuration: 60,
-    autoSaveWhiteboard: true,
-    breakReminders: true,
-    
-    // Privacy & Security
+    // Privacy & Security - Both
     twoFactorAuth: false,
     shareUsageData: true,
     
-    // Accessibility
+    // Accessibility - Both
     highContrast: false,
     screenReaderOptimized: false,
     textToSpeech: false,
 
-    // ✅ Tutor-specific settings (only used if isTutor)
+    // ============================================
+    // STUDENT-ONLY SETTINGS
+    // ============================================
+    student: {
+      // Learning Preferences
+      defaultCurriculum: '',
+      defaultGrade: '',
+      autoPlayTutorials: true,
+      showHints: true,
+      difficultyLevel: 'intermediate',
+      showSolutions: 'after_attempt',
+      
+      // Session Preferences
+      preferredSessionTime: 'evening',
+      sessionDuration: 60,
+      autoSaveWhiteboard: true,
+      breakReminders: true
+    },
+
+    // ============================================
+    // TUTOR-ONLY SETTINGS
+    // ============================================
     tutor: {
+      // Profile
       bio: '',
       tier: '',
       subjects: [],
@@ -78,12 +86,16 @@ const Settings = () => {
       phone: '',
       linkedin: '',
       website: '',
+      
+      // Availability
       availability: {
         days: [],
         sessionDuration: 60,
         bufferTime: 15,
         rate: 0
       },
+      
+      // Tutor Notifications
       notifications: {
         newBookings: true,
         studentMessages: true,
@@ -91,6 +103,8 @@ const Settings = () => {
         earnings: true,
         systemUpdates: true
       },
+      
+      // Payment
       paymentInfo: {
         method: 'bank_transfer',
         bankName: '',
@@ -109,7 +123,7 @@ const Settings = () => {
     }
   }, [success]);
 
-  // ✅ Fetch all dynamic data
+  // Fetch all dynamic data
   useEffect(() => {
     const fetchData = async () => {
       try {
@@ -134,26 +148,14 @@ const Settings = () => {
           setCurriculumOptions(currData.curricula || []);
         }
 
-        // Fetch tiers from user data or settings
-        const tiersRes = await fetch(`${API_BASE_URL}/config/tiers`);
-        if (tiersRes.ok) {
-          const tiersData = await tiersRes.json();
-          if (tiersData.success) {
-            setTierOptions(tiersData.tiers || []);
-          }
-        }
-
-        // Fallback tiers if API fails
-        if (tierOptions.length === 0) {
-          setTierOptions([
-            { value: 'TIER_1', label: 'TIER_1 - Grades 8-9' },
-            { value: 'TIER_2', label: 'TIER_2 - Grades 10-11' },
-            { value: 'TIER_3', label: 'TIER_3 - Grade 12 & Tertiary' }
-          ]);
-        }
+        // Tiers - fallback if API not available
+        setTierOptions([
+          { value: 'TIER_1', label: 'TIER_1 - Grades 8-9' },
+          { value: 'TIER_2', label: 'TIER_2 - Grades 10-11' },
+          { value: 'TIER_3', label: 'TIER_3 - Grade 12 & Tertiary' }
+        ]);
       } catch (error) {
         console.error('Failed to fetch dynamic data:', error);
-        // Fallback - use empty arrays
         setSubjectOptions([]);
         setShiftOptions([]);
         setCurriculumOptions([]);
@@ -196,21 +198,19 @@ const Settings = () => {
             } catch (e) {}
           }
 
-          // ✅ Load tutor-specific data dynamically
-          if (isTutorAccount) {
-            // Get user's existing data
-            const userProfileRes = await fetch(`${API_BASE_URL}/auth/me`, {
-              headers: {
-                'Authorization': `Bearer ${token}`
-              }
-            });
-            const profileData = await userProfileRes.json();
-            const userProfile = profileData.user || profileData || {};
+          // Get user profile
+          const userProfileRes = await fetch(`${API_BASE_URL}/auth/me`, {
+            headers: {
+              'Authorization': `Bearer ${token}`
+            }
+          });
+          const profileData = await userProfileRes.json();
+          const userProfile = profileData.user || profileData || {};
 
+          if (isTutorAccount) {
+            // Load tutor data
             setSettings(prev => ({
               ...prev,
-              defaultCurriculum: userData.curriculum || userProfile.curriculum || '',
-              defaultGrade: userData.grade || userProfile.grade || '',
               tutor: {
                 ...prev.tutor,
                 bio: userData.bio || userProfile.bio || userProfile.tutor_bio || '',
@@ -235,6 +235,20 @@ const Settings = () => {
                 }
               }
             }));
+          } else {
+            // Load student data
+            setSettings(prev => ({
+              ...prev,
+              student: {
+                ...prev.student,
+                defaultCurriculum: userData.curriculum || userProfile.curriculum || '',
+                defaultGrade: userData.grade || userProfile.grade || '',
+                preferredSessionTime: userData.preferredSessionTime || userProfile.preferredSessionTime || 'evening',
+                sessionDuration: userData.sessionDuration || userProfile.sessionDuration || 60,
+                autoSaveWhiteboard: userData.autoSaveWhiteboard !== undefined ? userData.autoSaveWhiteboard : true,
+                breakReminders: userData.breakReminders !== undefined ? userData.breakReminders : true
+              }
+            }));
           }
         } else {
           navigate('/login');
@@ -253,7 +267,7 @@ const Settings = () => {
     setSettings(prev => ({ ...prev, theme: theme }));
   }, [theme]);
 
-  // Handle setting changes
+  // Handle general setting changes
   const handleSettingChange = (category, key, value) => {
     setSettings(prev => {
       const newSettings = category 
@@ -268,7 +282,20 @@ const Settings = () => {
     });
   };
 
-  // ✅ Handle tutor settings changes
+  // Handle student setting changes
+  const handleStudentSettingChange = (category, key, value) => {
+    setSettings(prev => ({
+      ...prev,
+      student: {
+        ...prev.student,
+        [category]: typeof prev.student[category] === 'object' 
+          ? { ...prev.student[category], [key]: value }
+          : { ...prev.student, [category]: value }
+      }
+    }));
+  };
+
+  // Handle tutor setting changes
   const handleTutorSettingChange = (category, key, value) => {
     setSettings(prev => ({
       ...prev,
@@ -281,7 +308,7 @@ const Settings = () => {
     }));
   };
 
-  // ✅ Handle tutor subject toggle
+  // Handle tutor subject toggle
   const handleSubjectToggle = (subjectId) => {
     setSettings(prev => {
       const subjects = prev.tutor.subjects || [];
@@ -299,7 +326,7 @@ const Settings = () => {
     });
   };
 
-  // ✅ Handle tutor availability toggle
+  // Handle tutor availability toggle
   const handleAvailabilityToggle = (day) => {
     setSettings(prev => {
       const days = prev.tutor.availability.days || [];
@@ -343,22 +370,38 @@ const Settings = () => {
         const payload = {
           timezone: settings.timezone || 'Africa/Johannesburg',
           settings: settings,
-          curriculum: settings.defaultCurriculum,
-          grade: settings.defaultGrade,
-          ...(isTutor && {
-            bio: settings.tutor.bio,
-            tier: settings.tutor.tier,
-            subjects: settings.tutor.subjects,
-            shiftId: settings.tutor.shiftId,
-            yearsExperience: settings.tutor.yearsExperience,
-            education: settings.tutor.education,
-            phone: settings.tutor.phone,
-            linkedin: settings.tutor.linkedin,
-            website: settings.tutor.website,
-            availability: settings.tutor.availability,
-            paymentInfo: settings.tutor.paymentInfo
-          })
+          // Common fields
+          theme: settings.theme,
+          fontSize: settings.fontSize,
+          language: settings.language,
+          dateFormat: settings.dateFormat,
+          currency: settings.currency,
+          twoFactorAuth: settings.twoFactorAuth,
+          shareUsageData: settings.shareUsageData
         };
+
+        if (isTutor) {
+          // Tutor payload
+          payload.bio = settings.tutor.bio;
+          payload.tier = settings.tutor.tier;
+          payload.subjects = settings.tutor.subjects;
+          payload.shiftId = settings.tutor.shiftId;
+          payload.yearsExperience = settings.tutor.yearsExperience;
+          payload.education = settings.tutor.education;
+          payload.phone = settings.tutor.phone;
+          payload.linkedin = settings.tutor.linkedin;
+          payload.website = settings.tutor.website;
+          payload.availability = settings.tutor.availability;
+          payload.paymentInfo = settings.tutor.paymentInfo;
+        } else {
+          // Student payload
+          payload.curriculum = settings.student.defaultCurriculum;
+          payload.grade = settings.student.defaultGrade;
+          payload.preferredSessionTime = settings.student.preferredSessionTime;
+          payload.sessionDuration = settings.student.sessionDuration;
+          payload.autoSaveWhiteboard = settings.student.autoSaveWhiteboard;
+          payload.breakReminders = settings.student.breakReminders;
+        }
 
         const response = await fetch(`${API_BASE_URL}/auth/update-profile`, {
           method: 'PUT',
@@ -433,7 +476,11 @@ const Settings = () => {
 
         <div className="settings-sections">
 
-          {/* ===== APPEARANCE ===== */}
+          {/* ============================================
+              COMMON SETTINGS - Both Student & Tutor
+              ============================================ */}
+
+          {/* Appearance */}
           <div className="settings-card">
             <div className="settings-card-header">
               <span className="settings-card-icon">🌙</span>
@@ -496,7 +543,7 @@ const Settings = () => {
             </div>
           </div>
 
-          {/* ===== LANGUAGE & REGION ===== */}
+          {/* Language & Region */}
           <div className="settings-card">
             <div className="settings-card-header">
               <span className="settings-card-icon">🌐</span>
@@ -548,7 +595,7 @@ const Settings = () => {
             </div>
           </div>
 
-          {/* ===== NOTIFICATIONS ===== */}
+          {/* Notifications - Common */}
           <div className="settings-card">
             <div className="settings-card-header">
               <span className="settings-card-icon">🔔</span>
@@ -588,147 +635,208 @@ const Settings = () => {
             </div>
           </div>
 
-          {/* ===== LEARNING PREFERENCES ===== */}
+          {/* Privacy & Security */}
           <div className="settings-card">
             <div className="settings-card-header">
-              <span className="settings-card-icon">📚</span>
-              <h3>Learning Preferences</h3>
+              <span className="settings-card-icon">🔒</span>
+              <h3>Privacy & Security</h3>
             </div>
             <div className="settings-card-body">
-              <div className="settings-group">
-                <label>Default Curriculum</label>
-                <select 
-                  className="settings-select"
-                  value={settings.defaultCurriculum}
-                  onChange={(e) => handleSettingChange(null, 'defaultCurriculum', e.target.value)}
-                >
-                  <option value="">Select curriculum...</option>
-                  {curriculumOptions.map(curr => (
-                    <option key={curr.id || curr.code} value={curr.id || curr.code}>
-                      {curr.name} {curr.country ? `(${curr.country})` : ''}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              <div className="settings-group">
-                <label>Default Grade</label>
-                <select 
-                  className="settings-select"
-                  value={settings.defaultGrade}
-                  onChange={(e) => handleSettingChange(null, 'defaultGrade', e.target.value)}
-                >
-                  <option value="">Select grade...</option>
-                  <option value="Grade 8">Grade 8</option>
-                  <option value="Grade 9">Grade 9</option>
-                  <option value="Grade 10">Grade 10</option>
-                  <option value="Grade 11">Grade 11</option>
-                  <option value="Grade 12">Grade 12</option>
-                  <option value="1st Year">1st Year</option>
-                  <option value="2nd Year">2nd Year</option>
-                </select>
-              </div>
-
-              <div className="settings-group">
-                <label>Difficulty Level</label>
-                <div className="difficulty-options">
-                  <button 
-                    className={`difficulty-option ${settings.difficultyLevel === 'beginner' ? 'active' : ''}`}
-                    onClick={() => handleSettingChange(null, 'difficultyLevel', 'beginner')}
-                  >
-                    🌱 Beginner
-                  </button>
-                  <button 
-                    className={`difficulty-option ${settings.difficultyLevel === 'intermediate' ? 'active' : ''}`}
-                    onClick={() => handleSettingChange(null, 'difficultyLevel', 'intermediate')}
-                  >
-                    📈 Intermediate
-                  </button>
-                  <button 
-                    className={`difficulty-option ${settings.difficultyLevel === 'advanced' ? 'active' : ''}`}
-                    onClick={() => handleSettingChange(null, 'difficultyLevel', 'advanced')}
-                  >
-                    🚀 Advanced
-                  </button>
-                </div>
-              </div>
-
               <Toggle
-                enabled={settings.autoPlayTutorials}
-                onChange={(val) => handleSettingChange(null, 'autoPlayTutorials', val)}
-                label="Auto-play whiteboard tutorials"
+                enabled={settings.twoFactorAuth}
+                onChange={(val) => handleSettingChange(null, 'twoFactorAuth', val)}
+                label="Two-factor authentication"
               />
               <Toggle
-                enabled={settings.showHints}
-                onChange={(val) => handleSettingChange(null, 'showHints', val)}
-                label="Show hints"
+                enabled={settings.shareUsageData}
+                onChange={(val) => handleSettingChange(null, 'shareUsageData', val)}
+                label="Share usage data to improve the platform"
               />
-
-              <div className="settings-group">
-                <label>Show Solutions</label>
-                <select 
-                  className="settings-select"
-                  value={settings.showSolutions}
-                  onChange={(e) => handleSettingChange(null, 'showSolutions', e.target.value)}
-                >
-                  <option value="immediately">Immediately</option>
-                  <option value="after_attempt">After attempt</option>
-                  <option value="never">Never</option>
-                </select>
+              
+              <div className="settings-group security-actions">
+                <button className="security-btn export-btn">
+                  📥 Download My Data
+                </button>
+                <button className="security-btn sessions-btn">
+                  🖥️ Manage Active Sessions
+                </button>
               </div>
             </div>
           </div>
 
-          {/* ===== SESSION PREFERENCES ===== */}
+          {/* Accessibility */}
           <div className="settings-card">
             <div className="settings-card-header">
-              <span className="settings-card-icon">🕐</span>
-              <h3>Session Preferences</h3>
+              <span className="settings-card-icon">♿</span>
+              <h3>Accessibility</h3>
             </div>
             <div className="settings-card-body">
-              <div className="settings-group">
-                <label>Preferred Session Time</label>
-                <select 
-                  className="settings-select"
-                  value={settings.preferredSessionTime}
-                  onChange={(e) => handleSettingChange(null, 'preferredSessionTime', e.target.value)}
-                >
-                  <option value="morning">Morning (6am - 12pm)</option>
-                  <option value="afternoon">Afternoon (12pm - 5pm)</option>
-                  <option value="evening">Evening (5pm - 9pm)</option>
-                  <option value="night">Night (9pm - 12am)</option>
-                </select>
-              </div>
-
-              <div className="settings-group">
-                <label>Session Duration</label>
-                <select 
-                  className="settings-select"
-                  value={settings.sessionDuration}
-                  onChange={(e) => handleSettingChange(null, 'sessionDuration', Number(e.target.value))}
-                >
-                  <option value="30">30 minutes</option>
-                  <option value="45">45 minutes</option>
-                  <option value="60">60 minutes</option>
-                  <option value="90">90 minutes</option>
-                </select>
-              </div>
-
               <Toggle
-                enabled={settings.autoSaveWhiteboard}
-                onChange={(val) => handleSettingChange(null, 'autoSaveWhiteboard', val)}
-                label="Auto-save whiteboard"
+                enabled={settings.highContrast}
+                onChange={(val) => handleSettingChange(null, 'highContrast', val)}
+                label="High contrast mode"
               />
               <Toggle
-                enabled={settings.breakReminders}
-                onChange={(val) => handleSettingChange(null, 'breakReminders', val)}
-                label="Break reminders"
+                enabled={settings.screenReaderOptimized}
+                onChange={(val) => handleSettingChange(null, 'screenReaderOptimized', val)}
+                label="Screen reader optimized"
+              />
+              <Toggle
+                enabled={settings.textToSpeech}
+                onChange={(val) => handleSettingChange(null, 'textToSpeech', val)}
+                label="Text-to-speech"
               />
             </div>
           </div>
 
           {/* ============================================
-              ✅ TUTOR-ONLY SETTINGS
+              STUDENT-ONLY SETTINGS
+              ============================================ */}
+          {!isTutor && (
+            <>
+              {/* Learning Preferences */}
+              <div className="settings-card student-settings">
+                <div className="settings-card-header">
+                  <span className="settings-card-icon">📚</span>
+                  <h3>Learning Preferences</h3>
+                </div>
+                <div className="settings-card-body">
+                  <div className="settings-group">
+                    <label>Default Curriculum</label>
+                    <select 
+                      className="settings-select"
+                      value={settings.student.defaultCurriculum}
+                      onChange={(e) => handleStudentSettingChange('defaultCurriculum', e.target.value)}
+                    >
+                      <option value="">Select curriculum...</option>
+                      {curriculumOptions.map(curr => (
+                        <option key={curr.id || curr.code} value={curr.id || curr.code}>
+                          {curr.name} {curr.country ? `(${curr.country})` : ''}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div className="settings-group">
+                    <label>Default Grade</label>
+                    <select 
+                      className="settings-select"
+                      value={settings.student.defaultGrade}
+                      onChange={(e) => handleStudentSettingChange('defaultGrade', e.target.value)}
+                    >
+                      <option value="">Select grade...</option>
+                      <option value="Grade 8">Grade 8</option>
+                      <option value="Grade 9">Grade 9</option>
+                      <option value="Grade 10">Grade 10</option>
+                      <option value="Grade 11">Grade 11</option>
+                      <option value="Grade 12">Grade 12</option>
+                      <option value="1st Year">1st Year</option>
+                      <option value="2nd Year">2nd Year</option>
+                    </select>
+                  </div>
+
+                  <div className="settings-group">
+                    <label>Difficulty Level</label>
+                    <div className="difficulty-options">
+                      <button 
+                        className={`difficulty-option ${settings.student.difficultyLevel === 'beginner' ? 'active' : ''}`}
+                        onClick={() => handleStudentSettingChange('difficultyLevel', 'beginner')}
+                      >
+                        🌱 Beginner
+                      </button>
+                      <button 
+                        className={`difficulty-option ${settings.student.difficultyLevel === 'intermediate' ? 'active' : ''}`}
+                        onClick={() => handleStudentSettingChange('difficultyLevel', 'intermediate')}
+                      >
+                        📈 Intermediate
+                      </button>
+                      <button 
+                        className={`difficulty-option ${settings.student.difficultyLevel === 'advanced' ? 'active' : ''}`}
+                        onClick={() => handleStudentSettingChange('difficultyLevel', 'advanced')}
+                      >
+                        🚀 Advanced
+                      </button>
+                    </div>
+                  </div>
+
+                  <Toggle
+                    enabled={settings.student.autoPlayTutorials}
+                    onChange={(val) => handleStudentSettingChange('autoPlayTutorials', val)}
+                    label="Auto-play whiteboard tutorials"
+                  />
+                  <Toggle
+                    enabled={settings.student.showHints}
+                    onChange={(val) => handleStudentSettingChange('showHints', val)}
+                    label="Show hints"
+                  />
+
+                  <div className="settings-group">
+                    <label>Show Solutions</label>
+                    <select 
+                      className="settings-select"
+                      value={settings.student.showSolutions}
+                      onChange={(e) => handleStudentSettingChange('showSolutions', e.target.value)}
+                    >
+                      <option value="immediately">Immediately</option>
+                      <option value="after_attempt">After attempt</option>
+                      <option value="never">Never</option>
+                    </select>
+                  </div>
+                </div>
+              </div>
+
+              {/* Session Preferences - Student */}
+              <div className="settings-card student-settings">
+                <div className="settings-card-header">
+                  <span className="settings-card-icon">🕐</span>
+                  <h3>Session Preferences</h3>
+                </div>
+                <div className="settings-card-body">
+                  <div className="settings-group">
+                    <label>Preferred Session Time</label>
+                    <select 
+                      className="settings-select"
+                      value={settings.student.preferredSessionTime}
+                      onChange={(e) => handleStudentSettingChange('preferredSessionTime', e.target.value)}
+                    >
+                      <option value="morning">Morning (6am - 12pm)</option>
+                      <option value="afternoon">Afternoon (12pm - 5pm)</option>
+                      <option value="evening">Evening (5pm - 9pm)</option>
+                      <option value="night">Night (9pm - 12am)</option>
+                    </select>
+                  </div>
+
+                  <div className="settings-group">
+                    <label>Session Duration</label>
+                    <select 
+                      className="settings-select"
+                      value={settings.student.sessionDuration}
+                      onChange={(e) => handleStudentSettingChange('sessionDuration', Number(e.target.value))}
+                    >
+                      <option value="30">30 minutes</option>
+                      <option value="45">45 minutes</option>
+                      <option value="60">60 minutes</option>
+                      <option value="90">90 minutes</option>
+                    </select>
+                  </div>
+
+                  <Toggle
+                    enabled={settings.student.autoSaveWhiteboard}
+                    onChange={(val) => handleStudentSettingChange('autoSaveWhiteboard', val)}
+                    label="Auto-save whiteboard"
+                  />
+                  <Toggle
+                    enabled={settings.student.breakReminders}
+                    onChange={(val) => handleStudentSettingChange('breakReminders', val)}
+                    label="Break reminders"
+                  />
+                </div>
+              </div>
+            </>
+          )}
+
+          {/* ============================================
+              TUTOR-ONLY SETTINGS
               ============================================ */}
           {isTutor && (
             <>
@@ -802,7 +910,7 @@ const Settings = () => {
                       type="number"
                       className="settings-input"
                       value={settings.tutor.yearsExperience}
-                      onChange={(e) => handleTutorSettingChange('yearsExperience', e.target.value)}
+                      onChange={(e) => handleTutorSettingChange('yearsExperience', Number(e.target.value))}
                       min="0"
                       max="50"
                     />
@@ -1024,60 +1132,6 @@ const Settings = () => {
               </div>
             </>
           )}
-
-          {/* ===== PRIVACY & SECURITY ===== */}
-          <div className="settings-card">
-            <div className="settings-card-header">
-              <span className="settings-card-icon">🔒</span>
-              <h3>Privacy & Security</h3>
-            </div>
-            <div className="settings-card-body">
-              <Toggle
-                enabled={settings.twoFactorAuth}
-                onChange={(val) => handleSettingChange(null, 'twoFactorAuth', val)}
-                label="Two-factor authentication"
-              />
-              <Toggle
-                enabled={settings.shareUsageData}
-                onChange={(val) => handleSettingChange(null, 'shareUsageData', val)}
-                label="Share usage data to improve the platform"
-              />
-              
-              <div className="settings-group security-actions">
-                <button className="security-btn export-btn">
-                  📥 Download My Data
-                </button>
-                <button className="security-btn sessions-btn">
-                  🖥️ Manage Active Sessions
-                </button>
-              </div>
-            </div>
-          </div>
-
-          {/* ===== ACCESSIBILITY ===== */}
-          <div className="settings-card">
-            <div className="settings-card-header">
-              <span className="settings-card-icon">♿</span>
-              <h3>Accessibility</h3>
-            </div>
-            <div className="settings-card-body">
-              <Toggle
-                enabled={settings.highContrast}
-                onChange={(val) => handleSettingChange(null, 'highContrast', val)}
-                label="High contrast mode"
-              />
-              <Toggle
-                enabled={settings.screenReaderOptimized}
-                onChange={(val) => handleSettingChange(null, 'screenReaderOptimized', val)}
-                label="Screen reader optimized"
-              />
-              <Toggle
-                enabled={settings.textToSpeech}
-                onChange={(val) => handleSettingChange(null, 'textToSpeech', val)}
-                label="Text-to-speech"
-              />
-            </div>
-          </div>
 
           {/* Save Button */}
           <div className="settings-actions">

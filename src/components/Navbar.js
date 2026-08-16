@@ -29,6 +29,7 @@ import { useHomeData } from "../hooks/useHomeData";
 import { useLanguage } from "../context/LanguageContext";
 import { useSound } from "../context/SoundContext";
 import { authService } from "../services/authService";
+import NotificationBell from "./NotificationBell";
 import "./Navbar.css";
 
 // ============================================
@@ -549,6 +550,11 @@ function Navbar() {
               ))}
             </div>
           </div>
+
+          {/* ============================================
+              🔔 NOTIFICATION BELL - PLACED HERE
+              ============================================ */}
+          {isAuthenticated && <NotificationBell />}
 
           {/* ============================================
               USER DROPDOWN - FIXED AVATAR OVERLAPPING

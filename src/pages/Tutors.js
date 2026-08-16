@@ -66,42 +66,42 @@ const Tutors = () => {
   // RENDER AVATAR - SHOW REAL OR DEFAULT
   // ============================================
   const renderAvatar = (tutor) => {
-    // If tutor has an avatar (base64 or URL)
-    if (tutor?.avatar) {
-      const isImage = tutor.avatar.startsWith('data:image') || 
-                      tutor.avatar.startsWith('http://') || 
-                      tutor.avatar.startsWith('https://');
-
-      if (isImage) {
-        let imageUrl = tutor.avatar;
-        if (imageUrl.startsWith('http')) {
-          const separator = imageUrl.includes('?') ? '&' : '?';
-          imageUrl = `${imageUrl}${separator}t=${Date.now()}`;
-        }
-
-        return (
-          <img 
-            src={imageUrl} 
-            alt={tutor.name} 
-            className="tutor-avatar-img"
-            loading="lazy"
-            onError={(e) => {
-              e.target.style.display = 'none';
-              const parent = e.target.parentElement;
-              if (parent) {
-                parent.textContent = '🧑‍🏫';
-                parent.style.fontSize = '28px';
-                parent.style.display = 'flex';
-                parent.style.alignItems = 'center';
-                parent.style.justifyContent = 'center';
-              }
-            }}
-          />
-        );
-      }
+    if (!tutor.avatar) {
+      return '🧑‍🏫';
     }
-    
-    // Default avatar (emoji)
+
+    const isImage = tutor.avatar.startsWith('data:image') || 
+                    tutor.avatar.startsWith('http://') || 
+                    tutor.avatar.startsWith('https://');
+
+    if (isImage) {
+      let imageUrl = tutor.avatar;
+      if (imageUrl.startsWith('http')) {
+        const separator = imageUrl.includes('?') ? '&' : '?';
+        imageUrl = `${imageUrl}${separator}t=${Date.now()}`;
+      }
+
+      return (
+        <img 
+          src={imageUrl} 
+          alt={tutor.name} 
+          className="tutor-avatar-img"
+          loading="lazy"
+          onError={(e) => {
+            e.target.style.display = 'none';
+            const parent = e.target.parentElement;
+            if (parent) {
+              parent.textContent = '🧑‍🏫';
+              parent.style.fontSize = '28px';
+              parent.style.display = 'flex';
+              parent.style.alignItems = 'center';
+              parent.style.justifyContent = 'center';
+            }
+          }}
+        />
+      );
+    }
+
     return '🧑‍🏫';
   };
 
@@ -114,9 +114,6 @@ const Tutors = () => {
     setShowFullProfile(false);
   };
 
-  // ============================================
-  // HANDLE VIEW FULL PROFILE
-  // ============================================
   const handleViewFullProfile = () => {
     setShowFullProfile(true);
   };
@@ -143,6 +140,9 @@ const Tutors = () => {
     setShowBookingModal(true);
   };
 
+  // ============================================
+  // HANDLE BOOK SESSION - FIXED
+  // ============================================
   const handleBookSession = (tutor) => {
     if (!isAuthenticated) {
       setSelectedTutor(tutor);
@@ -160,6 +160,9 @@ const Tutors = () => {
     setShowBookingModal(true);
   };
 
+  // ============================================
+  // HANDLE BOOKING SUBMIT - FIXED
+  // ============================================
   const handleBookingSubmit = async (e) => {
     e.preventDefault();
     if (!booking.date) {
@@ -167,8 +170,20 @@ const Tutors = () => {
       return;
     }
 
+    if (!booking.tutorId) {
+      alert('Please select a tutor');
+      return;
+    }
+
     try {
       setBookingLoading(true);
+      
+      console.log('📤 Booking data:', {
+        tutorId: booking.tutorId,
+        date: booking.date,
+        duration: booking.duration,
+        topic: booking.topic
+      });
       
       const result = await sessionService.bookSession(
         booking.tutorId,
@@ -177,13 +192,17 @@ const Tutors = () => {
         booking.topic
       );
 
+      console.log('📥 Booking result:', result);
+
       if (result.success) {
         setShowBookingModal(false);
-        navigate(`/session/${result.session.id}`);
+        alert('✅ Session booked successfully!');
+        navigate('/my-sessions');
       } else {
         alert('❌ Failed to book session: ' + (result.error || 'Unknown error'));
       }
     } catch (error) {
+      console.error('❌ Booking error:', error);
       alert('❌ Failed to book session: ' + error.message);
     } finally {
       setBookingLoading(false);
@@ -195,7 +214,7 @@ const Tutors = () => {
   };
 
   // ============================================
-  // TUTOR MODAL/POPUP - NO HARDCODED DATA
+  // TUTOR MODAL
   // ============================================
   const TutorModal = () => {
     if (!viewingTutor) return null;
@@ -206,19 +225,16 @@ const Tutors = () => {
           <button className="tutor-modal-close" onClick={() => setShowTutorModal(false)}>×</button>
           
           {!showFullProfile ? (
-            // ===== QUICK VIEW =====
             <div className="tutor-modal-content">
               <div className="tutor-modal-avatar">
                 {renderAvatar(viewingTutor)}
               </div>
               <h2 className="tutor-modal-name">{viewingTutor.name}</h2>
               
-              {/* Only show tier if it exists */}
               {viewingTutor.tier && (
                 <span className="tutor-modal-tier">{viewingTutor.tier}</span>
               )}
               
-              {/* Only show subjects if they exist */}
               {viewingTutor.subjects && viewingTutor.subjects.length > 0 && (
                 <div className="tutor-modal-subjects">
                   {viewingTutor.subjects.map((subject, idx) => (
@@ -227,7 +243,6 @@ const Tutors = () => {
                 </div>
               )}
 
-              {/* Only show bio if it exists */}
               {viewingTutor.bio && (
                 <p className="tutor-modal-bio">{viewingTutor.bio}</p>
               )}
@@ -245,7 +260,6 @@ const Tutors = () => {
               </div>
             </div>
           ) : (
-            // ===== FULL PROFILE VIEW =====
             <div className="tutor-modal-full-profile">
               <button className="back-btn" onClick={() => setShowFullProfile(false)}>
                 ← Back
@@ -267,7 +281,6 @@ const Tutors = () => {
               </div>
 
               <div className="full-profile-body">
-                {/* Subjects */}
                 {viewingTutor.subjects && viewingTutor.subjects.length > 0 && (
                   <div className="profile-section">
                     <h3>📖 Subjects</h3>
@@ -279,7 +292,6 @@ const Tutors = () => {
                   </div>
                 )}
 
-                {/* Bio/About */}
                 {viewingTutor.bio && (
                   <div className="profile-section">
                     <h3>📝 About</h3>
@@ -287,7 +299,6 @@ const Tutors = () => {
                   </div>
                 )}
 
-                {/* Shift/Availability */}
                 {viewingTutor.shift && (
                   <div className="profile-section">
                     <h3>⏰ Availability</h3>
@@ -298,7 +309,6 @@ const Tutors = () => {
                   </div>
                 )}
 
-                {/* Tier - show as experience level */}
                 {viewingTutor.tier && (
                   <div className="profile-section">
                     <h3>🏅 Experience Level</h3>
@@ -317,7 +327,9 @@ const Tutors = () => {
     );
   };
 
-  // ===== LOGIN PROMPT =====
+  // ============================================
+  // LOGIN PROMPT
+  // ============================================
   const LoginPrompt = () => (
     <div className="login-prompt-overlay" onClick={() => setShowLoginPrompt(false)}>
       <div className="login-prompt-modal" onClick={(e) => e.stopPropagation()}>
@@ -340,7 +352,9 @@ const Tutors = () => {
     </div>
   );
 
-  // ===== BOOKING MODAL =====
+  // ============================================
+  // BOOKING MODAL - FIXED
+  // ============================================
   const BookingModal = () => (
     <div className="booking-modal-overlay" onClick={() => setShowBookingModal(false)}>
       <div className="booking-modal" onClick={(e) => e.stopPropagation()}>

@@ -1,9 +1,9 @@
 // src/services/sessionService.js
 import { API_BASE_URL } from '../config/api';
 
-export const sessionService = {
+const sessionService = {
   // ============================================
-  // BOOK A SESSION - FIXED
+  // BOOK A SESSION - SIMPLIFIED
   // ============================================
   bookSession: async (tutorId, date, duration = 60, topic = 'Mathematics') => {
     try {
@@ -40,7 +40,7 @@ export const sessionService = {
       console.log('📥 Booking response:', data);
 
       if (!response.ok) {
-        throw new Error(data.error || 'Failed to book session');
+        throw new Error(data.error || data.message || 'Failed to book session');
       }
 
       return {

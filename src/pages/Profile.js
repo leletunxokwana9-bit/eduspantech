@@ -206,14 +206,42 @@ const Profile = () => {
       }
     };
 
-    // ✅ FIXED: Fetch tutor stats with dynamic rating from user data
+    // ✅ FIXED: Fetch tutor stats with dynamic rating from API
     const fetchTutorStats = async (userData) => {
       try {
         const token = localStorage.getItem('accessToken');
         if (!token) return;
 
-        // ✅ Get rating from user data (database)
-        const rating = userData?.tutor_rating || userData?.rating || 4.5;
+        // ✅ FETCH RATING FROM THE API
+        let rating = 4.5;
+        let ratingCount = 0;
+
+        try {
+          const tutorsResponse = await fetch(`${API_BASE_URL}/tutors`, {
+            headers: {
+              'Authorization': `Bearer ${token}`,
+              'Content-Type': 'application/json'
+            }
+          });
+
+          if (tutorsResponse.ok) {
+            const tutorsData = await tutorsResponse.json();
+            // Find the current tutor in the response
+            for (const shift of (tutorsData.tutors || [])) {
+              const tutor = shift.tutors?.find(t => t.id === userData?.id);
+              if (tutor) {
+                rating = tutor.rating || tutor.tutorRating || 4.5;
+                ratingCount = tutor.ratingCount || 0;
+                console.log('📊 Rating from API for', userData?.name, ':', rating);
+                break;
+              }
+            }
+          }
+        } catch (error) {
+          console.error('❌ Failed to fetch rating:', error);
+          // Fallback: use rating from user data
+          rating = userData?.tutor_rating || userData?.rating || 4.5;
+        }
 
         const sessionsResponse = await fetch(`${API_BASE_URL}/sessions`, {
           headers: {
@@ -233,14 +261,16 @@ const Profile = () => {
             totalSessions: sessions.length,
             studentsTaught: uniqueStudents.size,
             totalEarnings: completedSessions.length * 100,
-            avgRating: rating
+            avgRating: rating,
+            ratingCount: ratingCount
           });
         } else {
           setTutorStats({
             totalSessions: 0,
             studentsTaught: 0,
             totalEarnings: 0,
-            avgRating: rating
+            avgRating: rating,
+            ratingCount: ratingCount
           });
         }
       } catch (error) {
@@ -251,7 +281,8 @@ const Profile = () => {
           totalSessions: 0,
           studentsTaught: 0,
           totalEarnings: 0,
-          avgRating: rating
+          avgRating: rating,
+          ratingCount: 0
         });
       }
     };

@@ -8,11 +8,19 @@ import './Settings.css';
 
 const Settings = () => {
   const navigate = useNavigate();
-  const { theme, setTheme, toggleTheme, isDark } = useTheme();
+  const { theme, setTheme } = useTheme();
   const [loading, setLoading] = useState(true);
   const [success, setSuccess] = useState('');
   const [error, setError] = useState('');
   const [saving, setSaving] = useState(false);
+  const [isTutor, setIsTutor] = useState(false);
+  const [user, setUser] = useState(null);
+
+  // ✅ Dynamic data from API
+  const [subjectOptions, setSubjectOptions] = useState([]);
+  const [shiftOptions, setShiftOptions] = useState([]);
+  const [tierOptions, setTierOptions] = useState([]);
+  const [curriculumOptions, setCurriculumOptions] = useState([]);
 
   // Settings state
   const [settings, setSettings] = useState({
@@ -37,7 +45,7 @@ const Settings = () => {
     },
     
     // Learning Preferences
-    defaultCurriculum: 'ZA',
+    defaultCurriculum: '',
     defaultGrade: '',
     autoPlayTutorials: true,
     showHints: true,
@@ -57,7 +65,40 @@ const Settings = () => {
     // Accessibility
     highContrast: false,
     screenReaderOptimized: false,
-    textToSpeech: false
+    textToSpeech: false,
+
+    // ✅ Tutor-specific settings (only used if isTutor)
+    tutor: {
+      bio: '',
+      tier: '',
+      subjects: [],
+      shiftId: '',
+      yearsExperience: 0,
+      education: '',
+      phone: '',
+      linkedin: '',
+      website: '',
+      availability: {
+        days: [],
+        sessionDuration: 60,
+        bufferTime: 15,
+        rate: 0
+      },
+      notifications: {
+        newBookings: true,
+        studentMessages: true,
+        ratings: true,
+        earnings: true,
+        systemUpdates: true
+      },
+      paymentInfo: {
+        method: 'bank_transfer',
+        bankName: '',
+        accountNumber: '',
+        accountHolder: '',
+        taxId: ''
+      }
+    }
   });
 
   // Auto-dismiss success message
@@ -68,9 +109,68 @@ const Settings = () => {
     }
   }, [success]);
 
-  // Fetch user data and saved settings
+  // ✅ Fetch all dynamic data
   useEffect(() => {
     const fetchData = async () => {
+      try {
+        // Fetch subjects
+        const subjectsRes = await fetch(`${API_BASE_URL}/content/subjects`);
+        const subjectsData = await subjectsRes.json();
+        if (subjectsData.success) {
+          setSubjectOptions(subjectsData.subjects || []);
+        }
+
+        // Fetch shifts
+        const shiftsRes = await fetch(`${API_BASE_URL}/shifts`);
+        const shiftsData = await shiftsRes.json();
+        if (shiftsData.success) {
+          setShiftOptions(shiftsData.shifts || []);
+        }
+
+        // Fetch curricula
+        const currRes = await fetch(`${API_BASE_URL}/content/curricula`);
+        const currData = await currRes.json();
+        if (currData.success) {
+          setCurriculumOptions(currData.curricula || []);
+        }
+
+        // Fetch tiers from user data or settings
+        const tiersRes = await fetch(`${API_BASE_URL}/config/tiers`);
+        if (tiersRes.ok) {
+          const tiersData = await tiersRes.json();
+          if (tiersData.success) {
+            setTierOptions(tiersData.tiers || []);
+          }
+        }
+
+        // Fallback tiers if API fails
+        if (tierOptions.length === 0) {
+          setTierOptions([
+            { value: 'TIER_1', label: 'TIER_1 - Grades 8-9' },
+            { value: 'TIER_2', label: 'TIER_2 - Grades 10-11' },
+            { value: 'TIER_3', label: 'TIER_3 - Grade 12 & Tertiary' }
+          ]);
+        }
+      } catch (error) {
+        console.error('Failed to fetch dynamic data:', error);
+        // Fallback - use empty arrays
+        setSubjectOptions([]);
+        setShiftOptions([]);
+        setCurriculumOptions([]);
+        setTierOptions([
+          { value: 'TIER_1', label: 'TIER_1 - Grades 8-9' },
+          { value: 'TIER_2', label: 'TIER_2 - Grades 10-11' },
+          { value: 'TIER_3', label: 'TIER_3 - Grade 12 & Tertiary' }
+        ]);
+      }
+    };
+
+    fetchData();
+  }, []);
+
+  // Fetch user data and saved settings
+  useEffect(() => {
+    const fetchUserData = async () => {
       try {
         const token = localStorage.getItem('accessToken');
         if (!token) {
@@ -80,17 +180,61 @@ const Settings = () => {
 
         const userData = await authService.getCurrentUserWithSubscription();
         if (userData) {
+          setUser(userData);
+          const isTutorAccount = userData.is_tutor === true || userData.role === 'tutor';
+          setIsTutor(isTutorAccount);
+          
           // Load saved settings from localStorage
           const savedSettings = localStorage.getItem('eduspantech_settings');
           if (savedSettings) {
             try {
               const parsed = JSON.parse(savedSettings);
-              // Ensure theme from saved settings matches global theme
               if (parsed.theme) {
                 setTheme(parsed.theme);
               }
               setSettings(prev => ({ ...prev, ...parsed }));
             } catch (e) {}
+          }
+
+          // ✅ Load tutor-specific data dynamically
+          if (isTutorAccount) {
+            // Get user's existing data
+            const userProfileRes = await fetch(`${API_BASE_URL}/auth/me`, {
+              headers: {
+                'Authorization': `Bearer ${token}`
+              }
+            });
+            const profileData = await userProfileRes.json();
+            const userProfile = profileData.user || profileData || {};
+
+            setSettings(prev => ({
+              ...prev,
+              defaultCurriculum: userData.curriculum || userProfile.curriculum || '',
+              defaultGrade: userData.grade || userProfile.grade || '',
+              tutor: {
+                ...prev.tutor,
+                bio: userData.bio || userProfile.bio || userProfile.tutor_bio || '',
+                tier: userData.tutor_tier || userProfile.tutor_tier || userData.tier || '',
+                subjects: userData.tutor_subjects || userProfile.tutor_subjects || [],
+                shiftId: userData.tutor_shift_id || userProfile.tutor_shift_id || '',
+                yearsExperience: userData.years_experience || userProfile.years_experience || 0,
+                education: userData.education || userProfile.education || '',
+                phone: userData.phone || userProfile.phone || '',
+                linkedin: userData.linkedin || userProfile.linkedin || '',
+                website: userData.website || userProfile.website || '',
+                availability: {
+                  ...prev.tutor.availability,
+                  days: userData.availability?.days || userProfile.availability?.days || [],
+                  sessionDuration: userData.availability?.sessionDuration || userProfile.availability?.sessionDuration || 60,
+                  bufferTime: userData.availability?.bufferTime || userProfile.availability?.bufferTime || 15,
+                  rate: userData.availability?.rate || userProfile.availability?.rate || 0
+                },
+                paymentInfo: {
+                  ...prev.tutor.paymentInfo,
+                  ...(userData.paymentInfo || userProfile.paymentInfo || {})
+                }
+              }
+            }));
           }
         } else {
           navigate('/login');
@@ -101,12 +245,11 @@ const Settings = () => {
         setLoading(false);
       }
     };
-    fetchData();
+    fetchUserData();
   }, [navigate, setTheme]);
 
-  // Apply theme on change - Now managed by ThemeContext
+  // Apply theme on change
   useEffect(() => {
-    // Update local settings when global theme changes
     setSettings(prev => ({ ...prev, theme: theme }));
   }, [theme]);
 
@@ -117,12 +260,72 @@ const Settings = () => {
         ? { ...prev, [category]: { ...prev[category], [key]: value } }
         : { ...prev, [key]: value };
       
-      // If theme changes, update global theme
       if (key === 'theme' && !category) {
         setTheme(value);
       }
       
       return newSettings;
+    });
+  };
+
+  // ✅ Handle tutor settings changes
+  const handleTutorSettingChange = (category, key, value) => {
+    setSettings(prev => ({
+      ...prev,
+      tutor: {
+        ...prev.tutor,
+        [category]: typeof prev.tutor[category] === 'object' && !Array.isArray(prev.tutor[category])
+          ? { ...prev.tutor[category], [key]: value }
+          : { ...prev.tutor, [category]: value }
+      }
+    }));
+  };
+
+  // ✅ Handle tutor subject toggle
+  const handleSubjectToggle = (subjectId) => {
+    setSettings(prev => {
+      const subjects = prev.tutor.subjects || [];
+      if (subjects.includes(subjectId)) {
+        return {
+          ...prev,
+          tutor: { ...prev.tutor, subjects: subjects.filter(s => s !== subjectId) }
+        };
+      } else {
+        return {
+          ...prev,
+          tutor: { ...prev.tutor, subjects: [...subjects, subjectId] }
+        };
+      }
+    });
+  };
+
+  // ✅ Handle tutor availability toggle
+  const handleAvailabilityToggle = (day) => {
+    setSettings(prev => {
+      const days = prev.tutor.availability.days || [];
+      if (days.includes(day)) {
+        return {
+          ...prev,
+          tutor: {
+            ...prev.tutor,
+            availability: {
+              ...prev.tutor.availability,
+              days: days.filter(d => d !== day)
+            }
+          }
+        };
+      } else {
+        return {
+          ...prev,
+          tutor: {
+            ...prev.tutor,
+            availability: {
+              ...prev.tutor.availability,
+              days: [...days, day]
+            }
+          }
+        };
+      }
     });
   };
 
@@ -133,29 +336,44 @@ const Settings = () => {
     setSuccess('');
 
     try {
-      // Save to localStorage
       localStorage.setItem('eduspantech_settings', JSON.stringify(settings));
 
-      // Save to backend if needed
       const token = localStorage.getItem('accessToken');
       if (token) {
-        // ✅ FIXED: Using API_BASE_URL (no /v1)
+        const payload = {
+          timezone: settings.timezone || 'Africa/Johannesburg',
+          settings: settings,
+          curriculum: settings.defaultCurriculum,
+          grade: settings.defaultGrade,
+          ...(isTutor && {
+            bio: settings.tutor.bio,
+            tier: settings.tutor.tier,
+            subjects: settings.tutor.subjects,
+            shiftId: settings.tutor.shiftId,
+            yearsExperience: settings.tutor.yearsExperience,
+            education: settings.tutor.education,
+            phone: settings.tutor.phone,
+            linkedin: settings.tutor.linkedin,
+            website: settings.tutor.website,
+            availability: settings.tutor.availability,
+            paymentInfo: settings.tutor.paymentInfo
+          })
+        };
+
         const response = await fetch(`${API_BASE_URL}/auth/update-profile`, {
           method: 'PUT',
           headers: {
             'Content-Type': 'application/json',
             'Authorization': `Bearer ${token}`
           },
-          body: JSON.stringify({
-            timezone: settings.timezone || 'Africa/Johannesburg',
-            settings: settings
-          })
+          body: JSON.stringify(payload)
         });
 
         if (response.ok) {
           setSuccess('Settings saved successfully! ✅');
         } else {
-          setError('Failed to save settings to server');
+          const errorData = await response.json();
+          setError(errorData.error || 'Failed to save settings to server');
         }
       }
     } catch (err) {
@@ -195,11 +413,13 @@ const Settings = () => {
   return (
     <div className="settings-page">
       <div className="settings-container">
-        {/* Header */}
         <div className="settings-header">
           <div className="settings-header-left">
             <h1>⚙️ Settings</h1>
-            <p>Customize your learning experience</p>
+            <p>Customize your {isTutor ? 'tutoring' : 'learning'} experience</p>
+            {isTutor && (
+              <span className="tutor-badge">👨‍🏫 Tutor Account</span>
+            )}
           </div>
           <div className="settings-header-actions">
             <button className="settings-reset-btn" onClick={handleReset}>
@@ -211,7 +431,6 @@ const Settings = () => {
         {error && <div className="settings-error">{error}</div>}
         {success && <div className="settings-success">{success}</div>}
 
-        {/* Settings Sections */}
         <div className="settings-sections">
 
           {/* ===== APPEARANCE ===== */}
@@ -383,12 +602,12 @@ const Settings = () => {
                   value={settings.defaultCurriculum}
                   onChange={(e) => handleSettingChange(null, 'defaultCurriculum', e.target.value)}
                 >
-                  <option value="ZA">South Africa (CAPS/IEB)</option>
-                  <option value="US">United States</option>
-                  <option value="GB">United Kingdom</option>
-                  <option value="AU">Australia</option>
-                  <option value="SG">Singapore</option>
-                  <option value="JP">Japan</option>
+                  <option value="">Select curriculum...</option>
+                  {curriculumOptions.map(curr => (
+                    <option key={curr.id || curr.code} value={curr.id || curr.code}>
+                      {curr.name} {curr.country ? `(${curr.country})` : ''}
+                    </option>
+                  ))}
                 </select>
               </div>
 
@@ -399,7 +618,7 @@ const Settings = () => {
                   value={settings.defaultGrade}
                   onChange={(e) => handleSettingChange(null, 'defaultGrade', e.target.value)}
                 >
-                  <option value="">Select grade</option>
+                  <option value="">Select grade...</option>
                   <option value="Grade 8">Grade 8</option>
                   <option value="Grade 9">Grade 9</option>
                   <option value="Grade 10">Grade 10</option>
@@ -507,6 +726,304 @@ const Settings = () => {
               />
             </div>
           </div>
+
+          {/* ============================================
+              ✅ TUTOR-ONLY SETTINGS
+              ============================================ */}
+          {isTutor && (
+            <>
+              {/* Tutor Profile */}
+              <div className="settings-card tutor-settings">
+                <div className="settings-card-header">
+                  <span className="settings-card-icon">👨‍🏫</span>
+                  <h3>Tutor Profile</h3>
+                </div>
+                <div className="settings-card-body">
+                  <div className="settings-group">
+                    <label>Bio / About Me</label>
+                    <textarea
+                      className="settings-textarea"
+                      value={settings.tutor.bio}
+                      onChange={(e) => handleTutorSettingChange('bio', e.target.value)}
+                      placeholder="Tell students about yourself, your teaching style, and experience..."
+                      rows="4"
+                    />
+                  </div>
+
+                  <div className="settings-group">
+                    <label>Tier</label>
+                    <select
+                      className="settings-select"
+                      value={settings.tutor.tier}
+                      onChange={(e) => handleTutorSettingChange('tier', e.target.value)}
+                    >
+                      <option value="">Select tier...</option>
+                      {tierOptions.map(option => (
+                        <option key={option.value} value={option.value}>{option.label}</option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div className="settings-group">
+                    <label>Shift</label>
+                    <select
+                      className="settings-select"
+                      value={settings.tutor.shiftId}
+                      onChange={(e) => handleTutorSettingChange('shiftId', e.target.value)}
+                    >
+                      <option value="">Select a shift...</option>
+                      {shiftOptions.map(shift => (
+                        <option key={shift.id} value={shift.id}>
+                          {shift.name} ({shift.time || `${shift.sast_start} - ${shift.sast_end}`})
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div className="settings-group">
+                    <label>Subjects Taught</label>
+                    <div className="subjects-grid">
+                      {subjectOptions.map(subject => (
+                        <label key={subject.id} className="subject-checkbox">
+                          <input
+                            type="checkbox"
+                            checked={(settings.tutor.subjects || []).includes(subject.id)}
+                            onChange={() => handleSubjectToggle(subject.id)}
+                          />
+                          {subject.icon || '📐'} {subject.name}
+                        </label>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div className="settings-group">
+                    <label>Years of Experience</label>
+                    <input
+                      type="number"
+                      className="settings-input"
+                      value={settings.tutor.yearsExperience}
+                      onChange={(e) => handleTutorSettingChange('yearsExperience', e.target.value)}
+                      min="0"
+                      max="50"
+                    />
+                  </div>
+
+                  <div className="settings-group">
+                    <label>Education</label>
+                    <input
+                      type="text"
+                      className="settings-input"
+                      value={settings.tutor.education}
+                      onChange={(e) => handleTutorSettingChange('education', e.target.value)}
+                      placeholder="e.g., BSc Mathematics, University of Cape Town"
+                    />
+                  </div>
+
+                  <div className="settings-group">
+                    <label>Phone Number</label>
+                    <input
+                      type="tel"
+                      className="settings-input"
+                      value={settings.tutor.phone}
+                      onChange={(e) => handleTutorSettingChange('phone', e.target.value)}
+                      placeholder="+27 82 123 4567"
+                    />
+                  </div>
+
+                  <div className="settings-group">
+                    <label>LinkedIn Profile</label>
+                    <input
+                      type="url"
+                      className="settings-input"
+                      value={settings.tutor.linkedin}
+                      onChange={(e) => handleTutorSettingChange('linkedin', e.target.value)}
+                      placeholder="https://linkedin.com/in/your-profile"
+                    />
+                  </div>
+
+                  <div className="settings-group">
+                    <label>Website</label>
+                    <input
+                      type="url"
+                      className="settings-input"
+                      value={settings.tutor.website}
+                      onChange={(e) => handleTutorSettingChange('website', e.target.value)}
+                      placeholder="https://yourwebsite.com"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* Tutor Availability */}
+              <div className="settings-card tutor-settings">
+                <div className="settings-card-header">
+                  <span className="settings-card-icon">⏰</span>
+                  <h3>Availability</h3>
+                </div>
+                <div className="settings-card-body">
+                  <div className="settings-group">
+                    <label>Available Days</label>
+                    <div className="days-grid">
+                      {['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'].map(day => (
+                        <label key={day} className="day-checkbox">
+                          <input
+                            type="checkbox"
+                            checked={(settings.tutor.availability.days || []).includes(day)}
+                            onChange={() => handleAvailabilityToggle(day)}
+                          />
+                          {day.charAt(0).toUpperCase() + day.slice(1)}
+                        </label>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div className="settings-group">
+                    <label>Session Duration (minutes)</label>
+                    <select
+                      className="settings-select"
+                      value={settings.tutor.availability.sessionDuration}
+                      onChange={(e) => handleTutorSettingChange('availability', 'sessionDuration', Number(e.target.value))}
+                    >
+                      <option value="30">30 minutes</option>
+                      <option value="45">45 minutes</option>
+                      <option value="60">60 minutes</option>
+                      <option value="90">90 minutes</option>
+                      <option value="120">120 minutes</option>
+                    </select>
+                  </div>
+
+                  <div className="settings-group">
+                    <label>Buffer Time Between Sessions (minutes)</label>
+                    <select
+                      className="settings-select"
+                      value={settings.tutor.availability.bufferTime}
+                      onChange={(e) => handleTutorSettingChange('availability', 'bufferTime', Number(e.target.value))}
+                    >
+                      <option value="0">0 minutes</option>
+                      <option value="5">5 minutes</option>
+                      <option value="10">10 minutes</option>
+                      <option value="15">15 minutes</option>
+                      <option value="30">30 minutes</option>
+                    </select>
+                  </div>
+
+                  <div className="settings-group">
+                    <label>Rate (R/hour)</label>
+                    <input
+                      type="number"
+                      className="settings-input"
+                      value={settings.tutor.availability.rate}
+                      onChange={(e) => handleTutorSettingChange('availability', 'rate', Number(e.target.value))}
+                      min="0"
+                      step="50"
+                      placeholder="200"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* Tutor Notifications */}
+              <div className="settings-card tutor-settings">
+                <div className="settings-card-header">
+                  <span className="settings-card-icon">🔔</span>
+                  <h3>Tutor Notifications</h3>
+                </div>
+                <div className="settings-card-body">
+                  <Toggle
+                    enabled={settings.tutor.notifications.newBookings}
+                    onChange={(val) => handleTutorSettingChange('notifications', 'newBookings', val)}
+                    label="New booking requests"
+                  />
+                  <Toggle
+                    enabled={settings.tutor.notifications.studentMessages}
+                    onChange={(val) => handleTutorSettingChange('notifications', 'studentMessages', val)}
+                    label="Student messages"
+                  />
+                  <Toggle
+                    enabled={settings.tutor.notifications.ratings}
+                    onChange={(val) => handleTutorSettingChange('notifications', 'ratings', val)}
+                    label="Ratings received"
+                  />
+                  <Toggle
+                    enabled={settings.tutor.notifications.earnings}
+                    onChange={(val) => handleTutorSettingChange('notifications', 'earnings', val)}
+                    label="Earnings updates"
+                  />
+                  <Toggle
+                    enabled={settings.tutor.notifications.systemUpdates}
+                    onChange={(val) => handleTutorSettingChange('notifications', 'systemUpdates', val)}
+                    label="System updates"
+                  />
+                </div>
+              </div>
+
+              {/* Payment Information */}
+              <div className="settings-card tutor-settings">
+                <div className="settings-card-header">
+                  <span className="settings-card-icon">💳</span>
+                  <h3>Payment Information</h3>
+                </div>
+                <div className="settings-card-body">
+                  <div className="settings-group">
+                    <label>Payout Method</label>
+                    <select
+                      className="settings-select"
+                      value={settings.tutor.paymentInfo.method}
+                      onChange={(e) => handleTutorSettingChange('paymentInfo', 'method', e.target.value)}
+                    >
+                      <option value="bank_transfer">Bank Transfer</option>
+                      <option value="paypal">PayPal</option>
+                      <option value="stripe">Stripe</option>
+                    </select>
+                  </div>
+
+                  <div className="settings-group">
+                    <label>Bank Name</label>
+                    <input
+                      type="text"
+                      className="settings-input"
+                      value={settings.tutor.paymentInfo.bankName}
+                      onChange={(e) => handleTutorSettingChange('paymentInfo', 'bankName', e.target.value)}
+                      placeholder="e.g., First National Bank"
+                    />
+                  </div>
+
+                  <div className="settings-group">
+                    <label>Account Number</label>
+                    <input
+                      type="text"
+                      className="settings-input"
+                      value={settings.tutor.paymentInfo.accountNumber}
+                      onChange={(e) => handleTutorSettingChange('paymentInfo', 'accountNumber', e.target.value)}
+                      placeholder="123456789"
+                    />
+                  </div>
+
+                  <div className="settings-group">
+                    <label>Account Holder Name</label>
+                    <input
+                      type="text"
+                      className="settings-input"
+                      value={settings.tutor.paymentInfo.accountHolder}
+                      onChange={(e) => handleTutorSettingChange('paymentInfo', 'accountHolder', e.target.value)}
+                      placeholder="Full name on account"
+                    />
+                  </div>
+
+                  <div className="settings-group">
+                    <label>Tax ID / ID Number</label>
+                    <input
+                      type="text"
+                      className="settings-input"
+                      value={settings.tutor.paymentInfo.taxId}
+                      onChange={(e) => handleTutorSettingChange('paymentInfo', 'taxId', e.target.value)}
+                      placeholder="ID number or tax reference"
+                    />
+                  </div>
+                </div>
+              </div>
+            </>
+          )}
 
           {/* ===== PRIVACY & SECURITY ===== */}
           <div className="settings-card">

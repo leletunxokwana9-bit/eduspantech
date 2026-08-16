@@ -2,6 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { authService } from '../services/authService';
+import { API_BASE_URL } from '../services/api';
 import './TutorEarnings.css';
 
 const TutorEarnings = () => {
@@ -47,7 +48,8 @@ const TutorEarnings = () => {
       
       console.log('📊 Fetching earnings from API...');
       
-      const response = await fetch('https://eduspantech-backend.onrender.com/api/tutors/earnings', {
+      // ✅ FIXED: Using API_BASE_URL
+      const response = await fetch(`${API_BASE_URL}/tutors/earnings`, {
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'

@@ -2,6 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { authService } from '../services/authService';
+import { API_BASE_URL } from '../services/api';
 import './TutorDashboard.css';
 
 const TutorDashboard = () => {
@@ -92,9 +93,6 @@ const TutorDashboard = () => {
       const user = await authService.getCurrentUser();
       if (user) {
         setTutor(user);
-        // ============================================
-        // FIX: Use robust tutor check
-        // ============================================
         const isTutorAccount = checkIsTutor(user);
         if (!isTutorAccount) {
           console.log('Not a tutor, redirecting to student dashboard');
@@ -114,8 +112,8 @@ const TutorDashboard = () => {
       setLoading(true);
       const token = localStorage.getItem('accessToken');
       
-      // Fetch tutor's bookings
-      const response = await fetch('https://eduspantech-backend.onrender.com/api/sessions', {
+      // ✅ FIXED: Using API_BASE_URL
+      const response = await fetch(`${API_BASE_URL}/sessions`, {
         headers: {
           'Authorization': `Bearer ${token}`
         }
@@ -156,7 +154,8 @@ const TutorDashboard = () => {
     
     try {
       const token = localStorage.getItem('accessToken');
-      const response = await fetch(`https://eduspantech-backend.onrender.com/api/sessions/${bookingId}`, {
+      // ✅ FIXED: Using API_BASE_URL
+      const response = await fetch(`${API_BASE_URL}/sessions/${bookingId}`, {
         method: 'DELETE',
         headers: {
           'Authorization': `Bearer ${token}`

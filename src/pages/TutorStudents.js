@@ -2,6 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { authService } from '../services/authService';
+import { API_BASE_URL } from '../services/api';
 import './TutorStudents.css';
 
 const TutorStudents = () => {
@@ -46,7 +47,7 @@ const TutorStudents = () => {
       setLoading(true);
       const token = localStorage.getItem('accessToken');
       
-      const response = await fetch('https://eduspantech-backend.onrender.com/api/tutors/students', {
+      const response = await fetch(`${API_BASE_URL}/tutors/students`, {
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'
@@ -57,66 +58,17 @@ const TutorStudents = () => {
         const data = await response.json();
         setStudents(data.students || []);
       } else {
-        // Fallback - show demo data with real avatars
-        setStudents([
-          { 
-            id: 1, 
-            name: 'Leletu Nxokwana', 
-            grade: 11, 
-            subjects: ['Algebra', 'Geometry'], 
-            sessions: 3, 
-            progress: 65, 
-            lastSession: '2026-08-15', 
-            status: 'active',
-            avatar: 'https://ui-avatars.com/api/?name=Leletu+Nxokwana&size=100&background=4f46e5&color=fff&bold=true'
-          },
-          { 
-            id: 2, 
-            name: 'Thabo Mokoena', 
-            grade: 10, 
-            subjects: ['Trigonometry'], 
-            sessions: 1, 
-            progress: 30, 
-            lastSession: '2026-08-14', 
-            status: 'active',
-            avatar: 'https://ui-avatars.com/api/?name=Thabo+Mokoena&size=100&background=059669&color=fff&bold=true'
-          },
-          { 
-            id: 3, 
-            name: 'Priya Patel', 
-            grade: 12, 
-            subjects: ['Calculus', 'Linear Algebra'], 
-            sessions: 5, 
-            progress: 80, 
-            lastSession: '2026-08-15', 
-            status: 'active',
-            avatar: 'https://ui-avatars.com/api/?name=Priya+Patel&size=100&background=7c3aed&color=fff&bold=true'
-          },
-          { 
-            id: 4, 
-            name: 'Michael Zhang', 
-            grade: 9, 
-            subjects: ['Number Theory'], 
-            sessions: 2, 
-            progress: 45, 
-            lastSession: '2026-08-13', 
-            status: 'inactive',
-            avatar: 'https://ui-avatars.com/api/?name=Michael+Zhang&size=100&background=d97706&color=fff&bold=true'
-          },
-        ]);
+        setStudents([]);
       }
     } catch (error) {
       console.error('Failed to fetch students:', error);
+      setStudents([]);
     } finally {
       setLoading(false);
     }
   };
 
-  // ============================================
-  // RENDER STUDENT AVATAR - SHOW REAL AVATARS
-  // ============================================
   const renderStudentAvatar = (student) => {
-    // Check if student has an avatar (base64 or URL)
     const hasAvatar = student?.avatar && (
       student.avatar.startsWith('data:image') || 
       student.avatar.startsWith('http://') || 
@@ -130,7 +82,6 @@ const TutorStudents = () => {
           alt={student.name} 
           className="student-avatar-img"
           onError={(e) => {
-            // If image fails, show initials fallback
             e.target.style.display = 'none';
             const parent = e.target.parentElement;
             if (parent) {
@@ -148,7 +99,6 @@ const TutorStudents = () => {
       );
     }
     
-    // If no avatar, show initials
     return student.name.charAt(0).toUpperCase();
   };
 
@@ -209,7 +159,6 @@ const TutorStudents = () => {
       </div>
 
       <div className="tutor-students-container">
-        {/* Header */}
         <div className="tutor-students-header">
           <div className="header-content">
             <div className="header-left">
@@ -230,7 +179,6 @@ const TutorStudents = () => {
           </div>
         </div>
 
-        {/* Stats */}
         <div className="tutor-students-stats">
           <div className="stat-card">
             <span className="stat-number">{students.filter(s => s.status === 'active').length}</span>
@@ -246,7 +194,6 @@ const TutorStudents = () => {
           </div>
         </div>
 
-        {/* Search & Filter */}
         <div className="tutor-students-toolbar">
           <div className="search-container">
             <span className="search-icon">🔍</span>
@@ -280,7 +227,6 @@ const TutorStudents = () => {
           </div>
         </div>
 
-        {/* Students Grid */}
         <div className="tutor-students-grid">
           {getFilteredStudents().length > 0 ? (
             getFilteredStudents().map((student) => (

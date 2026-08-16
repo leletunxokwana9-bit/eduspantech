@@ -25,7 +25,6 @@ const SoundGenerator = {
       oscillator.stop(audioCtx.currentTime + 0.04);
     } catch (error) {}
   },
-
   generateMessageSound: () => {
     try {
       const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
@@ -58,7 +57,6 @@ const SoundGenerator = {
       }, 120);
     } catch (error) {}
   },
-
   generateRaiseHandSound: () => {
     try {
       const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
@@ -121,10 +119,25 @@ const EMOJIS = [
 ];
 
 // ============================================
-// ✅ RENDER TUTOR AVATAR - FIXED
+// ✅ RENDER TUTOR AVATAR - SAFE VERSION
 // ============================================
 const renderTutorAvatar = (tutor) => {
-  if (!tutor) return null;
+  if (!tutor) {
+    return (
+      <div className="tutor-avatar-default" style={{ 
+        width: '100%', 
+        height: '100%', 
+        borderRadius: '50%',
+        background: '#4f46e5',
+        color: 'white',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        fontSize: '18px',
+        fontWeight: 'bold'
+      }}>T</div>
+    );
+  }
 
   const photoUrl = tutor.avatar || tutor.profileImage;
   
@@ -132,9 +145,10 @@ const renderTutorAvatar = (tutor) => {
     return (
       <img 
         src={photoUrl} 
-        alt={tutor.name} 
+        alt={tutor.name || 'Tutor'} 
         className="tutor-avatar-img"
         loading="lazy"
+        style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: '50%' }}
         onError={(e) => {
           e.target.style.display = 'none';
         }}
@@ -142,17 +156,17 @@ const renderTutorAvatar = (tutor) => {
     );
   }
   
-  // Fallback to initials
-  const initials = tutor.name
+  const name = tutor.name || 'Tutor';
+  const initials = name
     .split(' ')
-    .map(word => word[0])
+    .map(word => word[0] || '')
     .join('')
     .toUpperCase()
     .slice(0, 2);
   
   const colors = ['#1a73e8', '#e91e63', '#ff6f00', '#7b1fa2', '#0d47a1', '#00695c', '#bf360c', '#4a148c', '#1a237e', '#880e4f', '#004d40'];
-  const hash = tutor.name.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
-  const color = colors[hash % colors.length];
+  const hash = name.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
+  const color = colors[hash % colors.length] || '#4f46e5';
   
   return (
     <div 
@@ -171,13 +185,13 @@ const renderTutorAvatar = (tutor) => {
         textTransform: 'uppercase'
       }}
     >
-      {initials}
+      {initials || 'T'}
     </div>
   );
 };
 
 // ============================================
-// ✅ HELPERS - FIXED
+// HELPERS
 // ============================================
 const getCurrentTime = () => {
   return new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
@@ -196,7 +210,6 @@ const getPublicIP = async () => {
   if (cachedIP) {
     return cachedIP;
   }
-
   try {
     const response = await fetch('https://api.ipify.org?format=json', {
       signal: AbortSignal.timeout(3000)
@@ -210,7 +223,6 @@ const getPublicIP = async () => {
   } catch (error) {
     console.log('⚠️ Could not fetch public IP:', error.message);
   }
-  
   return '127.0.0.1';
 };
 
@@ -330,7 +342,6 @@ const TutorSession = () => {
   // CHECK IF USER IS TUTOR OR STUDENT
   // ============================================
   const [isTutorUser, setIsTutorUser] = useState(false);
-  const [currentUser, setCurrentUser] = useState(null);
 
   useEffect(() => {
     const checkUserRole = async () => {
@@ -345,7 +356,6 @@ const TutorSession = () => {
           if (response.ok) {
             const data = await response.json();
             const user = data.user || data;
-            setCurrentUser(user);
             const isTutor = user.is_tutor === true || user.role === 'tutor';
             setIsTutorUser(isTutor);
             console.log('👤 User role:', isTutor ? 'Tutor' : 'Student');
@@ -369,7 +379,7 @@ const TutorSession = () => {
   const [isHandRaised, setIsHandRaised] = useState(false);
   const [showChat, setShowChat] = useState(false);
   const [isMobile, setIsMobile] = useState(window.innerWidth <= 768);
-  const [participants, setParticipants] = useState([
+  const [participants] = useState([
     { id: 'tutor', name: tutor?.name || 'Tutor', role: 'tutor', online: true },
     { id: 'student', name: 'You', role: 'student', online: true },
   ]);
@@ -696,9 +706,7 @@ const TutorSession = () => {
   // WHITEBOARD - DISABLED FOR STUDENTS
   // ============================================
   const startDrawing = (e) => {
-    if (!isTutorUser) {
-      return;
-    }
+    if (!isTutorUser) return;
     if (tokens < 1) {
       alert('Rate limit exceeded. Please wait a moment.');
       return;
@@ -741,9 +749,7 @@ const TutorSession = () => {
   };
 
   const clearWhiteboard = () => {
-    if (!isTutorUser) {
-      return;
-    }
+    if (!isTutorUser) return;
     const canvas = canvasRef.current;
     const ctx = canvas.getContext('2d');
     ctx.clearRect(0, 0, canvas.width, canvas.height);
@@ -1057,16 +1063,20 @@ const TutorSession = () => {
     setSessionStats(prev => ({ ...prev, duration }));
     setSessionEnded(true);
     
+    // Always show rating modal immediately
+    setShowRatingModal(true);
+    setShowSummary(false);
+    
+    // Try to end the session in the backend (don't wait for it)
     try {
       const token = localStorage.getItem('accessToken');
       const sessionId = location.state?.sessionId || 'temp_session';
       
-      // Try to get session ID from URL
       const pathParts = window.location.pathname.split('/');
       const urlSessionId = pathParts[pathParts.length - 1];
       const finalSessionId = sessionId !== 'temp_session' ? sessionId : urlSessionId;
       
-      if (finalSessionId && finalSessionId !== 'temp_session') {
+      if (finalSessionId && finalSessionId !== 'temp_session' && finalSessionId !== 'TutorSession') {
         const response = await fetch(`${API_BASE_URL}/sessions/end`, {
           method: 'POST',
           headers: {
@@ -1082,15 +1092,13 @@ const TutorSession = () => {
         if (response.ok) {
           console.log('✅ Session ended successfully');
         } else {
-          console.log('⚠️ Session end API returned error');
+          console.log('⚠️ Session end API returned error, but session is closed locally');
         }
       }
     } catch (error) {
       console.error('Error ending session:', error);
+      // Continue - session is already ended locally
     }
-    
-    setShowRatingModal(true);
-    setShowSummary(false);
   };
 
   // ============================================

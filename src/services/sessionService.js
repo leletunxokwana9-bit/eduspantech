@@ -2,9 +2,6 @@
 import { API_BASE_URL } from '../config/api';
 
 const sessionService = {
-  // ============================================
-  // BOOK A SESSION - SIMPLIFIED
-  // ============================================
   bookSession: async (tutorId, date, duration = 60, topic = 'Mathematics') => {
     try {
       const token = localStorage.getItem('accessToken');
@@ -12,20 +9,16 @@ const sessionService = {
         throw new Error('Not authenticated');
       }
 
-      // Calculate start and end times
-      const startTime = new Date(date);
-      const endTime = new Date(startTime.getTime() + duration * 60000);
-
+      // Send 'date' field (not 'startTime') to match backend expectation
       const payload = {
         tutorId: tutorId,
-        startTime: startTime.toISOString(),
-        endTime: endTime.toISOString(),
+        date: date,  // ← Send as 'date'
         duration: duration,
         topic: topic,
         region: 'af-south-1'
       };
 
-      console.log('📤 Booking session with payload:', payload);
+      console.log('📤 Booking payload:', payload);
 
       const response = await fetch(`${API_BASE_URL}/sessions`, {
         method: 'POST',
@@ -48,7 +41,7 @@ const sessionService = {
         session: data.session || data
       };
     } catch (error) {
-      console.error('❌ Failed to book session:', error);
+      console.error('❌ Booking error:', error);
       return {
         success: false,
         error: error.message
@@ -56,9 +49,6 @@ const sessionService = {
     }
   },
 
-  // ============================================
-  // GET MY SESSIONS
-  // ============================================
   getMySessions: async () => {
     try {
       const token = localStorage.getItem('accessToken');
@@ -93,9 +83,6 @@ const sessionService = {
     }
   },
 
-  // ============================================
-  // GET SESSION BY ID
-  // ============================================
   getSessionById: async (sessionId) => {
     try {
       const token = localStorage.getItem('accessToken');
@@ -129,9 +116,6 @@ const sessionService = {
     }
   },
 
-  // ============================================
-  // CANCEL SESSION
-  // ============================================
   cancelSession: async (sessionId) => {
     try {
       const token = localStorage.getItem('accessToken');

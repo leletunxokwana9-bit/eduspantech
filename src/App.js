@@ -39,159 +39,13 @@ import TutorEarnings from './pages/TutorEarnings';
 import Notifications from './pages/Notifications';
 import ForgotPassword from './pages/ForgotPassword';
 
-// ===== LAZY LOAD WITH ERROR BOUNDARY =====
-// Create a wrapper component to handle lazy loading errors
-const LazyWrapper = ({ children, fallback }) => {
-  const [hasError, setHasError] = React.useState(false);
-  
-  React.useEffect(() => {
-    // If the lazy component fails, this will catch it
-    const handleError = (event) => {
-      if (event.error && event.error.toString().includes('loading chunk')) {
-        setHasError(true);
-      }
-    };
-    window.addEventListener('error', handleError);
-    return () => window.removeEventListener('error', handleError);
-  }, []);
-  
-  if (hasError) {
-    return (
-      <div style={{
-        padding: '40px 20px',
-        textAlign: 'center',
-        color: '#ef4444',
-        minHeight: '60vh',
-        display: 'flex',
-        flexDirection: 'column',
-        alignItems: 'center',
-        justifyContent: 'center',
-        background: '#0a0e1a'
-      }}>
-        <h2>⚠️ Failed to load this page</h2>
-        <p style={{ color: '#94a3b8', marginTop: '12px' }}>
-          Please refresh the page or try again later.
-        </p>
-        <button 
-          onClick={() => window.location.reload()}
-          style={{
-            marginTop: '24px',
-            padding: '12px 32px',
-            background: '#4f46e5',
-            color: 'white',
-            border: 'none',
-            borderRadius: '8px',
-            cursor: 'pointer',
-            fontSize: '16px'
-          }}
-        >
-          Refresh Page
-        </button>
-      </div>
-    );
-  }
-  
-  return children;
-};
-
-// ===== LAZY LOAD COMPONENTS WITH ERROR HANDLING =====
-const MyCourses = lazy(() => 
-  import('./pages/MyCourses')
-    .then(module => {
-      console.log('✅ MyCourses loaded successfully');
-      return module;
-    })
-    .catch(err => {
-      console.error('❌ Failed to load MyCourses:', err);
-      return {
-        default: () => (
-          <div style={{
-            padding: '60px 20px',
-            textAlign: 'center',
-            color: '#ef4444',
-            minHeight: '100vh',
-            display: 'flex',
-            flexDirection: 'column',
-            alignItems: 'center',
-            justifyContent: 'center',
-            background: '#0a0e1a'
-          }}>
-            <h2>⚠️ Failed to load MyCourses</h2>
-            <p style={{ color: '#94a3b8', marginTop: '12px' }}>
-              {err.message || 'An error occurred loading this page'}
-            </p>
-            <button 
-              onClick={() => window.location.reload()}
-              style={{
-                marginTop: '24px',
-                padding: '12px 32px',
-                background: '#4f46e5',
-                color: 'white',
-                border: 'none',
-                borderRadius: '8px',
-                cursor: 'pointer',
-                fontSize: '16px'
-              }}
-            >
-              Refresh Page
-            </button>
-          </div>
-        )
-      };
-    })
-);
-
-const MySessions = lazy(() => 
-  import('./pages/MySessions')
-    .then(module => {
-      console.log('✅ MySessions loaded successfully');
-      return module;
-    })
-    .catch(err => {
-      console.error('❌ Failed to load MySessions:', err);
-      return {
-        default: () => (
-          <div style={{
-            padding: '60px 20px',
-            textAlign: 'center',
-            color: '#ef4444',
-            minHeight: '100vh',
-            display: 'flex',
-            flexDirection: 'column',
-            alignItems: 'center',
-            justifyContent: 'center',
-            background: '#0a0e1a'
-          }}>
-            <h2>⚠️ Failed to load MySessions</h2>
-            <p style={{ color: '#94a3b8', marginTop: '12px' }}>
-              {err.message || 'An error occurred loading this page'}
-            </p>
-            <button 
-              onClick={() => window.location.reload()}
-              style={{
-                marginTop: '24px',
-                padding: '12px 32px',
-                background: '#4f46e5',
-                color: 'white',
-                border: 'none',
-                borderRadius: '8px',
-                cursor: 'pointer',
-                fontSize: '16px'
-              }}
-            >
-              Refresh Page
-            </button>
-          </div>
-        )
-      };
-    })
-);
-
-// ===== ERROR BOUNDARY COMPONENT =====
+// ============================================
+// ERROR BOUNDARY COMPONENT
+// ============================================
 class ErrorBoundary extends React.Component {
   constructor(props) {
     super(props);
-    this.state = { hasError: false, error: null };
+    this.state = { hasError: false, error: null, errorInfo: null };
   }
 
   static getDerivedStateFromError(error) {
@@ -199,8 +53,9 @@ class ErrorBoundary extends React.Component {
   }
 
   componentDidCatch(error, errorInfo) {
-    console.error('❌ React Error Boundary caught:', error);
+    console.error('❌ React Error Boundary caught an error:', error);
     console.error('Error Info:', errorInfo);
+    this.setState({ errorInfo });
   }
 
   render() {
@@ -217,10 +72,32 @@ class ErrorBoundary extends React.Component {
           background: '#0a0e1a',
           color: '#fff'
         }}>
-          <h1 style={{ color: '#ef4444' }}>⚠️ Something went wrong</h1>
-          <p style={{ color: '#94a3b8', marginTop: '12px' }}>
+          <h1 style={{ color: '#ef4444', fontSize: '28px' }}>⚠️ Something went wrong</h1>
+          <p style={{ color: '#94a3b8', marginTop: '12px', maxWidth: '500px' }}>
             {this.state.error?.message || 'An unexpected error occurred'}
           </p>
+          {this.state.errorInfo && (
+            <details style={{ 
+              marginTop: '20px', 
+              color: '#94a3b8', 
+              fontSize: '14px',
+              textAlign: 'left',
+              maxWidth: '600px',
+              background: '#1a1a2e',
+              padding: '16px',
+              borderRadius: '8px'
+            }}>
+              <summary>Technical Details</summary>
+              <pre style={{ 
+                marginTop: '12px', 
+                fontSize: '12px',
+                overflow: 'auto',
+                maxHeight: '200px'
+              }}>
+                {this.state.errorInfo.componentStack}
+              </pre>
+            </details>
+          )}
           <button 
             onClick={() => window.location.reload()}
             style={{
@@ -231,8 +108,11 @@ class ErrorBoundary extends React.Component {
               border: 'none',
               borderRadius: '8px',
               cursor: 'pointer',
-              fontSize: '16px'
+              fontSize: '16px',
+              transition: 'background 0.3s'
             }}
+            onMouseEnter={(e) => e.target.style.background = '#6366f1'}
+            onMouseLeave={(e) => e.target.style.background = '#4f46e5'}
           >
             Refresh Page
           </button>
@@ -244,7 +124,73 @@ class ErrorBoundary extends React.Component {
   }
 }
 
-// ===== LOADING COMPONENT =====
+// ============================================
+// LAZY LOAD WITH ERROR HANDLING
+// ============================================
+const withLazyErrorHandling = (importFn, componentName) => {
+  return lazy(() => 
+    importFn()
+      .then(module => {
+        console.log(`✅ ${componentName} loaded successfully`);
+        return module;
+      })
+      .catch(err => {
+        console.error(`❌ Failed to load ${componentName}:`, err);
+        return {
+          default: () => (
+            <div style={{
+              padding: '60px 20px',
+              textAlign: 'center',
+              color: '#ef4444',
+              minHeight: '100vh',
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              justifyContent: 'center',
+              background: '#0a0e1a'
+            }}>
+              <h2>⚠️ Failed to load {componentName}</h2>
+              <p style={{ color: '#94a3b8', marginTop: '12px' }}>
+                {err.message || 'An error occurred loading this page'}
+              </p>
+              <button 
+                onClick={() => window.location.reload()}
+                style={{
+                  marginTop: '24px',
+                  padding: '12px 32px',
+                  background: '#4f46e5',
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: '8px',
+                  cursor: 'pointer',
+                  fontSize: '16px'
+                }}
+              >
+                Refresh Page
+              </button>
+            </div>
+          )
+        };
+      })
+  );
+};
+
+// ============================================
+// LAZY LOADED COMPONENTS
+// ============================================
+const MyCourses = withLazyErrorHandling(
+  () => import('./pages/MyCourses'),
+  'MyCourses'
+);
+
+const MySessions = withLazyErrorHandling(
+  () => import('./pages/MySessions'),
+  'MySessions'
+);
+
+// ============================================
+// LAZY LOAD FALLBACK COMPONENT
+// ============================================
 const PageLoader = () => (
   <div style={{
     minHeight: '100vh',
@@ -273,8 +219,12 @@ const PageLoader = () => (
   </div>
 );
 
+// ============================================
+// MAIN APP COMPONENT
+// ============================================
 function App() {
   console.log('🚀 App starting...');
+  console.log('📋 Environment:', process.env.NODE_ENV);
   
   return (
     <ErrorBoundary>
@@ -288,13 +238,17 @@ function App() {
                   <main className="app-main">
                     <Suspense fallback={<PageLoader />}>
                       <Routes>
-                        {/* ===== CORE ROUTES (Always accessible) ===== */}
+                        {/* ============================================
+                            CORE ROUTES - Always accessible
+                            ============================================ */}
                         <Route path="/forgot-password" element={<ForgotPassword />} />
                         <Route path="/login" element={<Login />} />
                         <Route path="/register" element={<Register />} />
                         <Route path="/verify-email" element={<VerifyEmail />} />
                         
-                        {/* ===== PUBLIC ROUTES ===== */}
+                        {/* ============================================
+                            PUBLIC ROUTES - No authentication needed
+                            ============================================ */}
                         <Route path="/" element={<Home />} />
                         <Route path="/subjects" element={<Subjects />} />
                         <Route path="/subjects/:subjectName" element={<SubjectDetail />} />
@@ -312,7 +266,9 @@ function App() {
                         <Route path="/privacy" element={<Privacy />} />
                         <Route path="/search" element={<SearchResults />} />
                         
-                        {/* ===== PROTECTED ROUTES (Requires Login) ===== */}
+                        {/* ============================================
+                            PROTECTED ROUTES - Require authentication
+                            ============================================ */}
                         <Route path="/dashboard" element={<Dashboard />} />
                         <Route path="/profile" element={<Profile />} />
                         <Route path="/settings" element={<Settings />} />
@@ -323,24 +279,20 @@ function App() {
                         <Route path="/payment-success" element={<PaymentSuccess />} />
                         <Route path="/notifications" element={<Notifications />} />
                         
-                        {/* ===== TUTOR ROUTES ===== */}
+                        {/* ============================================
+                            TUTOR ROUTES - Require tutor role
+                            ============================================ */}
                         <Route path="/tutor/dashboard" element={<TutorDashboard />} />
                         <Route path="/tutor/session/:sessionId" element={<TutorSession />} />
                         <Route path="/tutor/students" element={<TutorStudents />} />
                         <Route path="/tutor/earnings" element={<TutorEarnings />} />
                         <Route path="/admin/add-tutor" element={<AddTutor />} />
                         
-                        {/* ===== LAZY LOADED ROUTES (With LazyWrapper) ===== */}
-                        <Route path="/my-courses" element={
-                          <LazyWrapper>
-                            <MyCourses />
-                          </LazyWrapper>
-                        } />
-                        <Route path="/my-sessions" element={
-                          <LazyWrapper>
-                            <MySessions />
-                          </LazyWrapper>
-                        } />
+                        {/* ============================================
+                            LAZY LOADED ROUTES - With error handling
+                            ============================================ */}
+                        <Route path="/my-courses" element={<MyCourses />} />
+                        <Route path="/my-sessions" element={<MySessions />} />
                       </Routes>
                     </Suspense>
                   </main>

@@ -1,8 +1,3 @@
-// ============================================
-// EduSpantech App - Version 2.1.0
-// Build: 2026-08-13 - Forced cache bust
-// ============================================
-
 // src/App.js
 import React, { Suspense, lazy } from 'react';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
@@ -44,7 +39,62 @@ import TutorEarnings from './pages/TutorEarnings';
 import Notifications from './pages/Notifications';
 import ForgotPassword from './pages/ForgotPassword';
 
-// ===== LAZY LOAD MY COURSES & SESSIONS WITH ERROR BOUNDARY =====
+// ===== LAZY LOAD WITH ERROR BOUNDARY =====
+// Create a wrapper component to handle lazy loading errors
+const LazyWrapper = ({ children, fallback }) => {
+  const [hasError, setHasError] = React.useState(false);
+  
+  React.useEffect(() => {
+    // If the lazy component fails, this will catch it
+    const handleError = (event) => {
+      if (event.error && event.error.toString().includes('loading chunk')) {
+        setHasError(true);
+      }
+    };
+    window.addEventListener('error', handleError);
+    return () => window.removeEventListener('error', handleError);
+  }, []);
+  
+  if (hasError) {
+    return (
+      <div style={{
+        padding: '40px 20px',
+        textAlign: 'center',
+        color: '#ef4444',
+        minHeight: '60vh',
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center',
+        justifyContent: 'center',
+        background: '#0a0e1a'
+      }}>
+        <h2>⚠️ Failed to load this page</h2>
+        <p style={{ color: '#94a3b8', marginTop: '12px' }}>
+          Please refresh the page or try again later.
+        </p>
+        <button 
+          onClick={() => window.location.reload()}
+          style={{
+            marginTop: '24px',
+            padding: '12px 32px',
+            background: '#4f46e5',
+            color: 'white',
+            border: 'none',
+            borderRadius: '8px',
+            cursor: 'pointer',
+            fontSize: '16px'
+          }}
+        >
+          Refresh Page
+        </button>
+      </div>
+    );
+  }
+  
+  return children;
+};
+
+// ===== LAZY LOAD COMPONENTS WITH ERROR HANDLING =====
 const MyCourses = lazy(() => 
   import('./pages/MyCourses')
     .then(module => {
@@ -67,7 +117,9 @@ const MyCourses = lazy(() =>
             background: '#0a0e1a'
           }}>
             <h2>⚠️ Failed to load MyCourses</h2>
-            <p style={{ color: '#94a3b8', marginTop: '12px' }}>Please refresh the page or try again later.</p>
+            <p style={{ color: '#94a3b8', marginTop: '12px' }}>
+              {err.message || 'An error occurred loading this page'}
+            </p>
             <button 
               onClick={() => window.location.reload()}
               style={{
@@ -111,7 +163,9 @@ const MySessions = lazy(() =>
             background: '#0a0e1a'
           }}>
             <h2>⚠️ Failed to load MySessions</h2>
-            <p style={{ color: '#94a3b8', marginTop: '12px' }}>Please refresh the page or try again later.</p>
+            <p style={{ color: '#94a3b8', marginTop: '12px' }}>
+              {err.message || 'An error occurred loading this page'}
+            </p>
             <button 
               onClick={() => window.location.reload()}
               style={{
@@ -132,6 +186,63 @@ const MySessions = lazy(() =>
       };
     })
 );
+
+// ===== ERROR BOUNDARY COMPONENT =====
+class ErrorBoundary extends React.Component {
+  constructor(props) {
+    super(props);
+    this.state = { hasError: false, error: null };
+  }
+
+  static getDerivedStateFromError(error) {
+    return { hasError: true, error };
+  }
+
+  componentDidCatch(error, errorInfo) {
+    console.error('❌ React Error Boundary caught:', error);
+    console.error('Error Info:', errorInfo);
+  }
+
+  render() {
+    if (this.state.hasError) {
+      return (
+        <div style={{
+          padding: '60px 20px',
+          textAlign: 'center',
+          minHeight: '100vh',
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          justifyContent: 'center',
+          background: '#0a0e1a',
+          color: '#fff'
+        }}>
+          <h1 style={{ color: '#ef4444' }}>⚠️ Something went wrong</h1>
+          <p style={{ color: '#94a3b8', marginTop: '12px' }}>
+            {this.state.error?.message || 'An unexpected error occurred'}
+          </p>
+          <button 
+            onClick={() => window.location.reload()}
+            style={{
+              marginTop: '24px',
+              padding: '12px 32px',
+              background: '#4f46e5',
+              color: 'white',
+              border: 'none',
+              borderRadius: '8px',
+              cursor: 'pointer',
+              fontSize: '16px'
+            }}
+          >
+            Refresh Page
+          </button>
+        </div>
+      );
+    }
+
+    return this.props.children;
+  }
+}
 
 // ===== LOADING COMPONENT =====
 const PageLoader = () => (
@@ -163,67 +274,85 @@ const PageLoader = () => (
 );
 
 function App() {
+  console.log('🚀 App starting...');
+  
   return (
-    <Router>
-      <SoundProvider>
-        <ThemeProvider>
-          <LanguageProvider>
-            <SessionSettingsProvider>
-              <div className="app">
-                <Navbar />
-                <main className="app-main">
-                  <Suspense fallback={<PageLoader />}>
-                    <Routes>
-                      {/* ===== CUSTOM ROUTES FIRST ===== */}
-                      <Route path="/forgot-password" element={<ForgotPassword />} />
-                      <Route path="/notifications" element={<Notifications />} />
-                      <Route path="/admin/add-tutor" element={<AddTutor />} />
-                      <Route path="/tutor/dashboard" element={<TutorDashboard />} />
-                      <Route path="/tutor/session/:sessionId" element={<TutorSession />} />
-                      <Route path="/tutor/students" element={<TutorStudents />} />
-                      <Route path="/tutor/earnings" element={<TutorEarnings />} />
-                      <Route path="/my-sessions" element={<MySessions />} />
-                      <Route path="/my-courses" element={<MyCourses />} />
-                      <Route path="/verify-email" element={<VerifyEmail />} />
-                      <Route path="/practice/:id" element={<Practice />} />
-                      <Route path="/help/*" element={<Help />} />
-                      <Route path="/settings" element={<Settings />} />
-                      <Route path="/profile" element={<Profile />} />
-                      <Route path="/login" element={<Login />} />
-                      <Route path="/register" element={<Register />} />
-                      <Route path="/dashboard" element={<Dashboard />} />
-                      <Route path="/subjects/:subjectName" element={<SubjectDetail />} />
-                      <Route path="/subjects" element={<Subjects />} />
-                      <Route path="/curriculum/:countryId" element={<CurriculumDetail />} />
-                      <Route path="/curriculum" element={<Curriculum />} />
-                      <Route path="/tutors" element={<Tutors />} />
-                      <Route path="/pricing" element={<Pricing />} />
-                      <Route path="/resources/:vaultName/:resourceId" element={<ResourceDetail />} />
-                      <Route path="/resources/:vaultName" element={<ResourceDetail />} />
-                      <Route path="/resources/videos/:id" element={<ResourceDetail />} />
-                      <Route path="/resources/practice/:id" element={<ResourceDetail />} />
-                      <Route path="/resources/guides/:id" element={<ResourceDetail />} />
-                      <Route path="/resources" element={<Resources />} />
-                      <Route path="/terms" element={<Terms />} />
-                      <Route path="/privacy" element={<Privacy />} />
-                      <Route path="/session/:sessionId" element={<TutorSession />} />
-                      <Route path="/checkout" element={<Checkout />} />
-                      <Route path="/payment-success" element={<PaymentSuccess />} />
-                      <Route path="/search" element={<SearchResults />} />
-                      
-                      {/* ===== HOME MUST BE LAST ===== */}
-                      <Route path="/" element={<Home />} />
-                    </Routes>
-                  </Suspense>
-                </main>
-                <Footer />
-                <ChatWidget />
-              </div>
-            </SessionSettingsProvider>
-          </LanguageProvider>
-        </ThemeProvider>
-      </SoundProvider>
-    </Router>
+    <ErrorBoundary>
+      <Router>
+        <SoundProvider>
+          <ThemeProvider>
+            <LanguageProvider>
+              <SessionSettingsProvider>
+                <div className="app">
+                  <Navbar />
+                  <main className="app-main">
+                    <Suspense fallback={<PageLoader />}>
+                      <Routes>
+                        {/* ===== CORE ROUTES (Always accessible) ===== */}
+                        <Route path="/forgot-password" element={<ForgotPassword />} />
+                        <Route path="/login" element={<Login />} />
+                        <Route path="/register" element={<Register />} />
+                        <Route path="/verify-email" element={<VerifyEmail />} />
+                        
+                        {/* ===== PUBLIC ROUTES ===== */}
+                        <Route path="/" element={<Home />} />
+                        <Route path="/subjects" element={<Subjects />} />
+                        <Route path="/subjects/:subjectName" element={<SubjectDetail />} />
+                        <Route path="/curriculum" element={<Curriculum />} />
+                        <Route path="/curriculum/:countryId" element={<CurriculumDetail />} />
+                        <Route path="/tutors" element={<Tutors />} />
+                        <Route path="/pricing" element={<Pricing />} />
+                        <Route path="/resources" element={<Resources />} />
+                        <Route path="/resources/:vaultName/:resourceId" element={<ResourceDetail />} />
+                        <Route path="/resources/:vaultName" element={<ResourceDetail />} />
+                        <Route path="/resources/videos/:id" element={<ResourceDetail />} />
+                        <Route path="/resources/practice/:id" element={<ResourceDetail />} />
+                        <Route path="/resources/guides/:id" element={<ResourceDetail />} />
+                        <Route path="/terms" element={<Terms />} />
+                        <Route path="/privacy" element={<Privacy />} />
+                        <Route path="/search" element={<SearchResults />} />
+                        
+                        {/* ===== PROTECTED ROUTES (Requires Login) ===== */}
+                        <Route path="/dashboard" element={<Dashboard />} />
+                        <Route path="/profile" element={<Profile />} />
+                        <Route path="/settings" element={<Settings />} />
+                        <Route path="/help/*" element={<Help />} />
+                        <Route path="/practice/:id" element={<Practice />} />
+                        <Route path="/session/:sessionId" element={<TutorSession />} />
+                        <Route path="/checkout" element={<Checkout />} />
+                        <Route path="/payment-success" element={<PaymentSuccess />} />
+                        <Route path="/notifications" element={<Notifications />} />
+                        
+                        {/* ===== TUTOR ROUTES ===== */}
+                        <Route path="/tutor/dashboard" element={<TutorDashboard />} />
+                        <Route path="/tutor/session/:sessionId" element={<TutorSession />} />
+                        <Route path="/tutor/students" element={<TutorStudents />} />
+                        <Route path="/tutor/earnings" element={<TutorEarnings />} />
+                        <Route path="/admin/add-tutor" element={<AddTutor />} />
+                        
+                        {/* ===== LAZY LOADED ROUTES (With LazyWrapper) ===== */}
+                        <Route path="/my-courses" element={
+                          <LazyWrapper>
+                            <MyCourses />
+                          </LazyWrapper>
+                        } />
+                        <Route path="/my-sessions" element={
+                          <LazyWrapper>
+                            <MySessions />
+                          </LazyWrapper>
+                        } />
+                      </Routes>
+                    </Suspense>
+                  </main>
+                  <Footer />
+                  <ChatWidget />
+                </div>
+              </SessionSettingsProvider>
+            </LanguageProvider>
+          </ThemeProvider>
+        </SoundProvider>
+      </Router>
+    </ErrorBoundary>
   );
 }
 

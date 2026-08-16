@@ -141,7 +141,7 @@ const Tutors = () => {
   };
 
   // ============================================
-  // HANDLE BOOK SESSION - FIXED
+  // HANDLE BOOK SESSION
   // ============================================
   const handleBookSession = (tutor) => {
     if (!isAuthenticated) {
@@ -161,7 +161,7 @@ const Tutors = () => {
   };
 
   // ============================================
-  // HANDLE BOOKING SUBMIT - FIXED
+  // HANDLE BOOKING SUBMIT
   // ============================================
   const handleBookingSubmit = async (e) => {
     e.preventDefault();
@@ -214,10 +214,23 @@ const Tutors = () => {
   };
 
   // ============================================
-  // TUTOR MODAL
+  // TUTOR MODAL - CONDITIONAL RENDERING
   // ============================================
   const TutorModal = () => {
     if (!viewingTutor) return null;
+
+    // Get shift display name
+    const getShiftName = (shiftId) => {
+      const shiftMap = {
+        '594a3d55-4388-4dec-8dd7-73c30a2488f3': 'APAC',
+        'b35b41e1-e05a-4cef-8ff9-9c67d80af6c1': 'SOUTH_ASIA',
+        '07a371b1-6ec0-44ec-a55c-6ab396abb0b5': 'AFRICA_EUROPE',
+        '28606515-8920-42de-ad88-da7531f4f273': 'AMERICAS'
+      };
+      return shiftMap[shiftId] || null;
+    };
+
+    const shiftName = getShiftName(viewingTutor.shiftId);
 
     return (
       <div className="tutor-modal-overlay" onClick={() => setShowTutorModal(false)}>
@@ -225,16 +238,19 @@ const Tutors = () => {
           <button className="tutor-modal-close" onClick={() => setShowTutorModal(false)}>×</button>
           
           {!showFullProfile ? (
+            // ===== QUICK VIEW =====
             <div className="tutor-modal-content">
               <div className="tutor-modal-avatar">
                 {renderAvatar(viewingTutor)}
               </div>
               <h2 className="tutor-modal-name">{viewingTutor.name}</h2>
               
+              {/* Tier - Only show if exists */}
               {viewingTutor.tier && (
                 <span className="tutor-modal-tier">{viewingTutor.tier}</span>
               )}
               
+              {/* Subjects - Only show if exists */}
               {viewingTutor.subjects && viewingTutor.subjects.length > 0 && (
                 <div className="tutor-modal-subjects">
                   {viewingTutor.subjects.map((subject, idx) => (
@@ -243,8 +259,16 @@ const Tutors = () => {
                 </div>
               )}
 
+              {/* Bio - Only show if exists */}
               {viewingTutor.bio && (
                 <p className="tutor-modal-bio">{viewingTutor.bio}</p>
+              )}
+
+              {/* Shift - Only show if exists */}
+              {shiftName && (
+                <div className="tutor-modal-shift">
+                  <span className="shift-label">⏰ {shiftName}</span>
+                </div>
               )}
 
               <div className="tutor-modal-actions">
@@ -260,6 +284,7 @@ const Tutors = () => {
               </div>
             </div>
           ) : (
+            // ===== FULL PROFILE VIEW - CONDITIONAL =====
             <div className="tutor-modal-full-profile">
               <button className="back-btn" onClick={() => setShowFullProfile(false)}>
                 ← Back
@@ -271,9 +296,13 @@ const Tutors = () => {
                 </div>
                 <div className="full-profile-info">
                   <h2>{viewingTutor.name}</h2>
+                  
+                  {/* Tier - Only show if exists */}
                   {viewingTutor.tier && (
                     <span className="full-profile-tier">{viewingTutor.tier}</span>
                   )}
+                  
+                  {/* Email - Only show if exists */}
                   {viewingTutor.email && (
                     <p className="full-profile-email">{viewingTutor.email}</p>
                   )}
@@ -281,6 +310,15 @@ const Tutors = () => {
               </div>
 
               <div className="full-profile-body">
+                {/* Bio/About - Only show if exists */}
+                {viewingTutor.bio && (
+                  <div className="profile-section">
+                    <h3>📝 About</h3>
+                    <p>{viewingTutor.bio}</p>
+                  </div>
+                )}
+
+                {/* Subjects - Only show if exists */}
                 {viewingTutor.subjects && viewingTutor.subjects.length > 0 && (
                   <div className="profile-section">
                     <h3>📖 Subjects</h3>
@@ -292,27 +330,50 @@ const Tutors = () => {
                   </div>
                 )}
 
-                {viewingTutor.bio && (
-                  <div className="profile-section">
-                    <h3>📝 About</h3>
-                    <p>{viewingTutor.bio}</p>
-                  </div>
-                )}
-
-                {viewingTutor.shift && (
+                {/* Shift/Availability - Only show if exists */}
+                {shiftName && (
                   <div className="profile-section">
                     <h3>⏰ Availability</h3>
-                    <p>{viewingTutor.shift.name || 'Various shifts'}</p>
-                    {viewingTutor.shift.time && (
-                      <p className="shift-time">{viewingTutor.shift.time}</p>
+                    <p>{shiftName}</p>
+                    {viewingTutor.shiftTime && (
+                      <p className="shift-time">{viewingTutor.shiftTime}</p>
                     )}
                   </div>
                 )}
 
-                {viewingTutor.tier && (
+                {/* Education - Only show if exists */}
+                {viewingTutor.education && (
                   <div className="profile-section">
-                    <h3>🏅 Experience Level</h3>
-                    <p>{viewingTutor.tier}</p>
+                    <h3>🎓 Education</h3>
+                    <p>{viewingTutor.education}</p>
+                  </div>
+                )}
+
+                {/* Years Experience - Only show if exists */}
+                {viewingTutor.yearsExperience > 0 && (
+                  <div className="profile-section">
+                    <h3>📅 Experience</h3>
+                    <p>{viewingTutor.yearsExperience} years</p>
+                  </div>
+                )}
+
+                {/* LinkedIn - Only show if exists */}
+                {viewingTutor.linkedin && (
+                  <div className="profile-section">
+                    <h3>🔗 Connect</h3>
+                    <a href={viewingTutor.linkedin} target="_blank" rel="noopener noreferrer" className="profile-link">
+                      LinkedIn Profile
+                    </a>
+                  </div>
+                )}
+
+                {/* Website - Only show if exists */}
+                {viewingTutor.website && (
+                  <div className="profile-section">
+                    <h3>🌐 Website</h3>
+                    <a href={viewingTutor.website} target="_blank" rel="noopener noreferrer" className="profile-link">
+                      {viewingTutor.website}
+                    </a>
                   </div>
                 )}
 
@@ -353,7 +414,7 @@ const Tutors = () => {
   );
 
   // ============================================
-  // BOOKING MODAL - FIXED
+  // BOOKING MODAL
   // ============================================
   const BookingModal = () => (
     <div className="booking-modal-overlay" onClick={() => setShowBookingModal(false)}>

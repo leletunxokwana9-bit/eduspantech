@@ -111,7 +111,7 @@ const SoundGenerator = {
   }
 };
 
-// ===== EMOJI DATA (DEDUPLICATED) =====
+// ===== EMOJI DATA =====
 const EMOJIS = [
   '😀', '😁', '😂', '🤣', '😃', '😄', '😅', '😆', '😉', '😊', '😋', '😎', '😍', '🥰', '😘', '😗', '😙', '😚', '🙂', '🤗', '🤩', '🤔', '🤨', '😐', '😑', '😶', '🙄', '😏', '😣', '😥', '😮', '🤐', '😯', '😪', '😫', '😴', '😌', '😛', '😜', '😝', '🤤', '😒', '😓', '😔', '😕', '🙃', '🤑', '😲', '☹️', '🙁', '😖', '😞', '😟', '😤', '😢', '😭', '😦', '😧', '😨', '😩', '🤯', '😬', '😰', '😱', '🥵', '🥶', '😳', '🤪', '😵', '😡', '😠', '🤬',
   '👍', '👎', '👊', '✊', '🤛', '🤜', '👏', '🙌', '👐', '🤲', '🤝', '🙏', '✌️', '🤟', '🤘', '👌', '🤌', '🤞', '🖕', '🖐️', '✋', '👋', '🤙', '💪', '🦾', '🖖', '👆', '👇', '👉', '👈', '🙋', '🙇', '💁', '🙅', '🙆', '🙎', '🙍',
@@ -119,12 +119,11 @@ const EMOJIS = [
   '📚', '📖', '📕', '📗', '📘', '📙', '📓', '📒', '📃', '📜', '📄', '📰', '📑', '🔖', '🏷️', '💰', '💵', '💴', '💶', '💷', '🪙', '💳', '🧾', '💎', '⚖️', '🪝', '🔧', '🔩', '⚙️', '🗜️', '⚗️', '🧪', '🧫', '🧬', '🔬', '🔭', '📡', '💉', '🩸', '💊', '🩹', '🩺', '🧴', '🧵', '🧶', '🪡', '🧥', '🥼', '🦺', '👔', '👕', '👖', '🧣', '🧤', '🧦', '👗', '👘', '🥻', '🩱', '🩲', '🩳', '👙', '👚', '👛', '👜', '👝', '🎒', '👞', '👟', '🥾', '🥿', '👠', '👡', '🩰', '👢', '👑', '👒', '🎩', '🎓', '🧢', '⛑️', '📿', '💄', '💍'
 ];
 
-// ===== HELPER: GET CURRENT TIME =====
+// ===== HELPERS =====
 const getCurrentTime = () => {
   return new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 };
 
-// ===== HELPER: GENERATE UUID =====
 const generateUUID = () => {
   return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
     const r = Math.random() * 16 | 0;
@@ -133,7 +132,6 @@ const generateUUID = () => {
   });
 };
 
-// ===== HELPER: GET PUBLIC IP (FIXED - CORS-friendly) =====
 const getPublicIP = async () => {
   try {
     const response = await fetch('https://ipapi.co/json/');
@@ -150,7 +148,6 @@ const getPublicIP = async () => {
   }
 };
 
-// ===== HELPER: GET SHIFT INFO =====
 const getShiftInfo = () => {
   const now = new Date();
   const sastTime = new Date(now.toLocaleString('en-US', { timeZone: 'Africa/Johannesburg' }));
@@ -171,7 +168,6 @@ const getShiftInfo = () => {
   return { name: 'Off-Peak', active: false, hubs: ['Global'] };
 };
 
-// ===== HELPER: GET REGION FROM IP =====
 const getRegionFromIP = (ip) => {
   const regions = [
     { code: 'af-south-1', name: 'Cape Town', lat: -33.9249, lng: 18.4241 },
@@ -189,6 +185,9 @@ const getRegionFromIP = (ip) => {
   return regions[hash % regions.length];
 };
 
+// ============================================
+// MAIN COMPONENT
+// ============================================
 const TutorSession = () => {
   const navigate = useNavigate();
   const location = useLocation();
@@ -196,31 +195,31 @@ const TutorSession = () => {
   const { isDark } = useSessionSettings();
   const [showSettings, setShowSettings] = useState(false);
 
-  // ===== FEATURE 1: WebGL Watermark =====
+  // ===== FEATURE: Watermark =====
   const [watermark, setWatermark] = useState({ text: '', position: { x: 10, y: 30 } });
   const [publicIP, setPublicIP] = useState('127.0.0.1');
   const [watermarkVisible] = useState(true);
 
-  // ===== FEATURE 3: Token Bucket Rate Limiting =====
+  // ===== FEATURE: Token Bucket =====
   const [tokens, setTokens] = useState(15);
   const [maxTokens] = useState(15);
   const [tokenFillRate] = useState(0.166);
   const [lastTokenUpdate, setLastTokenUpdate] = useState(Date.now());
 
-  // ===== FEATURE 4: Shift Overlap Timer =====
+  // ===== FEATURE: Shift Overlap =====
   const [shiftInfo, setShiftInfo] = useState(getShiftInfo());
   const [isShiftOverlapping, setIsShiftOverlapping] = useState(false);
 
-  // ===== FEATURE 5: Connection Quality =====
+  // ===== FEATURE: Connection Quality =====
   const [latency, setLatency] = useState(12);
   const [connectionQuality, setConnectionQuality] = useState('excellent');
   const [regionInfo, setRegionInfo] = useState(null);
 
-  // ===== FEATURE 6: Raise Hand Queue =====
+  // ===== FEATURE: Raise Hand Queue =====
   const [handRaiseQueue, setHandRaiseQueue] = useState([]);
   const [handRaisePosition, setHandRaisePosition] = useState(null);
 
-  // ===== FEATURE 7: Session Summary =====
+  // ===== FEATURE: Session Summary =====
   const [sessionStats, setSessionStats] = useState({
     whiteboardActions: 0,
     messagesSent: 0,
@@ -229,20 +228,36 @@ const TutorSession = () => {
   });
   const [showSummary, setShowSummary] = useState(false);
 
-  // ===== FEATURE 8: Whiteboard Undo/Redo =====
+  // ===== FEATURE: Whiteboard Undo/Redo =====
   const [canvasHistory, setCanvasHistory] = useState([]);
   const [historyIndex, setHistoryIndex] = useState(-1);
   const [maxHistory] = useState(50);
 
-  // ===== FEATURE 9: Enhanced Whiteboard Tools =====
+  // ===== FEATURE: Whiteboard Tools =====
   const [currentTool, setCurrentTool] = useState('pen');
   const [selectedColor, setSelectedColor] = useState('#1a1a2e');
   const [strokeWidth, setStrokeWidth] = useState(3);
   const [showGrid, setShowGrid] = useState(false);
   const [zoomLevel, setZoomLevel] = useState(1);
 
-  // ===== FEATURE 10: Recording Indicator =====
+  // ===== FEATURE: Recording =====
   const [isRecording, setIsRecording] = useState(false);
+
+  // ============================================
+  // RATING FEATURE - NEW
+  // ============================================
+  const [showRatingModal, setShowRatingModal] = useState(false);
+  const [ratingData, setRatingData] = useState({
+    overall: 0,
+    communication: 0,
+    knowledge: 0,
+    teaching: 0,
+    punctuality: 0,
+    review: ''
+  });
+  const [ratingSubmitted, setRatingSubmitted] = useState(false);
+  const [ratingLoading, setRatingLoading] = useState(false);
+  const [hoveredStar, setHoveredStar] = useState(0);
 
   // ===== STATE =====
   const [isMuted, setIsMuted] = useState(false);
@@ -274,7 +289,7 @@ const TutorSession = () => {
   const canvasDataRef = useRef(null);
   const resizeTimeoutRef = useRef(null);
 
-  // ===== DRAW WATERMARK ON CANVAS =====
+  // ===== DRAW WATERMARK =====
   const drawWatermark = useCallback(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
@@ -319,7 +334,7 @@ const TutorSession = () => {
     img.src = dataUrl;
   }, [watermark, watermarkVisible]);
 
-  // ===== INIT: Setup UUID, IP, Watermark =====
+  // ===== INIT =====
   useEffect(() => {
     let uuid = localStorage.getItem('eduspantech_uuid');
     if (!uuid) {
@@ -366,7 +381,7 @@ const TutorSession = () => {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [drawWatermark]);
 
-  // ===== TOKEN BUCKET SYSTEM =====
+  // ===== TOKEN BUCKET =====
   useEffect(() => {
     const updateTokens = () => {
       const now = Date.now();
@@ -439,7 +454,7 @@ const TutorSession = () => {
     return () => clearInterval(interval);
   }, []);
 
-  // ===== RECORDING INDICATOR =====
+  // ===== RECORDING =====
   useEffect(() => {
     if (isRecording) {
       recordingIntervalRef.current = setInterval(() => {}, 1000);
@@ -456,7 +471,7 @@ const TutorSession = () => {
     };
   }, [isRecording]);
 
-  // ===== MOCK CHAT MESSAGES =====
+  // ===== MOCK CHAT =====
   const getMockMessages = () => {
     const currentTime = getCurrentTime();
     return [
@@ -495,7 +510,7 @@ const TutorSession = () => {
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
-  // Canvas setup
+  // ===== CANVAS SETUP =====
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
@@ -561,7 +576,7 @@ const TutorSession = () => {
     }
   }, [isMobile]);
 
-  // ===== SAVE CANVAS STATE FOR UNDO/REDO =====
+  // ===== SAVE CANVAS STATE =====
   const saveCanvasState = useCallback(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
@@ -578,7 +593,7 @@ const TutorSession = () => {
     setHistoryIndex(newHistory.length - 1);
   }, [canvasHistory, historyIndex, maxHistory]);
 
-  // ===== WHITEBOARD FUNCTIONS =====
+  // ===== WHITEBOARD =====
   const startDrawing = (e) => {
     if (tokens < 1) {
       alert('Rate limit exceeded. Please wait a moment.');
@@ -663,7 +678,7 @@ const TutorSession = () => {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [historyIndex, canvasHistory]);
 
-  // ===== CHAT FUNCTIONS =====
+  // ===== CHAT =====
   const sendMessage = (e) => {
     e?.preventDefault();
     if (!newMessage.trim()) return;
@@ -737,7 +752,7 @@ const TutorSession = () => {
     chatInputRef.current?.focus();
   };
 
-  // ===== RAISE HAND WITH QUEUE =====
+  // ===== RAISE HAND =====
   const toggleRaiseHand = () => {
     const newState = !isHandRaised;
     setIsHandRaised(newState);
@@ -799,7 +814,106 @@ const TutorSession = () => {
     return `${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
   };
 
-  // ===== END SESSION - FIXED =====
+  // ============================================
+  // RATING FUNCTIONS
+  // ============================================
+  const handleRatingChange = (category, value) => {
+    setRatingData(prev => ({
+      ...prev,
+      [category]: value
+    }));
+  };
+
+  const handleReviewChange = (e) => {
+    setRatingData(prev => ({
+      ...prev,
+      review: e.target.value
+    }));
+  };
+
+  const submitRating = async () => {
+    if (ratingData.overall === 0) {
+      alert('Please rate the overall experience');
+      return;
+    }
+
+    setRatingLoading(true);
+
+    try {
+      const token = localStorage.getItem('accessToken');
+      const sessionId = location.state?.sessionId || 'temp_session';
+
+      const response = await fetch('https://eduspantech-backend.onrender.com/api/ratings', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          sessionId: sessionId,
+          tutorId: tutor?.id || 'unknown',
+          rating: ratingData.overall,
+          review: ratingData.review,
+          communication: ratingData.communication || 0,
+          knowledge: ratingData.knowledge || 0,
+          teaching: ratingData.teaching || 0,
+          punctuality: ratingData.punctuality || 0
+        })
+      });
+
+      if (response.ok) {
+        setRatingSubmitted(true);
+        setRatingLoading(false);
+        setTimeout(() => {
+          setShowRatingModal(false);
+          navigate('/dashboard');
+        }, 2000);
+      } else {
+        const error = await response.json();
+        alert('Failed to submit rating: ' + (error.message || 'Please try again'));
+        setRatingLoading(false);
+      }
+    } catch (error) {
+      console.error('Rating submission error:', error);
+      alert('Failed to submit rating. Please try again.');
+      setRatingLoading(false);
+    }
+  };
+
+  const renderStars = (rating, category) => {
+    const stars = [];
+    const hover = category === 'overall' ? hoveredStar : 0;
+    const value = category === 'overall' ? (hover || rating) : rating;
+
+    for (let i = 1; i <= 5; i++) {
+      stars.push(
+        <span
+          key={i}
+          className={`star ${i <= value ? 'filled' : ''}`}
+          onMouseEnter={() => category === 'overall' && setHoveredStar(i)}
+          onMouseLeave={() => category === 'overall' && setHoveredStar(0)}
+          onClick={() => handleRatingChange(category, i)}
+          style={{
+            cursor: 'pointer',
+            fontSize: '28px',
+            color: i <= value ? '#f59e0b' : '#4b5563',
+            transition: 'color 0.2s ease'
+          }}
+        >
+          ★
+        </span>
+      );
+    }
+    return stars;
+  };
+
+  // ===== SKIP RATING =====
+  const skipRating = () => {
+    setShowRatingModal(false);
+    navigate('/dashboard');
+  };
+
+  // ===== END SESSION =====
   const endSession = async () => {
     const duration = Math.floor((Date.now() - sessionStats.startTime) / 1000);
     setSessionStats(prev => ({ ...prev, duration }));
@@ -807,7 +921,7 @@ const TutorSession = () => {
     // Send end session request to backend
     try {
       const token = localStorage.getItem('accessToken');
-      const response = await fetch(`https://eduspantech-backend.onrender.com/api/v1/sessions/end`, {
+      const response = await fetch('https://eduspantech-backend.onrender.com/api/v1/sessions/end', {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -826,15 +940,109 @@ const TutorSession = () => {
       console.error('Error ending session:', error);
     }
     
-    // Show summary
-    setShowSummary(true);
+    // Show rating modal instead of summary
+    setShowRatingModal(true);
+    setShowSummary(false);
   };
 
-  // ===== CLOSE SUMMARY AND NAVIGATE - FIXED =====
-  const closeSummary = () => {
-    setShowSummary(false);
-    navigate('/dashboard');
-  };
+  // ===== RATING MODAL =====
+  const RatingModal = () => (
+    <div className="rating-modal-overlay">
+      <div className="rating-modal">
+        <div className="rating-modal-header">
+          <h2>⭐ Rate Your Session</h2>
+          <p>How was your session with {tutor?.name}?</p>
+        </div>
+
+        <div className="rating-modal-body">
+          {!ratingSubmitted ? (
+            <>
+              {/* Overall Rating */}
+              <div className="rating-category">
+                <label>Overall Experience</label>
+                <div className="stars-container">
+                  {renderStars(ratingData.overall, 'overall')}
+                  <span className="rating-label">
+                    {ratingData.overall > 0 ? `${ratingData.overall}.0` : 'Select'}
+                  </span>
+                </div>
+              </div>
+
+              {/* Communication */}
+              <div className="rating-category">
+                <label>💬 Communication</label>
+                <div className="stars-container">
+                  {renderStars(ratingData.communication, 'communication')}
+                </div>
+              </div>
+
+              {/* Knowledge */}
+              <div className="rating-category">
+                <label>📚 Subject Knowledge</label>
+                <div className="stars-container">
+                  {renderStars(ratingData.knowledge, 'knowledge')}
+                </div>
+              </div>
+
+              {/* Teaching */}
+              <div className="rating-category">
+                <label>📖 Teaching Style</label>
+                <div className="stars-container">
+                  {renderStars(ratingData.teaching, 'teaching')}
+                </div>
+              </div>
+
+              {/* Punctuality */}
+              <div className="rating-category">
+                <label>⏰ Punctuality</label>
+                <div className="stars-container">
+                  {renderStars(ratingData.punctuality, 'punctuality')}
+                </div>
+              </div>
+
+              {/* Review */}
+              <div className="rating-review">
+                <label>Write a Review (Optional)</label>
+                <textarea
+                  placeholder="Share your experience with this tutor..."
+                  value={ratingData.review}
+                  onChange={handleReviewChange}
+                  rows="3"
+                />
+              </div>
+            </>
+          ) : (
+            <div className="rating-success">
+              <div className="success-icon">✅</div>
+              <h3>Thank You for Your Rating!</h3>
+              <p>Your feedback helps other students find the right tutor.</p>
+            </div>
+          )}
+        </div>
+
+        <div className="rating-modal-footer">
+          {!ratingSubmitted ? (
+            <>
+              <button className="btn-skip" onClick={skipRating} disabled={ratingLoading}>
+                Skip
+              </button>
+              <button 
+                className="btn-submit-rating" 
+                onClick={submitRating} 
+                disabled={ratingLoading || ratingData.overall === 0}
+              >
+                {ratingLoading ? 'Submitting...' : 'Submit Rating'}
+              </button>
+            </>
+          ) : (
+            <button className="btn-done" onClick={() => navigate('/dashboard')}>
+              Go to Dashboard
+            </button>
+          )}
+        </div>
+      </div>
+    </div>
+  );
 
   // ===== RENDER =====
   if (!tutor) {
@@ -850,6 +1058,8 @@ const TutorSession = () => {
 
   return (
     <div className={`session-container ${isDark ? 'dark' : 'light'}`}>
+      {showRatingModal && <RatingModal />}
+
       <header className="session-header">
         <div className="session-header-left">
           <button className="btn-back" onClick={() => navigate('/tutors')}>← Back</button>
@@ -888,8 +1098,8 @@ const TutorSession = () => {
       </header>
 
       <div className={`session-grid ${showChat ? 'chat-open' : ''}`}>
+        {/* MAIN CONTENT */}
         <div className="session-main" style={{ position: 'relative' }}>
-          
           {/* Floating Tutor Card */}
           <div className="floating-tutor-card">
             <div className="tutor-avatar-small">
@@ -914,7 +1124,7 @@ const TutorSession = () => {
             </div>
           </div>
 
-          {/* Video-Free Badge Overlay */}
+          {/* Video-Free Overlay */}
           <div className="video-free-overlay">
             <span>🎧 Audio Only</span>
             <span className="video-free-sub">15MB/hr • Ultra-Low Bandwidth</span>
@@ -981,7 +1191,7 @@ const TutorSession = () => {
           </div>
         </div>
 
-        {/* Sidebar - Chat */}
+        {/* SIDEBAR - CHAT */}
         <div className={`session-sidebar ${isMobile ? 'mobile-sidebar' : ''} ${showChat ? 'mobile-open' : ''}`}>
           <div className="participants-list">
             <h4>👥 Participants</h4>
@@ -1071,25 +1281,6 @@ const TutorSession = () => {
       </div>
 
       {showSettings && <SessionSettings onClose={() => setShowSettings(false)} />}
-
-      {showSummary && (
-        <div className="session-summary-overlay">
-          <div className="session-summary-panel">
-            <h2>📊 Session Summary</h2>
-            <div className="summary-stats">
-              <div className="stat-item"><span className="stat-label">Duration</span><span className="stat-value">{formatTime(sessionStats.duration || 0)}</span></div>
-              <div className="stat-item"><span className="stat-label">Whiteboard Actions</span><span className="stat-value">{sessionStats.whiteboardActions}</span></div>
-              <div className="stat-item"><span className="stat-label">Messages Sent</span><span className="stat-value">{sessionStats.messagesSent}</span></div>
-              <div className="stat-item"><span className="stat-label">Hand Raises</span><span className="stat-value">{sessionStats.handRaises}</span></div>
-              <div className="stat-item"><span className="stat-label">Peak Latency</span><span className="stat-value">{latency}ms</span></div>
-              <div className="stat-item"><span className="stat-label">Region</span><span className="stat-value">{regionInfo?.name || 'Unknown'}</span></div>
-            </div>
-            <div className="summary-actions">
-              <button className="summary-done" onClick={closeSummary}>Done</button>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 };

@@ -1,94 +1,137 @@
 // src/services/sessionService.js
-import { API_BASE_URL } from './api';
+import { API_BASE_URL } from '../config/api';
 
-const API_URL = API_BASE_URL;
-
-const sessionService = {
-  // ===== BOOK A SESSION =====
-  bookSession: async (tutorId, date, duration, topic) => {
+export const sessionService = {
+  // ============================================
+  // BOOK A SESSION - FIXED
+  // ============================================
+  bookSession: async (tutorId, date, duration = 60, topic = 'Mathematics') => {
     try {
       const token = localStorage.getItem('accessToken');
       if (!token) {
         throw new Error('Not authenticated');
       }
 
-      console.log('📚 Booking session:', { tutorId, date, duration, topic });
+      // Calculate start and end times
+      const startTime = new Date(date);
+      const endTime = new Date(startTime.getTime() + duration * 60000);
 
-      const response = await fetch(`${API_URL}/sessions`, {
+      const payload = {
+        tutorId: tutorId,
+        startTime: startTime.toISOString(),
+        endTime: endTime.toISOString(),
+        duration: duration,
+        topic: topic,
+        region: 'af-south-1'
+      };
+
+      console.log('📤 Booking session with payload:', payload);
+
+      const response = await fetch(`${API_BASE_URL}/sessions`, {
         method: 'POST',
         headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
         },
-        body: JSON.stringify({ tutorId, date, duration, topic })
+        body: JSON.stringify(payload)
+      });
+
+      const data = await response.json();
+      console.log('📥 Booking response:', data);
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to book session');
+      }
+
+      return {
+        success: true,
+        session: data.session || data
+      };
+    } catch (error) {
+      console.error('❌ Failed to book session:', error);
+      return {
+        success: false,
+        error: error.message
+      };
+    }
+  },
+
+  // ============================================
+  // GET MY SESSIONS
+  // ============================================
+  getMySessions: async () => {
+    try {
+      const token = localStorage.getItem('accessToken');
+      if (!token) {
+        throw new Error('Not authenticated');
+      }
+
+      const response = await fetch(`${API_BASE_URL}/sessions`, {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
       });
 
       if (!response.ok) {
         const error = await response.json();
-        throw new Error(error.error || 'Failed to book session');
+        throw new Error(error.error || 'Failed to fetch sessions');
       }
 
-      return await response.json();
+      const data = await response.json();
+      return {
+        success: true,
+        sessions: data.sessions || data || []
+      };
     } catch (error) {
-      console.error('Book session error:', error);
-      throw error;
+      console.error('❌ Failed to fetch sessions:', error);
+      return {
+        success: false,
+        error: error.message,
+        sessions: []
+      };
     }
   },
 
-  // ===== GET USER SESSIONS =====
-  getSessions: async (status = null) => {
+  // ============================================
+  // GET SESSION BY ID
+  // ============================================
+  getSessionById: async (sessionId) => {
     try {
       const token = localStorage.getItem('accessToken');
       if (!token) {
         throw new Error('Not authenticated');
       }
 
-      let url = `${API_URL}/sessions`;
-      if (status) url += `?status=${status}`;
-
-      const response = await fetch(url, {
+      const response = await fetch(`${API_BASE_URL}/sessions/${sessionId}`, {
         headers: {
-          'Authorization': `Bearer ${token}`
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
         }
       });
 
       if (!response.ok) {
-        throw new Error('Failed to fetch sessions');
+        const error = await response.json();
+        throw new Error(error.error || 'Failed to fetch session');
       }
 
-      return await response.json();
+      const data = await response.json();
+      return {
+        success: true,
+        session: data.session || data
+      };
     } catch (error) {
-      console.error('Get sessions error:', error);
-      return { success: false, sessions: [] };
+      console.error('❌ Failed to fetch session:', error);
+      return {
+        success: false,
+        error: error.message
+      };
     }
   },
 
-  // ===== GET SESSION BY ID =====
-  getSession: async (sessionId) => {
-    try {
-      const token = localStorage.getItem('accessToken');
-      if (!token) {
-        throw new Error('Not authenticated');
-      }
-
-      const response = await fetch(`${API_URL}/sessions/${sessionId}`, {
-        headers: {
-          'Authorization': `Bearer ${token}`
-        }
-      });
-
-      if (!response.ok) {
-        throw new Error('Failed to fetch session');
-      }
-
-      return await response.json();
-    } catch (error) {
-      console.error('Get session error:', error);
-      return { success: false, session: null };
-    }
-  },
-
-  // ===== CANCEL SESSION =====
+  // ============================================
+  // CANCEL SESSION
+  // ============================================
   cancelSession: async (sessionId) => {
     try {
       const token = localStorage.getItem('accessToken');
@@ -96,10 +139,11 @@ const sessionService = {
         throw new Error('Not authenticated');
       }
 
-      const response = await fetch(`${API_URL}/sessions/${sessionId}`, {
-        method: 'DELETE',
+      const response = await fetch(`${API_BASE_URL}/sessions/${sessionId}/cancel`, {
+        method: 'PUT',
         headers: {
-          'Authorization': `Bearer ${token}`
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
         }
       });
 
@@ -108,13 +152,19 @@ const sessionService = {
         throw new Error(error.error || 'Failed to cancel session');
       }
 
-      return await response.json();
+      const data = await response.json();
+      return {
+        success: true,
+        message: data.message || 'Session cancelled successfully'
+      };
     } catch (error) {
-      console.error('Cancel session error:', error);
-      throw error;
+      console.error('❌ Failed to cancel session:', error);
+      return {
+        success: false,
+        error: error.message
+      };
     }
   }
 };
 
-export { sessionService };
 export default sessionService;

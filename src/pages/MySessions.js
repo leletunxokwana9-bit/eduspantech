@@ -16,6 +16,21 @@ const MySessions = () => {
   const [expandedSession, setExpandedSession] = useState(null);
   const [filterStatus, setFilterStatus] = useState('all');
 
+  // ===== CUSTOM POPUP STATE =====
+  const [showCancelPopup, setShowCancelPopup] = useState(false);
+  const [showReschedulePopup, setShowReschedulePopup] = useState(false);
+  const [showSuccessPopup, setShowSuccessPopup] = useState(false);
+  const [showErrorPopup, setShowErrorPopup] = useState(false);
+  const [popupMessage, setPopupMessage] = useState('');
+  const [popupTitle, setPopupTitle] = useState('');
+  const [popupType, setPopupType] = useState('info');
+  const [sessionToCancel, setSessionToCancel] = useState(null);
+  const [sessionToReschedule, setSessionToReschedule] = useState(null);
+  const [rescheduleDate, setRescheduleDate] = useState('');
+  const [rescheduleDuration, setRescheduleDuration] = useState(60);
+  const [rescheduleTopic, setRescheduleTopic] = useState('');
+  const [actionLoading, setActionLoading] = useState(false);
+
   useEffect(() => {
     const fetchUserAndSessions = async () => {
       try {
@@ -80,14 +95,12 @@ const MySessions = () => {
 
         console.log('📋 Sessions list length:', sessionsList.length);
 
-        // ✅ Fetch tutor details from API
         const enrichedSessions = await Promise.all(
           sessionsList.map(async (session) => {
             let tutor = null;
             
             if (session.tutor_id) {
               try {
-                // ✅ Fetch tutor from /api/tutors
                 const tutorResponse = await fetch(`${API_BASE_URL}/tutors/${session.tutor_id}`, {
                   headers: {
                     'Authorization': `Bearer ${token}`,
@@ -99,18 +112,6 @@ const MySessions = () => {
                   const tutorData = await tutorResponse.json();
                   tutor = tutorData.tutor || tutorData;
                   console.log('✅ Tutor found:', tutor?.name);
-                } else {
-                  // Fallback: try to get from users table
-                  const fallbackResponse = await fetch(`${API_BASE_URL}/users/${session.tutor_id}`, {
-                    headers: {
-                      'Authorization': `Bearer ${token}`,
-                      'Content-Type': 'application/json'
-                    }
-                  });
-                  if (fallbackResponse.ok) {
-                    const fallbackData = await fallbackResponse.json();
-                    tutor = fallbackData.user || fallbackData;
-                  }
                 }
               } catch (e) {
                 console.error('Failed to fetch tutor details:', e);
@@ -180,10 +181,8 @@ const MySessions = () => {
   const renderTutorAvatar = (tutor) => {
     if (!tutor) return '🧑‍🏫';
 
-    // Check if tutor has a real photo
     const photoUrl = tutor.avatar || tutor.profileImage;
     
-    // ✅ If there's a real photo, show it
     if (photoUrl) {
       return (
         <img 
@@ -195,7 +194,6 @@ const MySessions = () => {
             e.target.style.display = 'none';
             const parent = e.target.parentElement;
             if (parent) {
-              // Show default avatar with initials
               const initials = tutor.name
                 .split(' ')
                 .map(word => word[0])
@@ -231,7 +229,6 @@ const MySessions = () => {
       );
     }
     
-    // ✅ NO real photo - show default avatar with initials (same as Tutors page)
     const initials = tutor.name
       .split(' ')
       .map(word => word[0])
@@ -239,7 +236,6 @@ const MySessions = () => {
       .toUpperCase()
       .slice(0, 2);
     
-    // Generate consistent color based on tutor's name
     const colors = ['#1a73e8', '#e91e63', '#ff6f00', '#7b1fa2', '#0d47a1', '#00695c', '#bf360c', '#4a148c', '#1a237e', '#880e4f', '#004d40'];
     const hash = tutor.name.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
     const color = colors[hash % colors.length];
@@ -267,6 +263,9 @@ const MySessions = () => {
     );
   };
 
+  // ============================================
+  // FORMAT HELPERS
+  // ============================================
   const formatDate = (dateString) => {
     if (!dateString) return 'N/A';
     const date = new Date(dateString);
@@ -311,21 +310,6 @@ const MySessions = () => {
     }
   };
 
-  const getStatusIcon = (status) => {
-    switch (status) {
-      case 'upcoming':
-        return '📅';
-      case 'ongoing':
-        return '🟢';
-      case 'completed':
-        return '✅';
-      case 'cancelled':
-        return '❌';
-      default:
-        return '📅';
-    }
-  };
-
   const getStatusLabel = (status) => {
     switch (status) {
       case 'upcoming':
@@ -341,6 +325,155 @@ const MySessions = () => {
     }
   };
 
+  // ============================================
+  // ✅ CUSTOM POPUP HELPERS
+  // ============================================
+  const showPopup = (title, message, type = 'info') => {
+    setPopupTitle(title);
+    setPopupMessage(message);
+    setPopupType(type);
+    setShowSuccessPopup(true);
+  };
+
+  const showErrorPopup = (message) => {
+    setPopupTitle('❌ Error');
+    setPopupMessage(message);
+    setPopupType('error');
+    setShowErrorPopup(true);
+  };
+
+  // ============================================
+  // ✅ CANCEL SESSION WITH CUSTOM POPUP
+  // ============================================
+  const handleCancelClick = (session) => {
+    setSessionToCancel(session);
+    setShowCancelPopup(true);
+  };
+
+  const confirmCancel = async () => {
+    if (!sessionToCancel) return;
+    
+    setActionLoading(true);
+    
+    try {
+      const token = localStorage.getItem('accessToken');
+      const response = await fetch(`${API_BASE_URL}/sessions/${sessionToCancel.id}/cancel`, {
+        method: 'PUT',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      });
+
+      if (response.ok) {
+        // Update local state
+        setSessions(prev => 
+          prev.map(s => 
+            s.id === sessionToCancel.id 
+              ? { ...s, status: 'cancelled' }
+              : s
+          )
+        );
+        
+        setShowCancelPopup(false);
+        setSessionToCancel(null);
+        showPopup('✅ Session Cancelled', 'Your session has been cancelled successfully.', 'success');
+        
+        // Refresh sessions after a moment
+        setTimeout(() => {
+          fetchUserSessions();
+        }, 1000);
+      } else {
+        const errorData = await response.json();
+        showErrorPopup(errorData.error || 'Failed to cancel session. Please try again.');
+      }
+    } catch (error) {
+      console.error('Error cancelling session:', error);
+      showErrorPopup('An error occurred. Please try again.');
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  // ============================================
+  // ✅ RESCHEDULE SESSION
+  // ============================================
+  const handleRescheduleClick = (session) => {
+    setSessionToReschedule(session);
+    setRescheduleDate('');
+    setRescheduleDuration(session.duration || 60);
+    setRescheduleTopic(session.topic || 'Mathematics');
+    setShowReschedulePopup(true);
+  };
+
+  const confirmReschedule = async () => {
+    if (!sessionToReschedule) return;
+    
+    if (!rescheduleDate) {
+      showErrorPopup('Please select a new date and time.');
+      return;
+    }
+
+    setActionLoading(true);
+    
+    try {
+      const token = localStorage.getItem('accessToken');
+      
+      // First cancel the existing session
+      const cancelResponse = await fetch(`${API_BASE_URL}/sessions/${sessionToReschedule.id}/cancel`, {
+        method: 'PUT',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      });
+
+      if (!cancelResponse.ok) {
+        showErrorPopup('Failed to cancel the existing session. Please try again.');
+        setActionLoading(false);
+        return;
+      }
+
+      // Book a new session with the same tutor
+      const bookResponse = await fetch(`${API_BASE_URL}/sessions`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          tutorId: sessionToReschedule.tutorId,
+          date: rescheduleDate,
+          duration: rescheduleDuration,
+          topic: rescheduleTopic
+        })
+      });
+
+      const bookData = await bookResponse.json();
+
+      if (bookResponse.ok) {
+        setShowReschedulePopup(false);
+        setSessionToReschedule(null);
+        showPopup('✅ Session Rescheduled', 'Your session has been rescheduled successfully!', 'success');
+        
+        // Refresh sessions
+        setTimeout(() => {
+          fetchUserSessions();
+        }, 1000);
+      } else {
+        showErrorPopup(bookData.error || 'Failed to reschedule session. Please try again.');
+      }
+    } catch (error) {
+      console.error('Error rescheduling session:', error);
+      showErrorPopup('An error occurred. Please try again.');
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  // ============================================
+  // HANDLERS
+  // ============================================
   const handleSessionClick = (session) => {
     setSelectedSession(session);
     setExpandedSession(expandedSession === session.id ? null : session.id);
@@ -352,42 +485,6 @@ const MySessions = () => {
     } else {
       navigate(`/session/${session.id}`, { state: { tutor: session.tutor } });
     }
-  };
-
-  const handleCancelSession = async (session) => {
-    if (!window.confirm(`Are you sure you want to cancel your session with ${session.tutor?.name || 'Tutor'} on ${session.dateFormatted}?`)) {
-      return;
-    }
-
-    try {
-      const token = localStorage.getItem('accessToken');
-      const response = await fetch(`${API_BASE_URL}/sessions/${session.id}/cancel`, {
-        method: 'PUT',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        }
-      });
-
-      if (response.ok) {
-        setSessions(prev => 
-          prev.map(s => 
-            s.id === session.id 
-              ? { ...s, status: 'cancelled' }
-              : s
-          )
-        );
-      } else {
-        alert('Failed to cancel session. Please try again.');
-      }
-    } catch (error) {
-      console.error('Error cancelling session:', error);
-      alert('An error occurred. Please try again.');
-    }
-  };
-
-  const handleReschedule = (session) => {
-    navigate('/tutors', { state: { reschedule: session } });
   };
 
   const handleRedirectToTutors = () => {
@@ -413,6 +510,153 @@ const MySessions = () => {
   const completedSessions = sessions.filter(s => s.status === 'completed');
   const cancelledSessions = sessions.filter(s => s.status === 'cancelled');
 
+  // ============================================
+  // ✅ CUSTOM POPUP COMPONENT
+  // ============================================
+  const CustomPopup = ({ isOpen, onClose, title, message, type = 'info', onConfirm, confirmText = 'OK', showCancel = false }) => {
+    if (!isOpen) return null;
+
+    const getIcon = () => {
+      switch (type) {
+        case 'success':
+          return '✅';
+        case 'error':
+          return '❌';
+        case 'warning':
+          return '⚠️';
+        default:
+          return 'ℹ️';
+      }
+    };
+
+    const getColor = () => {
+      switch (type) {
+        case 'success':
+          return '#34d399';
+        case 'error':
+          return '#ef4444';
+        case 'warning':
+          return '#f59e0b';
+        default:
+          return '#4f46e5';
+      }
+    };
+
+    return (
+      <div className="popup-overlay" onClick={onClose}>
+        <div className="popup-modal" onClick={(e) => e.stopPropagation()}>
+          <div className="popup-icon" style={{ color: getColor() }}>{getIcon()}</div>
+          <h3 className="popup-title">{title}</h3>
+          <p className="popup-message">{message}</p>
+          <div className="popup-actions">
+            {showCancel && (
+              <button className="popup-btn cancel-btn" onClick={onClose}>
+                Cancel
+              </button>
+            )}
+            <button className="popup-btn proceed-btn" onClick={onConfirm || onClose} style={{ background: getColor() }}>
+              {confirmText}
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
+  // ============================================
+  // ✅ CANCEL CONFIRMATION POPUP
+  // ============================================
+  const CancelConfirmationPopup = ({ isOpen, onClose, onConfirm, session, loading }) => {
+    if (!isOpen || !session) return null;
+
+    return (
+      <div className="popup-overlay" onClick={onClose}>
+        <div className="popup-modal" onClick={(e) => e.stopPropagation()}>
+          <div className="popup-icon" style={{ color: '#ef4444' }}>⚠️</div>
+          <h3 className="popup-title">Cancel Session</h3>
+          <p className="popup-message">
+            Are you sure you want to cancel your session with <strong>{session.tutor?.name || 'Tutor'}</strong> on <strong>{session.dateFormatted}</strong>?
+            <br /><br />
+            This action cannot be undone.
+          </p>
+          <div className="popup-actions">
+            <button className="popup-btn cancel-btn" onClick={onClose} disabled={loading}>
+              Keep Session
+            </button>
+            <button className="popup-btn proceed-btn" onClick={onConfirm} disabled={loading} style={{ background: '#ef4444' }}>
+              {loading ? 'Cancelling...' : 'Yes, Cancel Session'}
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
+  // ============================================
+  // ✅ RESCHEDULE POPUP
+  // ============================================
+  const ReschedulePopup = ({ isOpen, onClose, onConfirm, session, date, setDate, duration, setDuration, topic, setTopic, loading }) => {
+    if (!isOpen || !session) return null;
+
+    return (
+      <div className="popup-overlay" onClick={onClose}>
+        <div className="popup-modal reschedule-modal" onClick={(e) => e.stopPropagation()}>
+          <button className="popup-close" onClick={onClose}>×</button>
+          <div className="popup-icon" style={{ color: '#4f46e5' }}>🔄</div>
+          <h3 className="popup-title">Reschedule Session</h3>
+          <p className="popup-message">
+            Reschedule your session with <strong>{session.tutor?.name || 'Tutor'}</strong>
+          </p>
+          
+          <div className="reschedule-form">
+            <div className="form-group">
+              <label>📅 New Date & Time</label>
+              <input
+                type="datetime-local"
+                value={date}
+                onChange={(e) => setDate(e.target.value)}
+                min={new Date(Date.now() + 3600000).toISOString().slice(0, 16)}
+                required
+              />
+            </div>
+
+            <div className="form-group">
+              <label>⏱️ Duration</label>
+              <select
+                value={duration}
+                onChange={(e) => setDuration(parseInt(e.target.value))}
+              >
+                <option value={30}>30 minutes</option>
+                <option value={60}>60 minutes</option>
+                <option value={90}>90 minutes</option>
+                <option value={120}>120 minutes</option>
+              </select>
+            </div>
+
+            <div className="form-group">
+              <label>📖 Topic</label>
+              <input
+                type="text"
+                value={topic}
+                onChange={(e) => setTopic(e.target.value)}
+                placeholder="Enter topic..."
+              />
+            </div>
+          </div>
+
+          <div className="popup-actions">
+            <button className="popup-btn cancel-btn" onClick={onClose} disabled={loading}>
+              Cancel
+            </button>
+            <button className="popup-btn proceed-btn" onClick={onConfirm} disabled={loading || !date} style={{ background: '#4f46e5' }}>
+              {loading ? 'Rescheduling...' : 'Confirm Reschedule'}
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
   if (loading) {
     return (
       <div className="my-sessions-loading">
@@ -428,6 +672,53 @@ const MySessions = () => {
 
   return (
     <div className="my-sessions-wrapper">
+      {/* ===== CUSTOM POPUPS ===== */}
+      <CustomPopup
+        isOpen={showSuccessPopup}
+        onClose={() => setShowSuccessPopup(false)}
+        title={popupTitle}
+        message={popupMessage}
+        type={popupType}
+        confirmText="OK"
+      />
+
+      <CustomPopup
+        isOpen={showErrorPopup}
+        onClose={() => setShowErrorPopup(false)}
+        title={popupTitle}
+        message={popupMessage}
+        type="error"
+        confirmText="Try Again"
+      />
+
+      <CancelConfirmationPopup
+        isOpen={showCancelPopup}
+        onClose={() => {
+          setShowCancelPopup(false);
+          setSessionToCancel(null);
+        }}
+        onConfirm={confirmCancel}
+        session={sessionToCancel}
+        loading={actionLoading}
+      />
+
+      <ReschedulePopup
+        isOpen={showReschedulePopup}
+        onClose={() => {
+          setShowReschedulePopup(false);
+          setSessionToReschedule(null);
+        }}
+        onConfirm={confirmReschedule}
+        session={sessionToReschedule}
+        date={rescheduleDate}
+        setDate={setRescheduleDate}
+        duration={rescheduleDuration}
+        setDuration={setRescheduleDuration}
+        topic={rescheduleTopic}
+        setTopic={setRescheduleTopic}
+        loading={actionLoading}
+      />
+
       {/* Background Effects */}
       <div className="my-sessions-bg">
         <div className="gradient-orb orb-1"></div>
@@ -672,14 +963,14 @@ const MySessions = () => {
                           </button>
                           <button 
                             className="action-btn reschedule-btn"
-                            onClick={() => handleReschedule(session)}
+                            onClick={() => handleRescheduleClick(session)}
                           >
                             <span className="btn-icon">🔄</span>
                             Reschedule
                           </button>
                           <button 
                             className="action-btn cancel-btn"
-                            onClick={() => handleCancelSession(session)}
+                            onClick={() => handleCancelClick(session)}
                           >
                             <span className="btn-icon">❌</span>
                             Cancel

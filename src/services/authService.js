@@ -1,5 +1,5 @@
 // src/services/authService.js
-import { API_BASE_URL } from './api';
+import { API_BASE_URL } from './api';  // ✅ FIXED: Correct path
 
 // ===== HELPER: Get token =====
 const getToken = () => localStorage.getItem('accessToken');

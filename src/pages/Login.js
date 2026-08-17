@@ -153,6 +153,9 @@ const Login = () => {
       console.log('✅ SUCCESS: Login as:', isTutor ? 'TUTOR' : 'STUDENT');
       localStorage.setItem('userRole', isTutor ? 'tutor' : 'student');
       
+      // ✅ Dispatch auth change event for Navbar and other components
+      window.dispatchEvent(new Event('authChange'));
+      
       // Navigate based on ACTUAL role
       if (isTutor) {
         navigate('/tutor/dashboard');

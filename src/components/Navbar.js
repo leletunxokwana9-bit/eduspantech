@@ -49,6 +49,7 @@ function Navbar() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [isTutor, setIsTutor] = useState(false);
   const [logoError, setLogoError] = useState(false);
+  const [authChecked, setAuthChecked] = useState(false); // ← NEW
   const location = useLocation();
   const navigate = useNavigate();
   const menuRef = useRef(null);
@@ -74,44 +75,83 @@ function Navbar() {
     );
   };
 
-  // Check authentication status and user role
-  useEffect(() => {
-    const checkAuth = async () => {
-      const accessToken = localStorage.getItem('accessToken');
-      if (accessToken) {
-        setIsAuthenticated(true);
-        try {
-          const userData = await authService.getCurrentUserWithSubscription();
-          if (userData) {
-            setUser(userData);
-            const isTutorAccount = checkIsTutor(userData);
+  // ============================================
+  // CHECK AUTHENTICATION - FIXED
+  // ============================================
+  const checkAuth = useCallback(async () => {
+    console.log('🔍 Navbar checking auth...');
+    const accessToken = localStorage.getItem('accessToken');
+    console.log('🔍 Token exists:', !!accessToken);
+    
+    if (accessToken) {
+      setIsAuthenticated(true);
+      try {
+        const userData = await authService.getCurrentUserWithSubscription();
+        if (userData) {
+          console.log('✅ Navbar user loaded:', userData.email);
+          setUser(userData);
+          const isTutorAccount = checkIsTutor(userData);
+          setIsTutor(isTutorAccount);
+          console.log('🔍 isTutor:', isTutorAccount);
+        } else {
+          const fallbackUser = await authService.getCurrentUser();
+          if (fallbackUser) {
+            console.log('✅ Navbar fallback user loaded:', fallbackUser.email);
+            setUser(fallbackUser);
+            const isTutorAccount = checkIsTutor(fallbackUser);
             setIsTutor(isTutorAccount);
           } else {
-            const fallbackUser = await authService.getCurrentUser();
-            if (fallbackUser) {
-              setUser(fallbackUser);
-              const isTutorAccount = checkIsTutor(fallbackUser);
-              setIsTutor(isTutorAccount);
-            }
+            setIsAuthenticated(false);
+            setUser(null);
+            setIsTutor(false);
           }
-        } catch (error) {
-          console.error('Failed to get user:', error);
-          localStorage.removeItem('accessToken');
-          localStorage.removeItem('refreshToken');
-          localStorage.removeItem('user');
-          localStorage.removeItem('userRole');
-          setIsAuthenticated(false);
-          setUser(null);
-          setIsTutor(false);
         }
-      } else {
+      } catch (error) {
+        console.error('Failed to get user:', error);
+        localStorage.removeItem('accessToken');
+        localStorage.removeItem('refreshToken');
+        localStorage.removeItem('user');
+        localStorage.removeItem('userRole');
         setIsAuthenticated(false);
         setUser(null);
         setIsTutor(false);
       }
-    };
+    } else {
+      setIsAuthenticated(false);
+      setUser(null);
+      setIsTutor(false);
+    }
+    setAuthChecked(true);
+  }, []);
+
+  // Check authentication on mount and location change
+  useEffect(() => {
     checkAuth();
-  }, [location]);
+  }, [location.pathname, checkAuth]);
+
+  // Listen for storage changes (login/logout in other tabs)
+  useEffect(() => {
+    const handleStorageChange = (e) => {
+      if (e.key === 'accessToken' || e.key === 'user' || e.key === 'userRole') {
+        console.log('🔍 Storage changed, rechecking auth...');
+        checkAuth();
+      }
+    };
+    
+    window.addEventListener('storage', handleStorageChange);
+    return () => window.removeEventListener('storage', handleStorageChange);
+  }, [checkAuth]);
+
+  // Listen for custom events (login/logout from same tab)
+  useEffect(() => {
+    const handleAuthChange = () => {
+      console.log('🔍 Auth change event received, rechecking...');
+      checkAuth();
+    };
+    
+    window.addEventListener('authChange', handleAuthChange);
+    return () => window.removeEventListener('authChange', handleAuthChange);
+  }, [checkAuth]);
 
   const handleLogout = () => {
     authService.logout();
@@ -120,6 +160,8 @@ function Navbar() {
     setIsTutor(false);
     setIsUserDropdownOpen(false);
     playClick();
+    // Dispatch event for other components
+    window.dispatchEvent(new Event('authChange'));
     navigate('/');
   };
 
@@ -409,6 +451,23 @@ function Navbar() {
       </div>
     );
   };
+
+  // If still checking auth, show minimal navbar
+  if (!authChecked) {
+    return (
+      <header className="navbar" ref={menuRef}>
+        <div className="navbar-container">
+          <Link to="/" className="logo">
+            {renderLogo()}
+            <div className="logo-content">
+              <span className="logo-title">EduSpantech</span>
+              <span className="logo-subtitle">Global Mathematics Platform</span>
+            </div>
+          </Link>
+        </div>
+      </header>
+    );
+  }
 
   if (loading) {
     return (

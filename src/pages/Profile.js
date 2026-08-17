@@ -206,7 +206,7 @@ const Profile = () => {
       }
     };
 
-    // ✅ FIXED: Fetch tutor stats with dynamic rating from API
+    // ✅ FIXED: Fetch tutor stats with dynamic rating from API and earnings from earnings table
     const fetchTutorStats = async (userData) => {
       try {
         const token = localStorage.getItem('accessToken');
@@ -243,36 +243,56 @@ const Profile = () => {
           rating = userData?.tutor_rating || userData?.rating || 4.5;
         }
 
-        const sessionsResponse = await fetch(`${API_BASE_URL}/sessions`, {
-          headers: {
-            'Authorization': `Bearer ${token}`,
-            'Content-Type': 'application/json'
+        // ✅ FETCH EARNINGS FROM EARNINGS TABLE
+        let totalEarnings = 0;
+        let sessionsCount = 0;
+        let uniqueStudents = new Set();
+
+        try {
+          const earningsResponse = await fetch(`${API_BASE_URL}/earnings`, {
+            headers: {
+              'Authorization': `Bearer ${token}`,
+              'Content-Type': 'application/json'
+            }
+          });
+
+          if (earningsResponse.ok) {
+            const data = await earningsResponse.json();
+            if (data.success && data.earnings) {
+              totalEarnings = data.earnings.total || 0;
+              sessionsCount = data.earnings.sessionsCount || 0;
+              uniqueStudents = new Set(data.earnings.history?.map(h => h.studentId) || []);
+              console.log('📊 Earnings from API:', totalEarnings);
+            }
           }
+        } catch (error) {
+          console.error('❌ Failed to fetch earnings:', error);
+          // Fallback: use sessions
+          const sessionsResponse = await fetch(`${API_BASE_URL}/sessions`, {
+            headers: {
+              'Authorization': `Bearer ${token}`,
+              'Content-Type': 'application/json'
+            }
+          });
+
+          if (sessionsResponse.ok) {
+            const data = await sessionsResponse.json();
+            const sessions = data.sessions || [];
+            uniqueStudents = new Set(sessions.map(s => s.user_id));
+            const completedSessions = sessions.filter(s => s.status === 'completed' || s.status === 'ended');
+            sessionsCount = sessions.length;
+            totalEarnings = completedSessions.length * 100;
+          }
+        }
+
+        setTutorStats({
+          totalSessions: sessionsCount || tutorStats.totalSessions || 0,
+          studentsTaught: uniqueStudents.size || tutorStats.studentsTaught || 0,
+          totalEarnings: totalEarnings || tutorStats.totalEarnings || 0,
+          avgRating: rating,
+          ratingCount: ratingCount
         });
 
-        if (sessionsResponse.ok) {
-          const data = await sessionsResponse.json();
-          const sessions = data.sessions || [];
-          
-          const uniqueStudents = new Set(sessions.map(s => s.user_id));
-          const completedSessions = sessions.filter(s => s.status === 'completed' || s.status === 'ended');
-          
-          setTutorStats({
-            totalSessions: sessions.length,
-            studentsTaught: uniqueStudents.size,
-            totalEarnings: completedSessions.length * 100,
-            avgRating: rating,
-            ratingCount: ratingCount
-          });
-        } else {
-          setTutorStats({
-            totalSessions: 0,
-            studentsTaught: 0,
-            totalEarnings: 0,
-            avgRating: rating,
-            ratingCount: ratingCount
-          });
-        }
       } catch (error) {
         console.error('❌ Failed to fetch tutor stats:', error);
         // Fallback: use rating from user data
@@ -696,8 +716,8 @@ const Profile = () => {
   const statsToShow = isTutor ? [
     { number: tutorStats.totalSessions, label: 'Total Sessions' },
     { number: tutorStats.studentsTaught, label: 'Students Taught' },
-    { number: `R${tutorStats.totalEarnings}`, label: 'Earnings' },
-    { number: `${tutorStats.avgRating}⭐`, label: 'Rating' }
+    { number: `R${tutorStats.totalEarnings.toFixed(2)}`, label: 'Earnings' },
+    { number: `${tutorStats.avgRating.toFixed(1)}⭐`, label: 'Rating' }
   ] : [
     { number: studentStats.coursesEnrolled, label: 'Courses Enrolled' },
     { number: studentStats.hoursSpent, label: 'Hours Spent' },

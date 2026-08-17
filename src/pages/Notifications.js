@@ -89,36 +89,17 @@ const Notifications = () => {
     }
   };
 
-  const getNotificationIcon = (type) => {
-    const icons = {
-      'session_reminder': '📅',
-      'session_started': '🟢',
-      'booking_confirmed': '✅',
-      'session_cancelled': '❌',
-      'new_rating': '⭐',
-      'new_message': '💬',
-      'subscription_alert': '🔔',
-      'progress_update': '📈',
-      'system_update': '🚀',
-      'session_completed': '🎯'
-    };
-    return icons[type] || '📌';
-  };
-
-  const getNotificationColor = (type) => {
-    const colors = {
-      'session_reminder': '#4f46e5',
-      'session_started': '#22c55e',
-      'booking_confirmed': '#22c55e',
-      'session_cancelled': '#ef4444',
-      'new_rating': '#f59e0b',
-      'new_message': '#8b5cf6',
-      'subscription_alert': '#f59e0b',
-      'progress_update': '#06b6d4',
-      'system_update': '#6366f1',
-      'session_completed': '#22c55e'
-    };
-    return colors[type] || '#6b7280';
+  // ===== USE FAVICON AS SMALL ICON =====
+  const getNotificationIcon = () => {
+    return (
+      <div className="notification-favicon-icon">
+        <img 
+          src="/favicon.ico" 
+          alt="EduSpantech" 
+          className="notification-favicon-img"
+        />
+      </div>
+    );
   };
 
   const formatTime = (dateString) => {
@@ -202,11 +183,8 @@ const Notifications = () => {
               className={`notification-card ${!notification.is_read ? 'unread' : ''}`}
               onClick={() => markAsRead(notification.id)}
             >
-              <div className="notification-icon" style={{ 
-                background: `${getNotificationColor(notification.type)}15`,
-                color: getNotificationColor(notification.type)
-              }}>
-                {getNotificationIcon(notification.type)}
+              <div className="notification-icon-wrapper">
+                {getNotificationIcon()}
               </div>
               <div className="notification-body">
                 <div className="notification-title">{notification.title}</div>

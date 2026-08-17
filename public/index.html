@@ -4,15 +4,15 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     
-    <!-- ===== FAVICON (from RealFaviconGenerator) ===== -->
-    <link rel="icon" type="image/png" href="/favicon-96x96.png" sizes="96x96" />
+    <!-- ===== FAVICON (Using EduSpantech Logo) ===== -->
+    <link rel="icon" type="image/png" href="/EduspanLogo.png" sizes="96x96" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <link rel="shortcut icon" href="/favicon.ico" />
     <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />
     <meta name="apple-mobile-web-app-title" content="EduSpantech" />
     <link rel="manifest" href="/site.webmanifest" />
     
-    <!-- ===== PRIMARY TITLE (This is what shows in Google) ===== -->
+    <!-- ===== PRIMARY TITLE ===== -->
     <title>EduSpantech - Global Mathematics Tutoring Platform | South Africa</title>
     
     <!-- ===== CRITICAL SEO META TAGS ===== -->
@@ -29,17 +29,21 @@
     <meta property="og:url" content="https://www.eduspantech.com" />
     <meta property="og:site_name" content="EduSpantech" />
     <meta property="og:locale" content="en_ZA" />
+    <meta property="og:image" content="https://www.eduspantech.com/EduspanLogo.png" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
     
     <!-- ===== TWITTER CARD ===== -->
     <meta name="twitter:card" content="summary_large_image" />
     <meta name="twitter:title" content="EduSpantech - Global Mathematics Tutoring Platform" />
     <meta name="twitter:description" content="Expert mathematics tutoring from Grade 8 to University. South Africa's trusted platform." />
+    <meta name="twitter:image" content="https://www.eduspantech.com/EduspanLogo.png" />
     
     <!-- ===== ADDITIONAL SEO ===== -->
     <meta name="theme-color" content="#4f46e5" />
     <link rel="canonical" href="https://www.eduspantech.com" />
     
-    <!-- ===== STRUCTURED DATA (JSON-LD) - TELLS GOOGLE WHO YOU ARE ===== -->
+    <!-- ===== STRUCTURED DATA (JSON-LD) ===== -->
     <script type="application/ld+json">
     {
       "@context": "https://schema.org",
@@ -47,7 +51,7 @@
       "name": "EduSpantech",
       "description": "Global mathematics tutoring platform serving students from Grade 8 to 2nd-Year Tertiary. Expert tutors, multiple curricula including CAPS, IEB, and international standards.",
       "url": "https://www.eduspantech.com",
-      "logo": "https://www.eduspantech.com/favicon-96x96.png",
+      "logo": "https://www.eduspantech.com/EduspanLogo.png",
       "foundingDate": "2024",
       "address": {
         "@type": "PostalAddress",
@@ -61,13 +65,13 @@
     </script>
   </head>
   
-  <!-- ===== GLOBAL POLYFILL FOR [SENSITIVE] ===== -->
+  <!-- ===== GLOBAL POLYFILL ===== -->
   <script>
     (function() {
       console.log('🔧 Global polyfill running...');
       
       // ✅ Set actual values
-      const API_URL = 'https://eduspantech-backend.onrender.com/api/v1';
+      const API_URL = 'https://eduspantech-backend.onrender.com/api';
       const SUPABASE_URL = 'https://dokwmteucrhajourpthf.supabase.co';
       const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRva3dtdGV1Y3JoYWpvdXJwdGhmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODM4NTc2NzgsImV4cCI6MjA5OTQzMzY3OH0.R7hQVGrZTSdWeiyL3Ve6Wk00OuWKpZkCeWnZLbGY-hg';
       
@@ -89,20 +93,6 @@
       window.__SUPABASE_URL = SUPABASE_URL;
       window.__SUPABASE_KEY = SUPABASE_KEY;
       
-      // ✅ If [SENSITIVE] is used as a global variable, override it
-      if (typeof window['[SENSITIVE]'] !== 'undefined') {
-        console.log('🔧 Overriding window.[SENSITIVE]');
-        window['[SENSITIVE]'] = API_URL;
-      }
-      
-      // ✅ Override any other possible placeholder names
-      if (typeof window.SENSITIVE !== 'undefined') {
-        window.SENSITIVE = API_URL;
-      }
-      if (typeof window.API_URL_PLACEHOLDER !== 'undefined') {
-        window.API_URL_PLACEHOLDER = API_URL;
-      }
-      
       console.log('✅ Global polyfill completed');
       console.log('📋 API URL set to:', API_URL);
       console.log('📋 Supabase URL set to:', SUPABASE_URL);
@@ -113,9 +103,10 @@
   <body>
     <noscript>
       <div style="text-align:center;padding:50px;font-family:Arial,sans-serif;">
-        <h1>📚 EduSpantech</h1>
-        <p>Please enable JavaScript to use this educational platform.</p>
-        <p>Education for the love of your life ❤️</p>
+        <img src="/EduspanLogo.png" alt="EduSpantech" style="width:80px;height:80px;margin-bottom:20px;" />
+        <h1 style="color:#4f46e5;">📚 EduSpantech</h1>
+        <p style="color:#1a1a2e;">Please enable JavaScript to use this educational platform.</p>
+        <p style="color:#6b7280;">Education for the love of your life ❤️</p>
       </div>
     </noscript>
     <div id="root"></div>

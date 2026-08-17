@@ -1,16 +1,32 @@
 {
   "short_name": "EduSpantech",
   "name": "EduSpantech - Education for the love of your life",
+  "description": "World-class mathematics tutoring from Grade 8 to 2nd-Year Tertiary",
   "icons": [
     {
-      "src": "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ccircle cx='50' cy='50' r='48' fill='%234f46e5'/%3E%3Ctext x='50' y='72' text-anchor='middle' font-family='Arial,sans-serif' font-size='56' font-weight='bold' fill='%23ffffff'%3E%26%238721;%3C/text%3E%3C/svg%3E",
-      "sizes": "any",
-      "type": "image/svg+xml",
+      "src": "EduspanLogo.png",
+      "sizes": "64x64 32x32 24x24 16x16",
+      "type": "image/png"
+    },
+    {
+      "src": "logo192.png",
+      "type": "image/png",
+      "sizes": "192x192",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "logo512.png",
+      "type": "image/png",
+      "sizes": "512x512",
       "purpose": "any maskable"
     }
   ],
   "start_url": ".",
   "display": "standalone",
+  "orientation": "portrait",
   "theme_color": "#4f46e5",
-  "background_color": "#0a0e1a"
+  "background_color": "#0a0e1a",
+  "categories": ["education", "mathematics", "tutoring"],
+  "prefer_related_applications": false,
+  "scope": "/"
 }

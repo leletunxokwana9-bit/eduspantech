@@ -14,11 +14,10 @@ const TutorEarnings = () => {
   const [period, setPeriod] = useState('all');
 
   useEffect(() => {
-    checkAuth();
-    fetchEarnings();
+    checkAuthAndFetch();
   }, []);
 
-  const checkAuth = async () => {
+  const checkAuthAndFetch = async () => {
     const token = localStorage.getItem('accessToken');
     if (!token) {
       navigate('/login');
@@ -26,69 +25,120 @@ const TutorEarnings = () => {
     }
 
     try {
+      setLoading(true);
+      setError('');
+      
+      // Get current user
       const user = await authService.getCurrentUser();
-      if (user) {
-        const isTutor = user.is_tutor === true || user.role === 'tutor';
-        if (!isTutor) {
-          navigate('/dashboard');
-          return;
-        }
-        setTutor(user);
+      console.log('👤 Current user:', user);
+      
+      if (!user) {
+        navigate('/login');
+        return;
       }
+
+      // Check if user has tutor access
+      const isTutor = user.is_tutor === true || user.role === 'tutor' || user.role === 'TUTOR';
+      console.log('🔍 Is tutor:', isTutor);
+      
+      if (!isTutor) {
+        setError('You do not have tutor access. Please contact support if you believe this is an error.');
+        setLoading(false);
+        return;
+      }
+
+      setTutor(user);
+      
+      // Fetch earnings - using the correct API endpoint
+      await fetchEarnings(token);
+      
     } catch (error) {
-      navigate('/login');
+      console.error('❌ Auth check failed:', error);
+      setError('Failed to authenticate. Please try logging in again.');
+      setLoading(false);
     }
   };
 
-  const fetchEarnings = async () => {
+  const fetchEarnings = async (token) => {
     try {
       setLoading(true);
       setError('');
-      const token = localStorage.getItem('accessToken');
       
-      console.log('📊 Fetching earnings from API...');
+      // ✅ CORRECT: Use API_BASE_URL which includes /api
+      // Full URL: https://eduspantech-backend.onrender.com/api/earnings
+      const earningsUrl = `${API_BASE_URL}/earnings`;
+      console.log('📊 Fetching earnings from:', earningsUrl);
       
-      // ✅ FIXED: Using API_BASE_URL
-      const response = await fetch(`${API_BASE_URL}/tutors/earnings`, {
+      const response = await fetch(earningsUrl, {
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'
         }
       });
 
+      console.log('📊 Response status:', response.status);
+
+      // Check if response is JSON
+      const contentType = response.headers.get('content-type');
+      if (!contentType || !contentType.includes('application/json')) {
+        const text = await response.text();
+        console.error('❌ Non-JSON response:', text.substring(0, 200));
+        throw new Error('Server returned non-JSON response. Please check if the API endpoint is correct.');
+      }
+
       const data = await response.json();
       console.log('📊 Earnings response:', data);
 
-      if (response.ok && data.success) {
+      if (!response.ok) {
+        // Handle specific error cases
+        if (response.status === 404) {
+          throw new Error('Tutor profile not found. Please contact support to set up your tutor account.');
+        } else if (response.status === 401) {
+          throw new Error('Session expired. Please log in again.');
+        } else {
+          throw new Error(data.error || data.message || 'Failed to fetch earnings data');
+        }
+      }
+
+      // Your backend returns: { success: true, earnings: { ... } }
+      if (data.success && data.earnings) {
+        console.log('✅ Earnings data received:', data.earnings);
         setEarningsData(data.earnings);
       } else {
-        setError(data.error || 'Failed to load earnings');
+        throw new Error(data.error || 'Invalid response from server');
       }
+      
     } catch (error) {
       console.error('❌ Failed to fetch earnings:', error);
-      setError('Failed to load earnings data');
+      setError(error.message || 'Failed to load earnings data');
     } finally {
       setLoading(false);
     }
   };
 
   const formatCurrency = (amount) => {
-    if (typeof amount !== 'number') return 'R0.00';
+    if (typeof amount !== 'number' || isNaN(amount)) return 'R0.00';
     return `R${amount.toFixed(2)}`;
   };
 
   const formatDate = (dateStr) => {
     if (!dateStr) return 'N/A';
-    const date = new Date(dateStr);
-    return date.toLocaleDateString('en-US', {
-      month: 'short',
-      day: 'numeric',
-      year: 'numeric'
-    });
+    try {
+      const date = new Date(dateStr);
+      if (isNaN(date.getTime())) return 'N/A';
+      return date.toLocaleDateString('en-US', {
+        month: 'short',
+        day: 'numeric',
+        year: 'numeric'
+      });
+    } catch {
+      return 'N/A';
+    }
   };
 
   const getFilteredHistory = () => {
     if (!earningsData?.history) return [];
+    if (!Array.isArray(earningsData.history)) return [];
     
     if (period === 'all') return earningsData.history;
     
@@ -101,28 +151,54 @@ const TutorEarnings = () => {
       filterDate.setMonth(now.getMonth() - 1);
     }
     
-    return earningsData.history.filter(item => 
-      new Date(item.date) >= filterDate
-    );
+    return earningsData.history.filter(item => {
+      try {
+        const itemDate = new Date(item.date);
+        return !isNaN(itemDate.getTime()) && itemDate >= filterDate;
+      } catch {
+        return false;
+      }
+    });
   };
 
+  const handleRefresh = () => {
+    setLoading(true);
+    checkAuthAndFetch();
+  };
+
+  // Loading state
   if (loading) {
     return (
       <div className="tutor-earnings-loading">
         <div className="loading-spinner"></div>
-        <p>Loading earnings...</p>
+        <p>Loading earnings data...</p>
       </div>
     );
   }
 
+  // Error state
   if (error) {
     return (
       <div className="tutor-earnings-error">
         <span className="error-icon">⚠️</span>
         <h3>Failed to load earnings</h3>
         <p>{error}</p>
-        <button className="retry-btn" onClick={fetchEarnings}>
-          Retry
+        <button className="retry-btn" onClick={handleRefresh}>
+          🔄 Retry
+        </button>
+      </div>
+    );
+  }
+
+  // No earnings data state
+  if (!earningsData) {
+    return (
+      <div className="tutor-earnings-error">
+        <span className="error-icon">📊</span>
+        <h3>No earnings data available</h3>
+        <p>Start teaching sessions to see your earnings here.</p>
+        <button className="retry-btn" onClick={handleRefresh}>
+          🔄 Refresh
         </button>
       </div>
     );
@@ -148,42 +224,42 @@ const TutorEarnings = () => {
                 Earnings
               </h1>
               <p className="header-subtitle">
-                {earningsData?.studentCount || 0} students • {earningsData?.sessionsCount || 0} sessions completed
+                {earningsData.studentCount || 0} students • {earningsData.sessionsCount || 0} sessions completed
               </p>
             </div>
             <div className="header-right">
-              <button className="btn-refresh" onClick={fetchEarnings}>
+              <button className="btn-refresh" onClick={handleRefresh}>
                 🔄 Refresh
               </button>
             </div>
           </div>
         </div>
 
-        {/* Stats */}
+        {/* Stats Cards */}
         <div className="earnings-stats">
           <div className="stat-card total">
             <span className="stat-label">Total Earnings</span>
-            <span className="stat-number">{formatCurrency(earningsData?.total || 0)}</span>
+            <span className="stat-number">{formatCurrency(earningsData.total || 0)}</span>
           </div>
           <div className="stat-card month">
             <span className="stat-label">This Month</span>
-            <span className="stat-number">{formatCurrency(earningsData?.thisMonth || 0)}</span>
+            <span className="stat-number">{formatCurrency(earningsData.thisMonth || 0)}</span>
           </div>
           <div className="stat-card week">
             <span className="stat-label">This Week</span>
-            <span className="stat-number">{formatCurrency(earningsData?.thisWeek || 0)}</span>
+            <span className="stat-number">{formatCurrency(earningsData.thisWeek || 0)}</span>
           </div>
           <div className="stat-card sessions">
             <span className="stat-label">Completed Sessions</span>
-            <span className="stat-number">{earningsData?.sessionsCount || 0}</span>
+            <span className="stat-number">{earningsData.sessionsCount || 0}</span>
           </div>
           <div className="stat-card pending">
             <span className="stat-label">Pending Sessions</span>
-            <span className="stat-number">{earningsData?.pendingSessions || 0}</span>
+            <span className="stat-number">{earningsData.pendingSessions || 0}</span>
           </div>
         </div>
 
-        {/* History */}
+        {/* History Table */}
         <div className="earnings-history">
           <div className="history-header">
             <h3>📋 Earnings History</h3>
@@ -220,16 +296,18 @@ const TutorEarnings = () => {
             </div>
             {filteredHistory && filteredHistory.length > 0 ? (
               filteredHistory.map((item) => (
-                <div key={item.id} className="table-row">
+                <div key={item.id || Math.random()} className="table-row">
                   <span className="date">{formatDate(item.date)}</span>
-                  <span className="student">{item.student}</span>
-                  <span className="subject">{item.subject}</span>
+                  <span className="student">{item.student || 'Student'}</span>
+                  <span className="subject">{item.subject || 'Mathematics'}</span>
                   <span className="duration">{item.duration || 60} min</span>
-                  <span className="amount">{formatCurrency(item.amount)}</span>
-                  <span className={`status-badge ${item.status}`}>
+                  <span className="amount">{formatCurrency(item.amount || 0)}</span>
+                  <span className={`status-badge ${item.status || 'pending'}`}>
                     {item.status === 'completed' ? '✅ Completed' : 
                      item.status === 'upcoming' ? '📅 Upcoming' : 
-                     item.status}
+                     item.status === 'pending' ? '⏳ Pending' :
+                     item.status === 'cancelled' ? '❌ Cancelled' :
+                     item.status || 'Pending'}
                   </span>
                 </div>
               ))
@@ -245,7 +323,7 @@ const TutorEarnings = () => {
             <div className="history-footer">
               <span className="total-label">Total:</span>
               <span className="total-amount">
-                {formatCurrency(filteredHistory.reduce((sum, item) => sum + item.amount, 0))}
+                {formatCurrency(filteredHistory.reduce((sum, item) => sum + (item.amount || 0), 0))}
               </span>
             </div>
           )}

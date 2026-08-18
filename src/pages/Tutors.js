@@ -1,4 +1,4 @@
-// src/pages/Tutors.js
+// src/pages/Tutors.js - COMPLETE WITH IMPROVED NO-VIDEO PLACEHOLDER
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { tutorService } from '../services/tutorService';
@@ -76,6 +76,10 @@ const Tutors = () => {
     setShowVideoModal(true);
   };
 
+  const hasVideo = (tutor) => {
+    return tutor.intro_video_url && tutor.intro_video_thumbnail;
+  };
+
   // ============================================
   // RENDER AVATAR - SHOW REAL OR DEFAULT
   // ============================================
@@ -120,22 +124,62 @@ const Tutors = () => {
   };
 
   // ============================================
-  // RENDER VIDEO THUMBNAIL
+  // GET AVATAR COLOR FOR FALLBACK
+  // ============================================
+  const getAvatarColor = (name) => {
+    const colors = ['#4f46e5', '#7c3aed', '#059669', '#10b981', '#dc2626', '#f59e0b', '#8b5cf6', '#ec4899'];
+    if (!name) return colors[0];
+    const index = name.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
+    return colors[index % colors.length];
+  };
+
+  const getInitials = (name) => {
+    if (!name) return 'T';
+    return name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
+  };
+
+  // ============================================
+  // RENDER VIDEO THUMBNAIL - WITH IMPROVED NO-VIDEO PLACEHOLDER
   // ============================================
   const renderVideoThumbnail = (tutor) => {
-    const hasVideo = tutor.intro_video_url || tutor.intro_video_thumbnail;
+    const hasVideoFile = hasVideo(tutor);
     const duration = tutor.intro_video_duration || 0;
     const views = tutor.intro_video_views || 0;
 
-    if (!hasVideo) {
+    if (!hasVideoFile) {
+      // ===== NO VIDEO - Show blurred avatar with friendly message =====
+      const avatarColor = getAvatarColor(tutor.name);
+      const initials = getInitials(tutor.name);
+      
       return (
-        <div className="video-placeholder">
-          <span className="video-placeholder-icon">🎬</span>
-          <p>No intro video</p>
+        <div className="video-placeholder-no-video">
+          <div className="no-video-avatar-wrapper">
+            {tutor.avatar ? (
+              <img 
+                src={tutor.avatar} 
+                alt={tutor.name}
+                className="no-video-blurred-avatar"
+                loading="lazy"
+              />
+            ) : (
+              <div 
+                className="no-video-blurred-initial"
+                style={{ background: avatarColor }}
+              >
+                {initials}
+              </div>
+            )}
+            <div className="no-video-overlay">
+              <span className="no-video-icon">📹</span>
+              <span className="no-video-text">Get to know me</span>
+              <span className="no-video-subtext">Click to learn more</span>
+            </div>
+          </div>
         </div>
       );
     }
 
+    // ===== HAS VIDEO - Show thumbnail with play button =====
     const formatDuration = (seconds) => {
       const mins = Math.floor(seconds / 60);
       const secs = seconds % 60;
@@ -689,7 +733,7 @@ const Tutors = () => {
                         >
                           📚 Book Session
                         </button>
-                        {tutor.intro_video_url && (
+                        {hasVideo(tutor) && (
                           <button 
                             className="watch-intro-btn"
                             onClick={(e) => handleWatchIntro(tutor, e)}

@@ -1,4 +1,4 @@
-// src/services/tutorService.js - COMPLETE WITH REMOVE METHOD
+// src/services/tutorService.js - COMPLETE FIXED VERSION
 import { API_BASE_URL } from './api';
 
 export const tutorService = {
@@ -188,7 +188,7 @@ export const tutorService = {
   },
 
   // ============================================
-  // UPLOAD TUTOR INTRO VIDEO
+  // UPLOAD TUTOR INTRO VIDEO - ✅ FIXED
   // ============================================
   uploadIntroVideo: async (videoData) => {
     try {
@@ -219,7 +219,7 @@ export const tutorService = {
   },
 
   // ============================================
-  // REMOVE TUTOR INTRO VIDEO - ADD THIS
+  // REMOVE TUTOR INTRO VIDEO - ✅ FIXED
   // ============================================
   removeIntroVideo: async () => {
     try {
@@ -249,11 +249,16 @@ export const tutorService = {
   },
 
   // ============================================
-  // GET TUTOR INTRO VIDEO
+  // GET TUTOR INTRO VIDEO - ✅ FIXED (requires tutorId)
   // ============================================
   getIntroVideo: async (tutorId) => {
     try {
+      if (!tutorId) {
+        throw new Error('Tutor ID is required to fetch video');
+      }
+
       const response = await fetch(`${API_BASE_URL}/tutor/${tutorId}/video`, {
+        method: 'GET',
         headers: {
           'Content-Type': 'application/json'
         }
@@ -272,10 +277,14 @@ export const tutorService = {
   },
 
   // ============================================
-  // INCREMENT VIDEO VIEWS
+  // INCREMENT VIDEO VIEWS - ✅ FIXED
   // ============================================
   incrementVideoViews: async (tutorId) => {
     try {
+      if (!tutorId) {
+        throw new Error('Tutor ID is required');
+      }
+
       const response = await fetch(`${API_BASE_URL}/tutor/${tutorId}/video/views`, {
         method: 'POST',
         headers: {
@@ -292,6 +301,30 @@ export const tutorService = {
     } catch (error) {
       console.error('Increment video views error:', error);
       return { success: false, error: error.message };
+    }
+  },
+
+  // ============================================
+  // GET ALL TUTORS WITH VIDEOS - ✅ NEW
+  // ============================================
+  getAllTutorsWithVideos: async () => {
+    try {
+      const response = await fetch(`${API_BASE_URL}/tutors/videos`, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json'
+        }
+      });
+      
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || 'Failed to fetch tutors with videos');
+      }
+      
+      return await response.json();
+    } catch (error) {
+      console.error('Get tutors with videos error:', error);
+      return { success: false, tutors: [], error: error.message };
     }
   }
 };

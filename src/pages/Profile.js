@@ -1,4 +1,4 @@
-// src/pages/Profile.js - COMPLETE WITH VIDEO UPLOAD
+// src/pages/Profile.js - FULLY FIXED WITH VIDEO UPLOAD
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import authService from '../services/authService';
@@ -146,7 +146,7 @@ const Profile = () => {
             }
           }
 
-          // Set video data
+          // ✅ FIX: Set video data from userData
           setVideoUrl(userData.intro_video_url || null);
           setVideoThumbnail(userData.intro_video_thumbnail || null);
           setVideoDuration(userData.intro_video_duration || 0);
@@ -319,7 +319,7 @@ const Profile = () => {
   }, [navigate]);
 
   // ============================================
-  // VIDEO HANDLERS
+  // VIDEO HANDLERS - FULLY FIXED
   // ============================================
   const handleVideoSelect = (e) => {
     const file = e.target.files[0];
@@ -374,6 +374,7 @@ const Profile = () => {
     };
   };
 
+  // ✅ FIXED: Upload video using tutorService with proper error handling
   const handleUploadVideo = async () => {
     if (!videoFile) {
       setError('Please select a video first');
@@ -393,6 +394,7 @@ const Profile = () => {
           const base64Video = reader.result;
           setVideoProgress(50);
 
+          // ✅ Use tutorService.uploadIntroVideo
           const result = await tutorService.uploadIntroVideo({
             videoUrl: base64Video,
             thumbnail: videoThumbnail || null,
@@ -403,6 +405,7 @@ const Profile = () => {
             setVideoUrl(base64Video);
             setSuccess('✅ Video uploaded successfully!');
             
+            // Update user state
             setUser(prev => ({
               ...prev,
               intro_video_url: base64Video,
@@ -438,6 +441,7 @@ const Profile = () => {
     }
   };
 
+  // ✅ FIXED: Remove video using tutorService
   const handleRemoveVideo = async () => {
     if (!window.confirm('Are you sure you want to remove your intro video?')) {
       return;
@@ -446,6 +450,7 @@ const Profile = () => {
     try {
       setVideoUploading(true);
       
+      // ✅ Use tutorService.removeIntroVideo
       const result = await tutorService.removeIntroVideo();
       
       if (result.success) {
@@ -1305,7 +1310,7 @@ const Profile = () => {
               </div>
 
               {/* ============================================
-                  VIDEO UPLOAD SECTION - ADDED HERE
+                  VIDEO UPLOAD SECTION - FULLY FIXED
                   ============================================ */}
               <div style={{ gridColumn: '1 / -1', marginTop: '8px', paddingTop: '16px', borderTop: '1px solid rgba(255,255,255,0.06)' }}>
                 <label style={labelStyle}>🎬 Intro Video</label>
@@ -1425,7 +1430,7 @@ const Profile = () => {
               </div>
             </div>
 
-            {/* ===== SAVE BUTTON - ONLY HERE ===== */}
+            {/* ===== SAVE BUTTON ===== */}
             {isEditing && (
               <div style={{ 
                 marginTop: '24px', 

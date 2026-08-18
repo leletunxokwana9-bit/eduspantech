@@ -1755,3 +1755,102 @@
     font-size: 16px;
   }
 }
+/* ============================================
+   NO VIDEO - BLURRED AVATAR PLACEHOLDER
+   ============================================ */
+.video-placeholder-no-video {
+  width: 100%;
+  aspect-ratio: 16/9;
+  border-radius: 10px;
+  overflow: hidden;
+  position: relative;
+  cursor: pointer;
+  background: #0a0e1a;
+}
+
+.no-video-avatar-wrapper {
+  width: 100%;
+  height: 100%;
+  position: relative;
+  overflow: hidden;
+}
+
+.no-video-blurred-avatar {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  filter: blur(8px);
+  transform: scale(1.1);
+  background: #0a0e1a;
+}
+
+.no-video-blurred-initial {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 64px;
+  font-weight: 700;
+  color: rgba(255, 255, 255, 0.15);
+  filter: blur(4px);
+  transform: scale(1.1);
+}
+
+.no-video-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  background: rgba(10, 14, 26, 0.5);
+  backdrop-filter: blur(2px);
+  gap: 2px;
+  transition: background 0.3s ease;
+}
+
+.video-placeholder-no-video:hover .no-video-overlay {
+  background: rgba(10, 14, 26, 0.3);
+}
+
+.no-video-icon {
+  font-size: 28px;
+  margin-bottom: 2px;
+}
+
+.no-video-text {
+  color: #ffffff;
+  font-size: 14px;
+  font-weight: 600;
+  letter-spacing: 0.3px;
+  text-shadow: 0 2px 8px rgba(0, 0, 0, 0.5);
+}
+
+.no-video-subtext {
+  color: rgba(255, 255, 255, 0.5);
+  font-size: 11px;
+  text-shadow: 0 2px 8px rgba(0, 0, 0, 0.5);
+}
+
+/* ============================================
+   LIGHT THEME
+   ============================================ */
+[data-theme="light"] .no-video-overlay {
+  background: rgba(255, 255, 255, 0.3);
+}
+
+[data-theme="light"] .no-video-text {
+  color: #0f172a;
+}
+
+[data-theme="light"] .no-video-subtext {
+  color: rgba(0, 0, 0, 0.4);
+}
+
+[data-theme="light"] .video-placeholder-no-video {
+  background: #f1f5f9;
+}

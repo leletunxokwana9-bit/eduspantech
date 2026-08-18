@@ -2,6 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { authService } from '../services/authService';
+import { supabase } from '../services/supabaseClient'; // Import your Supabase client
 import Pricing from '../components/home/Pricing/Pricing';
 import './Home.css';
 
@@ -18,12 +19,10 @@ const MathematicalOrbit = () => {
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
     >
-      {/* Core - Glowing Math Symbol */}
       <div className="core-math">
         <span>∫</span>
       </div>
 
-      {/* Orbit Rings */}
       <div className="orbit-ring orbit-ring-1">
         <div className="orbit-node node-1">{mathSymbols[0]}</div>
         <div className="orbit-node node-2">{mathSymbols[1]}</div>
@@ -45,17 +44,107 @@ const MathematicalOrbit = () => {
         <div className="orbit-node node-12">β</div>
       </div>
 
-      {/* Glowing particle trails */}
       <div className="particle-trail"></div>
       <div className="particle-trail-2"></div>
       <div className="particle-trail-3"></div>
 
-      {/* Hover glow effect */}
       {isHovered && <div className="orbit-glow"></div>}
     </div>
   );
 };
 
+// ============================================
+// FOOTER COMPONENT (now fetches from DB)
+// ============================================
+const Footer = ({ siteConfig, footerLinks }) => {
+  // Group links by category
+  const groupedLinks = footerLinks.reduce((acc, link) => {
+    if (!acc[link.category]) acc[link.category] = [];
+    acc[link.category].push(link);
+    return acc;
+  }, {});
+
+  // Category display names
+  const categoryLabels = {
+    platform: 'Platform',
+    support: 'Support',
+    connect: 'Connect'
+  };
+
+  // Social icon mapping
+  const getSocialIcon = (label) => {
+    const icons = {
+      'Twitter': '🐦',
+      'LinkedIn': '💼',
+      'YouTube': '▶️',
+      'Instagram': '📸',
+      'Facebook': '📘',
+      'TikTok': '🎵'
+    };
+    return icons[label] || '🔗';
+  };
+
+  return (
+    <footer className="footer">
+      <div className="container">
+        <div className="footer-grid">
+          {/* Brand Column */}
+          <div className="footer-brand">
+            <h3>📚 {siteConfig.site_name || 'EduSpantech'}</h3>
+            <p>{siteConfig.site_tagline || 'Education for the love of your life ❤️'}</p>
+            <p className="footer-tagline">{siteConfig.site_subtagline || 'From Grade 8 to 2nd-Year Tertiary Success'}</p>
+            
+            {/* Contact Info */}
+            <div className="footer-contact">
+              {siteConfig.contact_email && (
+                <p>📧 <a href={`mailto:${siteConfig.contact_email}`}>{siteConfig.contact_email}</a></p>
+              )}
+              {siteConfig.contact_phone && (
+                <p>📞 <a href={`tel:${siteConfig.contact_phone}`}>{siteConfig.contact_phone}</a></p>
+              )}
+              {siteConfig.contact_address && (
+                <p>📍 {siteConfig.contact_address}</p>
+              )}
+            </div>
+          </div>
+
+          {/* Dynamic Footer Links */}
+          {Object.keys(categoryLabels).map((category) => {
+            const links = groupedLinks[category] || [];
+            if (links.length === 0) return null;
+
+            return (
+              <div key={category} className="footer-links">
+                <h4>{categoryLabels[category]}</h4>
+                {links.map((link) => (
+                  <a 
+                    key={link.id} 
+                    href={link.url}
+                    target={link.url.startsWith('http') ? '_blank' : '_self'}
+                    rel={link.url.startsWith('http') ? 'noopener noreferrer' : ''}
+                  >
+                    {category === 'connect' && getSocialIcon(link.label)} {link.label}
+                  </a>
+                ))}
+              </div>
+            );
+          })}
+        </div>
+
+        <div className="footer-bottom">
+          <p>© {new Date().getFullYear()} {siteConfig.site_name || 'EduSpantech'} — {siteConfig.site_tagline || 'Education for the love of your life ❤️'}</p>
+          {siteConfig.compliance_text && (
+            <p className="footer-compliance">{siteConfig.compliance_text}</p>
+          )}
+        </div>
+      </div>
+    </footer>
+  );
+};
+
+// ============================================
+// MAIN HOME COMPONENT
+// ============================================
 function Home() {
   const navigate = useNavigate();
   const [isAuthenticated, setIsAuthenticated] = useState(false);
@@ -70,7 +159,65 @@ function Home() {
     avgRating: 0
   });
 
-  // Check authentication status on mount
+  // ============================================
+  // FETCH SITE CONFIG & FOOTER LINKS FROM SUPABASE
+  // ============================================
+  const [siteConfig, setSiteConfig] = useState({
+    site_name: 'EduSpantech',
+    site_tagline: 'Education for the love of your life ❤️',
+    site_subtagline: 'From Grade 8 to 2nd-Year Tertiary Success',
+    social_facebook: 'https://web.facebook.com/profile.php?id=61593114256334',
+    social_instagram: 'https://instagram.com/eduspantech',
+    social_twitter: 'https://twitter.com/eduspantech',
+    social_linkedin: 'https://linkedin.com/company/eduspantech',
+    social_youtube: 'https://youtube.com/@eduspantech',
+    contact_email: 'info@eduspantech.com',
+    contact_phone: '+27 79 376 4985',
+    contact_address: '19 Dock Road, Cape Town, 8001',
+    compliance_text: 'POPIA • GDPR • CPA Compliant'
+  });
+
+  const [footerLinks, setFooterLinks] = useState([]);
+
+  useEffect(() => {
+    const fetchSiteData = async () => {
+      try {
+        // Fetch site config
+        const { data: configData, error: configError } = await supabase
+          .from('site_config')
+          .select('config_key, config_value');
+
+        if (!configError && configData) {
+          const configObj = {};
+          configData.forEach(item => {
+            configObj[item.config_key] = item.config_value;
+          });
+          setSiteConfig(prev => ({ ...prev, ...configObj }));
+        }
+
+        // Fetch footer links
+        const { data: linksData, error: linksError } = await supabase
+          .from('footer_links')
+          .select('*')
+          .eq('is_active', true)
+          .order('sort_order', { ascending: true });
+
+        if (!linksError && linksData) {
+          setFooterLinks(linksData);
+        }
+
+      } catch (error) {
+        console.error('Failed to fetch site data:', error);
+        // Fallback: use default values already set in state
+      }
+    };
+
+    fetchSiteData();
+  }, []);
+
+  // ============================================
+  // AUTHENTICATION CHECK
+  // ============================================
   useEffect(() => {
     const checkAuth = async () => {
       const accessToken = localStorage.getItem('accessToken');
@@ -219,7 +366,7 @@ function Home() {
   if (isAuthenticated && isTutor) {
     return (
       <div className="home-page">
-        {/* Tutor Hero Section */}
+        {/* Hero Section */}
         <section className="hero-section">
           <div className="hero-content">
             <div className="hero-brand">
@@ -239,7 +386,7 @@ function Home() {
                 }}
               />
               <div className="hero-brand-text">
-                <span className="hero-brand-name">EduSpantech</span>
+                <span className="hero-brand-name">{siteConfig.site_name || 'EduSpantech'}</span>
                 <span className="hero-brand-tagline">Global Mathematics Platform</span>
               </div>
             </div>
@@ -465,43 +612,8 @@ function Home() {
           </div>
         </section>
 
-        {/* Footer */}
-        <footer className="footer">
-          <div className="container">
-            <div className="footer-grid">
-              <div className="footer-brand">
-                <h3>📚 EduSpantech</h3>
-                <p>Education for the love of your life ❤️</p>
-                <p className="footer-tagline">From Grade 8 to 2nd-Year Tertiary Success</p>
-              </div>
-              <div className="footer-links">
-                <h4>Platform</h4>
-                <a href="/subjects">Subjects</a>
-                <a href="/curriculum">Curriculum</a>
-                <a href="/tutors">Tutors</a>
-                <a href="/pricing">Pricing</a>
-              </div>
-              <div className="footer-links">
-                <h4>Support</h4>
-                <a href="/help">Help Center</a>
-                <a href="/contact">Contact Us</a>
-                <a href="/privacy">Privacy Policy</a>
-                <a href="/terms">Terms of Service</a>
-              </div>
-              <div className="footer-links">
-                <h4>Connect</h4>
-                <a href="https://twitter.com/eduspantech">Twitter</a>
-                <a href="https://linkedin.com/company/eduspantech">LinkedIn</a>
-                <a href="https://youtube.com/@eduspantech">YouTube</a>
-                <a href="https://instagram.com/eduspantech">Instagram</a>
-              </div>
-            </div>
-            <div className="footer-bottom">
-              <p>© 2026 EduSpantech — Education for the love of your life ❤️</p>
-              <p className="footer-compliance">POPIA • GDPR • CPA Compliant</p>
-            </div>
-          </div>
-        </footer>
+        {/* Footer - Now Fetched from DB */}
+        <Footer siteConfig={siteConfig} footerLinks={footerLinks} />
       </div>
     );
   }
@@ -531,7 +643,7 @@ function Home() {
               }}
             />
             <div className="hero-brand-text">
-              <span className="hero-brand-name">EduSpantech</span>
+              <span className="hero-brand-name">{siteConfig.site_name || 'EduSpantech'}</span>
               <span className="hero-brand-tagline">Global Mathematics Platform</span>
             </div>
           </div>
@@ -862,43 +974,8 @@ function Home() {
         </div>
       </section>
 
-      {/* Footer */}
-      <footer className="footer">
-        <div className="container">
-          <div className="footer-grid">
-            <div className="footer-brand">
-              <h3>📚 EduSpantech</h3>
-              <p>Education for the love of your life ❤️</p>
-              <p className="footer-tagline">From Grade 8 to 2nd-Year Tertiary Success</p>
-            </div>
-            <div className="footer-links">
-              <h4>Platform</h4>
-              <a href="/subjects">Subjects</a>
-              <a href="/curriculum">Curriculum</a>
-              <a href="/tutors">Tutors</a>
-              <a href="/pricing">Pricing</a>
-            </div>
-            <div className="footer-links">
-              <h4>Support</h4>
-              <a href="/help">Help Center</a>
-              <a href="/contact">Contact Us</a>
-              <a href="/privacy">Privacy Policy</a>
-              <a href="/terms">Terms of Service</a>
-            </div>
-            <div className="footer-links">
-              <h4>Connect</h4>
-              <a href="https://twitter.com/eduspantech">Twitter</a>
-              <a href="https://linkedin.com/company/eduspantech">LinkedIn</a>
-              <a href="https://youtube.com/@eduspantech">YouTube</a>
-              <a href="https://instagram.com/eduspantech">Instagram</a>
-            </div>
-          </div>
-          <div className="footer-bottom">
-            <p>© 2026 EduSpantech — Education for the love of your life ❤️</p>
-            <p className="footer-compliance">POPIA • GDPR • CPA Compliant</p>
-          </div>
-        </div>
-      </footer>
+      {/* Footer - Now Fetched from DB */}
+      <Footer siteConfig={siteConfig} footerLinks={footerLinks} />
     </div>
   );
 }

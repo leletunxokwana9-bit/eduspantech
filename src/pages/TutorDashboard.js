@@ -10,8 +10,10 @@ const TutorDashboard = () => {
   const [tutor, setTutor] = useState(null);
   const [loading, setLoading] = useState(true);
   const [bookings, setBookings] = useState([]);
+  const [students, setStudents] = useState({});
   const [stats, setStats] = useState({
     totalSessions: 0,
+    pending: 0,
     upcoming: 0,
     inProgress: 0,
     completed: 0,
@@ -107,12 +109,34 @@ const TutorDashboard = () => {
     }
   };
 
+  // ============================================
+  // FETCH STUDENT DETAILS
+  // ============================================
+  const fetchStudentDetails = async (studentId) => {
+    try {
+      const token = localStorage.getItem('accessToken');
+      const response = await fetch(`${API_BASE_URL}/users/${studentId}`, {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+      
+      if (response.ok) {
+        const data = await response.json();
+        return data.user || data;
+      }
+      return null;
+    } catch (error) {
+      console.error('Failed to fetch student:', error);
+      return null;
+    }
+  };
+
   const fetchTutorData = async () => {
     try {
       setLoading(true);
       const token = localStorage.getItem('accessToken');
       
-      // ✅ FIXED: Using API_BASE_URL
       const response = await fetch(`${API_BASE_URL}/sessions`, {
         headers: {
           'Authorization': `Bearer ${token}`
@@ -124,18 +148,31 @@ const TutorDashboard = () => {
         const sessions = data.sessions || [];
         setBookings(sessions);
         
+        // Fetch student details for each session
+        const studentPromises = sessions.map(async (session) => {
+          if (session.user_id && !students[session.user_id]) {
+            const student = await fetchStudentDetails(session.user_id);
+            if (student) {
+              setStudents(prev => ({ ...prev, [session.user_id]: student }));
+            }
+          }
+        });
+        await Promise.all(studentPromises);
+        
         // Calculate stats
-        const upcoming = sessions.filter(s => s.status === 'upcoming').length;
-        const inProgress = sessions.filter(s => s.status === 'in-progress').length;
-        const completed = sessions.filter(s => s.status === 'completed').length;
-        const students = new Set(sessions.map(s => s.user_id)).size;
+        const pending = sessions.filter(s => s.status === 'pending').length;
+        const upcoming = sessions.filter(s => s.status === 'upcoming' || s.status === 'pending').length;
+        const inProgress = sessions.filter(s => s.status === 'in-progress' || s.status === 'started').length;
+        const completed = sessions.filter(s => s.status === 'completed' || s.status === 'ended').length;
+        const uniqueStudents = new Set(sessions.map(s => s.user_id)).size;
         
         setStats({
           totalSessions: sessions.length,
+          pending: pending,
           upcoming: upcoming,
           inProgress: inProgress,
           completed: completed,
-          students: students
+          students: uniqueStudents
         });
       }
     } catch (error) {
@@ -145,28 +182,138 @@ const TutorDashboard = () => {
     }
   };
 
+  // ============================================
+  // RENDER STUDENT AVATAR
+  // ============================================
+  const renderStudentAvatar = (studentId, studentName) => {
+    const student = students[studentId];
+    
+    // Check if student has avatar
+    if (student?.avatar) {
+      return (
+        <img 
+          src={student.avatar} 
+          alt={student.name || 'Student'} 
+          className="student-avatar-img"
+          style={{ width: '40px', height: '40px', borderRadius: '50%', objectFit: 'cover' }}
+          onError={(e) => {
+            e.target.style.display = 'none';
+            const parent = e.target.parentElement;
+            if (parent) {
+              const initial = student?.name?.charAt(0)?.toUpperCase() || 'S';
+              parent.textContent = initial;
+              parent.style.display = 'flex';
+              parent.style.alignItems = 'center';
+              parent.style.justifyContent = 'center';
+              parent.style.background = '#4f46e5';
+              parent.style.color = 'white';
+              parent.style.fontSize = '18px';
+              parent.style.fontWeight = 'bold';
+              parent.style.borderRadius = '50%';
+              parent.style.width = '40px';
+              parent.style.height = '40px';
+            }
+          }}
+        />
+      );
+    }
+    
+    // Fallback to initials
+    const name = student?.name || studentName || 'Student';
+    const initial = name.charAt(0).toUpperCase();
+    const colors = ['#4f46e5', '#7c3aed', '#059669', '#10b981', '#dc2626', '#f59e0b', '#8b5cf6', '#ec4899'];
+    const hash = name.split('').reduce((acc, char) => acc + (char.charCodeAt(0) || 0), 0);
+    const color = colors[Math.abs(hash) % colors.length];
+    
+    return (
+      <div 
+        className="student-avatar-initial"
+        style={{
+          width: '40px',
+          height: '40px',
+          borderRadius: '50%',
+          background: color,
+          color: 'white',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          fontSize: '18px',
+          fontWeight: 'bold',
+          textTransform: 'uppercase'
+        }}
+      >
+        {initial}
+      </div>
+    );
+  };
+
+  // ============================================
+  // ACCEPT SESSION
+  // ============================================
+  const handleAcceptSession = async (sessionId) => {
+    if (!window.confirm('✅ Accept this session? The student will be notified.')) return;
+    
+    try {
+      const token = localStorage.getItem('accessToken');
+      const response = await fetch(`${API_BASE_URL}/sessions/${sessionId}/accept`, {
+        method: 'PUT',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        setBookings(prev => prev.map(b => 
+          b.id === sessionId ? { ...b, status: 'upcoming' } : b
+        ));
+        setStats(prev => ({
+          ...prev,
+          pending: prev.pending - 1,
+          upcoming: prev.upcoming
+        }));
+        alert('✅ Session accepted successfully! The student has been notified.');
+      } else {
+        const error = await response.json();
+        alert('❌ Failed to accept session: ' + (error.error || 'Unknown error'));
+      }
+    } catch (error) {
+      console.error('Accept session error:', error);
+      alert('❌ Failed to accept session');
+    }
+  };
+
+  // ============================================
+  // START SESSION
+  // ============================================
   const handleStartSession = (booking) => {
     navigate(`/session/${booking.id}`, { state: { tutor: tutor, session: booking } });
   };
 
-  const handleCancelSession = async (bookingId) => {
+  // ============================================
+  // CANCEL SESSION
+  // ============================================
+  const handleCancelSession = async (sessionId) => {
     if (!window.confirm('Are you sure you want to cancel this session?')) return;
     
     try {
       const token = localStorage.getItem('accessToken');
-      // ✅ FIXED: Using API_BASE_URL
-      const response = await fetch(`${API_BASE_URL}/sessions/${bookingId}`, {
-        method: 'DELETE',
+      const response = await fetch(`${API_BASE_URL}/sessions/${sessionId}/cancel`, {
+        method: 'PUT',
         headers: {
           'Authorization': `Bearer ${token}`
         }
       });
 
       if (response.ok) {
-        setBookings(prev => prev.filter(b => b.id !== bookingId));
+        setBookings(prev => prev.map(b => 
+          b.id === sessionId ? { ...b, status: 'cancelled' } : b
+        ));
         setStats(prev => ({
           ...prev,
           totalSessions: prev.totalSessions - 1,
+          pending: prev.pending - 1,
           upcoming: prev.upcoming - 1
         }));
         alert('✅ Session cancelled successfully');
@@ -179,14 +326,23 @@ const TutorDashboard = () => {
     }
   };
 
+  // ============================================
+  // GET FILTERED BOOKINGS
+  // ============================================
   const getFilteredBookings = () => {
     if (activeTab === 'all') return bookings;
     if (activeTab === 'upcoming') {
-      return bookings.filter(b => b.status === 'upcoming' || b.status === 'in-progress');
+      return bookings.filter(b => b.status === 'upcoming' || b.status === 'pending');
+    }
+    if (activeTab === 'pending') {
+      return bookings.filter(b => b.status === 'pending');
     }
     return bookings.filter(b => b.status === activeTab);
   };
 
+  // ============================================
+  // FORMAT DATE
+  // ============================================
   const formatDate = (dateStr) => {
     const date = new Date(dateStr);
     return date.toLocaleDateString('en-US', {
@@ -199,16 +355,34 @@ const TutorDashboard = () => {
     });
   };
 
-  // Get avatar image (tutor photo > avatar > initial)
-  const getAvatarImage = () => {
+  // ============================================
+  // GET TUTOR AVATAR
+  // ============================================
+  const getTutorAvatarImage = () => {
     if (tutor?.profile_photo) return tutor.profile_photo;
     if (tutor?.avatar) return tutor.avatar;
     return null;
   };
 
-  const getAvatarInitial = () => {
+  const getTutorAvatarInitial = () => {
     if (!tutor || !tutor.name) return 'T';
     return tutor.name.charAt(0).toUpperCase();
+  };
+
+  // ============================================
+  // RENDER STATUS BADGE
+  // ============================================
+  const renderStatusBadge = (status) => {
+    const statusMap = {
+      'pending': { label: '⏳ Pending', className: 'pending' },
+      'upcoming': { label: '📅 Upcoming', className: 'upcoming' },
+      'in-progress': { label: '🔄 In Progress', className: 'in-progress' },
+      'started': { label: '🔄 In Progress', className: 'in-progress' },
+      'completed': { label: '✅ Completed', className: 'completed' },
+      'ended': { label: '✅ Completed', className: 'completed' },
+      'cancelled': { label: '❌ Cancelled', className: 'cancelled' }
+    };
+    return statusMap[status] || { label: status || 'Unknown', className: 'unknown' };
   };
 
   if (loading) {
@@ -226,10 +400,10 @@ const TutorDashboard = () => {
       <div className="tutor-dashboard-header">
         <div className="tutor-dashboard-header-content">
           <div className="tutor-avatar">
-            {getAvatarImage() ? (
-              <img src={getAvatarImage()} alt={tutor?.name || 'Tutor'} className="tutor-avatar-img" />
+            {getTutorAvatarImage() ? (
+              <img src={getTutorAvatarImage()} alt={tutor?.name || 'Tutor'} className="tutor-avatar-img" />
             ) : (
-              <span className="tutor-avatar-initial">{getAvatarInitial()}</span>
+              <span className="tutor-avatar-initial">{getTutorAvatarInitial()}</span>
             )}
           </div>
           <div className="tutor-info">
@@ -254,6 +428,13 @@ const TutorDashboard = () => {
           <div className="stat-info">
             <span className="stat-number">{stats.totalSessions}</span>
             <span className="stat-label">Total Sessions</span>
+          </div>
+        </div>
+        <div className="stat-card">
+          <span className="stat-icon">⏳</span>
+          <div className="stat-info">
+            <span className="stat-number">{stats.pending}</span>
+            <span className="stat-label">Pending</span>
           </div>
         </div>
         <div className="stat-card">
@@ -292,16 +473,22 @@ const TutorDashboard = () => {
           <h2>📋 Your Sessions</h2>
           <div className="session-tabs">
             <button 
+              className={`tab-btn ${activeTab === 'pending' ? 'active' : ''}`}
+              onClick={() => setActiveTab('pending')}
+            >
+              ⏳ Pending {stats.pending > 0 && <span className="badge">{stats.pending}</span>}
+            </button>
+            <button 
               className={`tab-btn ${activeTab === 'upcoming' ? 'active' : ''}`}
               onClick={() => setActiveTab('upcoming')}
             >
-              Upcoming
+              📅 Upcoming
             </button>
             <button 
               className={`tab-btn ${activeTab === 'completed' ? 'active' : ''}`}
               onClick={() => setActiveTab('completed')}
             >
-              Completed
+              ✅ Completed
             </button>
             <button 
               className={`tab-btn ${activeTab === 'all' ? 'active' : ''}`}
@@ -314,77 +501,117 @@ const TutorDashboard = () => {
 
         <div className="sessions-list">
           {getFilteredBookings().length > 0 ? (
-            getFilteredBookings().map((booking) => (
-              <div key={booking.id} className="session-card">
-                <div className="session-card-header">
-                  <div className="session-student">
-                    <span className="student-avatar">👤</span>
-                    <div>
-                      <h4>Student Session</h4>
-                      <p className="student-id">ID: {booking.user_id?.slice(0, 8)}...</p>
+            getFilteredBookings().map((booking) => {
+              const statusInfo = renderStatusBadge(booking.status);
+              const studentName = students[booking.user_id]?.name || booking.student_name || 'Student';
+              
+              return (
+                <div key={booking.id} className="session-card">
+                  <div className="session-card-header">
+                    <div className="session-student">
+                      {renderStudentAvatar(booking.user_id, studentName)}
+                      <div>
+                        <h4>{studentName}</h4>
+                        <p className="student-id">ID: {booking.user_id?.slice(0, 8)}...</p>
+                      </div>
                     </div>
+                    <span className={`session-status ${statusInfo.className}`}>
+                      {statusInfo.label}
+                    </span>
                   </div>
-                  <span className={`session-status ${booking.status}`}>
-                    {booking.status === 'upcoming' ? '📅 Upcoming' : 
-                     booking.status === 'in-progress' ? '🔄 In Progress' : 
-                     booking.status === 'completed' ? '✅ Completed' : 
-                     booking.status === 'cancelled' ? '❌ Cancelled' : 
-                     booking.status || 'Scheduled'}
-                  </span>
-                </div>
-                <div className="session-card-body">
-                  <div className="session-details">
-                    <div className="detail-item">
-                      <span className="detail-icon">📅</span>
-                      <span>{formatDate(booking.date)}</span>
+                  <div className="session-card-body">
+                    <div className="session-details">
+                      <div className="detail-item">
+                        <span className="detail-icon">📅</span>
+                        <span>{formatDate(booking.date)}</span>
+                      </div>
+                      <div className="detail-item">
+                        <span className="detail-icon">⏱️</span>
+                        <span>{booking.duration || 60} minutes</span>
+                      </div>
+                      <div className="detail-item">
+                        <span className="detail-icon">📖</span>
+                        <span>{booking.topic || 'Mathematics'}</span>
+                      </div>
                     </div>
-                    <div className="detail-item">
-                      <span className="detail-icon">⏱️</span>
-                      <span>{booking.duration || 60} minutes</span>
-                    </div>
-                    <div className="detail-item">
-                      <span className="detail-icon">📖</span>
-                      <span>{booking.topic || 'Mathematics'}</span>
-                    </div>
+                    {booking.notes && (
+                      <p className="session-notes">📝 {booking.notes}</p>
+                    )}
                   </div>
-                  {booking.notes && (
-                    <p className="session-notes">📝 {booking.notes}</p>
-                  )}
-                </div>
-                <div className="session-card-actions">
-                  {(booking.status === 'upcoming' || booking.status === 'in-progress') && (
-                    <>
-                      <button 
-                        className="btn-start"
-                        onClick={() => handleStartSession(booking)}
-                      >
-                        {booking.status === 'in-progress' ? '▶️ Resume Session' : '🎯 Start Session'}
-                      </button>
-                      {booking.status === 'upcoming' && (
+                  <div className="session-card-actions">
+                    {/* PENDING - Show Accept button */}
+                    {booking.status === 'pending' && (
+                      <>
+                        <button 
+                          className="btn-accept"
+                          onClick={() => handleAcceptSession(booking.id)}
+                        >
+                          ✅ Accept Session
+                        </button>
                         <button 
                           className="btn-cancel"
                           onClick={() => handleCancelSession(booking.id)}
                         >
                           Cancel
                         </button>
-                      )}
-                    </>
-                  )}
-                  {booking.status === 'completed' && (
-                    <span className="session-completed-badge">✅ Completed</span>
-                  )}
-                  {booking.status === 'cancelled' && (
-                    <span className="session-cancelled-badge">❌ Cancelled</span>
-                  )}
+                      </>
+                    )}
+                    
+                    {/* UPCOMING - Show Start button */}
+                    {booking.status === 'upcoming' && (
+                      <>
+                        <button 
+                          className="btn-start"
+                          onClick={() => handleStartSession(booking)}
+                        >
+                          🎯 Start Session
+                        </button>
+                        <button 
+                          className="btn-cancel"
+                          onClick={() => handleCancelSession(booking.id)}
+                        >
+                          Cancel
+                        </button>
+                      </>
+                    )}
+                    
+                    {/* IN PROGRESS - Show Resume button */}
+                    {(booking.status === 'in-progress' || booking.status === 'started') && (
+                      <button 
+                        className="btn-start"
+                        onClick={() => handleStartSession(booking)}
+                      >
+                        ▶️ Resume Session
+                      </button>
+                    )}
+                    
+                    {/* COMPLETED */}
+                    {(booking.status === 'completed' || booking.status === 'ended') && (
+                      <span className="session-completed-badge">✅ Completed</span>
+                    )}
+                    
+                    {/* CANCELLED */}
+                    {booking.status === 'cancelled' && (
+                      <span className="session-cancelled-badge">❌ Cancelled</span>
+                    )}
+                  </div>
                 </div>
-              </div>
-            ))
+              );
+            })
           ) : (
             <div className="empty-sessions">
               <span className="empty-icon">📭</span>
               <h3>No {activeTab === 'all' ? '' : activeTab} sessions</h3>
-              <p>Students haven't booked sessions with you yet.</p>
-              <p className="empty-sub">Check back later for new bookings!</p>
+              <p>
+                {activeTab === 'pending' ? 'No pending session requests.' :
+                 activeTab === 'upcoming' ? 'No upcoming sessions scheduled.' :
+                 activeTab === 'completed' ? 'No completed sessions yet.' :
+                 'Students haven\'t booked sessions with you yet.'}
+              </p>
+              <p className="empty-sub">
+                {activeTab === 'pending' ? 'Students will appear here when they book.' :
+                 'Check back later for new bookings!'}
+              </p>
             </div>
           )}
         </div>

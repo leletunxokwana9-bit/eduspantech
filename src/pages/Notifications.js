@@ -89,8 +89,180 @@ const Notifications = () => {
     }
   };
 
+  // ===== GET NOTIFICATION ICON BY TYPE =====
+  const getNotificationIcon = (type) => {
+    const icons = {
+      'session_booked': '📚',
+      'session_accepted': '✅',
+      'session_started': '▶️',
+      'session_ended': '📝',
+      'session_cancelled': '❌',
+      'payment_received': '💰',
+      'subscription_renewed': '🔄',
+      'subscription_expired': '⚠️',
+      'student_joined': '👤',
+      'tutor_assigned': '👨‍🏫',
+      'system': '🔔',
+      'default': '📌'
+    };
+    return icons[type] || icons.default;
+  };
+
+  // ===== RENDER SESSION DETAILS IN NOTIFICATION =====
+  const renderNotificationDetails = (notification) => {
+    const { type, metadata } = notification;
+    
+    if (type === 'session_booked' && metadata) {
+      return (
+        <div className="notification-details">
+          <div className="detail-row">
+            <span className="detail-label">📅 Date:</span>
+            <span className="detail-value">
+              {new Date(metadata.date).toLocaleDateString('en-US', {
+                weekday: 'short',
+                month: 'short',
+                day: 'numeric',
+                year: 'numeric',
+                hour: '2-digit',
+                minute: '2-digit'
+              })}
+            </span>
+          </div>
+          <div className="detail-row">
+            <span className="detail-label">⏱️ Duration:</span>
+            <span className="detail-value">{metadata.duration || 60} minutes</span>
+          </div>
+          <div className="detail-row">
+            <span className="detail-label">📖 Topic:</span>
+            <span className="detail-value">{metadata.topic || 'Mathematics'}</span>
+          </div>
+          <div className="detail-row">
+            <span className="detail-label">👤 Student:</span>
+            <span className="detail-value">{metadata.student_name || 'Student'}</span>
+          </div>
+          {metadata.notes && (
+            <div className="detail-row">
+              <span className="detail-label">📝 Notes:</span>
+              <span className="detail-value">{metadata.notes}</span>
+            </div>
+          )}
+          <div className="detail-actions">
+            <button 
+              className="detail-action-btn accept"
+              onClick={() => handleAcceptSession(notification.metadata?.session_id)}
+            >
+              ✅ Accept Session
+            </button>
+            <button 
+              className="detail-action-btn view"
+              onClick={() => handleViewSession(notification.metadata?.session_id)}
+            >
+              👁️ View Details
+            </button>
+          </div>
+        </div>
+      );
+    }
+
+    if (type === 'session_accepted' && metadata) {
+      return (
+        <div className="notification-details">
+          <div className="detail-row">
+            <span className="detail-label">📅 Date:</span>
+            <span className="detail-value">
+              {new Date(metadata.date).toLocaleDateString('en-US', {
+                weekday: 'short',
+                month: 'short',
+                day: 'numeric',
+                year: 'numeric',
+                hour: '2-digit',
+                minute: '2-digit'
+              })}
+            </span>
+          </div>
+          <div className="detail-row">
+            <span className="detail-label">📖 Topic:</span>
+            <span className="detail-value">{metadata.topic || 'Mathematics'}</span>
+          </div>
+          <div className="detail-actions">
+            <button 
+              className="detail-action-btn view"
+              onClick={() => handleViewSession(metadata.session_id)}
+            >
+              👁️ View Session
+            </button>
+          </div>
+        </div>
+      );
+    }
+
+    if (type === 'session_cancelled' && metadata) {
+      return (
+        <div className="notification-details">
+          <div className="detail-row">
+            <span className="detail-label">📅 Date:</span>
+            <span className="detail-value">
+              {new Date(metadata.date).toLocaleDateString('en-US', {
+                weekday: 'short',
+                month: 'short',
+                day: 'numeric',
+                year: 'numeric',
+                hour: '2-digit',
+                minute: '2-digit'
+              })}
+            </span>
+          </div>
+          <div className="detail-row">
+            <span className="detail-label">📖 Topic:</span>
+            <span className="detail-value">{metadata.topic || 'Mathematics'}</span>
+          </div>
+          <div className="detail-row">
+            <span className="detail-label">🔄 Cancelled by:</span>
+            <span className="detail-value">{metadata.cancelled_by || 'Unknown'}</span>
+          </div>
+        </div>
+      );
+    }
+
+    return null;
+  };
+
+  // ===== HANDLE ACCEPT SESSION FROM NOTIFICATION =====
+  const handleAcceptSession = async (sessionId) => {
+    if (!sessionId) return;
+    
+    try {
+      const token = localStorage.getItem('accessToken');
+      const response = await fetch(`${API_BASE_URL}/sessions/${sessionId}/accept`, {
+        method: 'PUT',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      });
+
+      if (response.ok) {
+        alert('✅ Session accepted successfully!');
+        // Refresh notifications
+        fetchNotifications();
+      } else {
+        alert('❌ Failed to accept session');
+      }
+    } catch (error) {
+      console.error('Accept session error:', error);
+      alert('❌ Failed to accept session');
+    }
+  };
+
+  // ===== HANDLE VIEW SESSION =====
+  const handleViewSession = (sessionId) => {
+    if (sessionId) {
+      navigate(`/session/${sessionId}`);
+    }
+  };
+
   // ===== USE FAVICON AS SMALL ICON =====
-  const getNotificationIcon = () => {
+  const getNotificationIconElement = () => {
     return (
       <div className="notification-favicon-icon">
         <img 
@@ -184,11 +356,14 @@ const Notifications = () => {
               onClick={() => markAsRead(notification.id)}
             >
               <div className="notification-icon-wrapper">
-                {getNotificationIcon()}
+                <span className="notification-icon-emoji">
+                  {getNotificationIcon(notification.type)}
+                </span>
               </div>
               <div className="notification-body">
                 <div className="notification-title">{notification.title}</div>
                 <div className="notification-message">{notification.message}</div>
+                {renderNotificationDetails(notification)}
                 <div className="notification-time">{formatTime(notification.created_at)}</div>
               </div>
               {!notification.is_read && <span className="unread-badge">New</span>}

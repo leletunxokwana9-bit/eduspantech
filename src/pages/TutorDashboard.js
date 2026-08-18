@@ -110,12 +110,13 @@ const TutorDashboard = () => {
   };
 
   // ============================================
-  // FETCH STUDENT DETAILS
+  // FETCH STUDENT DETAILS - FIXED ENDPOINT
   // ============================================
   const fetchStudentDetails = async (studentId) => {
     try {
       const token = localStorage.getItem('accessToken');
-      const response = await fetch(`${API_BASE_URL}/users/${studentId}`, {
+      // ✅ FIXED: Use /auth/user/ instead of /users/
+      const response = await fetch(`${API_BASE_URL}/auth/user/${studentId}`, {
         headers: {
           'Authorization': `Bearer ${token}`
         }

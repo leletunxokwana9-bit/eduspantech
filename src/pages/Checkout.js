@@ -35,6 +35,11 @@ const Checkout = () => {
   const [showPrivacyModal, setShowPrivacyModal] = useState(false);
   const [showPaymentSuccessModal, setShowPaymentSuccessModal] = useState(false);
   const [paymentResult, setPaymentResult] = useState(null);
+  
+  // Alert Modal states
+  const [showAlertModal, setShowAlertModal] = useState(false);
+  const [alertMessage, setAlertMessage] = useState('');
+  const [alertTitle, setAlertTitle] = useState('');
 
   useEffect(() => {
     const params = new URLSearchParams(location.search);
@@ -60,10 +65,16 @@ const Checkout = () => {
     }));
   };
 
+  const showAlert = (title, message) => {
+    setAlertTitle(title);
+    setAlertMessage(message);
+    setShowAlertModal(true);
+  };
+
   const handleStep1Submit = (e) => {
     e.preventDefault();
     if (!formData.fullName || !formData.email || !formData.country) {
-      alert('Please fill in all required fields');
+      showAlert('⚠️ Missing Information', 'Please fill in all required fields before continuing.');
       return;
     }
     setCurrentStep(2);
@@ -75,37 +86,37 @@ const Checkout = () => {
 
     if (formData.paymentMethod === 'card') {
       if (!formData.cardNumber || !formData.expiryDate || !formData.cvv || !formData.cardholderName) {
-        alert('Please fill in all card details');
+        showAlert('💳 Incomplete Card Details', 'Please fill in all card details before proceeding.');
         setProcessing(false);
         return;
       }
       const cardNum = formData.cardNumber.replace(/\s/g, '');
       if (cardNum.length < 16) {
-        alert('Please enter a valid 16-digit card number');
+        showAlert('💳 Invalid Card Number', 'Please enter a valid 16-digit card number.');
         setProcessing(false);
         return;
       }
       if (formData.cvv.length < 3) {
-        alert('Please enter a valid CVV');
+        showAlert('🔒 Invalid CVV', 'Please enter a valid CVV (3-4 digits).');
         setProcessing(false);
         return;
       }
     }
 
     if (formData.paymentMethod === 'crypto' && !formData.walletAddress) {
-      alert('Please enter your wallet address');
+      showAlert('₿ Missing Wallet Address', 'Please enter your wallet address.');
       setProcessing(false);
       return;
     }
 
     if (formData.paymentMethod === 'voucher' && !formData.voucher) {
-      alert('Please enter your voucher code');
+      showAlert('🎫 Missing Voucher Code', 'Please enter your voucher code.');
       setProcessing(false);
       return;
     }
 
     if (!formData.agreeToTerms) {
-      alert('Please agree to the Terms of Service');
+      showAlert('📋 Terms Required', 'Please agree to the Terms of Service and Privacy Policy.');
       setProcessing(false);
       return;
     }
@@ -150,7 +161,7 @@ const Checkout = () => {
       setProcessing(false);
     } catch (err) {
       console.error('Payment error:', err);
-      alert(err.message || 'Payment failed. Please try again.');
+      showAlert('❌ Payment Failed', err.message || 'Payment failed. Please try again.');
       setProcessing(false);
     }
   };
@@ -160,6 +171,33 @@ const Checkout = () => {
     navigate('/payment-success', {
       state: paymentResult
     });
+  };
+
+  // ============================================
+  // ALERT MODAL
+  // ============================================
+  const AlertModal = () => {
+    if (!showAlertModal) return null;
+
+    return (
+      <div className="checkout-modal-overlay" onClick={() => setShowAlertModal(false)}>
+        <div className="checkout-modal alert-modal" onClick={(e) => e.stopPropagation()}>
+          <div className="checkout-modal-header alert-header">
+            <h2>{alertTitle || '⚠️ Notice'}</h2>
+            <button className="checkout-modal-close" onClick={() => setShowAlertModal(false)}>×</button>
+          </div>
+          <div className="checkout-modal-body alert-body">
+            <p>{alertMessage}</p>
+            <button 
+              className="btn-primary alert-btn" 
+              onClick={() => setShowAlertModal(false)}
+            >
+              Got it
+            </button>
+          </div>
+        </div>
+      </div>
+    );
   };
 
   // ============================================
@@ -508,6 +546,8 @@ const Checkout = () => {
   return (
     <div className="checkout-page">
       {/* ===== MODALS ===== */}
+      <AlertModal />
+      
       <Modal isOpen={showTermsModal} onClose={() => setShowTermsModal(false)} title="Terms of Service">
         <TermsContent />
       </Modal>

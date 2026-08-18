@@ -62,6 +62,13 @@ function Home() {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
   const [failedFlags, setFailedFlags] = useState({});
+  const [isTutor, setIsTutor] = useState(false);
+  const [tutorStats, setTutorStats] = useState({
+    totalSessions: 0,
+    studentsTaught: 0,
+    totalEarnings: 0,
+    avgRating: 0
+  });
 
   // Check authentication status on mount
   useEffect(() => {
@@ -73,10 +80,20 @@ function Home() {
           const userData = await authService.getCurrentUserWithSubscription();
           if (userData) {
             setUser(userData);
+            const isTutorAccount = userData.is_tutor === true || userData.role === 'tutor' || userData.role === 'TUTOR';
+            setIsTutor(isTutorAccount);
+            if (isTutorAccount) {
+              await fetchTutorStats();
+            }
           } else {
             const fallbackUser = await authService.getCurrentUser();
             if (fallbackUser) {
               setUser(fallbackUser);
+              const isTutorAccount = fallbackUser.is_tutor === true || fallbackUser.role === 'tutor' || fallbackUser.role === 'TUTOR';
+              setIsTutor(isTutorAccount);
+              if (isTutorAccount) {
+                await fetchTutorStats();
+              }
             }
           }
         } catch (error) {
@@ -86,15 +103,44 @@ function Home() {
           localStorage.removeItem('user');
           setIsAuthenticated(false);
           setUser(null);
+          setIsTutor(false);
         }
       } else {
         setIsAuthenticated(false);
         setUser(null);
+        setIsTutor(false);
       }
       setLoading(false);
     };
     checkAuth();
   }, []);
+
+  const fetchTutorStats = async () => {
+    try {
+      const token = localStorage.getItem('accessToken');
+      if (!token) return;
+
+      const response = await fetch(`${process.env.REACT_APP_API_URL || 'https://eduspantech-backend.onrender.com/api'}/earnings`, {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        if (data.success && data.earnings) {
+          setTutorStats({
+            totalSessions: data.earnings.sessionsCount || 0,
+            studentsTaught: data.earnings.studentCount || 0,
+            totalEarnings: data.earnings.total || 0,
+            avgRating: 4.8
+          });
+        }
+      }
+    } catch (error) {
+      console.error('Failed to fetch tutor stats:', error);
+    }
+  };
 
   const getUserName = () => {
     if (!user) return 'Student';
@@ -167,12 +213,328 @@ function Home() {
     );
   }
 
+  // ============================================
+  // TUTOR HOME VIEW
+  // ============================================
+  if (isAuthenticated && isTutor) {
+    return (
+      <div className="home-page">
+        {/* Tutor Hero Section */}
+        <section className="hero-section">
+          <div className="hero-content">
+            <div className="hero-brand">
+              <img 
+                src="/logo192.png" 
+                alt="EduSpantech" 
+                className="hero-brand-logo"
+                onError={(e) => {
+                  e.target.style.display = 'none';
+                  const parent = e.target.parentElement;
+                  if (parent) {
+                    const fallback = document.createElement('span');
+                    fallback.className = 'hero-brand-fallback';
+                    fallback.textContent = '∑';
+                    parent.insertBefore(fallback, e.target);
+                  }
+                }}
+              />
+              <div className="hero-brand-text">
+                <span className="hero-brand-name">EduSpantech</span>
+                <span className="hero-brand-tagline">Global Mathematics Platform</span>
+              </div>
+            </div>
+            
+            <h1 className="hero-title">
+              Welcome back, <br />
+              <span className="highlight">{getUserName()}! 👨‍🏫</span>
+            </h1>
+            <p className="hero-subtitle">
+              Your tutoring dashboard is ready. Help students master mathematics today.
+            </p>
+            
+            <div className="hero-actions">
+              <button 
+                className="btn-primary"
+                onClick={() => navigate('/tutor/dashboard')}
+              >
+                📊 Go to Dashboard
+              </button>
+              <button 
+                className="btn-secondary"
+                onClick={() => navigate('/tutor/earnings')}
+              >
+                💰 View Earnings
+              </button>
+              <button 
+                className="btn-secondary"
+                onClick={() => navigate('/my-sessions')}
+              >
+                📅 My Sessions
+              </button>
+            </div>
+
+            <div className="hero-stats">
+              <div className="stat-item">
+                <span className="stat-number">{tutorStats.totalSessions}</span>
+                <span className="stat-label-white">Sessions</span>
+              </div>
+              <div className="stat-divider"></div>
+              <div className="stat-item">
+                <span className="stat-number">{tutorStats.studentsTaught}</span>
+                <span className="stat-label-white">Students</span>
+              </div>
+              <div className="stat-divider"></div>
+              <div className="stat-item">
+                <span className="stat-number">R{tutorStats.totalEarnings.toFixed(2)}</span>
+                <span className="stat-label-white">Earnings</span>
+              </div>
+              <div className="stat-divider"></div>
+              <div className="stat-item">
+                <span className="stat-number">{tutorStats.avgRating}⭐</span>
+                <span className="stat-label-white">Rating</span>
+              </div>
+            </div>
+          </div>
+
+          <div className="hero-visual">
+            <MathematicalOrbit />
+          </div>
+        </section>
+
+        {/* Quick Actions for Tutors */}
+        <section className="quick-actions-section">
+          <div className="container">
+            <div className="section-header">
+              <span className="section-tag">🚀 Quick Actions</span>
+              <h2>Manage your tutoring</h2>
+              <p>Everything you need to manage your tutoring business</p>
+            </div>
+            <div className="quick-actions-grid">
+              <div className="quick-action-card" onClick={() => navigate('/tutor/students')}>
+                <div className="quick-action-icon">👨‍🎓</div>
+                <h4>View Students</h4>
+                <p>See all students you're teaching</p>
+              </div>
+              <div className="quick-action-card" onClick={() => navigate('/tutor/earnings')}>
+                <div className="quick-action-icon">💰</div>
+                <h4>Check Earnings</h4>
+                <p>Track your tutoring income</p>
+              </div>
+              <div className="quick-action-card" onClick={() => navigate('/my-sessions')}>
+                <div className="quick-action-icon">📅</div>
+                <h4>Manage Sessions</h4>
+                <p>View and manage your sessions</p>
+              </div>
+              <div className="quick-action-card" onClick={() => navigate('/profile')}>
+                <div className="quick-action-icon">👤</div>
+                <h4>Update Profile</h4>
+                <p>Keep your tutor profile current</p>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        {/* Features Section */}
+        <section className="features-section">
+          <div className="container">
+            <div className="section-header">
+              <span className="section-tag">Why EduSpantech</span>
+              <h2>Built for mathematical excellence</h2>
+              <p>Our platform delivers premium mathematics education through cutting-edge technology and expert South African tutors.</p>
+            </div>
+            <div className="features-grid">
+              <div className="feature-card feature-card-1">
+                <div className="feature-icon">🎯</div>
+                <h3>24/7 Global Access</h3>
+                <p>Learn anytime, anywhere. Our 9-region infrastructure ensures low-latency connections for students worldwide.</p>
+                <div className="feature-meta">
+                  <span>⚡ &lt;30ms latency</span>
+                </div>
+              </div>
+              <div className="feature-card feature-card-2">
+                <div className="feature-icon">📐</div>
+                <h3>Interactive Whiteboard</h3>
+                <p>Real-time collaborative math solving with ultra-low-bandwidth vector rendering — only 15MB per hour.</p>
+                <div className="feature-meta">
+                  <span>🖊️ WebGL powered</span>
+                </div>
+              </div>
+              <div className="feature-card feature-card-3">
+                <div className="feature-icon">🌍</div>
+                <h3>Global Curriculum Alignment</h3>
+                <p>South Africa CAPS/IEB, US Algebra/AP Calculus, UK A-Levels, Australia, Singapore, and more.</p>
+                <div className="feature-meta">
+                  <span>📚 7+ curricula</span>
+                </div>
+              </div>
+              <div className="feature-card feature-card-4">
+                <div className="feature-icon">🔒</div>
+                <h3>Enterprise-Grade Security</h3>
+                <p>AES-256 encryption, zero-knowledge PII masking, and compliance with POPIA &amp; GDPR standards.</p>
+                <div className="feature-meta">
+                  <span>🛡️ GDPR &amp; POPIA</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        {/* Curriculum Section */}
+        <section className="curriculum-section">
+          <div className="container">
+            <div className="section-header">
+              <span className="section-tag">Global Reach</span>
+              <h2>Mathematics without borders</h2>
+              <p>Our South African tutors are trained to teach multiple international curricula seamlessly.</p>
+            </div>
+            <div className="curriculum-grid">
+              {countries.map((country) => {
+                const flagUrl = `https://flagcdn.com/w80/${country.id}.png`;
+                const showFallback = failedFlags[country.id];
+                
+                return (
+                  <div key={country.id} className="curriculum-item">
+                    {!showFallback ? (
+                      <img 
+                        src={flagUrl}
+                        alt={`${country.name} flag`}
+                        className="curriculum-flag-img"
+                        onError={() => handleFlagError(country.id)}
+                        loading="lazy"
+                      />
+                    ) : (
+                      <div className="curriculum-flag-fallback">{country.code}</div>
+                    )}
+                    <h4>{country.name}</h4>
+                    <p>{country.description}</p>
+                    <div className="curriculum-levels">
+                      {country.levels?.map((level, idx) => (
+                        <span key={idx} className="level-tag">{level}</span>
+                      ))}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        </section>
+
+        {/* Infrastructure Section */}
+        <section className="infrastructure-section">
+          <div className="container">
+            <div className="infrastructure-content">
+              <div className="infrastructure-text">
+                <span className="section-tag">Powered by AWS</span>
+                <h2>9-region global infrastructure</h2>
+                <p>Our platform spans 9 AWS regions worldwide, ensuring low-latency connections and 99.99% availability.</p>
+                <ul className="infrastructure-list">
+                  <li>🇿🇦 Cape Town (af-south-1) — Primary</li>
+                  <li>🇧🇷 São Paulo (sa-east-1)</li>
+                  <li>🇸🇬 Singapore (ap-southeast-1)</li>
+                  <li>🇮🇪 Ireland (eu-west-1)</li>
+                  <li>🇺🇸 N. Virginia (us-east-1)</li>
+                  <li>🇺🇸 Oregon (us-west-2)</li>
+                  <li>🇯🇵 Tokyo (ap-northeast-1)</li>
+                  <li>🇮🇳 Mumbai (ap-south-1)</li>
+                  <li>🇦🇺 Sydney (ap-southeast-2)</li>
+                </ul>
+              </div>
+              <div className="infrastructure-map">
+                <div className="map-grid">
+                  {[1,2,3,4,5,6,7,8,9].map((i) => (
+                    <div key={i} className="map-node" style={{ '--delay': i * 0.1 }}>
+                      <span className="map-pulse"></span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        {/* CTA Section */}
+        <section className="cta-section">
+          <div className="container">
+            <div className="cta-content">
+              <h2>Ready for your next <br />tutoring session?</h2>
+              <p>Continue helping students master mathematics.</p>
+              <button className="btn-primary btn-large" onClick={() => navigate('/tutor/dashboard')}>
+                📊 Go to Dashboard
+              </button>
+            </div>
+          </div>
+        </section>
+
+        {/* Footer */}
+        <footer className="footer">
+          <div className="container">
+            <div className="footer-grid">
+              <div className="footer-brand">
+                <h3>📚 EduSpantech</h3>
+                <p>Education for the love of your life ❤️</p>
+                <p className="footer-tagline">From Grade 8 to 2nd-Year Tertiary Success</p>
+              </div>
+              <div className="footer-links">
+                <h4>Platform</h4>
+                <a href="/subjects">Subjects</a>
+                <a href="/curriculum">Curriculum</a>
+                <a href="/tutors">Tutors</a>
+                <a href="/pricing">Pricing</a>
+              </div>
+              <div className="footer-links">
+                <h4>Support</h4>
+                <a href="/help">Help Center</a>
+                <a href="/contact">Contact Us</a>
+                <a href="/privacy">Privacy Policy</a>
+                <a href="/terms">Terms of Service</a>
+              </div>
+              <div className="footer-links">
+                <h4>Connect</h4>
+                <a href="https://twitter.com/eduspantech">Twitter</a>
+                <a href="https://linkedin.com/company/eduspantech">LinkedIn</a>
+                <a href="https://youtube.com/@eduspantech">YouTube</a>
+                <a href="https://instagram.com/eduspantech">Instagram</a>
+              </div>
+            </div>
+            <div className="footer-bottom">
+              <p>© 2026 EduSpantech — Education for the love of your life ❤️</p>
+              <p className="footer-compliance">POPIA • GDPR • CPA Compliant</p>
+            </div>
+          </div>
+        </footer>
+      </div>
+    );
+  }
+
+  // ============================================
+  // STUDENT / NON-AUTHENTICATED HOME VIEW
+  // ============================================
   return (
     <div className="home-page">
       {/* Hero Section */}
       <section className="hero-section">
         <div className="hero-content">
-          <div className="hero-badge">🌍 Global Mathematics Platform</div>
+          <div className="hero-brand">
+            <img 
+              src="/logo192.png" 
+              alt="EduSpantech" 
+              className="hero-brand-logo"
+              onError={(e) => {
+                e.target.style.display = 'none';
+                const parent = e.target.parentElement;
+                if (parent) {
+                  const fallback = document.createElement('span');
+                  fallback.className = 'hero-brand-fallback';
+                  fallback.textContent = '∑';
+                  parent.insertBefore(fallback, e.target);
+                }
+              }}
+            />
+            <div className="hero-brand-text">
+              <span className="hero-brand-name">EduSpantech</span>
+              <span className="hero-brand-tagline">Global Mathematics Platform</span>
+            </div>
+          </div>
           
           {isAuthenticated ? (
             <>
@@ -271,13 +633,40 @@ function Home() {
           </div>
         </div>
 
-        {/* ============================================
-            MATHEMATICAL ORBIT - HERO VISUAL
-            ============================================ */}
         <div className="hero-visual">
           <MathematicalOrbit />
         </div>
       </section>
+
+      {/* Quick Actions for Authenticated Students */}
+      {isAuthenticated && !isTutor && (
+        <section className="quick-actions-section">
+          <div className="container">
+            <div className="quick-actions-grid">
+              <div className="quick-action-card" onClick={() => navigate('/subjects')}>
+                <div className="quick-action-icon">📖</div>
+                <h4>Browse Subjects</h4>
+                <p>Explore available mathematics topics</p>
+              </div>
+              <div className="quick-action-card" onClick={() => navigate('/tutors')}>
+                <div className="quick-action-icon">🧑‍🏫</div>
+                <h4>Find a Tutor</h4>
+                <p>Connect with expert mathematics tutors</p>
+              </div>
+              <div className="quick-action-card" onClick={() => navigate('/profile')}>
+                <div className="quick-action-icon">⚙️</div>
+                <h4>Account Settings</h4>
+                <p>Manage your profile and preferences</p>
+              </div>
+              <div className="quick-action-card" onClick={() => navigate('/resources')}>
+                <div className="quick-action-icon">📚</div>
+                <h4>Learning Resources</h4>
+                <p>Access on-demand math content vaults</p>
+              </div>
+            </div>
+          </div>
+        </section>
+      )}
 
       {/* Features Section */}
       <section className="features-section">
@@ -336,44 +725,11 @@ function Home() {
         </div>
       </section>
 
-      {/* Quick Actions for Authenticated Users */}
-      {isAuthenticated && (
-        <section className="quick-actions-section">
-          <div className="container">
-            <div className="quick-actions-grid">
-              <div className="quick-action-card" onClick={() => navigate('/subjects')}>
-                <div className="quick-action-icon">📖</div>
-                <h4>Browse Subjects</h4>
-                <p>Explore available mathematics topics</p>
-              </div>
-              <div className="quick-action-card" onClick={() => navigate('/tutors')}>
-                <div className="quick-action-icon">🧑‍🏫</div>
-                <h4>Find a Tutor</h4>
-                <p>Connect with expert mathematics tutors</p>
-              </div>
-              <div className="quick-action-card" onClick={() => navigate('/profile')}>
-                <div className="quick-action-icon">⚙️</div>
-                <h4>Account Settings</h4>
-                <p>Manage your profile and preferences</p>
-              </div>
-              <div className="quick-action-card" onClick={() => navigate('/resources')}>
-                <div className="quick-action-icon">📚</div>
-                <h4>Learning Resources</h4>
-                <p>Access on-demand math content vaults</p>
-              </div>
-            </div>
-          </div>
-        </section>
-      )}
-
-      {/* ============================================
-          PRICING SECTION - FETCHES FROM SUPABASE
-          Shows: R600, R1700, R2900
-          ============================================ */}
+      {/* Pricing Section - Only for non-authenticated users */}
       {!isAuthenticated && <Pricing />}
 
-      {/* Progress Section for Authenticated Users */}
-      {isAuthenticated && (
+      {/* Progress Section for Authenticated Students */}
+      {isAuthenticated && !isTutor && (
         <section className="progress-section">
           <div className="container">
             <div className="progress-content">

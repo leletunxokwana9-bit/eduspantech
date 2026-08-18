@@ -102,10 +102,81 @@ const Notifications = () => {
       'subscription_expired': '⚠️',
       'student_joined': '👤',
       'tutor_assigned': '👨‍🏫',
+      'new_tutor': '👨‍🏫',
       'system': '🔔',
       'default': '📌'
     };
     return icons[type] || icons.default;
+  };
+
+  // ===== RENDER STUDENT AVATAR OR INITIALS =====
+  const renderStudentAvatar = (notification) => {
+    const metadata = notification.metadata || {};
+    const studentName = metadata.student_name || 'Student';
+    const studentAvatar = metadata.student_avatar || null;
+    
+    if (studentAvatar) {
+      return (
+        <img 
+          src={studentAvatar} 
+          alt={studentName} 
+          className="notification-avatar-img"
+          style={{ 
+            width: '44px', 
+            height: '44px', 
+            borderRadius: '50%', 
+            objectFit: 'cover',
+            border: '2px solid rgba(255,255,255,0.1)'
+          }}
+          onError={(e) => {
+            e.target.style.display = 'none';
+            const parent = e.target.parentElement;
+            if (parent) {
+              const initial = studentName.charAt(0).toUpperCase();
+              parent.textContent = initial;
+              parent.style.display = 'flex';
+              parent.style.alignItems = 'center';
+              parent.style.justifyContent = 'center';
+              parent.style.background = '#4f46e5';
+              parent.style.color = 'white';
+              parent.style.fontSize = '18px';
+              parent.style.fontWeight = 'bold';
+              parent.style.borderRadius = '50%';
+              parent.style.width = '44px';
+              parent.style.height = '44px';
+            }
+          }}
+        />
+      );
+    }
+    
+    // Fallback to initials
+    const initial = studentName.charAt(0).toUpperCase();
+    const colors = ['#4f46e5', '#7c3aed', '#059669', '#10b981', '#dc2626', '#f59e0b', '#8b5cf6', '#ec4899'];
+    const hash = studentName.split('').reduce((acc, char) => acc + (char.charCodeAt(0) || 0), 0);
+    const color = colors[Math.abs(hash) % colors.length];
+    
+    return (
+      <div 
+        className="notification-avatar-initial"
+        style={{
+          width: '44px',
+          height: '44px',
+          borderRadius: '50%',
+          background: color,
+          color: 'white',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          fontSize: '18px',
+          fontWeight: 'bold',
+          textTransform: 'uppercase',
+          border: '2px solid rgba(255,255,255,0.1)'
+        }}
+      >
+        {initial}
+      </div>
+    );
   };
 
   // ===== RENDER SESSION DETAILS IN NOTIFICATION =====
@@ -115,6 +186,10 @@ const Notifications = () => {
     if (type === 'session_booked' && metadata) {
       return (
         <div className="notification-details">
+          <div className="detail-row">
+            <span className="detail-label">👤 Student:</span>
+            <span className="detail-value">{metadata.student_name || 'Student'}</span>
+          </div>
           <div className="detail-row">
             <span className="detail-label">📅 Date:</span>
             <span className="detail-value">
@@ -136,16 +211,6 @@ const Notifications = () => {
             <span className="detail-label">📖 Topic:</span>
             <span className="detail-value">{metadata.topic || 'Mathematics'}</span>
           </div>
-          <div className="detail-row">
-            <span className="detail-label">👤 Student:</span>
-            <span className="detail-value">{metadata.student_name || 'Student'}</span>
-          </div>
-          {metadata.notes && (
-            <div className="detail-row">
-              <span className="detail-label">📝 Notes:</span>
-              <span className="detail-value">{metadata.notes}</span>
-            </div>
-          )}
           <div className="detail-actions">
             <button 
               className="detail-action-btn accept"
@@ -243,7 +308,6 @@ const Notifications = () => {
 
       if (response.ok) {
         alert('✅ Session accepted successfully!');
-        // Refresh notifications
         fetchNotifications();
       } else {
         alert('❌ Failed to accept session');
@@ -259,19 +323,6 @@ const Notifications = () => {
     if (sessionId) {
       navigate(`/session/${sessionId}`);
     }
-  };
-
-  // ===== USE FAVICON AS SMALL ICON =====
-  const getNotificationIconElement = () => {
-    return (
-      <div className="notification-favicon-icon">
-        <img 
-          src="/favicon.ico" 
-          alt="EduSpantech" 
-          className="notification-favicon-img"
-        />
-      </div>
-    );
   };
 
   const formatTime = (dateString) => {
@@ -349,26 +400,34 @@ const Notifications = () => {
             <p>You're all caught up!</p>
           </div>
         ) : (
-          filteredNotifications.map((notification) => (
-            <div 
-              key={notification.id} 
-              className={`notification-card ${!notification.is_read ? 'unread' : ''}`}
-              onClick={() => markAsRead(notification.id)}
-            >
-              <div className="notification-icon-wrapper">
-                <span className="notification-icon-emoji">
-                  {getNotificationIcon(notification.type)}
-                </span>
+          filteredNotifications.map((notification) => {
+            const isSessionBooked = notification.type === 'session_booked';
+            
+            return (
+              <div 
+                key={notification.id} 
+                className={`notification-card ${!notification.is_read ? 'unread' : ''}`}
+                onClick={() => markAsRead(notification.id)}
+              >
+                <div className="notification-icon-wrapper">
+                  {isSessionBooked && notification.metadata?.student_name ? (
+                    renderStudentAvatar(notification)
+                  ) : (
+                    <span className="notification-icon-emoji">
+                      {getNotificationIcon(notification.type)}
+                    </span>
+                  )}
+                </div>
+                <div className="notification-body">
+                  <div className="notification-title">{notification.title}</div>
+                  <div className="notification-message">{notification.message}</div>
+                  {renderNotificationDetails(notification)}
+                  <div className="notification-time">{formatTime(notification.created_at)}</div>
+                </div>
+                {!notification.is_read && <span className="unread-badge">New</span>}
               </div>
-              <div className="notification-body">
-                <div className="notification-title">{notification.title}</div>
-                <div className="notification-message">{notification.message}</div>
-                {renderNotificationDetails(notification)}
-                <div className="notification-time">{formatTime(notification.created_at)}</div>
-              </div>
-              {!notification.is_read && <span className="unread-badge">New</span>}
-            </div>
-          ))
+            );
+          })
         )}
       </div>
     </div>

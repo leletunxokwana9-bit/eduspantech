@@ -1,5 +1,5 @@
 // src/services/sessionService.js
-import { API_BASE_URL } from '../config/api';
+import { API_BASE_URL } from './api';  // ✅ FIXED
 
 const sessionService = {
   bookSession: async (tutorId, date, duration = 60, topic = 'Mathematics') => {
@@ -9,10 +9,9 @@ const sessionService = {
         throw new Error('Not authenticated');
       }
 
-      // Send 'date' field (not 'startTime') to match backend expectation
       const payload = {
         tutorId: tutorId,
-        date: date,  // ← Send as 'date'
+        date: date,
         duration: duration,
         topic: topic,
         region: 'af-south-1'

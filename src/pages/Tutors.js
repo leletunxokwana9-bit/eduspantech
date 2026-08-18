@@ -25,6 +25,9 @@ const Tutors = () => {
   const [showTutorModal, setShowTutorModal] = useState(false);
   const [viewingTutor, setViewingTutor] = useState(null);
   const [showFullProfile, setShowFullProfile] = useState(false);
+  const [showSuccessModal, setShowSuccessModal] = useState(false);
+  const [successMessage, setSuccessMessage] = useState('');
+  const [bookingResult, setBookingResult] = useState(null);
 
   useEffect(() => {
     checkAuth();
@@ -196,8 +199,13 @@ const Tutors = () => {
 
       if (result.success) {
         setShowBookingModal(false);
-        alert('✅ Session booked successfully!');
-        navigate('/my-sessions');
+        setBookingResult(result);
+        setSuccessMessage(`✅ Session booked successfully with ${selectedTutor?.name}!`);
+        setShowSuccessModal(true);
+        setTimeout(() => {
+          setShowSuccessModal(false);
+          navigate('/my-sessions');
+        }, 3000);
       } else {
         alert('❌ Failed to book session: ' + (result.error || 'Unknown error'));
       }
@@ -211,6 +219,42 @@ const Tutors = () => {
 
   const handleLoginRedirect = () => {
     navigate('/login', { state: { from: '/tutors' } });
+  };
+
+  // ============================================
+  // SUCCESS MODAL
+  // ============================================
+  const SuccessModal = () => {
+    if (!showSuccessModal) return null;
+
+    return (
+      <div className="success-modal-overlay">
+        <div className="success-modal">
+          <div className="success-modal-icon">✅</div>
+          <h3>Session Booked!</h3>
+          <p>{successMessage}</p>
+          <div className="success-modal-details">
+            <div className="success-detail-item">
+              <span>Tutor</span>
+              <strong>{selectedTutor?.name}</strong>
+            </div>
+            <div className="success-detail-item">
+              <span>Date</span>
+              <strong>{new Date(booking.date).toLocaleString()}</strong>
+            </div>
+            <div className="success-detail-item">
+              <span>Duration</span>
+              <strong>{booking.duration} minutes</strong>
+            </div>
+            <div className="success-detail-item">
+              <span>Topic</span>
+              <strong>{booking.topic}</strong>
+            </div>
+          </div>
+          <p className="success-modal-note">Redirecting to your sessions...</p>
+        </div>
+      </div>
+    );
   };
 
   // ============================================
@@ -512,6 +556,7 @@ const Tutors = () => {
       {showLoginPrompt && <LoginPrompt />}
       {showBookingModal && <BookingModal />}
       {showTutorModal && <TutorModal />}
+      <SuccessModal />
 
       <div className="tutors-page-header">
         <h1>👨‍🏫 Our Expert Tutors</h1>

@@ -1,5 +1,5 @@
 // src/services/tutorService.js
-import API from '../config/api';
+import { API_BASE_URL } from './api';  // ✅ FIXED
 
 export const tutorService = {
   // ============================================
@@ -8,7 +8,7 @@ export const tutorService = {
   getTutors: async () => {
     try {
       const token = localStorage.getItem('accessToken');
-      const response = await fetch(API.tutors.all, {
+      const response = await fetch(`${API_BASE_URL}/tutors`, {
         headers: {
           'Authorization': token ? `Bearer ${token}` : '',
           'Content-Type': 'application/json'
@@ -35,7 +35,7 @@ export const tutorService = {
   getTutorById: async (id) => {
     try {
       const token = localStorage.getItem('accessToken');
-      const response = await fetch(API.tutors.byId(id), {
+      const response = await fetch(`${API_BASE_URL}/tutors/${id}`, {
         headers: {
           'Authorization': token ? `Bearer ${token}` : '',
           'Content-Type': 'application/json'
@@ -60,7 +60,7 @@ export const tutorService = {
   getTutorsByShift: async (shiftName) => {
     try {
       const token = localStorage.getItem('accessToken');
-      const response = await fetch(API.tutors.byShift(shiftName), {
+      const response = await fetch(`${API_BASE_URL}/tutors/shift/${shiftName}`, {
         headers: {
           'Authorization': token ? `Bearer ${token}` : '',
           'Content-Type': 'application/json'
@@ -89,7 +89,7 @@ export const tutorService = {
         throw new Error('Not authenticated');
       }
 
-      const response = await fetch(API.tutors.available, {
+      const response = await fetch(`${API_BASE_URL}/tutors/available`, {
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'
@@ -113,7 +113,7 @@ export const tutorService = {
   // ============================================
   checkShiftAvailability: async (countryCode) => {
     try {
-      const response = await fetch(API.auth.shiftCheck, {
+      const response = await fetch(`${API_BASE_URL}/auth/check-shift`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'

@@ -28,6 +28,10 @@ const Tutors = () => {
   const [showSuccessModal, setShowSuccessModal] = useState(false);
   const [successMessage, setSuccessMessage] = useState('');
   const [bookingResult, setBookingResult] = useState(null);
+  
+  // ===== VIDEO MODAL STATE =====
+  const [showVideoModal, setShowVideoModal] = useState(false);
+  const [videoTutor, setVideoTutor] = useState(null);
 
   useEffect(() => {
     checkAuth();
@@ -63,6 +67,13 @@ const Tutors = () => {
     } finally {
       setLoading(false);
     }
+  };
+
+  // ===== VIDEO FUNCTIONS =====
+  const handleWatchIntro = (tutor, e) => {
+    e.stopPropagation();
+    setVideoTutor(tutor);
+    setShowVideoModal(true);
   };
 
   // ============================================
@@ -106,6 +117,63 @@ const Tutors = () => {
     }
 
     return '🧑‍🏫';
+  };
+
+  // ============================================
+  // RENDER VIDEO THUMBNAIL
+  // ============================================
+  const renderVideoThumbnail = (tutor) => {
+    const hasVideo = tutor.intro_video_url || tutor.intro_video_thumbnail;
+    const duration = tutor.intro_video_duration || 0;
+    const views = tutor.intro_video_views || 0;
+
+    if (!hasVideo) {
+      return (
+        <div className="video-placeholder">
+          <span className="video-placeholder-icon">🎬</span>
+          <p>No intro video</p>
+        </div>
+      );
+    }
+
+    const formatDuration = (seconds) => {
+      const mins = Math.floor(seconds / 60);
+      const secs = seconds % 60;
+      return `${mins}:${secs.toString().padStart(2, '0')}`;
+    };
+
+    const formatViews = (count) => {
+      if (count >= 1000000) return `${(count / 1000000).toFixed(1)}M`;
+      if (count >= 1000) return `${(count / 1000).toFixed(1)}K`;
+      return count;
+    };
+
+    return (
+      <div className="video-thumbnail-container" onClick={(e) => handleWatchIntro(tutor, e)}>
+        <img 
+          src={tutor.intro_video_thumbnail || '/images/video-placeholder.jpg'} 
+          alt={`${tutor.name} intro video`}
+          className="video-thumbnail"
+          loading="lazy"
+          onError={(e) => {
+            e.target.src = 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="300" height="169" viewBox="0 0 300 169"%3E%3Crect width="300" height="169" fill="%23141b2d"/%3E%3Ctext x="150" y="85" text-anchor="middle" fill="%234f46e5" font-size="48"%3E🎬%3C/text%3E%3Ctext x="150" y="115" text-anchor="middle" fill="%2394a3b8" font-size="14"%3ENo thumbnail%3C/text%3E%3C/svg%3E';
+          }}
+        />
+        <div className="video-play-overlay">
+          <div className="play-button">
+            <span className="play-icon">▶</span>
+          </div>
+        </div>
+        <div className="video-duration-badge">
+          ⏱️ {formatDuration(duration)}
+        </div>
+        {views > 0 && (
+          <div className="video-views-badge">
+            👁️ {formatViews(views)} views
+          </div>
+        )}
+      </div>
+    );
   };
 
   // ============================================
@@ -222,6 +290,55 @@ const Tutors = () => {
   };
 
   // ============================================
+  // VIDEO MODAL
+  // ============================================
+  const VideoModal = () => {
+    if (!showVideoModal || !videoTutor) return null;
+
+    const formatDuration = (seconds) => {
+      const mins = Math.floor(seconds / 60);
+      const secs = seconds % 60;
+      return `${mins}:${secs.toString().padStart(2, '0')}`;
+    };
+
+    return (
+      <div className="video-modal-overlay" onClick={() => setShowVideoModal(false)}>
+        <div className="video-modal-content" onClick={(e) => e.stopPropagation()}>
+          <button className="video-modal-close" onClick={() => setShowVideoModal(false)}>×</button>
+          <div className="video-wrapper">
+            {videoTutor.intro_video_url ? (
+              <video
+                src={videoTutor.intro_video_url}
+                controls
+                autoPlay
+                className="video-modal-player"
+                poster={videoTutor.intro_video_thumbnail}
+              />
+            ) : (
+              <div className="video-not-available">
+                <span>🎬</span>
+                <p>Video not available</p>
+              </div>
+            )}
+          </div>
+          <div className="video-modal-info">
+            <h4>{videoTutor.name} - Introduction</h4>
+            <p className="video-modal-description">
+              Meet your potential tutor and learn about their teaching style!
+            </p>
+            {videoTutor.intro_video_duration > 0 && (
+              <span className="video-modal-duration">⏱️ {formatDuration(videoTutor.intro_video_duration)}</span>
+            )}
+            {videoTutor.intro_video_views > 0 && (
+              <span className="video-modal-views">👁️ {videoTutor.intro_video_views} views</span>
+            )}
+          </div>
+        </div>
+      </div>
+    );
+  };
+
+  // ============================================
   // SUCCESS MODAL
   // ============================================
   const SuccessModal = () => {
@@ -258,12 +375,11 @@ const Tutors = () => {
   };
 
   // ============================================
-  // TUTOR MODAL - FULL PROFILE WITH ALL FIELDS
+  // TUTOR MODAL - FULL PROFILE
   // ============================================
   const TutorModal = () => {
     if (!viewingTutor) return null;
 
-    // Get shift display name
     const getShiftName = (shiftId) => {
       const shiftMap = {
         '594a3d55-4388-4dec-8dd7-73c30a2488f3': 'APAC',
@@ -282,17 +398,14 @@ const Tutors = () => {
           <button className="tutor-modal-close" onClick={() => setShowTutorModal(false)}>×</button>
           
           {!showFullProfile ? (
-            // ===== QUICK VIEW =====
             <div className="tutor-modal-content">
               <div className="tutor-modal-avatar">
                 {renderAvatar(viewingTutor)}
               </div>
               <h2 className="tutor-modal-name">{viewingTutor.name}</h2>
-              
               {viewingTutor.tier && (
                 <span className="tutor-modal-tier">{viewingTutor.tier}</span>
               )}
-              
               {viewingTutor.subjects && viewingTutor.subjects.length > 0 && (
                 <div className="tutor-modal-subjects">
                   {viewingTutor.subjects.map((subject, idx) => (
@@ -300,17 +413,14 @@ const Tutors = () => {
                   ))}
                 </div>
               )}
-
               {viewingTutor.bio && (
                 <p className="tutor-modal-bio">{viewingTutor.bio}</p>
               )}
-
               {shiftName && (
                 <div className="tutor-modal-shift">
                   <span className="shift-label">⏰ {shiftName}</span>
                 </div>
               )}
-
               <div className="tutor-modal-actions">
                 <button className="modal-btn primary" onClick={handleBookFromModal}>
                   📚 Book Session
@@ -324,14 +434,10 @@ const Tutors = () => {
               </div>
             </div>
           ) : (
-            // ============================================
-            // FULL PROFILE VIEW - ALL FIELDS
-            // ============================================
             <div className="tutor-modal-full-profile">
               <button className="back-btn" onClick={() => setShowFullProfile(false)}>
                 ← Back
               </button>
-              
               <div className="full-profile-header">
                 <div className="full-profile-avatar">
                   {renderAvatar(viewingTutor)}
@@ -346,17 +452,13 @@ const Tutors = () => {
                   )}
                 </div>
               </div>
-
               <div className="full-profile-body">
-                {/* ===== BIO / ABOUT ME ===== */}
                 {viewingTutor.bio && (
                   <div className="profile-section">
                     <h3>📝 About Me</h3>
                     <p>{viewingTutor.bio}</p>
                   </div>
                 )}
-
-                {/* ===== SUBJECTS ===== */}
                 {viewingTutor.subjects && viewingTutor.subjects.length > 0 && (
                   <div className="profile-section">
                     <h3>📖 Subjects</h3>
@@ -367,8 +469,6 @@ const Tutors = () => {
                     </div>
                   </div>
                 )}
-
-                {/* ===== SHIFT / AVAILABILITY ===== */}
                 {shiftName && (
                   <div className="profile-section">
                     <h3>⏰ Availability</h3>
@@ -378,51 +478,18 @@ const Tutors = () => {
                     )}
                   </div>
                 )}
-
-                {/* ===== EDUCATION ===== */}
                 {viewingTutor.education && (
                   <div className="profile-section">
                     <h3>🎓 Education</h3>
                     <p>{viewingTutor.education}</p>
                   </div>
                 )}
-
-                {/* ===== YEARS OF EXPERIENCE ===== */}
                 {viewingTutor.yearsExperience > 0 && (
                   <div className="profile-section">
                     <h3>📅 Experience</h3>
                     <p>{viewingTutor.yearsExperience} years</p>
                   </div>
                 )}
-
-                {/* ===== PHONE ===== */}
-                {viewingTutor.phone && (
-                  <div className="profile-section">
-                    <h3>📞 Contact</h3>
-                    <p>{viewingTutor.phone}</p>
-                  </div>
-                )}
-
-                {/* ===== LINKEDIN ===== */}
-                {viewingTutor.linkedin && (
-                  <div className="profile-section">
-                    <h3>🔗 Connect</h3>
-                    <a href={viewingTutor.linkedin} target="_blank" rel="noopener noreferrer" className="profile-link">
-                      LinkedIn Profile
-                    </a>
-                  </div>
-                )}
-
-                {/* ===== WEBSITE ===== */}
-                {viewingTutor.website && (
-                  <div className="profile-section">
-                    <h3>🌐 Website</h3>
-                    <a href={viewingTutor.website} target="_blank" rel="noopener noreferrer" className="profile-link">
-                      {viewingTutor.website}
-                    </a>
-                  </div>
-                )}
-
                 <button className="modal-btn primary full-profile-book" onClick={handleBookFromModal}>
                   📚 Book Session
                 </button>
@@ -467,7 +534,6 @@ const Tutors = () => {
       <div className="booking-modal" onClick={(e) => e.stopPropagation()}>
         <button className="booking-modal-close" onClick={() => setShowBookingModal(false)}>×</button>
         <h3>📚 Book Session with {selectedTutor?.name}</h3>
-        
         <form onSubmit={handleBookingSubmit}>
           <div className="form-group">
             <label>📅 Date & Time</label>
@@ -479,7 +545,6 @@ const Tutors = () => {
               min={new Date(Date.now() + 3600000).toISOString().slice(0, 16)}
             />
           </div>
-
           <div className="form-group">
             <label>⏱️ Duration</label>
             <select
@@ -492,7 +557,6 @@ const Tutors = () => {
               <option value={120}>120 minutes</option>
             </select>
           </div>
-
           <div className="form-group">
             <label>📖 Topic</label>
             <div className="topic-input-group">
@@ -525,7 +589,6 @@ const Tutors = () => {
               />
             )}
           </div>
-
           <button 
             type="submit" 
             className="btn-primary" 
@@ -556,6 +619,7 @@ const Tutors = () => {
       {showLoginPrompt && <LoginPrompt />}
       {showBookingModal && <BookingModal />}
       {showTutorModal && <TutorModal />}
+      {showVideoModal && <VideoModal />}
       <SuccessModal />
 
       <div className="tutors-page-header">
@@ -589,6 +653,11 @@ const Tutors = () => {
                       className="tutors-page-tutor-card"
                       onClick={() => handleTutorCardClick(tutor)}
                     >
+                      {/* ===== VIDEO THUMBNAIL ===== */}
+                      <div className="tutor-card-video-section">
+                        {renderVideoThumbnail(tutor)}
+                      </div>
+
                       <div className="tutors-page-tutor-avatar">
                         {renderAvatar(tutor)}
                       </div>
@@ -610,15 +679,25 @@ const Tutors = () => {
                           </div>
                         )}
                       </div>
-                      <button 
-                        className="book-session-btn"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleBookSession(tutor);
-                        }}
-                      >
-                        📚 Book Session
-                      </button>
+                      <div className="tutor-card-actions">
+                        <button 
+                          className="book-session-btn"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleBookSession(tutor);
+                          }}
+                        >
+                          📚 Book Session
+                        </button>
+                        {tutor.intro_video_url && (
+                          <button 
+                            className="watch-intro-btn"
+                            onClick={(e) => handleWatchIntro(tutor, e)}
+                          >
+                            ▶ Watch Intro
+                          </button>
+                        )}
+                      </div>
                     </div>
                   ))
                 ) : (

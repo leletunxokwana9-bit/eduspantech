@@ -1,9 +1,10 @@
-// src/pages/Profile.js - CLEAN LAYOUT WITH FIXED SAVE AND DYNAMIC RATING
+// src/pages/Profile.js - COMPLETE WITH VIDEO UPLOAD
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import authService from '../services/authService';
 import AvatarSelector from '../components/AvatarSelector';
 import { API_BASE_URL } from '../services/api';
+import { tutorService } from '../services/tutorService';
 import './Profile.css';
 
 const Profile = () => {
@@ -67,6 +68,17 @@ const Profile = () => {
   const [photoUploading, setPhotoUploading] = useState(false);
   const [photoError, setPhotoError] = useState('');
   const fileInputRef = useRef(null);
+
+  // ===== VIDEO STATE =====
+  const [videoFile, setVideoFile] = useState(null);
+  const [videoPreview, setVideoPreview] = useState(null);
+  const [videoUploading, setVideoUploading] = useState(false);
+  const [videoProgress, setVideoProgress] = useState(0);
+  const [videoUrl, setVideoUrl] = useState(null);
+  const [videoDuration, setVideoDuration] = useState(0);
+  const [videoThumbnail, setVideoThumbnail] = useState(null);
+  const [showVideoModal, setShowVideoModal] = useState(false);
+  const videoFileInputRef = useRef(null);
 
   useEffect(() => {
     if (success) {
@@ -133,6 +145,11 @@ const Profile = () => {
               });
             }
           }
+
+          // Set video data
+          setVideoUrl(userData.intro_video_url || null);
+          setVideoThumbnail(userData.intro_video_thumbnail || null);
+          setVideoDuration(userData.intro_video_duration || 0);
 
           if (userData.subscription || userData.subscriptionTier) {
             setSubscription({
@@ -206,13 +223,11 @@ const Profile = () => {
       }
     };
 
-    // ✅ FIXED: Fetch tutor stats with dynamic rating from API and earnings from earnings table
     const fetchTutorStats = async (userData) => {
       try {
         const token = localStorage.getItem('accessToken');
         if (!token) return;
 
-        // ✅ FETCH RATING FROM THE API
         let rating = 4.5;
         let ratingCount = 0;
 
@@ -226,24 +241,20 @@ const Profile = () => {
 
           if (tutorsResponse.ok) {
             const tutorsData = await tutorsResponse.json();
-            // Find the current tutor in the response
             for (const shift of (tutorsData.tutors || [])) {
               const tutor = shift.tutors?.find(t => t.id === userData?.id);
               if (tutor) {
                 rating = tutor.rating || tutor.tutorRating || 4.5;
                 ratingCount = tutor.ratingCount || 0;
-                console.log('📊 Rating from API for', userData?.name, ':', rating);
                 break;
               }
             }
           }
         } catch (error) {
           console.error('❌ Failed to fetch rating:', error);
-          // Fallback: use rating from user data
           rating = userData?.tutor_rating || userData?.rating || 4.5;
         }
 
-        // ✅ FETCH EARNINGS FROM EARNINGS TABLE
         let totalEarnings = 0;
         let sessionsCount = 0;
         let uniqueStudents = new Set();
@@ -262,12 +273,10 @@ const Profile = () => {
               totalEarnings = data.earnings.total || 0;
               sessionsCount = data.earnings.sessionsCount || 0;
               uniqueStudents = new Set(data.earnings.history?.map(h => h.studentId) || []);
-              console.log('📊 Earnings from API:', totalEarnings);
             }
           }
         } catch (error) {
           console.error('❌ Failed to fetch earnings:', error);
-          // Fallback: use sessions
           const sessionsResponse = await fetch(`${API_BASE_URL}/sessions`, {
             headers: {
               'Authorization': `Bearer ${token}`,
@@ -295,7 +304,6 @@ const Profile = () => {
 
       } catch (error) {
         console.error('❌ Failed to fetch tutor stats:', error);
-        // Fallback: use rating from user data
         const rating = userData?.tutor_rating || userData?.rating || 4.5;
         setTutorStats({
           totalSessions: 0,
@@ -309,6 +317,169 @@ const Profile = () => {
 
     fetchUserData();
   }, [navigate]);
+
+  // ============================================
+  // VIDEO HANDLERS
+  // ============================================
+  const handleVideoSelect = (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    const validTypes = ['video/mp4', 'video/webm', 'video/quicktime', 'video/x-matroska'];
+    if (!validTypes.includes(file.type)) {
+      setError('Please upload a valid video file (MP4, WebM, MOV, MKV)');
+      return;
+    }
+
+    if (file.size > 100 * 1024 * 1024) {
+      setError('Video file must be less than 100MB');
+      return;
+    }
+
+    setVideoFile(file);
+    setError('');
+
+    const previewUrl = URL.createObjectURL(file);
+    setVideoPreview(previewUrl);
+
+    const video = document.createElement('video');
+    video.src = previewUrl;
+    video.onloadedmetadata = () => {
+      setVideoDuration(Math.round(video.duration));
+    };
+
+    generateThumbnail(file);
+  };
+
+  const generateThumbnail = (file) => {
+    const video = document.createElement('video');
+    const url = URL.createObjectURL(file);
+    video.src = url;
+    video.currentTime = 1;
+
+    video.onloadeddata = () => {
+      const canvas = document.createElement('canvas');
+      canvas.width = 640;
+      canvas.height = 360;
+      const ctx = canvas.getContext('2d');
+      ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+      const thumbnailDataUrl = canvas.toDataURL('image/jpeg', 0.8);
+      setVideoThumbnail(thumbnailDataUrl);
+      URL.revokeObjectURL(url);
+    };
+
+    video.onerror = () => {
+      setVideoThumbnail(null);
+      URL.revokeObjectURL(url);
+    };
+  };
+
+  const handleUploadVideo = async () => {
+    if (!videoFile) {
+      setError('Please select a video first');
+      return;
+    }
+
+    try {
+      setVideoUploading(true);
+      setVideoProgress(0);
+      setError('');
+
+      const reader = new FileReader();
+      reader.readAsDataURL(videoFile);
+      
+      reader.onload = async () => {
+        try {
+          const base64Video = reader.result;
+          setVideoProgress(50);
+
+          const result = await tutorService.uploadIntroVideo({
+            videoUrl: base64Video,
+            thumbnail: videoThumbnail || null,
+            duration: videoDuration
+          });
+
+          if (result.success) {
+            setVideoUrl(base64Video);
+            setSuccess('✅ Video uploaded successfully!');
+            
+            setUser(prev => ({
+              ...prev,
+              intro_video_url: base64Video,
+              intro_video_thumbnail: videoThumbnail,
+              intro_video_duration: videoDuration
+            }));
+
+            setVideoProgress(100);
+            
+            if (videoFileInputRef.current) {
+              videoFileInputRef.current.value = '';
+            }
+            
+            setTimeout(() => setSuccess(''), 3000);
+          } else {
+            setError(result.error || 'Failed to upload video');
+          }
+        } catch (err) {
+          setError(err.message || 'Failed to upload video');
+        } finally {
+          setVideoUploading(false);
+        }
+      };
+
+      reader.onerror = () => {
+        setError('Failed to read video file');
+        setVideoUploading(false);
+      };
+
+    } catch (err) {
+      setError(err.message || 'Failed to upload video');
+      setVideoUploading(false);
+    }
+  };
+
+  const handleRemoveVideo = async () => {
+    if (!window.confirm('Are you sure you want to remove your intro video?')) {
+      return;
+    }
+
+    try {
+      setVideoUploading(true);
+      
+      const result = await tutorService.removeIntroVideo();
+      
+      if (result.success) {
+        setVideoUrl(null);
+        setVideoThumbnail(null);
+        setVideoDuration(0);
+        setVideoPreview(null);
+        setVideoFile(null);
+        setSuccess('✅ Video removed successfully');
+        
+        setUser(prev => ({
+          ...prev,
+          intro_video_url: null,
+          intro_video_thumbnail: null,
+          intro_video_duration: 0
+        }));
+        
+        setTimeout(() => setSuccess(''), 3000);
+      } else {
+        setError(result.error || 'Failed to remove video');
+      }
+    } catch (err) {
+      setError(err.message || 'Failed to remove video');
+    } finally {
+      setVideoUploading(false);
+    }
+  };
+
+  const formatDuration = (seconds) => {
+    if (!seconds) return '0:00';
+    const mins = Math.floor(seconds / 60);
+    const secs = seconds % 60;
+    return `${mins}:${secs.toString().padStart(2, '0')}`;
+  };
 
   // ============================================
   // HANDLERS
@@ -798,6 +969,14 @@ const Profile = () => {
           </div>
         </div>
 
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept="image/*"
+          onChange={handlePhotoUpload}
+          style={{ display: 'none' }}
+        />
+
         <div style={{ flex: 1 }}>
           <h1 style={{ fontSize: '28px', fontWeight: 700, color: '#ffffff', margin: '0 0 4px 0' }}>
             {user?.name || 'User'}
@@ -848,14 +1027,6 @@ const Profile = () => {
           {isEditing ? 'Cancel' : '✏️ Edit Profile'}
         </button>
       </div>
-
-      <input
-        ref={fileInputRef}
-        type="file"
-        accept="image/*"
-        onChange={handlePhotoUpload}
-        style={{ display: 'none' }}
-      />
 
       {/* ===== STATUS MESSAGES ===== */}
       {photoError && <div style={{ background: 'rgba(239,68,68,0.1)', color: '#fca5a5', padding: '12px 20px', borderRadius: '10px', marginBottom: '16px', border: '1px solid rgba(239,68,68,0.15)' }}>{photoError}</div>}
@@ -934,7 +1105,7 @@ const Profile = () => {
         </div>
 
         {/* ============================================
-            TUTOR PROFILE - CLEAN SECTION
+            TUTOR PROFILE - WITH VIDEO UPLOAD
             ============================================ */}
         {isTutor && (
           <div style={cardFullStyle}>
@@ -1132,6 +1303,126 @@ const Profile = () => {
                   <span style={valueStyle}>{editForm.website || 'Not set'}</span>
                 )}
               </div>
+
+              {/* ============================================
+                  VIDEO UPLOAD SECTION - ADDED HERE
+                  ============================================ */}
+              <div style={{ gridColumn: '1 / -1', marginTop: '8px', paddingTop: '16px', borderTop: '1px solid rgba(255,255,255,0.06)' }}>
+                <label style={labelStyle}>🎬 Intro Video</label>
+                <p style={{ fontSize: '13px', color: '#94a3b8', marginBottom: '12px' }}>
+                  Upload a short introduction video (max 100MB, MP4/WebM/MOV)
+                </p>
+
+                {videoUrl ? (
+                  // Video exists - show preview
+                  <div>
+                    <div style={{ position: 'relative', borderRadius: '12px', overflow: 'hidden', background: '#0a0e1a', maxWidth: '400px' }}>
+                      <video
+                        src={videoUrl}
+                        controls
+                        style={{ width: '100%', maxHeight: '300px', borderRadius: '12px', background: '#0a0e1a' }}
+                        poster={videoThumbnail}
+                      />
+                      <div style={{ position: 'absolute', bottom: '12px', right: '12px', background: 'rgba(0,0,0,0.7)', padding: '4px 12px', borderRadius: '8px' }}>
+                        <span style={{ fontSize: '13px', color: '#ffffff' }}>
+                          ⏱️ {formatDuration(videoDuration)}
+                        </span>
+                      </div>
+                    </div>
+                    <div style={{ display: 'flex', gap: '12px', marginTop: '12px', flexWrap: 'wrap' }}>
+                      <button
+                        onClick={() => setShowVideoModal(true)}
+                        style={{ padding: '8px 20px', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '8px', background: 'rgba(255,255,255,0.04)', color: '#ffffff', fontSize: '13px', fontWeight: 500, cursor: 'pointer' }}
+                      >
+                        👁️ Preview
+                      </button>
+                      <button
+                        onClick={handleRemoveVideo}
+                        disabled={videoUploading}
+                        style={{ padding: '8px 20px', border: '1px solid rgba(239,68,68,0.2)', borderRadius: '8px', background: 'rgba(239,68,68,0.1)', color: '#fca5a5', fontSize: '13px', fontWeight: 500, cursor: 'pointer', opacity: videoUploading ? 0.6 : 1 }}
+                      >
+                        🗑️ Remove
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  // No video - show upload UI
+                  <div>
+                    {videoPreview ? (
+                      <div>
+                        <div style={{ position: 'relative', borderRadius: '12px', overflow: 'hidden', background: '#0a0e1a', maxWidth: '400px' }}>
+                          <video
+                            src={videoPreview}
+                            controls
+                            style={{ width: '100%', maxHeight: '300px', borderRadius: '12px', background: '#0a0e1a' }}
+                            poster={videoThumbnail}
+                          />
+                        </div>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '8px 12px', background: 'rgba(255,255,255,0.04)', borderRadius: '8px', fontSize: '13px', color: '#94a3b8', marginTop: '8px', flexWrap: 'wrap' }}>
+                          <span style={{ color: '#ffffff', fontWeight: 500 }}>📁 {videoFile?.name}</span>
+                          <span>({(videoFile?.size / (1024 * 1024)).toFixed(1)} MB)</span>
+                          {videoDuration > 0 && <span>⏱️ {formatDuration(videoDuration)}</span>}
+                        </div>
+                        <div style={{ display: 'flex', gap: '12px', marginTop: '12px', flexWrap: 'wrap' }}>
+                          <button
+                            onClick={handleUploadVideo}
+                            disabled={videoUploading}
+                            style={{ padding: '8px 24px', background: 'linear-gradient(135deg, #4f46e5, #7c3aed)', color: '#ffffff', border: 'none', borderRadius: '8px', fontSize: '14px', fontWeight: 600, cursor: 'pointer', opacity: videoUploading ? 0.6 : 1 }}
+                          >
+                            {videoUploading ? (
+                              <>
+                                <span style={{ display: 'inline-block', width: '14px', height: '14px', border: '2px solid rgba(255,255,255,0.2)', borderTopColor: '#ffffff', borderRadius: '50%', animation: 'spin 0.8s linear infinite', marginRight: '8px', verticalAlign: 'middle' }}></span>
+                                Uploading...
+                              </>
+                            ) : (
+                              '✅ Upload Video'
+                            )}
+                          </button>
+                          <button
+                            onClick={() => {
+                              setVideoPreview(null);
+                              setVideoFile(null);
+                              setVideoThumbnail(null);
+                              setVideoDuration(0);
+                              if (videoFileInputRef.current) {
+                                videoFileInputRef.current.value = '';
+                              }
+                            }}
+                            disabled={videoUploading}
+                            style={{ padding: '8px 20px', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '8px', background: 'rgba(255,255,255,0.04)', color: '#ffffff', fontSize: '13px', fontWeight: 500, cursor: 'pointer', opacity: videoUploading ? 0.6 : 1 }}
+                          >
+                            Cancel
+                          </button>
+                        </div>
+                        {videoUploading && (
+                          <div style={{ position: 'relative', width: '100%', maxWidth: '400px', height: '6px', background: 'rgba(255,255,255,0.06)', borderRadius: '4px', overflow: 'hidden', marginTop: '12px' }}>
+                            <div style={{ width: `${videoProgress}%`, height: '100%', background: 'linear-gradient(135deg, #4f46e5, #7c3aed)', borderRadius: '4px', transition: 'width 0.3s ease' }} />
+                            <span style={{ position: 'absolute', right: 0, top: '-20px', fontSize: '12px', color: '#94a3b8' }}>
+                              {videoProgress}%
+                            </span>
+                          </div>
+                        )}
+                      </div>
+                    ) : (
+                      <div style={{ border: '2px dashed rgba(255,255,255,0.15)', borderRadius: '12px', padding: '30px 20px', textAlign: 'center', position: 'relative', transition: 'all 0.3s ease', cursor: 'pointer', background: 'rgba(255,255,255,0.02)', maxWidth: '400px' }}>
+                        <input
+                          type="file"
+                          accept="video/mp4,video/webm,video/quicktime,video/x-matroska"
+                          onChange={handleVideoSelect}
+                          ref={videoFileInputRef}
+                          disabled={videoUploading}
+                          style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', opacity: 0, cursor: 'pointer' }}
+                        />
+                        <div>
+                          <span style={{ fontSize: '40px' }}>🎥</span>
+                          <p style={{ fontSize: '15px', color: '#e2e8f0', margin: '8px 0 4px 0' }}>Click to upload</p>
+                          <small style={{ fontSize: '12px', color: '#94a3b8' }}>MP4, WebM, MOV • Max 100MB</small>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
             </div>
 
             {/* ===== SAVE BUTTON - ONLY HERE ===== */}
@@ -1221,6 +1512,44 @@ const Profile = () => {
       </div>
 
       {/* ============================================
+          VIDEO PREVIEW MODAL
+          ============================================ */}
+      {showVideoModal && videoUrl && (
+        <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.8)', backdropFilter: 'blur(8px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }} onClick={() => setShowVideoModal(false)}>
+          <div style={{ background: '#141b2d', borderRadius: '16px', maxWidth: '640px', width: '90%', maxHeight: '90vh', overflow: 'auto', boxShadow: '0 20px 60px rgba(0,0,0,0.5)', border: '1px solid rgba(255,255,255,0.06)' }} onClick={(e) => e.stopPropagation()}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '16px 24px', borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
+              <h3 style={{ fontSize: '18px', fontWeight: 600, color: '#ffffff', margin: 0 }}>🎬 Intro Video Preview</h3>
+              <button onClick={() => setShowVideoModal(false)} style={{ background: 'none', border: 'none', fontSize: '24px', color: '#94a3b8', cursor: 'pointer' }}>×</button>
+            </div>
+            <div style={{ padding: '20px' }}>
+              <video
+                src={videoUrl}
+                controls
+                autoPlay
+                style={{ width: '100%', maxHeight: '70vh', borderRadius: '8px', background: '#0a0e1a' }}
+                poster={videoThumbnail}
+              />
+              <div style={{ marginTop: '12px', padding: '12px', background: 'rgba(255,255,255,0.03)', borderRadius: '8px' }}>
+                <p style={{ fontSize: '14px', color: '#94a3b8', margin: '0 0 8px 0' }}>
+                  This video will be shown to students on your profile card.
+                </p>
+                {videoDuration > 0 && (
+                  <span style={{ fontSize: '13px', color: '#64748b' }}>
+                    ⏱️ Duration: {formatDuration(videoDuration)}
+                  </span>
+                )}
+              </div>
+            </div>
+            <div style={{ display: 'flex', justifyContent: 'flex-end', padding: '16px 24px', borderTop: '1px solid rgba(255,255,255,0.06)' }}>
+              <button onClick={() => setShowVideoModal(false)} style={{ padding: '10px 24px', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '8px', background: 'rgba(255,255,255,0.04)', color: '#ffffff', fontSize: '14px', fontWeight: 500, cursor: 'pointer' }}>
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ============================================
           MODALS
           ============================================ */}
       {showPasswordModal && (
@@ -1282,6 +1611,12 @@ const Profile = () => {
           onClose={() => setShowAvatarSelector(false)}
         />
       )}
+
+      <style>{`
+        @keyframes spin {
+          to { transform: rotate(360deg); }
+        }
+      `}</style>
     </div>
   );
 };

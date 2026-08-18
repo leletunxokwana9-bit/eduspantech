@@ -1410,3 +1410,348 @@
     font-size: 20px;
   }
 }
+/* ============================================
+   VIDEO THUMBNAIL ON TUTOR CARD
+   ============================================ */
+.tutor-card-video-section {
+  width: 100%;
+  border-radius: 10px;
+  overflow: hidden;
+  margin-bottom: 10px;
+  background: #0a0e1a;
+  position: relative;
+  aspect-ratio: 16/9;
+}
+
+.video-thumbnail-container {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 16/9;
+  cursor: pointer;
+  overflow: hidden;
+  border-radius: 10px;
+  transition: all 0.3s ease;
+}
+
+.video-thumbnail-container:hover {
+  transform: scale(1.02);
+  box-shadow: 0 8px 30px rgba(79, 70, 229, 0.3);
+}
+
+.video-thumbnail {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+  background: #0a0e1a;
+}
+
+.video-play-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.3);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.3s ease;
+}
+
+.video-thumbnail-container:hover .video-play-overlay {
+  background: rgba(0, 0, 0, 0.2);
+}
+
+.play-button {
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  background: rgba(79, 70, 229, 0.9);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.3s ease;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
+}
+
+.play-button:hover {
+  transform: scale(1.1);
+  background: #4f46e5;
+  box-shadow: 0 8px 30px rgba(79, 70, 229, 0.5);
+}
+
+.play-icon {
+  color: white;
+  font-size: 28px;
+  margin-left: 4px;
+}
+
+.video-duration-badge {
+  position: absolute;
+  bottom: 8px;
+  right: 8px;
+  background: rgba(0, 0, 0, 0.8);
+  color: #ffffff;
+  padding: 2px 10px;
+  border-radius: 12px;
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.video-views-badge {
+  position: absolute;
+  bottom: 8px;
+  left: 8px;
+  background: rgba(0, 0, 0, 0.7);
+  color: #94a3b8;
+  padding: 2px 10px;
+  border-radius: 12px;
+  font-size: 11px;
+}
+
+.video-placeholder {
+  width: 100%;
+  aspect-ratio: 16/9;
+  background: #141b2d;
+  border-radius: 10px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  color: #94a3b8;
+  border: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.video-placeholder-icon {
+  font-size: 36px;
+  margin-bottom: 4px;
+}
+
+.video-placeholder p {
+  font-size: 12px;
+  margin: 0;
+}
+
+.tutor-card-actions {
+  display: flex;
+  gap: 8px;
+  width: 100%;
+  margin-top: 4px;
+  flex-wrap: wrap;
+}
+
+.watch-intro-btn {
+  padding: 6px 14px;
+  background: rgba(79, 70, 229, 0.12);
+  color: #818cf8;
+  border: 1px solid rgba(79, 70, 229, 0.15);
+  border-radius: 8px;
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  flex: 1;
+  min-width: 80px;
+}
+
+.watch-intro-btn:hover {
+  background: rgba(79, 70, 229, 0.2);
+  transform: translateY(-2px);
+}
+
+/* ============================================
+   VIDEO MODAL
+   ============================================ */
+.video-modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.85);
+  backdrop-filter: blur(12px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 5000;
+  animation: fadeIn 0.3s ease;
+  padding: 20px;
+}
+
+.video-modal-content {
+  max-width: 700px;
+  width: 95%;
+  max-height: 90vh;
+  background: #141b2d;
+  border-radius: 16px;
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  box-shadow: 0 30px 80px rgba(0, 0, 0, 0.8);
+  overflow: hidden;
+  animation: slideUp 0.3s ease;
+  position: relative;
+}
+
+.video-modal-close {
+  position: absolute;
+  top: 12px;
+  right: 16px;
+  background: rgba(0, 0, 0, 0.6);
+  border: none;
+  color: rgba(255, 255, 255, 0.7);
+  font-size: 28px;
+  cursor: pointer;
+  z-index: 10;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.3s ease;
+}
+
+.video-modal-close:hover {
+  background: rgba(255, 255, 255, 0.1);
+  color: #ffffff;
+}
+
+.video-wrapper {
+  width: 100%;
+  background: #000;
+  aspect-ratio: 16/9;
+}
+
+.video-modal-player {
+  width: 100%;
+  height: 100%;
+  background: #000;
+}
+
+.video-not-available {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  color: #94a3b8;
+}
+
+.video-not-available span {
+  font-size: 48px;
+  margin-bottom: 12px;
+}
+
+.video-modal-info {
+  padding: 20px 24px 24px;
+}
+
+.video-modal-info h4 {
+  font-size: 18px;
+  font-weight: 600;
+  color: #ffffff;
+  margin: 0 0 4px 0;
+}
+
+.video-modal-description {
+  font-size: 14px;
+  color: #94a3b8;
+  margin: 0 0 10px 0;
+}
+
+.video-modal-duration,
+.video-modal-views {
+  display: inline-block;
+  font-size: 13px;
+  color: #64748b;
+  margin-right: 16px;
+}
+
+/* ============================================
+   LIGHT THEME
+   ============================================ */
+[data-theme="light"] .video-modal-content {
+  background: #ffffff;
+  border: 1px solid rgba(0, 0, 0, 0.06);
+}
+
+[data-theme="light"] .video-modal-info h4 {
+  color: #0f172a;
+}
+
+[data-theme="light"] .video-modal-description {
+  color: #64748b;
+}
+
+[data-theme="light"] .video-placeholder {
+  background: #f1f5f9;
+  border-color: rgba(0, 0, 0, 0.06);
+}
+
+[data-theme="light"] .watch-intro-btn {
+  color: #4f46e5;
+  border-color: rgba(79, 70, 229, 0.2);
+  background: rgba(79, 70, 229, 0.06);
+}
+
+[data-theme="light"] .watch-intro-btn:hover {
+  background: rgba(79, 70, 229, 0.12);
+}
+
+/* ============================================
+   RESPONSIVE
+   ============================================ */
+@media (max-width: 768px) {
+  .tutors-page-tutor-card {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  
+  .tutor-card-video-section {
+    width: 100%;
+  }
+  
+  .tutors-page-tutor-avatar {
+    width: 40px;
+    height: 40px;
+    font-size: 20px;
+  }
+  
+  .video-modal-content {
+    max-width: 100%;
+    width: 100%;
+    border-radius: 0;
+    max-height: 100vh;
+    height: 100vh;
+  }
+  
+  .play-button {
+    width: 48px;
+    height: 48px;
+  }
+  
+  .play-icon {
+    font-size: 22px;
+  }
+}
+
+@media (max-width: 480px) {
+  .tutor-card-actions {
+    flex-direction: column;
+  }
+  
+  .book-session-btn,
+  .watch-intro-btn {
+    width: 100%;
+    justify-content: center;
+  }
+  
+  .video-modal-info {
+    padding: 16px;
+  }
+  
+  .video-modal-info h4 {
+    font-size: 16px;
+  }
+}

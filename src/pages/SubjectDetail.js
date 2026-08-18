@@ -6,6 +6,7 @@ import { useSound } from '../context/SoundContext';
 import './SubjectDetail.css';
 
 import { API_BASE_URL } from '../services/api';
+
 const SubjectDetail = () => {
   const { subjectName } = useParams();
   const navigate = useNavigate();
@@ -43,6 +44,30 @@ const SubjectDetail = () => {
     return itemSlug === subjectName || item.name === subjectName;
   });
 
+  // ===== HELPER: Get subscription from JWT token =====
+  const getSubscriptionFromToken = () => {
+    const token = localStorage.getItem('accessToken');
+    if (!token) return null;
+    
+    try {
+      const tokenParts = token.split('.');
+      if (tokenParts.length === 3) {
+        const payload = JSON.parse(atob(tokenParts[1]));
+        console.log('📦 Token payload:', payload);
+        
+        return {
+          tier: payload.subscriptionTier || payload.tier || null,
+          status: payload.subscriptionStatus || 'active',
+          subscriptionTier: payload.subscriptionTier || payload.tier || null,
+          subscriptionStatus: payload.subscriptionStatus || 'active'
+        };
+      }
+    } catch (error) {
+      console.error('Error decoding token:', error);
+    }
+    return null;
+  };
+
   // Check authentication status on mount
   useEffect(() => {
     const checkAuth = async () => {
@@ -52,28 +77,20 @@ const SubjectDetail = () => {
 
       if (isAuthenticated) {
         try {
+          // Get subscription from token first
+          const tokenSubscription = getSubscriptionFromToken();
+          if (tokenSubscription) {
+            console.log('✅ Subscription from token:', tokenSubscription);
+            setSubscription(tokenSubscription);
+          }
+
           const userData = await authService.getCurrentUserWithSubscription();
           if (userData) {
             setUser(userData);
+            
+            // If userData has subscription, use it
             if (userData.subscription) {
               setSubscription(userData.subscription);
-            } else {
-              try {
-                const token = localStorage.getItem('accessToken');
-                if (token) {
-                  const response = await fetch(`${API_BASE_URL}/subscription/me`, {
-                    headers: {
-                      'Authorization': `Bearer ${token}`
-                    }
-                  });
-                  if (response.ok) {
-                    const data = await response.json();
-                    setSubscription(data.subscription);
-                  }
-                }
-              } catch (error) {
-                console.error('Failed to get subscription:', error);
-              }
             }
           } else {
             const fallbackUser = await authService.getCurrentUser();
@@ -92,34 +109,6 @@ const SubjectDetail = () => {
 
     checkAuth();
   }, []);
-
-  // Check shift availability for user's country
-  useEffect(() => {
-    if (user) {
-      const checkShift = async () => {
-        try {
-          const token = localStorage.getItem('accessToken');
-          if (!token) return;
-          
-          const response = await fetch(`${API_BASE_URL}/auth/shift/check`, {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              'Authorization': `Bearer ${token}`
-            },
-            body: JSON.stringify({ countryCode: user.country || 'ZA' })
-          });
-          if (response.ok) {
-            const data = await response.json();
-            console.log('Shift status:', data);
-          }
-        } catch (error) {
-          console.error('Failed to check shift:', error);
-        }
-      };
-      checkShift();
-    }
-  }, [user]);
 
   // If subject not found, redirect
   useEffect(() => {
@@ -194,12 +183,12 @@ const SubjectDetail = () => {
     </div>
   );
 
-  // ===== ENROLLMENT FUNCTION WITH LOGIN CHECK =====
+  // ===== ENROLLMENT FUNCTION WITH FIX =====
   const handleEnroll = async () => {
-    // Play click sound
+    console.log('🚀 ENROLLMENT STARTED');
     playClick();
 
-    // ✅ Check authentication first - show login popup if not logged in
+    // Check authentication first
     if (!authService.isAuthenticated()) {
       setSelectedSubject(subject);
       setShowLoginPrompt(true);
@@ -211,106 +200,17 @@ const SubjectDetail = () => {
       return;
     }
 
-    if (!user) {
-      try {
-        const userData = await authService.getCurrentUser();
-        if (userData) {
-          setUser(userData);
-        } else {
-          setSelectedSubject(subject);
-          setShowLoginPrompt(true);
-          playNotification();
-          return;
-        }
-      } catch (error) {
-        setSelectedSubject(subject);
-        setShowLoginPrompt(true);
-        playNotification();
-        return;
-      }
-    }
-
     setIsEnrolling(true);
     setEnrollmentStatus(null);
 
     try {
       const subjectId = subject.id;
-
-      // Check subscription
-      let subscription = null;
-      try {
-        const token = localStorage.getItem('accessToken');
-        if (token) {
-          const subResponse = await fetch(`${API_BASE_URL}/subscription/me`, {
-            headers: {
-              'Authorization': `Bearer ${token}`
-            }
-          });
-          if (subResponse.ok) {
-            const data = await subResponse.json();
-            subscription = data.subscription;
-          }
-        }
-      } catch (error) {
-        console.error('Failed to check subscription:', error);
-      }
-
-      // No subscription or inactive
-      if (!subscription || subscription.status !== 'active') {
-        playEnrollFail();
-        setEnrollmentStatus({
-          type: 'error',
-          message: 'You need an active subscription to enroll. Please subscribe first.',
-          action: 'upgrade'
-        });
-        setIsEnrolling(false);
-        return;
-      }
-
-      // Silver tier warning
-      if (subscription.tier === 'Tier_Silver') {
-        playNotification();
-        setEnrollmentStatus({
-          type: 'warning',
-          message: 'Silver tier provides archive access only. Upgrade to Gold for live sessions.',
-          action: 'upgrade'
-        });
-      }
-
-      // Check shift for Gold/Platinum
-      if (subscription.tier !== 'Tier_Silver') {
-        try {
-          const token = localStorage.getItem('accessToken');
-          if (token) {
-            const shiftResponse = await fetch(`${API_BASE_URL}/auth/shift/check`, {
-              method: 'POST',
-              headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${token}`
-              },
-              body: JSON.stringify({ countryCode: user?.country || 'ZA' })
-            });
-
-            if (shiftResponse.ok) {
-              const shiftData = await shiftResponse.json();
-              if (!shiftData.authorized) {
-                playNotification();
-                setEnrollmentStatus({
-                  type: 'warning',
-                  message: `No active shift. Sessions available 16:00-23:00 Local Time. Current shift: ${shiftData.shiftName}`,
-                  action: 'schedule'
-                });
-              }
-            }
-          }
-        } catch (error) {
-          console.error('Failed to check shift:', error);
-        }
-      }
-
-      // Send enrollment request
+      console.log('📚 Subject ID:', subjectId);
+      
+      // Get token
       const token = localStorage.getItem('accessToken');
       if (!token) {
+        console.log('❌ No token found');
         playEnrollFail();
         setEnrollmentStatus({
           type: 'error',
@@ -321,6 +221,38 @@ const SubjectDetail = () => {
         return;
       }
 
+      // ===== FIX: Get subscription from JWT token =====
+      const subscriptionFromToken = getSubscriptionFromToken();
+      console.log('📊 Subscription from token:', subscriptionFromToken);
+
+      // Check if user has a subscription tier in the token
+      if (!subscriptionFromToken || !subscriptionFromToken.tier) {
+        console.log('❌ No subscription tier found in token');
+        playEnrollFail();
+        setEnrollmentStatus({
+          type: 'error',
+          message: 'You need an active subscription to enroll. Please subscribe first.',
+          action: 'upgrade'
+        });
+        setIsEnrolling(false);
+        return;
+      }
+
+      console.log('✅ User has subscription tier:', subscriptionFromToken.tier);
+
+      // Silver tier warning
+      const tier = subscriptionFromToken.tier;
+      if (tier === 'TIER_SILVER' || tier === 'Silver' || tier === 'Tier_Silver') {
+        playNotification();
+        setEnrollmentStatus({
+          type: 'warning',
+          message: 'Silver tier provides archive access only. Upgrade to Gold for live sessions.',
+          action: 'upgrade'
+        });
+      }
+
+      // ===== SEND ENROLLMENT REQUEST =====
+      console.log('📤 Sending enrollment request...');
       const enrollmentResponse = await fetch(`${API_BASE_URL}/content/subjects/${subjectId}/enroll`, {
         method: 'POST',
         headers: {
@@ -328,6 +260,8 @@ const SubjectDetail = () => {
           'Authorization': `Bearer ${token}`
         }
       });
+
+      console.log('📡 Enrollment response status:', enrollmentResponse.status);
 
       if (enrollmentResponse.ok) {
         // ===== SUCCESS SOUNDS =====
@@ -347,6 +281,8 @@ const SubjectDetail = () => {
         }, 2000);
       } else if (enrollmentResponse.status === 400) {
         const errorData = await enrollmentResponse.json();
+        console.log('📄 Error data:', errorData);
+        
         if (errorData.error && errorData.error.toLowerCase().includes('already enrolled')) {
           // ===== ALREADY ENROLLED SOUND =====
           playAlreadyEnrolled();
@@ -367,11 +303,12 @@ const SubjectDetail = () => {
         playEnrollFail();
         setEnrollmentStatus({
           type: 'error',
-          message: 'Please login again to enroll.',
+          message: 'Session expired. Please login again.',
           action: 'login'
         });
       } else {
         const errorData = await enrollmentResponse.json();
+        console.log('❌ Error response:', errorData);
         playEnrollFail();
         setEnrollmentStatus({
           type: 'error',
@@ -380,7 +317,7 @@ const SubjectDetail = () => {
         });
       }
     } catch (error) {
-      console.error('Enrollment error:', error);
+      console.error('❌ Enrollment error:', error);
       playEnrollFail();
       setEnrollmentStatus({
         type: 'error',
@@ -439,18 +376,15 @@ const SubjectDetail = () => {
     console.log('📄 Resource clicked:', resource);
     playClick();
     
-    // If there's a direct path, use it
     if (resource.path) {
       playPageTransition();
       navigate(resource.path);
       return;
     }
     
-    // For resources with type, navigate using the ID
     if (resource.id && resource.type) {
       const id = resource.id;
       
-      // Match your App.js routes
       switch (resource.type) {
         case 'video':
           playPageTransition();
@@ -475,7 +409,6 @@ const SubjectDetail = () => {
       return;
     }
     
-    // Fallback to resources page
     playPageTransition();
     navigate('/resources');
   };
@@ -585,15 +518,15 @@ const SubjectDetail = () => {
       {/* Subscription info banner */}
       {user && subscription && (
         <div className="subscription-banner">
-          <span className="subscription-tier">📊 {subscription.tier}</span>
-          <span className="subscription-status">{subscription.status}</span>
-          {subscription.tier === 'Tier_Silver' && (
+          <span className="subscription-tier">📊 {subscription.tier || subscription.subscriptionTier}</span>
+          <span className="subscription-status">{subscription.status || subscription.subscriptionStatus || 'Active'}</span>
+          {(subscription.tier === 'TIER_SILVER' || subscription.tier === 'Silver' || subscription.tier === 'Tier_Silver') && (
             <span className="subscription-note">💡 Upgrade to Gold for live sessions</span>
           )}
         </div>
       )}
 
-      {/* If not logged in, show subtle login hint (not a redirect) */}
+      {/* If not logged in, show subtle login hint */}
       {!user && !isCheckingAuth && (
         <div className="login-prompt-hint">
           <p>🔐 Please <button className="login-link" onClick={() => { playClick(); setShowLoginPrompt(true); }}>login</button> to enroll in this subject.</p>

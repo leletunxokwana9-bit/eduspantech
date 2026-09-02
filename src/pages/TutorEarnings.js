@@ -1,4 +1,4 @@
-// src/pages/TutorEarnings.js
+// src/pages/TutorEarnings.js - WITH DOWNLOAD BUTTONS VISIBLE
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { authService } from '../services/authService';
@@ -12,6 +12,7 @@ const TutorEarnings = () => {
   const [error, setError] = useState('');
   const [earningsData, setEarningsData] = useState(null);
   const [period, setPeriod] = useState('all');
+  const [downloading, setDownloading] = useState(false);
 
   useEffect(() => {
     checkAuthAndFetch();
@@ -28,7 +29,6 @@ const TutorEarnings = () => {
       setLoading(true);
       setError('');
       
-      // Get current user
       const user = await authService.getCurrentUser();
       console.log('👤 Current user:', user);
       
@@ -37,7 +37,6 @@ const TutorEarnings = () => {
         return;
       }
 
-      // Check if user has tutor access
       const isTutor = user.is_tutor === true || user.role === 'tutor' || user.role === 'TUTOR';
       console.log('🔍 Is tutor:', isTutor);
       
@@ -48,8 +47,6 @@ const TutorEarnings = () => {
       }
 
       setTutor(user);
-      
-      // Fetch earnings - using the correct API endpoint
       await fetchEarnings(token);
       
     } catch (error) {
@@ -64,8 +61,6 @@ const TutorEarnings = () => {
       setLoading(true);
       setError('');
       
-      // ✅ CORRECT: Use API_BASE_URL which includes /api
-      // Full URL: https://eduspantech-backend.onrender.com/api/earnings
       const earningsUrl = `${API_BASE_URL}/earnings`;
       console.log('📊 Fetching earnings from:', earningsUrl);
       
@@ -78,21 +73,19 @@ const TutorEarnings = () => {
 
       console.log('📊 Response status:', response.status);
 
-      // Check if response is JSON
       const contentType = response.headers.get('content-type');
       if (!contentType || !contentType.includes('application/json')) {
         const text = await response.text();
         console.error('❌ Non-JSON response:', text.substring(0, 200));
-        throw new Error('Server returned non-JSON response. Please check if the API endpoint is correct.');
+        throw new Error('Server returned non-JSON response.');
       }
 
       const data = await response.json();
       console.log('📊 Earnings response:', data);
 
       if (!response.ok) {
-        // Handle specific error cases
         if (response.status === 404) {
-          throw new Error('Tutor profile not found. Please contact support to set up your tutor account.');
+          throw new Error('Tutor profile not found.');
         } else if (response.status === 401) {
           throw new Error('Session expired. Please log in again.');
         } else {
@@ -100,7 +93,6 @@ const TutorEarnings = () => {
         }
       }
 
-      // Your backend returns: { success: true, earnings: { ... } }
       if (data.success && data.earnings) {
         console.log('✅ Earnings data received:', data.earnings);
         setEarningsData(data.earnings);
@@ -113,6 +105,352 @@ const TutorEarnings = () => {
       setError(error.message || 'Failed to load earnings data');
     } finally {
       setLoading(false);
+    }
+  };
+
+  // ============================================
+  // DOWNLOAD FUNCTIONS
+  // ============================================
+
+  const getFilteredData = () => {
+    if (!earningsData?.history) return [];
+    if (!Array.isArray(earningsData.history)) return [];
+    
+    if (period === 'all') return earningsData.history;
+    
+    const now = new Date();
+    const filterDate = new Date(now);
+    
+    if (period === 'week') {
+      filterDate.setDate(now.getDate() - 7);
+    } else if (period === 'month') {
+      filterDate.setMonth(now.getMonth() - 1);
+    }
+    
+    return earningsData.history.filter(item => {
+      try {
+        const itemDate = new Date(item.date);
+        return !isNaN(itemDate.getTime()) && itemDate >= filterDate;
+      } catch {
+        return false;
+      }
+    });
+  };
+
+  // Generate payslip HTML
+  const generatePayslipHTML = (data, tutorName, filteredData) => {
+    const total = filteredData.reduce((sum, item) => sum + (item.amount || 0), 0);
+    const currentDate = new Date().toLocaleDateString('en-US', {
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric'
+    });
+
+    return `
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <meta charset="UTF-8">
+        <title>Payslip - ${tutorName}</title>
+        <style>
+          * { margin: 0; padding: 0; box-sizing: border-box; }
+          body { 
+            font-family: 'Segoe UI', Arial, sans-serif; 
+            background: #ffffff; 
+            padding: 40px;
+            color: #1a1a2e;
+          }
+          .payslip-container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: #ffffff;
+            border: 2px solid #e2e8f0;
+            border-radius: 12px;
+            padding: 40px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+          }
+          .payslip-header {
+            text-align: center;
+            padding-bottom: 24px;
+            border-bottom: 3px solid #4f46e5;
+            margin-bottom: 24px;
+          }
+          .payslip-header h1 {
+            font-size: 28px;
+            color: #1a1a2e;
+            margin-bottom: 4px;
+          }
+          .payslip-header h1 span {
+            color: #4f46e5;
+          }
+          .payslip-header .subtitle {
+            color: #64748b;
+            font-size: 14px;
+          }
+          .payslip-header .date {
+            color: #94a3b8;
+            font-size: 13px;
+            margin-top: 4px;
+          }
+          .payslip-info {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 16px;
+            background: #f8fafc;
+            padding: 16px 20px;
+            border-radius: 8px;
+            margin-bottom: 24px;
+          }
+          .payslip-info .info-item {
+            display: flex;
+            flex-direction: column;
+          }
+          .payslip-info .info-item .label {
+            font-size: 12px;
+            color: #94a3b8;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+          }
+          .payslip-info .info-item .value {
+            font-size: 16px;
+            font-weight: 600;
+            color: #1a1a2e;
+          }
+          .payslip-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 16px 0 24px;
+          }
+          .payslip-table th {
+            background: #f1f5f9;
+            padding: 12px 16px;
+            text-align: left;
+            font-size: 12px;
+            font-weight: 600;
+            color: #475569;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            border-bottom: 2px solid #e2e8f0;
+          }
+          .payslip-table td {
+            padding: 12px 16px;
+            border-bottom: 1px solid #f1f5f9;
+            font-size: 14px;
+            color: #1a1a2e;
+          }
+          .payslip-table tr:hover td {
+            background: #f8fafc;
+          }
+          .payslip-table .text-right {
+            text-align: right;
+          }
+          .payslip-table .amount {
+            font-weight: 600;
+            color: #059669;
+          }
+          .payslip-summary {
+            display: flex;
+            justify-content: space-between;
+            padding: 16px 20px;
+            background: #f0fdf4;
+            border-radius: 8px;
+            border: 2px solid #86efac;
+            margin-top: 8px;
+          }
+          .payslip-summary .label {
+            font-size: 16px;
+            font-weight: 600;
+            color: #065f46;
+          }
+          .payslip-summary .total {
+            font-size: 24px;
+            font-weight: 700;
+            color: #059669;
+          }
+          .payslip-footer {
+            text-align: center;
+            padding-top: 24px;
+            margin-top: 24px;
+            border-top: 1px solid #e2e8f0;
+            color: #94a3b8;
+            font-size: 13px;
+          }
+          .status-badge {
+            display: inline-block;
+            padding: 2px 10px;
+            border-radius: 12px;
+            font-size: 12px;
+            font-weight: 500;
+          }
+          .status-badge.completed { background: #d1fae5; color: #065f46; }
+          .status-badge.upcoming { background: #dbeafe; color: #1e40af; }
+          .status-badge.pending { background: #fef3c7; color: #92400e; }
+          .status-badge.cancelled { background: #fee2e2; color: #991b1b; }
+          .status-badge.unknown { background: #f1f5f9; color: #475569; }
+          .no-data {
+            text-align: center;
+            padding: 40px 0;
+            color: #94a3b8;
+          }
+          @media print {
+            body { padding: 20px; }
+            .payslip-container { box-shadow: none; border: 1px solid #e2e8f0; }
+          }
+        </style>
+      </head>
+      <body>
+        <div class="payslip-container">
+          <div class="payslip-header">
+            <h1>📊 <span>EduSpantech</span> Payslip</h1>
+            <div class="subtitle">Tutor Earnings Statement</div>
+            <div class="date">Generated: ${currentDate}</div>
+          </div>
+
+          <div class="payslip-info">
+            <div class="info-item">
+              <span class="label">Tutor Name</span>
+              <span class="value">${tutorName || 'N/A'}</span>
+            </div>
+            <div class="info-item">
+              <span class="label">Period</span>
+              <span class="value">${period === 'all' ? 'All Time' : period === 'month' ? 'Last 30 Days' : 'Last 7 Days'}</span>
+            </div>
+            <div class="info-item">
+              <span class="label">Total Sessions</span>
+              <span class="value">${filteredData.length}</span>
+            </div>
+            <div class="info-item">
+              <span class="label">Total Earnings</span>
+              <span class="value">R${total.toFixed(2)}</span>
+            </div>
+          </div>
+
+          <table class="payslip-table">
+            <thead>
+              <tr>
+                <th>Date</th>
+                <th>Student</th>
+                <th>Subject</th>
+                <th>Duration</th>
+                <th>Amount</th>
+                <th>Status</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${filteredData.length > 0 ? filteredData.map(item => `
+                <tr>
+                  <td>${item.date ? new Date(item.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : 'N/A'}</td>
+                  <td>${item.student || 'Student'}</td>
+                  <td>${item.subject || 'Mathematics'}</td>
+                  <td>${item.duration || 60} min</td>
+                  <td class="amount text-right">R${(item.amount || 0).toFixed(2)}</td>
+                  <td><span class="status-badge ${item.status || 'unknown'}">${item.status || 'N/A'}</span></td>
+                </tr>
+              `).join('') : `
+                <tr>
+                  <td colspan="6" class="no-data">No earnings records found for this period.</td>
+                </tr>
+              `}
+            </tbody>
+          </table>
+
+          ${filteredData.length > 0 ? `
+            <div class="payslip-summary">
+              <span class="label">💰 Total Earnings</span>
+              <span class="total">R${total.toFixed(2)}</span>
+            </div>
+          ` : ''}
+
+          <div class="payslip-footer">
+            This is an official statement of earnings from EduSpantech.<br>
+            For any queries, please contact support@eduspantech.com
+          </div>
+        </div>
+      </body>
+      </html>
+    `;
+  };
+
+  // Generate CSV data
+  const generateCSV = (data) => {
+    const headers = ['Date', 'Student', 'Subject', 'Duration (min)', 'Amount (R)', 'Status'];
+    const rows = data.map(item => [
+      item.date ? new Date(item.date).toLocaleDateString() : 'N/A',
+      item.student || 'Student',
+      item.subject || 'Mathematics',
+      item.duration || 60,
+      (item.amount || 0).toFixed(2),
+      item.status || 'Pending'
+    ]);
+    return [headers, ...rows].map(row => row.join(',')).join('\n');
+  };
+
+  // ============================================
+  // DOWNLOAD HANDLERS
+  // ============================================
+
+  const handleDownloadPayslip = async () => {
+    try {
+      setDownloading(true);
+      const filteredData = getFilteredData();
+      
+      if (filteredData.length === 0) {
+        alert('No earnings data available to download for the selected period.');
+        setDownloading(false);
+        return;
+      }
+
+      const tutorName = tutor?.name || 'Tutor';
+      const html = generatePayslipHTML(earningsData, tutorName, filteredData);
+      
+      const blob = new Blob([html], { type: 'text/html' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      const dateStr = new Date().toISOString().slice(0, 10);
+      link.download = `payslip-${tutorName.replace(/\s+/g, '-')}-${dateStr}.html`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+      
+      setDownloading(false);
+    } catch (error) {
+      console.error('❌ Download payslip error:', error);
+      alert('Failed to download payslip. Please try again.');
+      setDownloading(false);
+    }
+  };
+
+  const handleDownloadCSV = async () => {
+    try {
+      setDownloading(true);
+      const filteredData = getFilteredData();
+      
+      if (filteredData.length === 0) {
+        alert('No earnings data available to download for the selected period.');
+        setDownloading(false);
+        return;
+      }
+
+      const csv = generateCSV(filteredData);
+      const blob = new Blob([csv], { type: 'text/csv' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      const tutorName = tutor?.name || 'Tutor';
+      const dateStr = new Date().toISOString().slice(0, 10);
+      link.download = `earnings-${tutorName.replace(/\s+/g, '-')}-${dateStr}.csv`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+      
+      setDownloading(false);
+    } catch (error) {
+      console.error('❌ Download CSV error:', error);
+      alert('Failed to download CSV. Please try again.');
+      setDownloading(false);
     }
   };
 
@@ -137,28 +475,7 @@ const TutorEarnings = () => {
   };
 
   const getFilteredHistory = () => {
-    if (!earningsData?.history) return [];
-    if (!Array.isArray(earningsData.history)) return [];
-    
-    if (period === 'all') return earningsData.history;
-    
-    const now = new Date();
-    const filterDate = new Date(now);
-    
-    if (period === 'week') {
-      filterDate.setDate(now.getDate() - 7);
-    } else if (period === 'month') {
-      filterDate.setMonth(now.getMonth() - 1);
-    }
-    
-    return earningsData.history.filter(item => {
-      try {
-        const itemDate = new Date(item.date);
-        return !isNaN(itemDate.getTime()) && itemDate >= filterDate;
-      } catch {
-        return false;
-      }
-    });
+    return getFilteredData();
   };
 
   const handleRefresh = () => {
@@ -259,29 +576,47 @@ const TutorEarnings = () => {
           </div>
         </div>
 
-        {/* History Table */}
+        {/* History Table with Download Buttons */}
         <div className="earnings-history">
           <div className="history-header">
             <h3>📋 Earnings History</h3>
-            <div className="period-selector">
-              <button 
-                className={`period-btn ${period === 'all' ? 'active' : ''}`}
-                onClick={() => setPeriod('all')}
-              >
-                All
-              </button>
-              <button 
-                className={`period-btn ${period === 'month' ? 'active' : ''}`}
-                onClick={() => setPeriod('month')}
-              >
-                Month
-              </button>
-              <button 
-                className={`period-btn ${period === 'week' ? 'active' : ''}`}
-                onClick={() => setPeriod('week')}
-              >
-                Week
-              </button>
+            <div className="history-controls">
+              <div className="period-selector">
+                <button 
+                  className={`period-btn ${period === 'all' ? 'active' : ''}`}
+                  onClick={() => setPeriod('all')}
+                >
+                  All
+                </button>
+                <button 
+                  className={`period-btn ${period === 'month' ? 'active' : ''}`}
+                  onClick={() => setPeriod('month')}
+                >
+                  Month
+                </button>
+                <button 
+                  className={`period-btn ${period === 'week' ? 'active' : ''}`}
+                  onClick={() => setPeriod('week')}
+                >
+                  Week
+                </button>
+              </div>
+              <div className="download-buttons">
+                <button 
+                  className="download-btn payslip-btn"
+                  onClick={handleDownloadPayslip}
+                  disabled={downloading || filteredHistory.length === 0}
+                >
+                  {downloading ? '⏳' : '📄'} Payslip
+                </button>
+                <button 
+                  className="download-btn csv-btn"
+                  onClick={handleDownloadCSV}
+                  disabled={downloading || filteredHistory.length === 0}
+                >
+                  {downloading ? '⏳' : '📊'} CSV
+                </button>
+              </div>
             </div>
           </div>
 

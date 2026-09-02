@@ -174,7 +174,7 @@ const Checkout = () => {
   };
 
   // ============================================
-  // ALERT MODAL
+  // ALERT MODAL - FIXED WITH OVERLAY
   // ============================================
   const AlertModal = () => {
     if (!showAlertModal) return null;
@@ -182,47 +182,97 @@ const Checkout = () => {
     return (
       <div className="checkout-modal-overlay" onClick={() => setShowAlertModal(false)}>
         <div className="checkout-modal alert-modal" onClick={(e) => e.stopPropagation()}>
-          <div className="checkout-modal-header alert-header">
-            <h2>{alertTitle || '⚠️ Notice'}</h2>
-            <button className="checkout-modal-close" onClick={() => setShowAlertModal(false)}>×</button>
-          </div>
-          <div className="checkout-modal-body alert-body">
-            <p>{alertMessage}</p>
-            <button 
-              className="btn-primary alert-btn" 
-              onClick={() => setShowAlertModal(false)}
-            >
-              Got it
-            </button>
-          </div>
+          <button className="checkout-modal-close" onClick={() => setShowAlertModal(false)}>×</button>
+          <div className="alert-icon">⚠️</div>
+          <h2 className="alert-title">{alertTitle || 'Notice'}</h2>
+          <p className="alert-message">{alertMessage}</p>
+          <button 
+            className="btn-primary alert-btn" 
+            onClick={() => setShowAlertModal(false)}
+          >
+            Got it
+          </button>
         </div>
       </div>
     );
   };
 
   // ============================================
-  // MODAL COMPONENT - MATCHES TUTOR POPUP STYLE
+  // TERMS MODAL - FIXED WITH OVERLAY
   // ============================================
-  const Modal = ({ isOpen, onClose, title, children }) => {
-    if (!isOpen) return null;
+  const TermsModal = () => {
+    if (!showTermsModal) return null;
+    const terms = TermsOfService.sections || [];
+    const effectiveDate = TermsOfService.effectiveDate || '2026-07-09';
 
     return (
-      <div className="checkout-modal-overlay" onClick={onClose}>
-        <div className="checkout-modal" onClick={(e) => e.stopPropagation()}>
-          <div className="checkout-modal-header">
-            <h2>{title}</h2>
-            <button className="checkout-modal-close" onClick={onClose}>×</button>
+      <div className="checkout-modal-overlay" onClick={() => setShowTermsModal(false)}>
+        <div className="checkout-modal terms-modal" onClick={(e) => e.stopPropagation()}>
+          <button className="checkout-modal-close" onClick={() => setShowTermsModal(false)}>×</button>
+          <h2 className="modal-title">📋 Terms of Service</h2>
+          <div className="modal-scroll-content">
+            <div className="last-updated">
+              Last Updated: {effectiveDate}
+            </div>
+            {terms.map((section) => (
+              <div key={section.id} className="section">
+                <h3>{section.title}</h3>
+                {section.content.map((paragraph, index) => (
+                  <p key={index}>{paragraph}</p>
+                ))}
+              </div>
+            ))}
           </div>
-          <div className="checkout-modal-body">
-            {children}
-          </div>
+          <button 
+            className="btn-primary modal-close-btn" 
+            onClick={() => setShowTermsModal(false)}
+          >
+            Close
+          </button>
         </div>
       </div>
     );
   };
 
   // ============================================
-  // PAYMENT SUCCESS MODAL
+  // PRIVACY MODAL - FIXED WITH OVERLAY
+  // ============================================
+  const PrivacyModal = () => {
+    if (!showPrivacyModal) return null;
+    const privacy = PrivacyPolicy.sections || [];
+    const effectiveDate = PrivacyPolicy.effectiveDate || '2026-07-09';
+
+    return (
+      <div className="checkout-modal-overlay" onClick={() => setShowPrivacyModal(false)}>
+        <div className="checkout-modal privacy-modal" onClick={(e) => e.stopPropagation()}>
+          <button className="checkout-modal-close" onClick={() => setShowPrivacyModal(false)}>×</button>
+          <h2 className="modal-title">🔒 Privacy Policy</h2>
+          <div className="modal-scroll-content">
+            <div className="last-updated">
+              Last Updated: {effectiveDate}
+            </div>
+            {privacy.map((section) => (
+              <div key={section.id} className="section">
+                <h3>{section.title}</h3>
+                {section.content.map((paragraph, index) => (
+                  <p key={index}>{paragraph}</p>
+                ))}
+              </div>
+            ))}
+          </div>
+          <button 
+            className="btn-primary modal-close-btn" 
+            onClick={() => setShowPrivacyModal(false)}
+          >
+            Close
+          </button>
+        </div>
+      </div>
+    );
+  };
+
+  // ============================================
+  // PAYMENT SUCCESS MODAL - FIXED WITH OVERLAY
   // ============================================
   const PaymentSuccessModal = () => {
     if (!showPaymentSuccessModal) return null;
@@ -230,91 +280,40 @@ const Checkout = () => {
     return (
       <div className="checkout-modal-overlay" onClick={() => {}}>
         <div className="checkout-modal success-modal" onClick={(e) => e.stopPropagation()}>
-          <div className="checkout-modal-header success-header">
-            <div className="success-icon">✅</div>
-            <h2>Payment Successful!</h2>
-            <button className="checkout-modal-close" onClick={handleSuccessModalClose}>×</button>
-          </div>
-          <div className="checkout-modal-body success-body">
-            <div className="success-message">
-              <p>Your subscription to <strong>{selectedPlan?.name}</strong> has been activated!</p>
-              <p className="success-details">
-                Transaction ID: <span className="transaction-id">{paymentResult?.transaction || 'N/A'}</span>
-              </p>
-              <div className="success-plan-details">
-                <div className="success-plan-item">
-                  <span>Plan</span>
-                  <strong>{selectedPlan?.name}</strong>
-                </div>
-                <div className="success-plan-item">
-                  <span>Price</span>
-                  <strong>{selectedPlan?.price}{selectedPlan?.period}</strong>
-                </div>
-                <div className="success-plan-item">
-                  <span>User</span>
-                  <strong>{formData.fullName}</strong>
-                </div>
-                <div className="success-plan-item">
-                  <span>Email</span>
-                  <strong>{formData.email}</strong>
-                </div>
-              </div>
+          <button className="checkout-modal-close" onClick={handleSuccessModalClose}>×</button>
+          <div className="success-icon">✅</div>
+          <h2 className="success-title">Payment Successful!</h2>
+          <p className="success-message">
+            Your subscription to <strong>{selectedPlan?.name}</strong> has been activated!
+          </p>
+          <div className="success-details">
+            <div className="success-detail-item">
+              <span>Transaction ID</span>
+              <strong>{paymentResult?.transaction || 'N/A'}</strong>
             </div>
-            <button className="btn-primary success-btn" onClick={handleSuccessModalClose}>
-              🚀 Go to Dashboard
-            </button>
-            <p className="success-note">You can also close this window and continue browsing.</p>
+            <div className="success-detail-item">
+              <span>Plan</span>
+              <strong>{selectedPlan?.name}</strong>
+            </div>
+            <div className="success-detail-item">
+              <span>Price</span>
+              <strong>{selectedPlan?.price}{selectedPlan?.period}</strong>
+            </div>
+            <div className="success-detail-item">
+              <span>User</span>
+              <strong>{formData.fullName}</strong>
+            </div>
+            <div className="success-detail-item">
+              <span>Email</span>
+              <strong>{formData.email}</strong>
+            </div>
           </div>
+          <button className="btn-primary success-btn" onClick={handleSuccessModalClose}>
+            🚀 Go to Dashboard
+          </button>
+          <p className="success-note">You can also close this window and continue browsing.</p>
         </div>
       </div>
-    );
-  };
-
-  // ============================================
-  // TERMS CONTENT
-  // ============================================
-  const TermsContent = () => {
-    const terms = TermsOfService.sections || [];
-    const effectiveDate = TermsOfService.effectiveDate || '2026-07-09';
-
-    return (
-      <>
-        <div className="last-updated">
-          Last Updated: {effectiveDate}
-        </div>
-        {terms.map((section) => (
-          <div key={section.id} className="section">
-            <h2>{section.title}</h2>
-            {section.content.map((paragraph, index) => (
-              <p key={index}>{paragraph}</p>
-            ))}
-          </div>
-        ))}
-      </>
-    );
-  };
-
-  // ============================================
-  // PRIVACY CONTENT
-  // ============================================
-  const PrivacyContent = () => {
-    const privacy = PrivacyPolicy.sections || [];
-    const effectiveDate = PrivacyPolicy.effectiveDate || '2026-07-09';
-
-    return (
-      <>
-        <div className="last-updated">
-          Last Updated: {effectiveDate}
-        </div>
-        {privacy.map((section) => (
-          <div key={section.id} className="section">
-            <h2>{section.title}</h2>
-            {section.content.map((paragraph, index) => (
-              <p key={index}>{paragraph}</p>
-            ))}
-          </div>
-        ))}
-      </>
     );
   };
 
@@ -545,17 +544,10 @@ const Checkout = () => {
 
   return (
     <div className="checkout-page">
-      {/* ===== MODALS ===== */}
+      {/* ===== MODALS - ALL WITH PROPER OVERLAYS ===== */}
       <AlertModal />
-      
-      <Modal isOpen={showTermsModal} onClose={() => setShowTermsModal(false)} title="Terms of Service">
-        <TermsContent />
-      </Modal>
-
-      <Modal isOpen={showPrivacyModal} onClose={() => setShowPrivacyModal(false)} title="Privacy Policy">
-        <PrivacyContent />
-      </Modal>
-
+      <TermsModal />
+      <PrivacyModal />
       <PaymentSuccessModal />
 
       <div className="checkout-container">

@@ -16,28 +16,20 @@ const Login = () => {
   const [resendSuccess, setResendSuccess] = useState(false);
   const [loginRole, setLoginRole] = useState('student');
   const [roleError, setRoleError] = useState('');
+  const [isCheckingSession, setIsCheckingSession] = useState(true);
 
   // ============================================
-  // ROBUST TUTOR CHECK - HANDLES ALL CASES
+  // ROBUST TUTOR CHECK
   // ============================================
   const checkIsTutor = (userData) => {
     if (!userData) return false;
     
-    console.log('🔍 CHECKING USER DATA:', userData);
-    console.log('🔍 is_tutor:', userData.is_tutor);
-    console.log('🔍 role:', userData.role);
-    
-    // Check if data is nested
     let data = userData;
     if (userData.user) {
-      console.log('🔍 Data is nested in user object');
       data = userData.user;
-      console.log('🔍 Nested is_tutor:', data.is_tutor);
-      console.log('🔍 Nested role:', data.role);
     }
     
-    // Check multiple possible fields
-    const isTutor = 
+    return (
       data.is_tutor === true ||
       data.is_tutor === 'true' ||
       data.role === 'tutor' ||
@@ -45,42 +37,71 @@ const Login = () => {
       data.role === 'instructor' ||
       data.userType === 'tutor' ||
       data.type === 'tutor' ||
-      (data.roles && data.roles.includes('tutor'));
-    
-    console.log('🔍 FINAL RESULT - isTutor:', isTutor);
-    
-    return isTutor;
+      (data.roles && data.roles.includes('tutor'))
+    );
   };
 
+  // ============================================
+  // CHECK EXISTING SESSION ON MOUNT
+  // ============================================
   useEffect(() => {
-    const checkAuth = async () => {
-      const accessToken = localStorage.getItem('accessToken');
-      if (accessToken) {
+    const checkExistingSession = async () => {
+      setIsCheckingSession(true);
+      
+      const token = localStorage.getItem('accessToken');
+      if (token) {
         try {
           const user = await authService.getCurrentUser();
-          if (user) {
+          if (user && user.name) {
+            // User is already logged in
             const isTutor = checkIsTutor(user);
             
-            console.log('🔍 checkAuth - isTutor:', isTutor);
+            const confirmSwitch = window.confirm(
+              `You are currently logged in as "${user.name}".\n\nDo you want to switch accounts?`
+            );
             
-            if (isTutor) {
-              navigate('/tutor/dashboard');
+            if (confirmSwitch) {
+              // Log out and stay on login page
+              localStorage.removeItem('accessToken');
+              localStorage.removeItem('refreshToken');
+              localStorage.removeItem('user');
+              localStorage.removeItem('userRole');
+              setIsCheckingSession(false);
             } else {
-              navigate('/dashboard');
+              // Redirect to dashboard
+              if (isTutor) {
+                navigate('/tutor/dashboard');
+              } else {
+                navigate('/dashboard');
+              }
             }
-            return;
+          } else {
+            // Invalid user data - clear and let them login
+            localStorage.removeItem('accessToken');
+            localStorage.removeItem('refreshToken');
+            localStorage.removeItem('user');
+            localStorage.removeItem('userRole');
+            setIsCheckingSession(false);
           }
         } catch (err) {
+          // Token invalid - clear and let them login
           localStorage.removeItem('accessToken');
           localStorage.removeItem('refreshToken');
           localStorage.removeItem('user');
           localStorage.removeItem('userRole');
+          setIsCheckingSession(false);
         }
+      } else {
+        setIsCheckingSession(false);
       }
     };
-    checkAuth();
+    
+    checkExistingSession();
   }, [navigate]);
 
+  // ============================================
+  // HANDLE LOGIN
+  // ============================================
   const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
@@ -91,9 +112,6 @@ const Login = () => {
     try {
       const response = await authService.login(email, password);
       
-      console.log('🔍 LOGIN RESPONSE:', response);
-      
-      // Check if login was successful
       if (!response || !response.success) {
         if (response?.needsVerification) {
           setNeedsVerification(true);
@@ -107,23 +125,10 @@ const Login = () => {
       }
 
       const userData = response.user;
-      
-      // ============================================
-      // CHECK IF USER IS A TUTOR
-      // ============================================
       const isTutor = checkIsTutor(userData);
-      
-      console.log('🔍 Login Debug - FINAL:', {
-        isTutor: isTutor,
-        loginRole: loginRole,
-        email: email
-      });
 
-      // ============================================
-      // BLOCK: Tutor trying to login as Student
-      // ============================================
+      // Role blocking
       if (loginRole === 'student' && isTutor) {
-        console.log('🚫 BLOCKED: Tutor trying to login as Student');
         setRoleError('❌ This is a TUTOR account. Please select "Tutor" to login.');
         setLoading(false);
         localStorage.removeItem('accessToken');
@@ -133,11 +138,7 @@ const Login = () => {
         return;
       }
       
-      // ============================================
-      // BLOCK: Student trying to login as Tutor
-      // ============================================
       if (loginRole === 'tutor' && !isTutor) {
-        console.log('🚫 BLOCKED: Student trying to login as Tutor');
         setRoleError('❌ This is a STUDENT account. Please select "Student" to login.');
         setLoading(false);
         localStorage.removeItem('accessToken');
@@ -147,16 +148,9 @@ const Login = () => {
         return;
       }
 
-      // ============================================
-      // SUCCESS: Valid login with correct role
-      // ============================================
-      console.log('✅ SUCCESS: Login as:', isTutor ? 'TUTOR' : 'STUDENT');
+      // ✅ SUCCESS
       localStorage.setItem('userRole', isTutor ? 'tutor' : 'student');
       
-      // ✅ Dispatch auth change event for Navbar and other components
-      window.dispatchEvent(new Event('authChange'));
-      
-      // Navigate based on ACTUAL role
       if (isTutor) {
         navigate('/tutor/dashboard');
       } else {
@@ -199,6 +193,50 @@ const Login = () => {
     setRoleError('');
     setError('');
   };
+
+  // Show loading while checking session
+  if (isCheckingSession) {
+    return (
+      <div className="login-wrapper">
+        <div className="login-bg">
+          <div className="math-symbols">
+            <span className="math-symbol">∫</span>
+            <span className="math-symbol">∑</span>
+            <span className="math-symbol">π</span>
+            <span className="math-symbol">√</span>
+            <span className="math-symbol">∞</span>
+            <span className="math-symbol">∂</span>
+            <span className="math-symbol">Δ</span>
+            <span className="math-symbol">θ</span>
+          </div>
+          <div className="gradient-orb orb-1"></div>
+          <div className="gradient-orb orb-2"></div>
+          <div className="gradient-orb orb-3"></div>
+        </div>
+        <div className="login-container">
+          <div className="login-right" style={{ maxWidth: '500px', margin: '0 auto' }}>
+            <div className="login-card" style={{ textAlign: 'center', padding: '60px 40px' }}>
+              <div className="loading-spinner" style={{ 
+                width: '40px', 
+                height: '40px', 
+                border: '3px solid rgba(79,70,229,0.1)', 
+                borderTopColor: '#4f46e5', 
+                borderRadius: '50%', 
+                animation: 'spin 0.8s linear infinite', 
+                margin: '0 auto 16px' 
+              }}></div>
+              <p style={{ color: '#94a3b8' }}>Checking your session...</p>
+              <style>{`
+                @keyframes spin {
+                  to { transform: rotate(360deg); }
+                }
+              `}</style>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="login-wrapper">

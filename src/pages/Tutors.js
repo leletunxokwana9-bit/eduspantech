@@ -1,4 +1,4 @@
-// src/pages/Tutors.js - COMPLETE WITH IMPROVED NO-VIDEO PLACEHOLDER
+// src/pages/Tutors.js - COMPLETE WITH FULL PAGE BACKGROUND FIX
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { tutorService } from '../services/tutorService';
@@ -658,111 +658,116 @@ const Tutors = () => {
     return <div className="page-error">Error: {error}</div>;
   }
 
+  // ============================================
+  // MAIN RENDER WITH WRAPPER FOR FULL BACKGROUND
+  // ============================================
   return (
-    <div className="tutors-page">
+    <div className="tutors-page-wrapper">
       {showLoginPrompt && <LoginPrompt />}
       {showBookingModal && <BookingModal />}
       {showTutorModal && <TutorModal />}
       {showVideoModal && <VideoModal />}
       <SuccessModal />
 
-      <div className="tutors-page-header">
-        <h1>👨‍🏫 Our Expert Tutors</h1>
-        <p>{totalTutors} Centralised Tutors • 24/7 Global Coverage</p>
-        {!isAuthenticated && (
-          <div className="tutors-auth-banner">
-            <span>🔐 Please <button onClick={() => navigate('/login', { state: { from: '/tutors' } })}>login</button> to book sessions</span>
-          </div>
-        )}
-      </div>
+      <div className="tutors-page">
+        <div className="tutors-page-header">
+          <h1>👨‍🏫 Our Expert Tutors</h1>
+          <p>{totalTutors} Centralised Tutors • 24/7 Global Coverage</p>
+          {!isAuthenticated && (
+            <div className="tutors-auth-banner">
+              <span>🔐 Please <button onClick={() => navigate('/login', { state: { from: '/tutors' } })}>login</button> to book sessions</span>
+            </div>
+          )}
+        </div>
 
-      <div className="tutors-page-grid">
-        {tutors && tutors.length > 0 ? (
-          tutors.map((shift) => (
-            <div key={shift.id || shift.name} className="tutors-page-shift">
-              <div className="tutors-page-shift-header">
-                <h3>{shift.name}</h3>
-                <span className="tutors-page-shift-time">{shift.time}</span>
-              </div>
-              <div className="tutors-page-hubs">
-                {shift.hubs?.map((hub, idx) => (
-                  <span key={idx}>{hub}</span>
-                ))}
-              </div>
-              <div className="tutors-page-tutor-list">
-                {shift.tutors && shift.tutors.length > 0 ? (
-                  shift.tutors.map((tutor) => (
-                    <div 
-                      key={tutor.id} 
-                      className="tutors-page-tutor-card"
-                      onClick={() => handleTutorCardClick(tutor)}
-                    >
-                      {/* ===== VIDEO THUMBNAIL ===== */}
-                      <div className="tutor-card-video-section">
-                        {renderVideoThumbnail(tutor)}
-                      </div>
-
-                      <div className="tutors-page-tutor-avatar">
-                        {renderAvatar(tutor)}
-                      </div>
-                      <div className="tutors-page-tutor-info">
-                        <div className="tutors-page-tutor-name-row">
-                          <h4>{tutor.name}</h4>
-                          {tutor.tier && (
-                            <span className="tutors-page-tutor-tier">{tutor.tier}</span>
-                          )}
+        <div className="tutors-page-grid">
+          {tutors && tutors.length > 0 ? (
+            tutors.map((shift) => (
+              <div key={shift.id || shift.name} className="tutors-page-shift">
+                <div className="tutors-page-shift-header">
+                  <h3>{shift.name}</h3>
+                  <span className="tutors-page-shift-time">{shift.time}</span>
+                </div>
+                <div className="tutors-page-hubs">
+                  {shift.hubs?.map((hub, idx) => (
+                    <span key={idx}>{hub}</span>
+                  ))}
+                </div>
+                <div className="tutors-page-tutor-list">
+                  {shift.tutors && shift.tutors.length > 0 ? (
+                    shift.tutors.map((tutor) => (
+                      <div 
+                        key={tutor.id} 
+                        className="tutors-page-tutor-card"
+                        onClick={() => handleTutorCardClick(tutor)}
+                      >
+                        {/* ===== VIDEO THUMBNAIL ===== */}
+                        <div className="tutor-card-video-section">
+                          {renderVideoThumbnail(tutor)}
                         </div>
-                        {tutor.subjects && tutor.subjects.length > 0 && (
-                          <div className="tutors-page-tutor-subjects">
-                            {tutor.subjects.slice(0, 3).map((subject, idx) => (
-                              <span key={idx}>{subject}</span>
-                            ))}
-                            {tutor.subjects.length > 3 && (
-                              <span>+{tutor.subjects.length - 3}</span>
+
+                        <div className="tutors-page-tutor-avatar">
+                          {renderAvatar(tutor)}
+                        </div>
+                        <div className="tutors-page-tutor-info">
+                          <div className="tutors-page-tutor-name-row">
+                            <h4>{tutor.name}</h4>
+                            {tutor.tier && (
+                              <span className="tutors-page-tutor-tier">{tutor.tier}</span>
                             )}
                           </div>
-                        )}
-                      </div>
-                      <div className="tutor-card-actions">
-                        <button 
-                          className="book-session-btn"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleBookSession(tutor);
-                          }}
-                        >
-                          📚 Book Session
-                        </button>
-                        {hasVideo(tutor) && (
+                          {tutor.subjects && tutor.subjects.length > 0 && (
+                            <div className="tutors-page-tutor-subjects">
+                              {tutor.subjects.slice(0, 3).map((subject, idx) => (
+                                <span key={idx}>{subject}</span>
+                              ))}
+                              {tutor.subjects.length > 3 && (
+                                <span>+{tutor.subjects.length - 3}</span>
+                              )}
+                            </div>
+                          )}
+                        </div>
+                        <div className="tutor-card-actions">
                           <button 
-                            className="watch-intro-btn"
-                            onClick={(e) => handleWatchIntro(tutor, e)}
+                            className="book-session-btn"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleBookSession(tutor);
+                            }}
                           >
-                            ▶ Watch Intro
+                            📚 Book Session
                           </button>
-                        )}
+                          {hasVideo(tutor) && (
+                            <button 
+                              className="watch-intro-btn"
+                              onClick={(e) => handleWatchIntro(tutor, e)}
+                            >
+                              ▶ Watch Intro
+                            </button>
+                          )}
+                        </div>
                       </div>
+                    ))
+                  ) : (
+                    <div className="tutors-page-empty">
+                      <p>No tutors available for this shift.</p>
+                      <p className="empty-sub">Check back during shift hours.</p>
                     </div>
-                  ))
-                ) : (
-                  <div className="tutors-page-empty">
-                    <p>No tutors available for this shift.</p>
-                    <p className="empty-sub">Check back during shift hours.</p>
-                  </div>
-                )}
+                  )}
+                </div>
               </div>
+            ))
+          ) : (
+            <div className="tutors-page-empty-state">
+              <p>No tutors available at the moment.</p>
+              <p className="empty-sub">Please check back later.</p>
             </div>
-          ))
-        ) : (
-          <div className="tutors-page-empty-state">
-            <p>No tutors available at the moment.</p>
-            <p className="empty-sub">Please check back later.</p>
-          </div>
-        )}
-      </div>
+          )}
+        </div>
 
-      <div className="tutors-page-total">
-        {tutors.length} Shifts × {tutors.reduce((acc, s) => acc + (s.tutors?.length || 0), 0)} Tutors = {totalTutors} Centralised Tutors Total
+        <div className="tutors-page-total">
+          {tutors.length} Shifts × {tutors.reduce((acc, s) => acc + (s.tutors?.length || 0), 0)} Tutors = {totalTutors} Centralised Tutors Total
+        </div>
       </div>
     </div>
   );

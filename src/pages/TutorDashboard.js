@@ -110,12 +110,54 @@ const TutorDashboard = () => {
   };
 
   // ============================================
-  // FETCH STUDENT DETAILS - FIXED ENDPOINT
+  // GOOGLE CALENDAR URL GENERATOR
+  // ============================================
+  const generateGoogleCalendarUrl = (session) => {
+    try {
+      const studentName = students[session.user_id]?.name || session.student_name || 'Student';
+      
+      // Parse and format the date
+      const startDate = new Date(session.date);
+      if (isNaN(startDate.getTime())) {
+        console.error('Invalid date:', session.date);
+        return '#';
+      }
+      
+      // Calculate end time based on duration
+      const durationMinutes = session.duration || 60;
+      const endDate = new Date(startDate.getTime() + durationMinutes * 60000);
+      
+      // Format for Google Calendar (YYYYMMDDTHHMMSSZ)
+      const formatGoogleDate = (date) => {
+        return date.toISOString().replace(/-|:|\.\d+/g, '');
+      };
+      
+      const startStr = formatGoogleDate(startDate);
+      const endStr = formatGoogleDate(endDate);
+      
+      // Build the URL parameters
+      const params = new URLSearchParams({
+        action: 'TEMPLATE',
+        text: `${session.topic || 'Tutoring Session'} - ${studentName}`,
+        dates: `${startStr}/${endStr}`,
+        details: `Session with ${studentName}\nTopic: ${session.topic || 'General Tutoring'}\n${session.notes ? `Notes: ${session.notes}` : ''}\n\nPowered by EduSpantech`,
+        location: 'EduSpantech Platform',
+        ctz: 'America/New_York'
+      });
+      
+      return `https://calendar.google.com/calendar/render?${params.toString()}`;
+    } catch (error) {
+      console.error('Error generating calendar URL:', error);
+      return '#';
+    }
+  };
+
+  // ============================================
+  // FETCH STUDENT DETAILS
   // ============================================
   const fetchStudentDetails = async (studentId) => {
     try {
       const token = localStorage.getItem('accessToken');
-      // ✅ FIXED: Use /auth/user/ instead of /users/
       const response = await fetch(`${API_BASE_URL}/auth/user/${studentId}`, {
         headers: {
           'Authorization': `Bearer ${token}`
@@ -189,7 +231,6 @@ const TutorDashboard = () => {
   const renderStudentAvatar = (studentId, studentName) => {
     const student = students[studentId];
     
-    // Check if student has avatar
     if (student?.avatar) {
       return (
         <img 
@@ -219,7 +260,6 @@ const TutorDashboard = () => {
       );
     }
     
-    // Fallback to initials
     const name = student?.name || studentName || 'Student';
     const initial = name.charAt(0).toUpperCase();
     const colors = ['#4f46e5', '#7c3aed', '#059669', '#10b981', '#dc2626', '#f59e0b', '#8b5cf6', '#ec4899'];
@@ -505,6 +545,7 @@ const TutorDashboard = () => {
             getFilteredBookings().map((booking) => {
               const statusInfo = renderStatusBadge(booking.status);
               const studentName = students[booking.user_id]?.name || booking.student_name || 'Student';
+              const calendarUrl = generateGoogleCalendarUrl(booking);
               
               return (
                 <div key={booking.id} className="session-card">
@@ -555,6 +596,15 @@ const TutorDashboard = () => {
                         >
                           Cancel
                         </button>
+                        {/* GOOGLE CALENDAR BUTTON */}
+                        <a 
+                          href={calendarUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="btn-google-calendar"
+                        >
+                          📅 Add to Calendar
+                        </a>
                       </>
                     )}
                     
@@ -573,22 +623,53 @@ const TutorDashboard = () => {
                         >
                           Cancel
                         </button>
+                        {/* GOOGLE CALENDAR BUTTON */}
+                        <a 
+                          href={calendarUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="btn-google-calendar"
+                        >
+                          📅 Add to Calendar
+                        </a>
                       </>
                     )}
                     
                     {/* IN PROGRESS - Show Resume button */}
                     {(booking.status === 'in-progress' || booking.status === 'started') && (
-                      <button 
-                        className="btn-start"
-                        onClick={() => handleStartSession(booking)}
-                      >
-                        ▶️ Resume Session
-                      </button>
+                      <>
+                        <button 
+                          className="btn-start"
+                          onClick={() => handleStartSession(booking)}
+                        >
+                          ▶️ Resume Session
+                        </button>
+                        {/* GOOGLE CALENDAR BUTTON */}
+                        <a 
+                          href={calendarUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="btn-google-calendar"
+                        >
+                          📅 Add to Calendar
+                        </a>
+                      </>
                     )}
                     
                     {/* COMPLETED */}
                     {(booking.status === 'completed' || booking.status === 'ended') && (
-                      <span className="session-completed-badge">✅ Completed</span>
+                      <>
+                        <span className="session-completed-badge">✅ Completed</span>
+                        {/* GOOGLE CALENDAR BUTTON */}
+                        <a 
+                          href={calendarUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="btn-google-calendar"
+                        >
+                          📅 Add to Calendar
+                        </a>
+                      </>
                     )}
                     
                     {/* CANCELLED */}

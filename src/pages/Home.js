@@ -1,8 +1,8 @@
 // src/pages/Home.js
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { authService } from '../services/authService';
-import { supabase } from '../services/supabaseClient'; // Import your Supabase client
+import { supabase } from '../services/supabaseClient';
 import Pricing from '../components/home/Pricing/Pricing';
 import './Home.css';
 
@@ -54,24 +54,47 @@ const MathematicalOrbit = () => {
 };
 
 // ============================================
-// FOOTER COMPONENT (now fetches from DB)
+// FALLBACK TEAM MEMBERS DATA
 // ============================================
-const Footer = ({ siteConfig, footerLinks }) => {
-  // Group links by category
+const getFallbackTeamMembers = () => {
+  return [
+    {
+      id: 1,
+      name: 'Leletu Nxokwana',
+      role: 'Full Stack Developer',
+      bio: 'Lead developer and architect of the EduSpantech platform. Passionate about creating scalable educational technology solutions that make mathematics accessible to students worldwide.',
+      photo_url: null,
+      specialties: ['React', 'Node.js', 'AWS', 'PostgreSQL', 'TypeScript'],
+      years_experience: 5,
+      fun_fact: '🎮 Can solve a Rubik\'s cube in under 30 seconds'
+    },
+    {
+      id: 2,
+      name: 'Dr. Garth Van Schalkwyk',
+      role: 'Director & Mathematics Researcher',
+      bio: 'Dr. Garth J. van Schalkwyk serves as an Extended Curriculum Programme (ECP) lecturer in the Department of Mathematics and Applied Mathematics at the University of the Western Cape (UWC). He completed his PhD at UWC in 2019, specializing in financial mathematics, epidemiological forecasting, risk management, and optimal control.',
+      photo_url: null,
+      specialties: ['Financial Mathematics', 'Epidemiological Forecasting', 'Risk Management', 'Optimal Control'],
+      years_experience: 15,
+      fun_fact: '📚 Published numerous research papers on mathematical biology and disease modeling'
+    }
+  ];
+};
+
+// ============================================
+// ENHANCED FOOTER COMPONENT
+// ============================================
+const EnhancedFooter = ({ siteConfig, footerLinks }) => {
+  const [email, setEmail] = useState('');
+  const [subscribed, setSubscribed] = useState(false);
+  const [selectedRegion, setSelectedRegion] = useState('Global');
+
   const groupedLinks = footerLinks.reduce((acc, link) => {
     if (!acc[link.category]) acc[link.category] = [];
     acc[link.category].push(link);
     return acc;
   }, {});
 
-  // Category display names
-  const categoryLabels = {
-    platform: 'Platform',
-    support: 'Support',
-    connect: 'Connect'
-  };
-
-  // Social icon mapping
   const getSocialIcon = (label) => {
     const icons = {
       'Twitter': '🐦',
@@ -79,66 +102,422 @@ const Footer = ({ siteConfig, footerLinks }) => {
       'YouTube': '▶️',
       'Instagram': '📸',
       'Facebook': '📘',
-      'TikTok': '🎵'
+      'TikTok': '🎵',
+      'WhatsApp': '💬'
     };
     return icons[label] || '🔗';
   };
 
+  const handleSubscribe = (e) => {
+    e.preventDefault();
+    if (email) {
+      setSubscribed(true);
+      setEmail('');
+      setTimeout(() => setSubscribed(false), 3000);
+    }
+  };
+
+  const relatedSubjects = [
+    { label: 'Algebra & Geometry', url: '/subjects/algebra-geometry' },
+    { label: 'Calculus & Trigonometry', url: '/subjects/calculus-trig' },
+    { label: 'Statistics & Probability', url: '/subjects/stat-prob' },
+    { label: 'Math & Science', url: '/subjects/math-science' },
+    { label: 'Exam Prep & Revision', url: '/subjects/exam-prep' },
+    { label: 'Tertiary Math', url: '/subjects/tertiary-math' },
+  ];
+
+  const currentYear = new Date().getFullYear();
+
   return (
-    <footer className="footer">
-      <div className="container">
-        <div className="footer-grid">
-          {/* Brand Column */}
-          <div className="footer-brand">
-            <h3>📚 {siteConfig.site_name || 'EduSpantech'}</h3>
-            <p>{siteConfig.site_tagline || 'Education for the love of your life ❤️'}</p>
-            <p className="footer-tagline">{siteConfig.site_subtagline || 'From Grade 8 to 2nd-Year Tertiary Success'}</p>
-            
-            {/* Contact Info */}
-            <div className="footer-contact">
-              {siteConfig.contact_email && (
-                <p>📧 <a href={`mailto:${siteConfig.contact_email}`}>{siteConfig.contact_email}</a></p>
-              )}
-              {siteConfig.contact_phone && (
-                <p>📞 <a href={`tel:${siteConfig.contact_phone}`}>{siteConfig.contact_phone}</a></p>
-              )}
-              {siteConfig.contact_address && (
-                <p>📍 {siteConfig.contact_address}</p>
-              )}
+    <footer className="footer-enhanced">
+      {/* ===== TOP BAR ===== */}
+      <div className="footer-top-bar">
+        <div className="container">
+          <div className="top-bar-content">
+            <div className="top-bar-left">
+              <span className="live-dot"></span>
+              <span className="top-bar-text">
+                🎓 <strong>12 Expert Tutors</strong> online now — Ready to help you master math!
+              </span>
+            </div>
+            <div className="top-bar-right">
+              <select 
+                className="region-select"
+                value={selectedRegion}
+                onChange={(e) => setSelectedRegion(e.target.value)}
+              >
+                <option value="Global">🌍 Global</option>
+                <option value="ZA">🇿🇦 South Africa</option>
+                <option value="US">🇺🇸 United States</option>
+                <option value="GB">🇬🇧 United Kingdom</option>
+                <option value="AU">🇦🇺 Australia</option>
+                <option value="SG">🇸🇬 Singapore</option>
+              </select>
+              <span className="region-tag">
+                {selectedRegion === 'Global' ? '🌍 9 Regions' : '📡 Live'}
+              </span>
             </div>
           </div>
+        </div>
+      </div>
 
-          {/* Dynamic Footer Links */}
-          {Object.keys(categoryLabels).map((category) => {
-            const links = groupedLinks[category] || [];
-            if (links.length === 0) return null;
+      {/* ===== MAIN FOOTER GRID ===== */}
+      <div className="footer-main">
+        <div className="container">
+          <div className="footer-grid">
+            
+            {/* ===== LEFT COLUMN - Brand + Newsletter ===== */}
+            <div className="footer-col footer-brand-col">
+              <div className="footer-brand">
+                <div className="brand-logo">
+                  <span className="brand-icon">∫</span>
+                  <span className="brand-name">{siteConfig.site_name || 'EduSpantech'}</span>
+                </div>
+                <p className="brand-tagline">
+                  {siteConfig.site_tagline || 'Education for the love of your life ❤️'}
+                </p>
+                <p className="brand-subtagline">
+                  {siteConfig.site_subtagline || 'From Grade 8 to 2nd-Year Tertiary Success'}
+                </p>
+                <div className="brand-contact">
+                  {siteConfig.contact_email && (
+                    <a href={`mailto:${siteConfig.contact_email}`} className="contact-link">
+                      📧 {siteConfig.contact_email}
+                    </a>
+                  )}
+                  {siteConfig.contact_phone && (
+                    <a href={`tel:${siteConfig.contact_phone}`} className="contact-link">
+                      📞 {siteConfig.contact_phone}
+                    </a>
+                  )}
+                </div>
+                {siteConfig.contact_address && (
+                  <p className="brand-address">📍 {siteConfig.contact_address}</p>
+                )}
+              </div>
 
-            return (
-              <div key={category} className="footer-links">
-                <h4>{categoryLabels[category]}</h4>
-                {links.map((link) => (
-                  <a 
-                    key={link.id} 
-                    href={link.url}
-                    target={link.url.startsWith('http') ? '_blank' : '_self'}
-                    rel={link.url.startsWith('http') ? 'noopener noreferrer' : ''}
-                  >
-                    {category === 'connect' && getSocialIcon(link.label)} {link.label}
+              {/* Newsletter */}
+              <div className="footer-newsletter">
+                <h4>📚 Get Weekly Math Tips</h4>
+                <p>Join 2,500+ students getting exam hacks and tutor updates</p>
+                <form className="newsletter-form" onSubmit={handleSubscribe}>
+                  <div className="form-group">
+                    <input
+                      type="email"
+                      placeholder="Enter your email"
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
+                      required
+                    />
+                    <button type="submit">
+                      {subscribed ? '✅' : '📩'}
+                    </button>
+                  </div>
+                  <p className="form-note">No spam. Unsubscribe anytime. 🔒</p>
+                </form>
+              </div>
+            </div>
+
+            {/* ===== MY SPECIFICS ===== */}
+            <div className="footer-col footer-specs">
+              <h4>🎯 Tutor Specialties</h4>
+              <div className="specs-grid">
+                <span className="spec-tag">🎓 Grade 8-9</span>
+                <span className="spec-tag">📚 Grade 10-11</span>
+                <span className="spec-tag">🏆 Matric/AP</span>
+                <span className="spec-tag">🏛️ University</span>
+                <span className="spec-tag">🌍 Global Curricula</span>
+                <span className="spec-tag">🧑‍🏫 Expert Tutors</span>
+                <span className="spec-tag">📐 Geometry</span>
+                <span className="spec-tag">⚡ Calculus</span>
+                <span className="spec-tag">📊 Statistics</span>
+                <span className="spec-tag">🧮 Algebra</span>
+                <span className="spec-tag">🧪 Trigonometry</span>
+                <span className="spec-tag">📈 Probability</span>
+              </div>
+            </div>
+
+            {/* ===== I DO IN MY SESSIONS ===== */}
+            <div className="footer-col footer-sessions">
+              <h4>📖 What We Teach</h4>
+              <div className="sessions-grid">
+                <div className="session-group">
+                  <span className="session-label">Core Math:</span>
+                  <span className="session-tag">Algebra</span>
+                  <span className="session-tag">Geometry</span>
+                  <span className="session-tag">Calculus</span>
+                </div>
+                <div className="session-group">
+                  <span className="session-label">Advanced:</span>
+                  <span className="session-tag">Trigonometry</span>
+                  <span className="session-tag">Statistics</span>
+                  <span className="session-tag">Probability</span>
+                </div>
+                <div className="session-group">
+                  <span className="session-label">Exam Prep:</span>
+                  <span className="session-tag">Matric</span>
+                  <span className="session-tag">AP Calculus</span>
+                  <span className="session-tag">A-Levels</span>
+                </div>
+                <div className="session-group">
+                  <span className="session-label">Tertiary:</span>
+                  <span className="session-tag">Linear Algebra</span>
+                  <span className="session-tag">Differential Eq.</span>
+                  <span className="session-tag">Discrete Math</span>
+                </div>
+              </div>
+            </div>
+
+            {/* ===== RELATED SUBJECTS ===== */}
+            <div className="footer-col footer-related">
+              <h4>🔗 Related Subjects</h4>
+              <div className="related-grid">
+                {relatedSubjects.map((subject, idx) => (
+                  <a key={idx} href={subject.url} className="related-tag">
+                    {subject.label}
                   </a>
                 ))}
               </div>
-            );
-          })}
-        </div>
+            </div>
+          </div>
 
-        <div className="footer-bottom">
-          <p>© {new Date().getFullYear()} {siteConfig.site_name || 'EduSpantech'} — {siteConfig.site_tagline || 'Education for the love of your life ❤️'}</p>
-          {siteConfig.compliance_text && (
-            <p className="footer-compliance">{siteConfig.compliance_text}</p>
-          )}
+          {/* ===== SOCIAL CONNECT ===== */}
+          <div className="footer-social-section">
+            <div className="social-grid">
+              {groupedLinks.connect?.map((link) => (
+                <a 
+                  key={link.id}
+                  href={link.url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="social-link"
+                  title={link.label}
+                >
+                  <span className="social-icon">{getSocialIcon(link.label)}</span>
+                  <span className="social-label">{link.label}</span>
+                </a>
+              ))}
+              {(!groupedLinks.connect || groupedLinks.connect.length === 0) && (
+                <>
+                  <a href={siteConfig.social_facebook} target="_blank" rel="noopener noreferrer" className="social-link">
+                    <span className="social-icon">📘</span>
+                    <span className="social-label">Facebook</span>
+                  </a>
+                  <a href={siteConfig.social_instagram} target="_blank" rel="noopener noreferrer" className="social-link">
+                    <span className="social-icon">📸</span>
+                    <span className="social-label">Instagram</span>
+                  </a>
+                  <a href={siteConfig.social_twitter} target="_blank" rel="noopener noreferrer" className="social-link">
+                    <span className="social-icon">🐦</span>
+                    <span className="social-label">Twitter</span>
+                  </a>
+                  <a href={siteConfig.social_linkedin} target="_blank" rel="noopener noreferrer" className="social-link">
+                    <span className="social-icon">💼</span>
+                    <span className="social-label">LinkedIn</span>
+                  </a>
+                  <a href={siteConfig.social_youtube} target="_blank" rel="noopener noreferrer" className="social-link">
+                    <span className="social-icon">▶️</span>
+                    <span className="social-label">YouTube</span>
+                  </a>
+                </>
+              )}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* ===== CTA BANNER ===== */}
+      <div className="footer-cta-banner">
+        <div className="container">
+          <div className="cta-banner-content">
+            <div className="cta-banner-text">
+              <span className="cta-banner-icon">🎯</span>
+              <div>
+                <h4>Ready to Excel in Mathematics?</h4>
+                <p>Get matched with the perfect tutor for your learning style.</p>
+              </div>
+            </div>
+            <div className="cta-banner-buttons">
+              <a href="/register" className="cta-btn-primary">
+                Start Free Trial <span>→</span>
+              </a>
+              <a href="/tutors" className="cta-btn-secondary">
+                Browse Tutors
+              </a>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* ===== BOTTOM BAR ===== */}
+      <div className="footer-bottom">
+        <div className="container">
+          <div className="bottom-bar-content">
+            <div className="bottom-bar-left">
+              <p className="copyright">
+                © {currentYear} {siteConfig.site_name || 'EduSpantech'}
+              </p>
+              <p className="copyright-tagline">
+                {siteConfig.site_tagline || 'Education for the love of your life ❤️'}
+              </p>
+            </div>
+            
+            <div className="bottom-bar-center">
+              <div className="compliance-badges">
+                {siteConfig.compliance_text && (
+                  <span className="compliance-badge">🛡️ {siteConfig.compliance_text}</span>
+                )}
+                <span className="compliance-badge">🔒 SSL Encrypted</span>
+                <span className="compliance-badge">✅ Verified Tutors</span>
+              </div>
+            </div>
+            
+            <div className="bottom-bar-right">
+              <div className="footer-legal-links">
+                <a href="/privacy">Privacy</a>
+                <span className="divider">|</span>
+                <a href="/terms">Terms</a>
+                <span className="divider">|</span>
+                <a href="/cookies">Cookies</a>
+                <span className="divider">|</span>
+                <a href="/accessibility">♿ Accessibility</a>
+                <span className="divider">|</span>
+                <a href="/support">Help</a>
+              </div>
+            </div>
+          </div>
+
+          {/* ===== LEGAL STATEMENT ===== */}
+          <div className="footer-legal-statement">
+            <p>
+              All tutors appearing on this site have contractually confirmed to us that they are qualified educators 
+              with verified credentials and appropriate teaching certifications.
+            </p>
+            <p className="legal-statement-small">
+              {siteConfig.compliance_text || 'POPIA • GDPR • CPA Compliant'} — EduSpantech is committed to educational excellence and student privacy.
+            </p>
+          </div>
+
+          {/* ===== TRUST BADGES ===== */}
+          <div className="footer-trust-badges">
+            <span className="trust-badge">📚 Quality Education</span>
+            <span className="trust-badge">🎓 Expert Tutors</span>
+            <span className="trust-badge">🔒 Secure Platform</span>
+            <span className="trust-badge">🌍 Global Reach</span>
+            <span className="trust-badge">⭐ 4.9/5 Rating</span>
+          </div>
         </div>
       </div>
     </footer>
+  );
+};
+
+// ============================================
+// TEAM CAROUSEL COMPONENT - FIXED
+// ============================================
+const TeamCarousel = ({ members, onViewAll }) => {
+  const scrollRef = useRef(null);
+  const [showLeftArrow, setShowLeftArrow] = useState(false);
+  const [showRightArrow, setShowRightArrow] = useState(true);
+
+  // ✅ FIX: Return null if no members or members is not an array
+  if (!members || !Array.isArray(members) || members.length === 0) {
+    return null;
+  }
+
+  const scroll = (direction) => {
+    if (scrollRef.current) {
+      const scrollAmount = 320;
+      const newScrollLeft = scrollRef.current.scrollLeft + (direction === 'left' ? -scrollAmount : scrollAmount);
+      
+      scrollRef.current.scrollTo({
+        left: newScrollLeft,
+        behavior: 'smooth'
+      });
+    }
+  };
+
+  const handleScroll = () => {
+    if (scrollRef.current) {
+      const { scrollLeft, scrollWidth, clientWidth } = scrollRef.current;
+      setShowLeftArrow(scrollLeft > 20);
+      setShowRightArrow(scrollLeft < scrollWidth - clientWidth - 20);
+    }
+  };
+
+  useEffect(() => {
+    const current = scrollRef.current;
+    if (current) {
+      current.addEventListener('scroll', handleScroll);
+      handleScroll();
+      return () => current.removeEventListener('scroll', handleScroll);
+    }
+  }, []);
+
+  return (
+    <div className="team-carousel-wrapper">
+      <div className="team-carousel-header">
+        <div className="team-carousel-title">
+          <span className="section-tag">👥 Our Team</span>
+          <h2>Meet the People Behind EduSpantech</h2>
+          <p>Passionate educators, developers, and designers working together to make mathematics accessible worldwide.</p>
+        </div>
+        <button className="team-view-all-btn" onClick={onViewAll}>
+          View All Team →
+        </button>
+      </div>
+
+      <div className="team-carousel-container">
+        {showLeftArrow && (
+          <button className="team-arrow team-arrow-left" onClick={() => scroll('left')}>
+            ‹
+          </button>
+        )}
+
+        <div className="team-carousel" ref={scrollRef}>
+          {members.map((member) => (
+            <div key={member.id || member.name || Math.random()} className="team-carousel-card">
+              <div className="team-card-image-wrapper">
+                {member.photo_url ? (
+                  <img src={member.photo_url} alt={member.name || 'Team Member'} className="team-card-photo" />
+                ) : (
+                  <div className="team-card-avatar-large">
+                    <span>{member.name?.charAt(0) || '?'}</span>
+                  </div>
+                )}
+                <div className="team-card-experience-badge">
+                  🎯 {member.years_experience || 0} yrs
+                </div>
+              </div>
+              <div className="team-card-details">
+                <h3>{member.name || 'Team Member'}</h3>
+                <p className="team-card-role">{member.role || 'Team Member'}</p>
+                <p className="team-card-bio">{member.bio?.slice(0, 100) || '...'}</p>
+                <div className="team-card-specialties">
+                  {member.specialties?.slice(0, 3).map((spec, idx) => (
+                    <span key={idx} className="team-card-spec-tag">{spec}</span>
+                  ))}
+                  {member.specialties?.length > 3 && (
+                    <span className="team-card-spec-tag more">+{member.specialties.length - 3}</span>
+                  )}
+                </div>
+                {member.fun_fact && (
+                  <div className="team-card-fun-fact">
+                    <span>{member.fun_fact}</span>
+                  </div>
+                )}
+              </div>
+            </div>
+          ))}
+        </div>
+
+        {showRightArrow && (
+          <button className="team-arrow team-arrow-right" onClick={() => scroll('right')}>
+            ›
+          </button>
+        )}
+      </div>
+    </div>
   );
 };
 
@@ -158,10 +537,8 @@ function Home() {
     totalEarnings: 0,
     avgRating: 0
   });
+  const [teamMembers, setTeamMembers] = useState([]);
 
-  // ============================================
-  // FETCH SITE CONFIG & FOOTER LINKS FROM SUPABASE
-  // ============================================
   const [siteConfig, setSiteConfig] = useState({
     site_name: 'EduSpantech',
     site_tagline: 'Education for the love of your life ❤️',
@@ -179,10 +556,42 @@ function Home() {
 
   const [footerLinks, setFooterLinks] = useState([]);
 
+  // ============================================
+  // FETCH TEAM MEMBERS FROM SUPABASE - WITH FALLBACK
+  // ============================================
+  const fetchTeamMembers = async () => {
+    try {
+      console.log('🔍 Fetching team members from Supabase...');
+      const { data, error } = await supabase
+        .from('team_members')
+        .select('*')
+        .eq('is_active', true)
+        .order('sort_order', { ascending: true });
+
+      if (error) {
+        console.error('❌ Supabase error:', error);
+        console.log('📌 Using fallback team members');
+        setTeamMembers(getFallbackTeamMembers());
+        return;
+      }
+
+      if (data && data.length > 0) {
+        console.log('✅ Team members loaded:', data.length);
+        setTeamMembers(data);
+      } else {
+        console.warn('⚠️ No team members found in database, using fallback');
+        setTeamMembers(getFallbackTeamMembers());
+      }
+    } catch (error) {
+      console.error('❌ Failed to fetch team members:', error);
+      console.log('📌 Using fallback team members');
+      setTeamMembers(getFallbackTeamMembers());
+    }
+  };
+
   useEffect(() => {
     const fetchSiteData = async () => {
       try {
-        // Fetch site config
         const { data: configData, error: configError } = await supabase
           .from('site_config')
           .select('config_key, config_value');
@@ -195,7 +604,6 @@ function Home() {
           setSiteConfig(prev => ({ ...prev, ...configObj }));
         }
 
-        // Fetch footer links
         const { data: linksData, error: linksError } = await supabase
           .from('footer_links')
           .select('*')
@@ -208,16 +616,13 @@ function Home() {
 
       } catch (error) {
         console.error('Failed to fetch site data:', error);
-        // Fallback: use default values already set in state
       }
     };
 
     fetchSiteData();
+    fetchTeamMembers();
   }, []);
 
-  // ============================================
-  // AUTHENTICATION CHECK
-  // ============================================
   useEffect(() => {
     const checkAuth = async () => {
       const accessToken = localStorage.getItem('accessToken');
@@ -302,7 +707,6 @@ function Home() {
     return 'Silver';
   };
 
-  // Country list with flagCDN URLs
   const countries = [
     { 
       id: 'za',
@@ -366,31 +770,8 @@ function Home() {
   if (isAuthenticated && isTutor) {
     return (
       <div className="home-page">
-        {/* Hero Section */}
         <section className="hero-section">
           <div className="hero-content">
-            <div className="hero-brand">
-              <img 
-                src="/logo192.png" 
-                alt="EduSpantech" 
-                className="hero-brand-logo"
-                onError={(e) => {
-                  e.target.style.display = 'none';
-                  const parent = e.target.parentElement;
-                  if (parent) {
-                    const fallback = document.createElement('span');
-                    fallback.className = 'hero-brand-fallback';
-                    fallback.textContent = '∑';
-                    parent.insertBefore(fallback, e.target);
-                  }
-                }}
-              />
-              <div className="hero-brand-text">
-                <span className="hero-brand-name">{siteConfig.site_name || 'EduSpantech'}</span>
-                <span className="hero-brand-tagline">Global Mathematics Platform</span>
-              </div>
-            </div>
-            
             <h1 className="hero-title">
               Welcome back, <br />
               <span className="highlight">{getUserName()}! 👨‍🏫</span>
@@ -417,6 +798,12 @@ function Home() {
                 onClick={() => navigate('/my-sessions')}
               >
                 📅 My Sessions
+              </button>
+              <button 
+                className="btn-secondary"
+                onClick={() => navigate('/team')}
+              >
+                👥 Meet Our Team
               </button>
             </div>
 
@@ -448,7 +835,6 @@ function Home() {
           </div>
         </section>
 
-        {/* Quick Actions for Tutors */}
         <section className="quick-actions-section">
           <div className="container">
             <div className="section-header">
@@ -477,11 +863,15 @@ function Home() {
                 <h4>Update Profile</h4>
                 <p>Keep your tutor profile current</p>
               </div>
+              <div className="quick-action-card" onClick={() => navigate('/team')}>
+                <div className="quick-action-icon">👥</div>
+                <h4>Meet Our Team</h4>
+                <p>Learn about the people behind EduSpantech</p>
+              </div>
             </div>
           </div>
         </section>
 
-        {/* Features Section */}
         <section className="features-section">
           <div className="container">
             <div className="section-header">
@@ -526,7 +916,20 @@ function Home() {
           </div>
         </section>
 
-        {/* Curriculum Section */}
+        {/* ============================================
+            TEAM CAROUSEL SECTION
+            ============================================ */}
+        {teamMembers && teamMembers.length > 0 && (
+          <section className="team-carousel-section">
+            <div className="container">
+              <TeamCarousel 
+                members={teamMembers} 
+                onViewAll={() => navigate('/team')}
+              />
+            </div>
+          </section>
+        )}
+
         <section className="curriculum-section">
           <div className="container">
             <div className="section-header">
@@ -566,7 +969,6 @@ function Home() {
           </div>
         </section>
 
-        {/* Infrastructure Section */}
         <section className="infrastructure-section">
           <div className="container">
             <div className="infrastructure-content">
@@ -599,7 +1001,6 @@ function Home() {
           </div>
         </section>
 
-        {/* CTA Section */}
         <section className="cta-section">
           <div className="container">
             <div className="cta-content">
@@ -612,8 +1013,7 @@ function Home() {
           </div>
         </section>
 
-        {/* Footer - Now Fetched from DB */}
-        <Footer siteConfig={siteConfig} footerLinks={footerLinks} />
+        <EnhancedFooter siteConfig={siteConfig} footerLinks={footerLinks} />
       </div>
     );
   }
@@ -623,31 +1023,8 @@ function Home() {
   // ============================================
   return (
     <div className="home-page">
-      {/* Hero Section */}
       <section className="hero-section">
         <div className="hero-content">
-          <div className="hero-brand">
-            <img 
-              src="/logo192.png" 
-              alt="EduSpantech" 
-              className="hero-brand-logo"
-              onError={(e) => {
-                e.target.style.display = 'none';
-                const parent = e.target.parentElement;
-                if (parent) {
-                  const fallback = document.createElement('span');
-                  fallback.className = 'hero-brand-fallback';
-                  fallback.textContent = '∑';
-                  parent.insertBefore(fallback, e.target);
-                }
-              }}
-            />
-            <div className="hero-brand-text">
-              <span className="hero-brand-name">{siteConfig.site_name || 'EduSpantech'}</span>
-              <span className="hero-brand-tagline">Global Mathematics Platform</span>
-            </div>
-          </div>
-          
           {isAuthenticated ? (
             <>
               <h1 className="hero-title">
@@ -687,6 +1064,12 @@ function Home() {
                 >
                   👤 My Profile
                 </button>
+                <button 
+                  className="btn-secondary"
+                  onClick={() => navigate('/team')}
+                >
+                  👥 Meet Our Team
+                </button>
               </>
             ) : (
               <>
@@ -694,13 +1077,19 @@ function Home() {
                   className="btn-primary"
                   onClick={() => navigate('/register')}
                 >
-                  🚀 Get Started — Free Trial
+                  Get Started — Free Trial
                 </button>
                 <button 
                   className="btn-secondary"
                   onClick={() => navigate('/login')}
                 >
-                  🔑 Sign In
+                  Sign In
+                </button>
+                <button 
+                  className="btn-secondary"
+                  onClick={() => navigate('/team')}
+                >
+                  👥 Meet Our Team
                 </button>
               </>
             )}
@@ -750,7 +1139,9 @@ function Home() {
         </div>
       </section>
 
-      {/* Quick Actions for Authenticated Students */}
+      {/* ============================================
+          QUICK ACTIONS
+          ============================================ */}
       {isAuthenticated && !isTutor && (
         <section className="quick-actions-section">
           <div className="container">
@@ -775,12 +1166,16 @@ function Home() {
                 <h4>Learning Resources</h4>
                 <p>Access on-demand math content vaults</p>
               </div>
+              <div className="quick-action-card" onClick={() => navigate('/team')}>
+                <div className="quick-action-icon">👥</div>
+                <h4>Meet Our Team</h4>
+                <p>Learn about the people behind EduSpantech</p>
+              </div>
             </div>
           </div>
         </section>
       )}
 
-      {/* Features Section */}
       <section className="features-section">
         <div className="container">
           <div className="section-header">
@@ -837,10 +1232,22 @@ function Home() {
         </div>
       </section>
 
-      {/* Pricing Section - Only for non-authenticated users */}
+      {/* ============================================
+          TEAM CAROUSEL SECTION
+          ============================================ */}
+      {teamMembers && teamMembers.length > 0 && (
+        <section className="team-carousel-section">
+          <div className="container">
+            <TeamCarousel 
+              members={teamMembers} 
+              onViewAll={() => navigate('/team')}
+            />
+          </div>
+        </section>
+      )}
+
       {!isAuthenticated && <Pricing />}
 
-      {/* Progress Section for Authenticated Students */}
       {isAuthenticated && !isTutor && (
         <section className="progress-section">
           <div className="container">
@@ -875,7 +1282,6 @@ function Home() {
         </section>
       )}
 
-      {/* Curriculum Section */}
       <section className="curriculum-section">
         <div className="container">
           <div className="section-header">
@@ -915,7 +1321,6 @@ function Home() {
         </div>
       </section>
 
-      {/* Infrastructure Section */}
       <section className="infrastructure-section">
         <div className="container">
           <div className="infrastructure-content">
@@ -948,7 +1353,6 @@ function Home() {
         </div>
       </section>
 
-      {/* CTA Section */}
       <section className="cta-section">
         <div className="container">
           <div className="cta-content">
@@ -965,7 +1369,7 @@ function Home() {
                 <h2>Ready to make mathematics <br />the love of your life?</h2>
                 <p>Join thousands of students already learning with EduSpantech.</p>
                 <button className="btn-primary btn-large" onClick={() => navigate('/register')}>
-                  🚀 Start Your Free Trial
+                  Start Your Free Trial
                 </button>
                 <p className="cta-small">No credit card required • 7-day free trial</p>
               </>
@@ -974,8 +1378,7 @@ function Home() {
         </div>
       </section>
 
-      {/* Footer - Now Fetched from DB */}
-      <Footer siteConfig={siteConfig} footerLinks={footerLinks} />
+      <EnhancedFooter siteConfig={siteConfig} footerLinks={footerLinks} />
     </div>
   );
 }

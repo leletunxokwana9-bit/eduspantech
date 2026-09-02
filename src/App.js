@@ -38,6 +38,10 @@ import TutorStudents from './pages/TutorStudents';
 import TutorEarnings from './pages/TutorEarnings';
 import Notifications from './pages/Notifications';
 import ForgotPassword from './pages/ForgotPassword';
+import Team from './pages/Team';
+
+// ✅ FIX: Remove .js extension
+import Timetable from './pages/Timetable';
 
 // ============================================
 // ERROR BOUNDARY COMPONENT
@@ -267,8 +271,14 @@ function App() {
                         <Route path="/search" element={<SearchResults />} />
                         
                         {/* ============================================
+                            TEAM ROUTE
+                            ============================================ */}
+                        <Route path="/team" element={<Team />} />
+                        
+                        {/* ============================================
                             PROTECTED ROUTES - Require authentication
                             ============================================ */}
+                        <Route path="/timetable" element={<Timetable />} />    
                         <Route path="/dashboard" element={<Dashboard />} />
                         <Route path="/profile" element={<Profile />} />
                         <Route path="/settings" element={<Settings />} />

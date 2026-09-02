@@ -32,9 +32,6 @@ import { authService } from "../services/authService";
 import NotificationBell from "./NotificationBell";
 import "./Navbar.css";
 
-// ============================================
-// IMPORT LOGO FROM ASSETS FOLDER
-// ============================================
 import logo from "../assets/EduspanLogo.png";
 
 function Navbar() {
@@ -49,7 +46,6 @@ function Navbar() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [isTutor, setIsTutor] = useState(false);
   const [logoError, setLogoError] = useState(false);
-  const [authChecked, setAuthChecked] = useState(false); // ← NEW
   const location = useLocation();
   const navigate = useNavigate();
   const menuRef = useRef(null);
@@ -61,13 +57,8 @@ function Navbar() {
   const { currentLanguage, changeLanguage, t, languages } = useLanguage();
   const { playClick } = useSound();
 
-  // ============================================
-  // SIMPLIFIED TUTOR CHECK - ONLY DATABASE FIELDS
-  // ============================================
   const checkIsTutor = (userData) => {
     if (!userData) return false;
-    
-    // ONLY check the database columns that matter
     return (
       userData.is_tutor === true ||
       userData.role === 'tutor' ||
@@ -75,83 +66,43 @@ function Navbar() {
     );
   };
 
-  // ============================================
-  // CHECK AUTHENTICATION - FIXED
-  // ============================================
-  const checkAuth = useCallback(async () => {
-    console.log('🔍 Navbar checking auth...');
-    const accessToken = localStorage.getItem('accessToken');
-    console.log('🔍 Token exists:', !!accessToken);
-    
-    if (accessToken) {
-      setIsAuthenticated(true);
-      try {
-        const userData = await authService.getCurrentUserWithSubscription();
-        if (userData) {
-          console.log('✅ Navbar user loaded:', userData.email);
-          setUser(userData);
-          const isTutorAccount = checkIsTutor(userData);
-          setIsTutor(isTutorAccount);
-          console.log('🔍 isTutor:', isTutorAccount);
-        } else {
-          const fallbackUser = await authService.getCurrentUser();
-          if (fallbackUser) {
-            console.log('✅ Navbar fallback user loaded:', fallbackUser.email);
-            setUser(fallbackUser);
-            const isTutorAccount = checkIsTutor(fallbackUser);
+  useEffect(() => {
+    const checkAuth = async () => {
+      const accessToken = localStorage.getItem('accessToken');
+      if (accessToken) {
+        setIsAuthenticated(true);
+        try {
+          const userData = await authService.getCurrentUserWithSubscription();
+          if (userData) {
+            setUser(userData);
+            const isTutorAccount = checkIsTutor(userData);
             setIsTutor(isTutorAccount);
           } else {
-            setIsAuthenticated(false);
-            setUser(null);
-            setIsTutor(false);
+            const fallbackUser = await authService.getCurrentUser();
+            if (fallbackUser) {
+              setUser(fallbackUser);
+              const isTutorAccount = checkIsTutor(fallbackUser);
+              setIsTutor(isTutorAccount);
+            }
           }
+        } catch (error) {
+          console.error('Failed to get user:', error);
+          localStorage.removeItem('accessToken');
+          localStorage.removeItem('refreshToken');
+          localStorage.removeItem('user');
+          localStorage.removeItem('userRole');
+          setIsAuthenticated(false);
+          setUser(null);
+          setIsTutor(false);
         }
-      } catch (error) {
-        console.error('Failed to get user:', error);
-        localStorage.removeItem('accessToken');
-        localStorage.removeItem('refreshToken');
-        localStorage.removeItem('user');
-        localStorage.removeItem('userRole');
+      } else {
         setIsAuthenticated(false);
         setUser(null);
         setIsTutor(false);
       }
-    } else {
-      setIsAuthenticated(false);
-      setUser(null);
-      setIsTutor(false);
-    }
-    setAuthChecked(true);
-  }, []);
-
-  // Check authentication on mount and location change
-  useEffect(() => {
+    };
     checkAuth();
-  }, [location.pathname, checkAuth]);
-
-  // Listen for storage changes (login/logout in other tabs)
-  useEffect(() => {
-    const handleStorageChange = (e) => {
-      if (e.key === 'accessToken' || e.key === 'user' || e.key === 'userRole') {
-        console.log('🔍 Storage changed, rechecking auth...');
-        checkAuth();
-      }
-    };
-    
-    window.addEventListener('storage', handleStorageChange);
-    return () => window.removeEventListener('storage', handleStorageChange);
-  }, [checkAuth]);
-
-  // Listen for custom events (login/logout from same tab)
-  useEffect(() => {
-    const handleAuthChange = () => {
-      console.log('🔍 Auth change event received, rechecking...');
-      checkAuth();
-    };
-    
-    window.addEventListener('authChange', handleAuthChange);
-    return () => window.removeEventListener('authChange', handleAuthChange);
-  }, [checkAuth]);
+  }, [location]);
 
   const handleLogout = () => {
     authService.logout();
@@ -160,8 +111,6 @@ function Navbar() {
     setIsTutor(false);
     setIsUserDropdownOpen(false);
     playClick();
-    // Dispatch event for other components
-    window.dispatchEvent(new Event('authChange'));
     navigate('/');
   };
 
@@ -206,7 +155,6 @@ function Navbar() {
     playClick();
   };
 
-  // Close dropdown when clicking outside
   useEffect(() => {
     const handleClickOutside = (event) => {
       if (userDropdownRef.current && !userDropdownRef.current.contains(event.target)) {
@@ -365,15 +313,23 @@ function Navbar() {
   };
 
   // ============================================
-  // STUDENT NAV LINKS (TOP NAV)
+  // BASE NAV LINKS (Always visible)
   // ============================================
-  const studentNavLinks = [
+  const baseNavLinks = [
     { path: "/", label: "Home", icon: <FiHome /> },
     { path: "/subjects", label: "Subjects", icon: <FiBook /> },
     { path: "/curriculum", label: "Curriculum", icon: <FiGrid /> },
     { path: "/tutors", label: "Tutors", icon: <FiUsers /> },
     { path: "/pricing", label: "Pricing", icon: <FiDollarSign /> },
     { path: "/resources", label: "Resources", icon: <FiFolder /> }
+  ];
+
+  // ============================================
+  // STUDENT NAV LINKS - ✅ INCLUDES TIMETABLE (only when logged in)
+  // ============================================
+  const studentNavLinks = [
+    ...baseNavLinks,
+    { path: "/timetable", label: "Timetable", icon: <FiCalendar /> }
   ];
 
   // ============================================
@@ -386,8 +342,8 @@ function Navbar() {
     { path: "/resources", label: "Resources", icon: <FiFolder /> }
   ];
 
-  // Choose which nav links to show based on role
-  const navLinks = isTutor ? tutorNavLinks : studentNavLinks;
+  // ✅ TIMETABLE ONLY SHOWS WHEN AUTHENTICATED AND NOT TUTOR
+  const navLinks = isTutor ? tutorNavLinks : (isAuthenticated ? studentNavLinks : baseNavLinks);
 
   const isActive = (path) => location.pathname === path;
 
@@ -419,9 +375,6 @@ function Navbar() {
     return 'Silver';
   };
 
-  // ============================================
-  // FIXED: Avatar image - use avatar for both
-  // ============================================
   const getAvatarImage = () => {
     if (user?.avatar) {
       return user.avatar;
@@ -429,9 +382,6 @@ function Navbar() {
     return null;
   };
 
-  // ============================================
-  // RENDER LOGO WITH IMPORTED IMAGE
-  // ============================================
   const renderLogo = () => {
     return (
       <div className="logo-icon">
@@ -451,23 +401,6 @@ function Navbar() {
       </div>
     );
   };
-
-  // If still checking auth, show minimal navbar
-  if (!authChecked) {
-    return (
-      <header className="navbar" ref={menuRef}>
-        <div className="navbar-container">
-          <Link to="/" className="logo">
-            {renderLogo()}
-            <div className="logo-content">
-              <span className="logo-title">EduSpantech</span>
-              <span className="logo-subtitle">Global Mathematics Platform</span>
-            </div>
-          </Link>
-        </div>
-      </header>
-    );
-  }
 
   if (loading) {
     return (
@@ -496,9 +429,6 @@ function Navbar() {
           </div>
         </Link>
 
-        {/* ============================================
-            TOP NAV LINKS - STUDENT vs TUTOR
-            ============================================ */}
         <nav className="navbar-links">
           {navLinks.map((link) => (
             <Link
@@ -514,7 +444,6 @@ function Navbar() {
         </nav>
 
         <div className="navbar-actions">
-          {/* Search */}
           <div className="search-container" ref={searchRef}>
             <button 
               className={`search-button ${isSearchOpen ? 'active' : ''}`}
@@ -580,7 +509,6 @@ function Navbar() {
             </div>
           </div>
 
-          {/* Language */}
           <div className="language-container" ref={languageRef}>
             <button 
               className={`language-button ${isLanguageOpen ? 'active' : ''}`}
@@ -610,14 +538,8 @@ function Navbar() {
             </div>
           </div>
 
-          {/* ============================================
-              🔔 NOTIFICATION BELL - PLACED HERE
-              ============================================ */}
           {isAuthenticated && <NotificationBell />}
 
-          {/* ============================================
-              USER DROPDOWN - FIXED AVATAR OVERLAPPING
-              ============================================ */}
           {isAuthenticated ? (
             <div className="user-menu" ref={userDropdownRef}>
               <button 
@@ -707,9 +629,6 @@ function Navbar() {
                   </div>
                 </div>
 
-                {/* ============================================
-                    STUDENT DROPDOWN ITEMS
-                    ============================================ */}
                 {!isTutor && (
                   <div className="dropdown-items">
                     <Link to="/profile" className="dropdown-item" onClick={() => { closeUserDropdown(); playClick(); }}>
@@ -737,6 +656,11 @@ function Navbar() {
                       <span>My Sessions</span>
                     </Link>
 
+                    <Link to="/timetable" className="dropdown-item" onClick={() => { closeUserDropdown(); playClick(); }}>
+                      <FiCalendar className="dropdown-icon" />
+                      <span>Timetable</span>
+                    </Link>
+
                     <Link to="/help" className="dropdown-item" onClick={() => { closeUserDropdown(); playClick(); }}>
                       <FiHelpCircle className="dropdown-icon" />
                       <span>Help & Support</span>
@@ -751,9 +675,6 @@ function Navbar() {
                   </div>
                 )}
 
-                {/* ============================================
-                    TUTOR DROPDOWN ITEMS 
-                    ============================================ */}
                 {isTutor && (
                   <div className="dropdown-items tutor-dropdown-items">
                     <Link to="/profile" className="dropdown-item" onClick={() => { closeUserDropdown(); playClick(); }}>
@@ -813,12 +734,8 @@ function Navbar() {
         </div>
       </div>
 
-      {/* ============================================
-          MOBILE MENU - COMBINES TOP NAV + DROPDOWN
-          ============================================ */}
       <div className={`mobile-menu-overlay ${isMenuOpen ? "open" : ""}`}>
         <nav className="mobile-nav-links">
-          {/* TOP NAV ITEMS */}
           {navLinks.map((link) => (
             <Link
               key={link.path}
@@ -833,7 +750,6 @@ function Navbar() {
           
           <div className="mobile-divider"></div>
 
-          {/* STUDENT MOBILE DROPDOWN ITEMS */}
           {isAuthenticated && !isTutor && (
             <>
               <Link to="/profile" className="mobile-profile" onClick={() => { closeMenu(); playClick(); }}>
@@ -851,13 +767,15 @@ function Navbar() {
               <Link to="/my-sessions" className="mobile-my-sessions" onClick={() => { closeMenu(); playClick(); }}>
                 <FiClock /> My Sessions
               </Link>
+              <Link to="/timetable" className="mobile-timetable" onClick={() => { closeMenu(); playClick(); }}>
+                <FiCalendar /> Timetable
+              </Link>
               <Link to="/help" className="mobile-help" onClick={() => { closeMenu(); playClick(); }}>
                 <FiHelpCircle /> Help
               </Link>
             </>
           )}
 
-          {/* TUTOR MOBILE DROPDOWN ITEMS */}
           {isAuthenticated && isTutor && (
             <>
               <Link to="/profile" className="mobile-profile" onClick={() => { closeMenu(); playClick(); }}>
@@ -883,7 +801,6 @@ function Navbar() {
 
           <div className="mobile-divider"></div>
 
-          {/* Language Section */}
           <div className="mobile-language-section">
             <div className="mobile-language-label">🌐 Language</div>
             {Object.values(languages).map((lang) => (
@@ -903,7 +820,6 @@ function Navbar() {
 
           <div className="mobile-divider"></div>
 
-          {/* Search */}
           <div className="mobile-search">
             <form onSubmit={handleSearch} className="mobile-search-form">
               <input
@@ -921,7 +837,6 @@ function Navbar() {
 
           <div className="mobile-divider"></div>
 
-          {/* Logout */}
           {isAuthenticated && (
             <button className="mobile-logout" onClick={handleLogout}>
               <FiLogOut /> Logout

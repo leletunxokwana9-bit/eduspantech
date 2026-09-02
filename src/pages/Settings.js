@@ -8,7 +8,7 @@ import './Settings.css';
 
 const Settings = () => {
   const navigate = useNavigate();
-  const { theme, setTheme } = useTheme();
+  const { theme, setThemeMode, isDark, toggleTheme } = useTheme();
   const [loading, setLoading] = useState(true);
   const [success, setSuccess] = useState('');
   const [error, setError] = useState('');
@@ -33,6 +33,7 @@ const Settings = () => {
     language: 'en',
     dateFormat: 'DD/MM/YYYY',
     currency: 'ZAR',
+    timezone: 'Africa/Johannesburg',
     
     // Notifications - Both (but different categories)
     notifications: {
@@ -123,6 +124,26 @@ const Settings = () => {
     }
   }, [success]);
 
+  // Load saved settings from localStorage on mount
+  useEffect(() => {
+    const savedSettings = localStorage.getItem('eduspantech_settings');
+    if (savedSettings) {
+      try {
+        const parsed = JSON.parse(savedSettings);
+        setSettings(prev => ({ ...prev, ...parsed }));
+      } catch (e) {
+        console.error('Failed to parse saved settings:', e);
+      }
+    }
+  }, []);
+
+  // Sync theme with context
+  useEffect(() => {
+    if (theme && settings.theme !== theme) {
+      setSettings(prev => ({ ...prev, theme }));
+    }
+  }, [theme]);
+
   // Fetch all dynamic data
   useEffect(() => {
     const fetchData = async () => {
@@ -191,8 +212,10 @@ const Settings = () => {
           if (savedSettings) {
             try {
               const parsed = JSON.parse(savedSettings);
+              // Apply theme from saved settings
               if (parsed.theme) {
-                setTheme(parsed.theme);
+                setSettings(prev => ({ ...prev, theme: parsed.theme }));
+                setThemeMode(parsed.theme);
               }
               setSettings(prev => ({ ...prev, ...parsed }));
             } catch (e) {}
@@ -260,12 +283,7 @@ const Settings = () => {
       }
     };
     fetchUserData();
-  }, [navigate, setTheme]);
-
-  // Apply theme on change
-  useEffect(() => {
-    setSettings(prev => ({ ...prev, theme: theme }));
-  }, [theme]);
+  }, [navigate, setThemeMode]);
 
   // Handle general setting changes
   const handleSettingChange = (category, key, value) => {
@@ -274,55 +292,84 @@ const Settings = () => {
         ? { ...prev, [category]: { ...prev[category], [key]: value } }
         : { ...prev, [key]: value };
       
+      // If theme changed, apply it immediately via ThemeContext
       if (key === 'theme' && !category) {
-        setTheme(value);
+        setThemeMode(value);
+        // Save to localStorage
+        localStorage.setItem('eduspantech_theme', value);
       }
+      
+      // Save settings to localStorage
+      localStorage.setItem('eduspantech_settings', JSON.stringify(newSettings));
       
       return newSettings;
     });
   };
 
   // Handle student setting changes
-  const handleStudentSettingChange = (category, key, value) => {
-    setSettings(prev => ({
-      ...prev,
-      student: {
-        ...prev.student,
-        [category]: typeof prev.student[category] === 'object' 
-          ? { ...prev.student[category], [key]: value }
-          : { ...prev.student, [category]: value }
-      }
-    }));
+  const handleStudentSettingChange = (key, value) => {
+    setSettings(prev => {
+      const newSettings = {
+        ...prev,
+        student: {
+          ...prev.student,
+          [key]: value
+        }
+      };
+      localStorage.setItem('eduspantech_settings', JSON.stringify(newSettings));
+      return newSettings;
+    });
   };
 
   // Handle tutor setting changes
-  const handleTutorSettingChange = (category, key, value) => {
-    setSettings(prev => ({
-      ...prev,
-      tutor: {
-        ...prev.tutor,
-        [category]: typeof prev.tutor[category] === 'object' && !Array.isArray(prev.tutor[category])
-          ? { ...prev.tutor[category], [key]: value }
-          : { ...prev.tutor, [category]: value }
-      }
-    }));
+  const handleTutorSettingChange = (key, value) => {
+    setSettings(prev => {
+      const newSettings = {
+        ...prev,
+        tutor: {
+          ...prev.tutor,
+          [key]: value
+        }
+      };
+      localStorage.setItem('eduspantech_settings', JSON.stringify(newSettings));
+      return newSettings;
+    });
+  };
+
+  // Handle nested tutor setting changes
+  const handleTutorNestedChange = (parent, key, value) => {
+    setSettings(prev => {
+      const newSettings = {
+        ...prev,
+        tutor: {
+          ...prev.tutor,
+          [parent]: {
+            ...prev.tutor[parent],
+            [key]: value
+          }
+        }
+      };
+      localStorage.setItem('eduspantech_settings', JSON.stringify(newSettings));
+      return newSettings;
+    });
   };
 
   // Handle tutor subject toggle
   const handleSubjectToggle = (subjectId) => {
     setSettings(prev => {
       const subjects = prev.tutor.subjects || [];
+      let newSubjects;
       if (subjects.includes(subjectId)) {
-        return {
-          ...prev,
-          tutor: { ...prev.tutor, subjects: subjects.filter(s => s !== subjectId) }
-        };
+        newSubjects = subjects.filter(s => s !== subjectId);
       } else {
-        return {
-          ...prev,
-          tutor: { ...prev.tutor, subjects: [...subjects, subjectId] }
-        };
+        newSubjects = [...subjects, subjectId];
       }
+      const newSettings = {
+        ...prev,
+        tutor: { ...prev.tutor, subjects: newSubjects }
+      };
+      localStorage.setItem('eduspantech_settings', JSON.stringify(newSettings));
+      return newSettings;
     });
   };
 
@@ -330,29 +377,24 @@ const Settings = () => {
   const handleAvailabilityToggle = (day) => {
     setSettings(prev => {
       const days = prev.tutor.availability.days || [];
+      let newDays;
       if (days.includes(day)) {
-        return {
-          ...prev,
-          tutor: {
-            ...prev.tutor,
-            availability: {
-              ...prev.tutor.availability,
-              days: days.filter(d => d !== day)
-            }
-          }
-        };
+        newDays = days.filter(d => d !== day);
       } else {
-        return {
-          ...prev,
-          tutor: {
-            ...prev.tutor,
-            availability: {
-              ...prev.tutor.availability,
-              days: [...days, day]
-            }
-          }
-        };
+        newDays = [...days, day];
       }
+      const newSettings = {
+        ...prev,
+        tutor: {
+          ...prev.tutor,
+          availability: {
+            ...prev.tutor.availability,
+            days: newDays
+          }
+        }
+      };
+      localStorage.setItem('eduspantech_settings', JSON.stringify(newSettings));
+      return newSettings;
     });
   };
 
@@ -363,15 +405,27 @@ const Settings = () => {
     setSuccess('');
 
     try {
-      localStorage.setItem('eduspantech_settings', JSON.stringify(settings));
+      // Ensure theme is saved
+      const themeToSave = settings.theme || 'dark';
+      
+      // Save to localStorage
+      const settingsToSave = {
+        ...settings,
+        theme: themeToSave
+      };
+      localStorage.setItem('eduspantech_settings', JSON.stringify(settingsToSave));
+      localStorage.setItem('eduspantech_theme', themeToSave);
+      
+      // Apply theme immediately via ThemeContext
+      setThemeMode(themeToSave);
 
       const token = localStorage.getItem('accessToken');
       if (token) {
         const payload = {
           timezone: settings.timezone || 'Africa/Johannesburg',
-          settings: settings,
+          settings: settingsToSave,
           // Common fields
-          theme: settings.theme,
+          theme: themeToSave,
           fontSize: settings.fontSize,
           language: settings.language,
           dateFormat: settings.dateFormat,
@@ -430,7 +484,8 @@ const Settings = () => {
   const handleReset = () => {
     if (window.confirm('Reset all settings to default?')) {
       localStorage.removeItem('eduspantech_settings');
-      setTheme('dark');
+      localStorage.removeItem('eduspantech_theme');
+      setThemeMode('dark');
       window.location.reload();
     }
   };
@@ -509,6 +564,12 @@ const Settings = () => {
                     💻 System
                   </button>
                 </div>
+                <p className="theme-preview-note">
+                  {settings.theme === 'light' ? '☀️ Light mode enabled' : 
+                   settings.theme === 'dark' ? '🌙 Dark mode enabled' : 
+                   '💻 Following system preference'}
+                  {isDark && ' (Dark)'}
+                </p>
               </div>
 
               <div className="settings-group">
@@ -990,7 +1051,7 @@ const Settings = () => {
                     <select
                       className="settings-select"
                       value={settings.tutor.availability.sessionDuration}
-                      onChange={(e) => handleTutorSettingChange('availability', 'sessionDuration', Number(e.target.value))}
+                      onChange={(e) => handleTutorNestedChange('availability', 'sessionDuration', Number(e.target.value))}
                     >
                       <option value="30">30 minutes</option>
                       <option value="45">45 minutes</option>
@@ -1005,7 +1066,7 @@ const Settings = () => {
                     <select
                       className="settings-select"
                       value={settings.tutor.availability.bufferTime}
-                      onChange={(e) => handleTutorSettingChange('availability', 'bufferTime', Number(e.target.value))}
+                      onChange={(e) => handleTutorNestedChange('availability', 'bufferTime', Number(e.target.value))}
                     >
                       <option value="0">0 minutes</option>
                       <option value="5">5 minutes</option>
@@ -1021,7 +1082,7 @@ const Settings = () => {
                       type="number"
                       className="settings-input"
                       value={settings.tutor.availability.rate}
-                      onChange={(e) => handleTutorSettingChange('availability', 'rate', Number(e.target.value))}
+                      onChange={(e) => handleTutorNestedChange('availability', 'rate', Number(e.target.value))}
                       min="0"
                       step="50"
                       placeholder="200"
@@ -1039,27 +1100,27 @@ const Settings = () => {
                 <div className="settings-card-body">
                   <Toggle
                     enabled={settings.tutor.notifications.newBookings}
-                    onChange={(val) => handleTutorSettingChange('notifications', 'newBookings', val)}
+                    onChange={(val) => handleTutorNestedChange('notifications', 'newBookings', val)}
                     label="New booking requests"
                   />
                   <Toggle
                     enabled={settings.tutor.notifications.studentMessages}
-                    onChange={(val) => handleTutorSettingChange('notifications', 'studentMessages', val)}
+                    onChange={(val) => handleTutorNestedChange('notifications', 'studentMessages', val)}
                     label="Student messages"
                   />
                   <Toggle
                     enabled={settings.tutor.notifications.ratings}
-                    onChange={(val) => handleTutorSettingChange('notifications', 'ratings', val)}
+                    onChange={(val) => handleTutorNestedChange('notifications', 'ratings', val)}
                     label="Ratings received"
                   />
                   <Toggle
                     enabled={settings.tutor.notifications.earnings}
-                    onChange={(val) => handleTutorSettingChange('notifications', 'earnings', val)}
+                    onChange={(val) => handleTutorNestedChange('notifications', 'earnings', val)}
                     label="Earnings updates"
                   />
                   <Toggle
                     enabled={settings.tutor.notifications.systemUpdates}
-                    onChange={(val) => handleTutorSettingChange('notifications', 'systemUpdates', val)}
+                    onChange={(val) => handleTutorNestedChange('notifications', 'systemUpdates', val)}
                     label="System updates"
                   />
                 </div>
@@ -1077,7 +1138,7 @@ const Settings = () => {
                     <select
                       className="settings-select"
                       value={settings.tutor.paymentInfo.method}
-                      onChange={(e) => handleTutorSettingChange('paymentInfo', 'method', e.target.value)}
+                      onChange={(e) => handleTutorNestedChange('paymentInfo', 'method', e.target.value)}
                     >
                       <option value="bank_transfer">Bank Transfer</option>
                       <option value="paypal">PayPal</option>
@@ -1091,7 +1152,7 @@ const Settings = () => {
                       type="text"
                       className="settings-input"
                       value={settings.tutor.paymentInfo.bankName}
-                      onChange={(e) => handleTutorSettingChange('paymentInfo', 'bankName', e.target.value)}
+                      onChange={(e) => handleTutorNestedChange('paymentInfo', 'bankName', e.target.value)}
                       placeholder="e.g., First National Bank"
                     />
                   </div>
@@ -1102,7 +1163,7 @@ const Settings = () => {
                       type="text"
                       className="settings-input"
                       value={settings.tutor.paymentInfo.accountNumber}
-                      onChange={(e) => handleTutorSettingChange('paymentInfo', 'accountNumber', e.target.value)}
+                      onChange={(e) => handleTutorNestedChange('paymentInfo', 'accountNumber', e.target.value)}
                       placeholder="123456789"
                     />
                   </div>
@@ -1113,7 +1174,7 @@ const Settings = () => {
                       type="text"
                       className="settings-input"
                       value={settings.tutor.paymentInfo.accountHolder}
-                      onChange={(e) => handleTutorSettingChange('paymentInfo', 'accountHolder', e.target.value)}
+                      onChange={(e) => handleTutorNestedChange('paymentInfo', 'accountHolder', e.target.value)}
                       placeholder="Full name on account"
                     />
                   </div>
@@ -1124,7 +1185,7 @@ const Settings = () => {
                       type="text"
                       className="settings-input"
                       value={settings.tutor.paymentInfo.taxId}
-                      onChange={(e) => handleTutorSettingChange('paymentInfo', 'taxId', e.target.value)}
+                      onChange={(e) => handleTutorNestedChange('paymentInfo', 'taxId', e.target.value)}
                       placeholder="ID number or tax reference"
                     />
                   </div>

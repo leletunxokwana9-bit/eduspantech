@@ -1,230 +1,116 @@
-// src/hooks/useWebRTC.js - COMPLETE FULL VERSION
+// src/hooks/useWebRTC.js - COMPLETE FIXED VERSION
 import { useState, useEffect, useRef, useCallback } from 'react';
 
-const useWebRTC = (roomId, role, userId) => {
-  // ===== STATE =====
+const useWebRTC = (sessionId, role, userId) => {
+  const [ws, setWs] = useState(null);
   const [isConnected, setIsConnected] = useState(false);
   const [participants, setParticipants] = useState([]);
   const [error, setError] = useState(null);
   const [isAudioEnabled, setIsAudioEnabled] = useState(true);
   const [connectionStatus, setConnectionStatus] = useState('disconnected');
-
-  // ===== REFS =====
-  const wsRef = useRef(null);
-  const peerConnectionsRef = useRef(new Map());
-  const localStreamRef = useRef(null);
-  const reconnectAttemptsRef = useRef(0);
+  const [tutorJoined, setTutorJoined] = useState(false);
+  
+  const peerConnections = useRef({});
+  const localStream = useRef(null);
+  const remoteStreams = useRef({});
+  const reconnectAttempts = useRef(0);
   const maxReconnectAttempts = 5;
-  const dataChannelsRef = useRef(new Map());
-  const reconnectTimerRef = useRef(null);
+  const audioElements = useRef({});
 
-  // ===== CONFIGURATION =====
   const WS_URL = process.env.REACT_APP_WS_URL || 
-    'wss://eduspantech-backend.onrender.com/webrtc';
+    (process.env.REACT_APP_API_URL?.replace('http', 'ws') || 'ws://localhost:3000');
 
-  // ============================================
-  // WEBRTC CONFIGURATION
-  // ============================================
-  const getRTCConfiguration = () => ({
-    iceServers: [
-      { urls: 'stun:stun.l.google.com:19302' },
-      { urls: 'stun:stun1.l.google.com:19302' },
-      { urls: 'stun:stun2.l.google.com:19302' },
-      { urls: 'stun:stun3.l.google.com:19302' },
-      { urls: 'stun:stun4.l.google.com:19302' },
-      {
-        urls: 'turn:openrelay.metered.ca:80',
-        username: 'openrelayproject',
-        credential: 'openrelayproject'
-      },
-      {
-        urls: 'turn:openrelay.metered.ca:443',
-        username: 'openrelayproject',
-        credential: 'openrelayproject'
-      },
-      {
-        urls: 'turn:openrelay.metered.ca:443?transport=tcp',
-        username: 'openrelayproject',
-        credential: 'openrelayproject'
-      }
-    ],
-    iceCandidatePoolSize: 10,
-    iceTransportPolicy: 'all',
-    bundlePolicy: 'max-bundle',
-    rtcpMuxPolicy: 'require'
-  });
-
-  // ============================================
-  // INIT WEBRTC - AUDIO OPTIONAL
-  // ============================================
-  const initWebRTC = useCallback(async () => {
-    try {
-      console.log('🎬 Initializing WebRTC...');
-      
-      // Try to get microphone, but don't fail if not available
-      try {
-        const stream = await navigator.mediaDevices.getUserMedia({
-          audio: true,
-          video: false
-        });
-        localStreamRef.current = stream;
-        setIsAudioEnabled(true);
-        console.log('🎤 Microphone access granted');
-      } catch (micError) {
-        console.warn('⚠️ No microphone available, continuing without audio:', micError.message);
-        setIsAudioEnabled(false);
-        setError('⚠️ No microphone detected. Whiteboard will still work without audio.');
-      }
-      
-      // Connect WebSocket for signaling
-      connectWebSocket();
-
-    } catch (err) {
-      console.error('❌ Failed to initialize WebRTC:', err);
-      setError('Failed to initialize. Please refresh and try again.');
-    }
-  }, []);
-
-  // ============================================
-  // WEBSOCKET CONNECTION
-  // ============================================
   const connectWebSocket = useCallback(() => {
-    try {
-      console.log('🔗 Connecting to WebSocket:', WS_URL);
-      
-      // Close existing connection if any
-      if (wsRef.current) {
-        wsRef.current.close();
-        wsRef.current = null;
+    // ✅ Ensure userId and role are properly encoded
+    const encodedUserId = encodeURIComponent(userId || 'unknown');
+    const encodedRole = encodeURIComponent(role || 'student');
+    const encodedRoomId = encodeURIComponent(sessionId || 'default');
+    
+    const wsUrl = `${WS_URL}/webrtc?userId=${encodedUserId}&roomId=${encodedRoomId}&role=${encodedRole}`;
+    console.log(`🔗 Connecting to WebSocket: ${wsUrl}`);
+    console.log(`👤 Role: ${role}, UserId: ${userId}`);
+    
+    const socket = new WebSocket(wsUrl);
+    
+    socket.onopen = () => {
+      console.log('🔗 WebSocket connected');
+      setIsConnected(true);
+      setConnectionStatus('connected');
+      setError(null);
+      reconnectAttempts.current = 0;
+      initializeAudio();
+    };
+
+    socket.onmessage = (event) => {
+      try {
+        const data = JSON.parse(event.data);
+        console.log('📨 Received message:', data.type);
+        handleWebSocketMessage(data);
+      } catch (error) {
+        console.error('❌ Failed to parse WebSocket message:', error);
       }
+    };
 
-      wsRef.current = new WebSocket(WS_URL);
-
-      wsRef.current.onopen = () => {
-        console.log('✅ WebSocket connected successfully');
-        setIsConnected(true);
-        setConnectionStatus('connecting');
-        reconnectAttemptsRef.current = 0;
-
-        // Send join message
-        const joinMessage = {
-          type: 'join-room',
-          roomId: roomId,
-          role: role,
-          userId: userId
-        };
-        console.log('📤 Sending join message:', joinMessage);
-        wsRef.current.send(JSON.stringify(joinMessage));
-      };
-
-      wsRef.current.onmessage = (event) => {
-        try {
-          const data = JSON.parse(event.data);
-          console.log('📨 Received WebSocket message:', data.type);
-          handleSignalingMessage(data);
-        } catch (err) {
-          console.error('❌ WebSocket message parse error:', err);
-        }
-      };
-
-      wsRef.current.onclose = (event) => {
-        console.log('🔌 WebSocket closed:', event.code, event.reason || 'No reason');
-        setIsConnected(false);
-        setConnectionStatus('disconnected');
-        
-        // Clear reconnect timer if exists
-        if (reconnectTimerRef.current) {
-          clearTimeout(reconnectTimerRef.current);
-          reconnectTimerRef.current = null;
-        }
-        
-        handleReconnect();
-      };
-
-      wsRef.current.onerror = (error) => {
-        console.error('❌ WebSocket error:', error);
-        setError('WebSocket connection error. Reconnecting...');
-      };
-
-    } catch (err) {
-      console.error('❌ WebSocket connection error:', err);
-      setError('Failed to connect to signaling server');
-      handleReconnect();
-    }
-  }, [roomId, role, userId]);
-
-  // ============================================
-  // HANDLE RECONNECT
-  // ============================================
-  const handleReconnect = useCallback(() => {
-    if (reconnectAttemptsRef.current < maxReconnectAttempts) {
-      reconnectAttemptsRef.current++;
-      const delay = 3000 * reconnectAttemptsRef.current;
-      console.log(`🔄 Reconnecting attempt ${reconnectAttemptsRef.current} in ${delay/1000}s...`);
+    socket.onclose = (event) => {
+      console.log(`🔌 WebSocket closed: ${event.code} ${event.reason || 'No reason'}`);
+      setIsConnected(false);
+      setConnectionStatus('disconnected');
       
-      if (reconnectTimerRef.current) {
-        clearTimeout(reconnectTimerRef.current);
+      // Auto-reconnect
+      if (reconnectAttempts.current < maxReconnectAttempts) {
+        reconnectAttempts.current++;
+        console.log(`🔄 Reconnecting attempt ${reconnectAttempts.current}/${maxReconnectAttempts}...`);
+        setTimeout(() => connectWebSocket(), 2000 * reconnectAttempts.current);
+      } else {
+        console.log('❌ Max reconnect attempts reached');
+        setError('Failed to connect to WebRTC server');
       }
-      
-      reconnectTimerRef.current = setTimeout(() => {
-        connectWebSocket();
-      }, delay);
-    } else {
-      setError('❌ Connection lost. Please refresh the page.');
-      console.error('❌ Max reconnect attempts reached');
-    }
-  }, [connectWebSocket]);
+    };
 
-  // ============================================
-  // HANDLE SIGNALING MESSAGES
-  // ============================================
-  const handleSignalingMessage = useCallback((data) => {
+    socket.onerror = (error) => {
+      console.error('❌ WebSocket error:', error);
+      setError('WebSocket connection error');
+    };
+
+    setWs(socket);
+    return socket;
+  }, [WS_URL, userId, sessionId, role]);
+
+  const handleWebSocketMessage = useCallback((data) => {
     switch (data.type) {
+      case 'connected':
+        console.log('✅ Connected to server:', data.userId);
+        console.log('✅ Role:', data.role);
+        break;
+
       case 'room-joined':
-        setParticipants(data.participants || []);
-        setConnectionStatus('connected');
         console.log('✅ Joined room:', data.roomId);
-        console.log('👥 Participants:', data.participants?.length || 0);
+        console.log('✅ Role in room:', data.role);
+        setParticipants(data.participants || []);
         break;
 
-      case 'participant-joined':
-        console.log('👤 Participant joined:', data.userId, 'Role:', data.role);
-        setParticipants(prev => {
-          // Check if already exists
-          if (prev.some(p => p.userId === data.userId)) return prev;
-          return [...prev, {
-            userId: data.userId,
-            role: data.role,
-            status: 'active',
-            audioEnabled: true
-          }];
-        });
-        
-        // If a tutor joined and we're a student, create peer connection
-        if (data.role === 'tutor' && role === 'student') {
-          console.log('🎓 Tutor joined, creating peer connection...');
-          createPeerConnection(data.userId, true);
-        }
+      case 'participants-update':
+        console.log('👥 Participants update:', data.participants);
+        setParticipants(data.participants || []);
         break;
 
-      case 'participant-left':
-        console.log('👤 Participant left:', data.userId);
-        setParticipants(prev => prev.filter(p => p.userId !== data.userId));
-        
-        // Close peer connection
-        const pc = peerConnectionsRef.current.get(data.userId);
-        if (pc) {
-          pc.close();
-          peerConnectionsRef.current.delete(data.userId);
-        }
-        // Close data channel
-        const dc = dataChannelsRef.current.get(data.userId);
-        if (dc) {
-          dc.close();
-          dataChannelsRef.current.delete(data.userId);
-        }
+      // ✅ Tutor joined event
+      case 'tutor-joined':
+        console.log('👨‍🏫 TUTOR JOINED THE SESSION!');
+        setTutorJoined(true);
+        window.dispatchEvent(new CustomEvent('tutor-joined', {
+          detail: { tutorId: data.tutorId }
+        }));
         break;
 
+      // ✅ Tutor left event
+      case 'tutor-left':
+        console.log('👨‍🏫 TUTOR LEFT THE SESSION');
+        setTutorJoined(false);
+        window.dispatchEvent(new CustomEvent('tutor-left'));
+        break;
+
+      // WebRTC Signaling
       case 'offer':
         console.log('📞 Received offer from:', data.fromUserId);
         handleOffer(data);
@@ -240,495 +126,281 @@ const useWebRTC = (roomId, role, userId) => {
         handleIceCandidate(data);
         break;
 
+      // Whiteboard events
       case 'whiteboard-update':
-        console.log('🖍️ Whiteboard update received:', data.action);
-        // Emit event for TutorSession component
         window.dispatchEvent(new CustomEvent('whiteboard-update', {
-          detail: data
+          detail: { action: data.action, data: data.data, timestamp: data.timestamp }
         }));
         break;
 
       case 'whiteboard-sync':
-        console.log('🔄 Whiteboard sync received');
         window.dispatchEvent(new CustomEvent('whiteboard-sync', {
-          detail: data
+          detail: { data: data.data, timestamp: data.timestamp }
         }));
         break;
 
-      case 'clear-whiteboard':
-        console.log('🧹 Clear whiteboard received');
+      case 'whiteboard-clear':
         window.dispatchEvent(new CustomEvent('clear-whiteboard'));
         break;
 
-      case 'tutor-left':
-        console.log('👨‍🏫 Tutor left the session');
-        setError('Tutor has left the session.');
-        setConnectionStatus('disconnected');
+      // Chat events
+      case 'chat-message':
+        window.dispatchEvent(new CustomEvent('chat-message', { detail: data }));
+        break;
+
+      case 'chat-history':
+        window.dispatchEvent(new CustomEvent('chat-history', { detail: data.messages }));
+        break;
+
+      case 'typing-start':
+        window.dispatchEvent(new CustomEvent('typing-start', { detail: data }));
+        break;
+
+      case 'typing-stop':
+        window.dispatchEvent(new CustomEvent('typing-stop'));
+        break;
+
+      case 'hand-raise':
+        window.dispatchEvent(new CustomEvent('hand-raise', { detail: data }));
         break;
 
       case 'audio-toggle':
-        console.log('🔊 Audio toggle:', data.userId, data.enabled);
         setParticipants(prev => prev.map(p => 
-          p.userId === data.userId 
-            ? { ...p, audioEnabled: data.enabled }
-            : p
+          p.userId === data.userId ? { ...p, audioEnabled: data.enabled } : p
         ));
         break;
 
+      case 'session-ended':
+        window.dispatchEvent(new CustomEvent('session-ended'));
+        break;
+
       case 'error':
-        console.error('❌ Server error:', data.message);
+        console.error('Server error:', data.message);
         setError(data.message);
         break;
 
       default:
-        console.log('⚠️ Unhandled message type:', data.type);
+        console.log('Unknown message type:', data.type);
     }
-  }, [role]);
+  }, []);
 
   // ============================================
-  // CREATE PEER CONNECTION
+  // WEBRTC HANDLERS
   // ============================================
-  const createPeerConnection = useCallback((targetUserId, isInitiator = false) => {
-    console.log('🔧 Creating peer connection to:', targetUserId, 'Initiator:', isInitiator);
-    
-    const configuration = getRTCConfiguration();
-    const pc = new RTCPeerConnection(configuration);
-    peerConnectionsRef.current.set(targetUserId, pc);
 
-    // ===== ADD LOCAL AUDIO TRACK =====
-    if (localStreamRef.current) {
-      localStreamRef.current.getTracks().forEach(track => {
-        pc.addTrack(track, localStreamRef.current);
-        console.log('🎵 Added track:', track.kind);
+  const initializeAudio = useCallback(async () => {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({
+        audio: {
+          echoCancellation: true,
+          noiseSuppression: true,
+          autoGainControl: true
+        }
+      });
+      localStream.current = stream;
+      setIsAudioEnabled(true);
+      console.log('🎤 Audio initialized');
+    } catch (error) {
+      console.warn('⚠️ No microphone available, continuing without audio:', error.message);
+      setError('Microphone not available. Voice features disabled.');
+    }
+  }, []);
+
+  const createPeerConnection = useCallback(async (targetUserId) => {
+    const pc = new RTCPeerConnection({
+      iceServers: [
+        { urls: 'stun:stun.l.google.com:19302' },
+        { urls: 'stun:stun1.l.google.com:19302' },
+        { urls: 'stun:stun2.l.google.com:19302' }
+      ]
+    });
+
+    if (localStream.current) {
+      localStream.current.getTracks().forEach(track => {
+        pc.addTrack(track, localStream.current);
       });
     }
 
-    // ===== HANDLE REMOTE TRACKS =====
     pc.ontrack = (event) => {
-      console.log('📡 Remote track received:', event.track.kind);
-      if (event.track.kind === 'audio') {
-        const audioElement = document.createElement('audio');
-        audioElement.srcObject = event.streams[0];
-        audioElement.autoplay = true;
-        audioElement.style.display = 'none';
-        audioElement.id = `audio-${targetUserId}`;
-        document.body.appendChild(audioElement);
-        console.log('🔊 Audio element created for:', targetUserId);
+      remoteStreams.current[targetUserId] = event.streams[0];
+      
+      if (!audioElements.current[targetUserId]) {
+        const audio = new Audio();
+        audio.autoplay = true;
+        audio.srcObject = event.streams[0];
+        audio.play().catch(e => console.log('Audio play error:', e));
+        audioElements.current[targetUserId] = audio;
       }
+      
+      window.dispatchEvent(new CustomEvent('remote-audio', {
+        detail: { userId: targetUserId, stream: event.streams[0] }
+      }));
     };
 
-    // ===== HANDLE ICE CANDIDATES =====
     pc.onicecandidate = (event) => {
-      if (event.candidate) {
-        console.log('🧊 ICE candidate generated');
-        sendSignalingMessage({
+      if (event.candidate && ws && ws.readyState === WebSocket.OPEN) {
+        ws.send(JSON.stringify({
           type: 'ice-candidate',
           targetUserId: targetUserId,
-          roomId: roomId,
-          candidate: event.candidate
-        });
+          candidate: event.candidate,
+          roomId: sessionId
+        }));
       }
     };
 
-    // ===== ICE CONNECTION STATE =====
-    pc.oniceconnectionstatechange = () => {
-      const state = pc.iceConnectionState;
-      console.log(`🧊 ICE connection state: ${state}`);
-      if (state === 'failed') {
-        console.log('🔄 ICE failed, restarting...');
-        pc.restartIce();
-      }
-      if (state === 'connected') {
-        console.log('✅ ICE connected');
-        setConnectionStatus('connected');
-      }
-    };
-
-    // ===== CONNECTION STATE =====
-    pc.onconnectionstatechange = () => {
-      const state = pc.connectionState;
-      console.log(`🔗 Connection state: ${state}`);
-      if (state === 'connected') {
-        console.log('✅ WebRTC connection established with:', targetUserId);
-        setConnectionStatus('connected');
-      }
-      if (state === 'failed' || state === 'disconnected') {
-        console.log('❌ Connection failed/disconnected');
-        setConnectionStatus('disconnected');
-      }
-    };
-
-    // ===== DATA CHANNEL FOR WHITEBOARD =====
-    let dataChannel = null;
-    
-    if (isInitiator) {
-      // Create data channel (tutor creates it)
-      dataChannel = pc.createDataChannel('whiteboard', {
-        ordered: true,
-        reliable: true
-      });
-      dataChannelsRef.current.set(targetUserId, dataChannel);
-      setupDataChannel(dataChannel, targetUserId);
-      console.log('📡 Data channel created for:', targetUserId);
-    }
-
-    // Handle incoming data channel (student receives it)
-    pc.ondatachannel = (event) => {
-      console.log('📡 Incoming data channel from:', targetUserId);
-      dataChannel = event.channel;
-      dataChannelsRef.current.set(targetUserId, dataChannel);
-      setupDataChannel(dataChannel, targetUserId);
-    };
-
-    // ===== CREATE OFFER IF INITIATOR =====
-    if (isInitiator) {
-      createOffer(pc, targetUserId);
-    }
-
+    peerConnections.current[targetUserId] = pc;
     return pc;
-  }, [roomId]);
+  }, [ws, sessionId]);
 
-  // ============================================
-  // SETUP DATA CHANNEL
-  // ============================================
-  const setupDataChannel = useCallback((channel, targetUserId) => {
-    channel.onopen = () => {
-      console.log('📡 Data channel open with:', targetUserId);
-    };
-
-    channel.onclose = () => {
-      console.log('📡 Data channel closed with:', targetUserId);
-    };
-
-    channel.onerror = (error) => {
-      console.error('📡 Data channel error:', error);
-    };
-
-    channel.onmessage = (event) => {
-      try {
-        const data = JSON.parse(event.data);
-        console.log('📡 Data channel message:', data.type);
-        
-        // Forward to whiteboard component
-        if (data.type === 'whiteboard-update' || data.type === 'whiteboard-sync' || data.type === 'clear-whiteboard') {
-          window.dispatchEvent(new CustomEvent(data.type, {
-            detail: data
-          }));
-        }
-      } catch (err) {
-        console.error('❌ Data channel message parse error:', err);
-      }
-    };
-  }, []);
-
-  // ============================================
-  // CREATE OFFER
-  // ============================================
-  const createOffer = async (pc, targetUserId) => {
+  const handleOffer = useCallback(async (data) => {
+    const { fromUserId, offer } = data;
     try {
-      console.log('📞 Creating offer for:', targetUserId);
-      const offer = await pc.createOffer({
-        offerToReceiveAudio: true,
-        offerToReceiveVideo: false
-      });
-      await pc.setLocalDescription(offer);
-      
-      sendSignalingMessage({
-        type: 'offer',
-        targetUserId: targetUserId,
-        roomId: roomId,
-        offer: offer
-      });
-      console.log('📞 Offer sent to:', targetUserId);
-    } catch (err) {
-      console.error('❌ Failed to create offer:', err);
-    }
-  };
-
-  // ============================================
-  // HANDLE OFFER
-  // ============================================
-  const handleOffer = async (data) => {
-    try {
-      const targetUserId = data.fromUserId;
-      console.log('📞 Handling offer from:', targetUserId);
-      
-      let pc = peerConnectionsRef.current.get(targetUserId);
+      let pc = peerConnections.current[fromUserId];
       if (!pc) {
-        pc = await createPeerConnection(targetUserId, false);
+        pc = await createPeerConnection(fromUserId);
       }
-
-      await pc.setRemoteDescription(new RTCSessionDescription(data.offer));
-      console.log('📞 Remote description set');
-      
+      await pc.setRemoteDescription(new RTCSessionDescription(offer));
       const answer = await pc.createAnswer();
       await pc.setLocalDescription(answer);
-      console.log('📞 Answer created');
-
-      sendSignalingMessage({
-        type: 'answer',
-        targetUserId: targetUserId,
-        roomId: roomId,
-        answer: answer
-      });
-      console.log('📞 Answer sent to:', targetUserId);
-    } catch (err) {
-      console.error('❌ Failed to handle offer:', err);
-    }
-  };
-
-  // ============================================
-  // HANDLE ANSWER
-  // ============================================
-  const handleAnswer = async (data) => {
-    try {
-      const targetUserId = data.fromUserId;
-      console.log('📞 Handling answer from:', targetUserId);
       
-      const pc = peerConnectionsRef.current.get(targetUserId);
-      if (pc) {
-        await pc.setRemoteDescription(new RTCSessionDescription(data.answer));
-        console.log('📞 Answer accepted from:', targetUserId);
-      } else {
-        console.warn('⚠️ No peer connection found for:', targetUserId);
-      }
-    } catch (err) {
-      console.error('❌ Failed to handle answer:', err);
-    }
-  };
-
-  // ============================================
-  // HANDLE ICE CANDIDATE
-  // ============================================
-  const handleIceCandidate = async (data) => {
-    try {
-      const targetUserId = data.fromUserId;
-      console.log('🧊 Adding ICE candidate from:', targetUserId);
-      
-      const pc = peerConnectionsRef.current.get(targetUserId);
-      if (pc) {
-        await pc.addIceCandidate(new RTCIceCandidate(data.candidate));
-        console.log('🧊 ICE candidate added');
-      } else {
-        console.warn('⚠️ No peer connection for ICE candidate from:', targetUserId);
-      }
-    } catch (err) {
-      console.error('❌ Failed to add ICE candidate:', err);
-    }
-  };
-
-  // ============================================
-  // SEND SIGNALING MESSAGE
-  // ============================================
-  const sendSignalingMessage = useCallback((data) => {
-    if (wsRef.current && wsRef.current.readyState === WebSocket.OPEN) {
-      wsRef.current.send(JSON.stringify(data));
-      console.log('📤 Sent:', data.type);
-    } else {
-      console.warn('⚠️ WebSocket not open, message not sent:', data.type);
-    }
-  }, []);
-
-  // ============================================
-  // SEND WHITEBOARD DATA VIA DATA CHANNEL (PREFERRED)
-  // ============================================
-  const sendWhiteboardViaDataChannel = useCallback((targetUserId, data) => {
-    const channel = dataChannelsRef.current.get(targetUserId);
-    if (channel && channel.readyState === 'open') {
-      channel.send(JSON.stringify(data));
-      console.log('📡 Whiteboard data sent via data channel');
-      return true;
-    }
-    return false;
-  }, []);
-
-  // ============================================
-  // BROADCAST WHITEBOARD UPDATE
-  // ============================================
-  const broadcastWhiteboardUpdate = useCallback((action, data) => {
-    if (role === 'tutor') {
-      const message = {
-        type: 'whiteboard-update',
-        action: action,
-        data: data,
-        roomId: roomId,
-        timestamp: Date.now()
-      };
-
-      // Try data channel first (P2P, faster)
-      let sentViaDataChannel = false;
-      const participantsList = participants.filter(p => p.role === 'student');
-      
-      for (const participant of participantsList) {
-        if (sendWhiteboardViaDataChannel(participant.userId, message)) {
-          sentViaDataChannel = true;
-        }
-      }
-
-      // Fallback to WebSocket if data channel not available
-      if (!sentViaDataChannel) {
-        console.log('📤 Broadcasting via WebSocket (fallback)');
-        sendSignalingMessage({
-          type: 'whiteboard-update',
-          action: action,
-          data: data,
-          roomId: roomId
-        });
-      }
-    }
-  }, [role, roomId, participants, sendWhiteboardViaDataChannel, sendSignalingMessage]);
-
-  // ============================================
-  // CLEAR WHITEBOARD
-  // ============================================
-  const clearWhiteboard = useCallback(() => {
-    if (role === 'tutor') {
-      const message = {
-        type: 'clear-whiteboard',
-        roomId: roomId,
-        timestamp: Date.now()
-      };
-
-      // Try data channel first
-      let sentViaDataChannel = false;
-      const participantsList = participants.filter(p => p.role === 'student');
-      
-      for (const participant of participantsList) {
-        if (sendWhiteboardViaDataChannel(participant.userId, message)) {
-          sentViaDataChannel = true;
-        }
-      }
-
-      // Fallback to WebSocket
-      if (!sentViaDataChannel) {
-        sendSignalingMessage({
-          type: 'clear-whiteboard',
-          roomId: roomId
-        });
-      }
-    }
-  }, [role, roomId, participants, sendWhiteboardViaDataChannel, sendSignalingMessage]);
-
-  // ============================================
-  // TOGGLE AUDIO
-  // ============================================
-  const toggleAudio = useCallback(() => {
-    if (localStreamRef.current) {
-      const audioTracks = localStreamRef.current.getAudioTracks();
-      audioTracks.forEach(track => {
-        track.enabled = !track.enabled;
-      });
-      const newState = !isAudioEnabled;
-      setIsAudioEnabled(newState);
-
-      sendSignalingMessage({
-        type: 'audio-toggle',
-        roomId: roomId,
-        enabled: newState
-      });
-      console.log('🔊 Audio toggled:', newState ? 'ON' : 'OFF');
-    } else {
-      console.warn('⚠️ No audio stream to toggle');
-    }
-  }, [isAudioEnabled, roomId, sendSignalingMessage]);
-
-  // ============================================
-  // LEAVE SESSION
-  // ============================================
-  const leaveSession = useCallback(() => {
-    console.log('👋 Leaving session...');
-    
-    // Clear reconnect timer
-    if (reconnectTimerRef.current) {
-      clearTimeout(reconnectTimerRef.current);
-      reconnectTimerRef.current = null;
-    }
-
-    // Close peer connections
-    peerConnectionsRef.current.forEach((pc, userId) => {
-      console.log('🔒 Closing peer connection:', userId);
-      pc.close();
-    });
-    peerConnectionsRef.current.clear();
-
-    // Close data channels
-    dataChannelsRef.current.forEach((dc, userId) => {
-      console.log('🔒 Closing data channel:', userId);
-      dc.close();
-    });
-    dataChannelsRef.current.clear();
-
-    // Stop local stream
-    if (localStreamRef.current) {
-      localStreamRef.current.getTracks().forEach(track => {
-        track.stop();
-        console.log('🎵 Track stopped:', track.kind);
-      });
-      localStreamRef.current = null;
-    }
-
-    // Close WebSocket
-    if (wsRef.current) {
-      try {
-        wsRef.current.send(JSON.stringify({
-          type: 'leave-room',
-          roomId: roomId
+      if (ws && ws.readyState === WebSocket.OPEN) {
+        ws.send(JSON.stringify({
+          type: 'answer',
+          targetUserId: fromUserId,
+          answer: pc.localDescription,
+          roomId: sessionId
         }));
-      } catch (e) {
-        // Ignore send errors on close
       }
-      wsRef.current.close();
-      wsRef.current = null;
+    } catch (error) {
+      console.error('Error handling offer:', error);
     }
+  }, [createPeerConnection, ws, sessionId]);
 
-    setIsConnected(false);
-    setConnectionStatus('disconnected');
-    setParticipants([]);
-    console.log('👋 Session left successfully');
-  }, [roomId]);
-
-  // ============================================
-  // CLEANUP ON UNMOUNT
-  // ============================================
-  useEffect(() => {
-    return () => {
-      leaveSession();
-    };
-  }, [leaveSession]);
-
-  // ============================================
-  // AUTO-CONNECT ON MOUNT
-  // ============================================
-  useEffect(() => {
-    if (roomId && role && userId) {
-      console.log('🚀 Auto-connecting to room:', roomId, 'as:', role);
-      initWebRTC();
+  const handleAnswer = useCallback(async (data) => {
+    const { fromUserId, answer } = data;
+    try {
+      const pc = peerConnections.current[fromUserId];
+      if (pc) {
+        await pc.setRemoteDescription(new RTCSessionDescription(answer));
+      }
+    } catch (error) {
+      console.error('Error handling answer:', error);
     }
+  }, []);
+
+  const handleIceCandidate = useCallback(async (data) => {
+    const { fromUserId, candidate } = data;
+    try {
+      const pc = peerConnections.current[fromUserId];
+      if (pc) {
+        await pc.addIceCandidate(new RTCIceCandidate(candidate));
+      }
+    } catch (error) {
+      console.error('Error handling ICE candidate:', error);
+    }
+  }, []);
+
+  // ============================================
+  // PUBLIC METHODS
+  // ============================================
+
+  const toggleAudio = useCallback(() => {
+    if (localStream.current) {
+      const tracks = localStream.current.getTracks();
+      tracks.forEach(track => {
+        track.enabled = !isAudioEnabled;
+      });
+      setIsAudioEnabled(!isAudioEnabled);
+      
+      if (ws && ws.readyState === WebSocket.OPEN) {
+        ws.send(JSON.stringify({
+          type: 'audio-toggle',
+          enabled: !isAudioEnabled
+        }));
+      }
+    }
+  }, [isAudioEnabled, ws]);
+
+  const broadcastWhiteboardUpdate = useCallback((action, data) => {
+    if (ws && ws.readyState === WebSocket.OPEN) {
+      ws.send(JSON.stringify({
+        type: 'whiteboard-draw',
+        action: action,
+        paths: data,
+        timestamp: Date.now()
+      }));
+    }
+  }, [ws]);
+
+  const clearWhiteboard = useCallback(() => {
+    if (ws && ws.readyState === WebSocket.OPEN) {
+      ws.send(JSON.stringify({
+        type: 'whiteboard-clear'
+      }));
+    }
+  }, [ws]);
+
+  const sendChatMessage = useCallback((message, name) => {
+    if (ws && ws.readyState === WebSocket.OPEN) {
+      ws.send(JSON.stringify({
+        type: 'chat-message',
+        message: message,
+        name: name || 'You',
+        time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+      }));
+    }
+  }, [ws]);
+
+  const raiseHand = useCallback((raised) => {
+    if (ws && ws.readyState === WebSocket.OPEN) {
+      ws.send(JSON.stringify({
+        type: 'hand-raise',
+        raised: raised
+      }));
+    }
+  }, [ws]);
+
+  const sendTyping = useCallback((isTyping) => {
+    if (ws && ws.readyState === WebSocket.OPEN) {
+      ws.send(JSON.stringify({
+        type: isTyping ? 'typing-start' : 'typing-stop'
+      }));
+    }
+  }, [ws]);
+
+  const leaveSession = useCallback(() => {
+    if (ws && ws.readyState === WebSocket.OPEN) {
+      ws.send(JSON.stringify({ type: 'leave-room' }));
+      ws.close();
+    }
+    if (localStream.current) {
+      localStream.current.getTracks().forEach(track => track.stop());
+    }
+    Object.values(peerConnections.current).forEach(pc => pc.close());
+    peerConnections.current = {};
     
-    // Cleanup on unmount
-    return () => {
-      if (reconnectTimerRef.current) {
-        clearTimeout(reconnectTimerRef.current);
-        reconnectTimerRef.current = null;
-      }
-    };
-  }, [roomId, role, userId, initWebRTC]);
+    Object.values(audioElements.current).forEach(audio => {
+      audio.pause();
+      audio.srcObject = null;
+    });
+    audioElements.current = {};
+  }, [ws]);
 
-  // ============================================
-  // RETURN API
-  // ============================================
   return {
     isConnected,
     participants,
     error,
     isAudioEnabled,
     connectionStatus,
+    tutorJoined,
     toggleAudio,
     leaveSession,
     broadcastWhiteboardUpdate,
     clearWhiteboard,
-    sendSignalingMessage,
-    sendWhiteboardViaDataChannel
+    sendChatMessage,
+    raiseHand,
+    sendTyping,
+    ws
   };
 };
 

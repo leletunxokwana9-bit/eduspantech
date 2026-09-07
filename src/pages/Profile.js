@@ -1,9 +1,8 @@
-// src/pages/Profile.js - COMPLETE WITH IDENTITY CARD
+// src/pages/Profile.js - COMPLETE WITH UUID FIX
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import authService from '../services/authService';
 import AvatarSelector from '../components/AvatarSelector';
-import IdentityCard from '../components/IdentityCard'; // ← ADD THIS IMPORT
 import { API_BASE_URL } from '../services/api';
 import { tutorService } from '../services/tutorService';
 import './Profile.css';
@@ -676,6 +675,7 @@ const Profile = () => {
         return;
       }
 
+      // ===== FIX: Convert empty string to null for UUID fields =====
       const payload = {
         name: editForm.name,
         email: editForm.email,
@@ -690,6 +690,7 @@ const Profile = () => {
         website: editForm.website || '',
         tier: editForm.tier || '',
         subjects: editForm.subjects || [],
+        // Convert empty string to null for UUID
         shiftId: editForm.shiftId && editForm.shiftId.trim() !== '' ? editForm.shiftId : null
       };
 
@@ -872,6 +873,7 @@ const Profile = () => {
           </div>
 
           <div className="profile-modal-body video-manager-body">
+            {/* Current Video Display */}
             {videoUrl && !videoPreview && (
               <div className="video-current-display">
                 <div className="video-preview-container" style={{ cursor: 'pointer' }} onClick={() => {
@@ -897,6 +899,7 @@ const Profile = () => {
               </div>
             )}
 
+            {/* Video Preview (new upload) */}
             {videoPreview && (
               <div className="video-preview-section">
                 <div className="video-preview-container">
@@ -923,6 +926,7 @@ const Profile = () => {
               </div>
             )}
 
+            {/* Upload Drop Zone (no video) */}
             {!videoUrl && !videoPreview && (
               <div className="video-upload-zone" onClick={() => videoFileInputRef.current?.click()}>
                 <input
@@ -939,6 +943,7 @@ const Profile = () => {
               </div>
             )}
 
+            {/* Action Buttons */}
             <div className="video-actions">
               {!videoPreview && !videoUrl && (
                 <button className="video-action-btn primary" onClick={() => videoFileInputRef.current?.click()} disabled={videoUploading}>
@@ -1060,17 +1065,58 @@ const Profile = () => {
       <VideoManagerModal />
       <VideoPreviewModal />
 
-      {/* ===== IDENTITY CARD ===== */}
-      <IdentityCard
-        isTutor={isTutor}
-        user={user}
-        editForm={editForm}
-        subscription={subscription}
-        shiftOptions={shiftOptions}
-        profilePhoto={profilePhoto}
-        avatarImage={avatarImage}
-        setIsEditing={setIsEditing}
-      />
+      {/* ===== HEADER ===== */}
+      <div className="profile-header">
+        <div className="profile-avatar" onClick={isTutor ? triggerFileInput : () => setShowAvatarSelector(true)}>
+          {isTutor ? (
+            profilePhoto ? (
+              <img src={profilePhoto} alt={user?.name} className="profile-avatar-img" />
+            ) : (
+              <span className="profile-avatar-emoji">👨‍🏫</span>
+            )
+          ) : (
+            avatarImage ? (
+              <img src={avatarImage} alt={user?.name} className="profile-avatar-img" />
+            ) : (
+              <span className="profile-avatar-emoji">👤</span>
+            )
+          )}
+          <div className="avatar-edit-badge">{isTutor ? '📸' : '✎'}</div>
+        </div>
+
+        <input ref={fileInputRef} type="file" accept="image/*" onChange={handlePhotoUpload} style={{ display: 'none' }} />
+
+        <div className="profile-header-info">
+          <h1>
+            {user?.name || 'User'}
+            {isTutor && (
+              <span style={{ 
+                fontSize: '14px', 
+                fontWeight: 600, 
+                color: '#34d399', 
+                background: 'rgba(52,211,153,0.15)', 
+                padding: '2px 12px', 
+                borderRadius: '12px', 
+                marginLeft: '12px',
+                border: '1px solid rgba(52,211,153,0.2)'
+              }}>
+                👨‍🏫 Tutor
+              </span>
+            )}
+          </h1>
+          <p className="profile-header-subtitle">
+            {isTutor ? 'Professional Mathematics Tutor' : (user?.cohort === 'HighSchool' ? 'High School Student' : 'University Student')} 
+            {' • '}{user?.country || 'South Africa'}
+          </p>
+          <div className="profile-status">
+            <span className="status-dot"></span>
+            <span>{isTutor ? 'Active Tutor' : 'Active Member'}</span>
+          </div>
+        </div>
+        <button className="profile-edit-btn" onClick={() => setIsEditing(!isEditing)}>
+          {isEditing ? 'Cancel' : '✏️ Edit Profile'}
+        </button>
+      </div>
 
       {/* ===== MESSAGES ===== */}
       {photoError && <div className="profile-error">{photoError}</div>}

@@ -104,6 +104,37 @@ const EMOJIS = [
 ];
 
 // ============================================
+// WAITING FOR TUTOR COMPONENT
+// ============================================
+const WaitingForTutor = ({ onLeave }) => (
+  <div className="waiting-for-tutor">
+    <div className="waiting-content">
+      <div className="waiting-animation">
+        <div className="pulse-ring"></div>
+        <div className="pulse-ring delay-1"></div>
+        <div className="pulse-ring delay-2"></div>
+        <span className="waiting-emoji">⏳</span>
+      </div>
+      <h2>Waiting for Tutor...</h2>
+      <p>
+        Your tutor will join the session shortly. 
+        Please stay connected.
+      </p>
+      <div className="waiting-status">
+        <span className="status-dot pulsating"></span>
+        <span>Connecting to session...</span>
+      </div>
+      <button 
+        className="leave-waiting-btn"
+        onClick={onLeave}
+      >
+        Leave Waiting Room
+      </button>
+    </div>
+  </div>
+);
+
+// ============================================
 // MAIN COMPONENT
 // ============================================
 const TutorSession = () => {
@@ -116,49 +147,158 @@ const TutorSession = () => {
   const [userRole, setUserRole] = useState('student');
   const [userId, setUserId] = useState(null);
   const [userName, setUserName] = useState('You');
+  const [isTutorUser, setIsTutorUser] = useState(false);
+  const [roleLoaded, setRoleLoaded] = useState(false);
   
-  // Get user role
+  // ============================================
+  // ✅ FIX: ROLE DETECTION - RUNS FIRST
+  // ============================================
   useEffect(() => {
     const checkRole = async () => {
+      console.log('🔍 Checking user role...');
       const token = localStorage.getItem('accessToken');
-      if (token) {
-        try {
-          const API_URL = process.env.REACT_APP_API_URL || 'https://eduspantech-backend.onrender.com/api';
-          const response = await fetch(`${API_URL}/auth/me`, {
-            headers: { 'Authorization': `Bearer ${token}` }
-          });
-          if (response.ok) {
-            const data = await response.json();
-            const user = data.user || data;
-            const isTutor = user.is_tutor === true || user.role === 'tutor';
-            setUserRole(isTutor ? 'tutor' : 'student');
-            setUserId(user.id || user.userId || `user-${Date.now()}`);
-            setUserName(user.name || user.fullName || 'You');
-            console.log('👤 User role:', isTutor ? 'Tutor' : 'Student');
-          }
-        } catch (e) {
-          console.error('Failed to check role:', e);
+      
+      if (!token) {
+        console.log('⚠️ No token found, defaulting to student');
+        setUserRole('student');
+        setUserId(`user-${Date.now()}`);
+        setUserName('You');
+        setIsTutorUser(false);
+        setRoleLoaded(true);
+        return;
+      }
+      
+      try {
+        const API_URL = process.env.REACT_APP_API_URL || 'https://eduspantech-backend.onrender.com/api';
+        const response = await fetch(`${API_URL}/auth/me`, {
+          headers: { 'Authorization': `Bearer ${token}` }
+        });
+        
+        if (response.ok) {
+          const data = await response.json();
+          const user = data.user || data;
+          const isTutor = user.is_tutor === true || user.role === 'tutor';
+          const id = user.id || user.userId || `user-${Date.now()}`;
+          const name = user.name || user.fullName || 'You';
+          
+          setUserRole(isTutor ? 'tutor' : 'student');
+          setUserId(id);
+          setUserName(name);
+          setIsTutorUser(isTutor);
+          setRoleLoaded(true);
+          
+          console.log('👤 User role determined:', isTutor ? 'TUTOR' : 'STUDENT');
+          console.log('👤 User ID:', id);
+          console.log('👤 User Name:', name);
+          
+          // Store in session storage for debugging
+          sessionStorage.setItem('userRole', isTutor ? 'tutor' : 'student');
+          sessionStorage.setItem('userId', id);
+        } else {
+          console.error('❌ Failed to fetch user data:', response.status);
+          setUserRole('student');
+          setUserId(`user-${Date.now()}`);
+          setUserName('You');
+          setIsTutorUser(false);
+          setRoleLoaded(true);
         }
+      } catch (error) {
+        console.error('❌ Failed to check role:', error);
+        setUserRole('student');
+        setUserId(`user-${Date.now()}`);
+        setUserName('You');
+        setIsTutorUser(false);
+        setRoleLoaded(true);
       }
     };
+    
     checkRole();
   }, []);
 
-  // ===== WEBRTC HOOK =====
+  // ============================================
+  // ✅ WEBRTC HOOK - WAIT FOR ROLE TO LOAD
+  // ============================================
   const {
     isConnected,
     participants,
     error: webrtcError,
     isAudioEnabled,
     connectionStatus,
+    tutorJoined,
     toggleAudio,
     leaveSession: leaveWebRTCSession,
     broadcastWhiteboardUpdate,
     clearWhiteboard: clearWhiteboardRemote,
-    sendSignalingMessage
-  } = useWebRTC(sessionId, userRole, userId);
+  } = useWebRTC(
+    roleLoaded ? sessionId : null, 
+    roleLoaded ? userRole : 'student', 
+    roleLoaded ? userId : null
+  );
 
-  // ===== WHITEBOARD STATE =====
+  // ============================================
+  // ✅ WAITING STATE
+  // ============================================
+  const [showWaitingScreen, setShowWaitingScreen] = useState(false);
+  const [sessionReady, setSessionReady] = useState(false);
+
+  useEffect(() => {
+    if (!roleLoaded) return;
+    
+    // If user is tutor, always show session
+    if (userRole === 'tutor') {
+      setShowWaitingScreen(false);
+      setSessionReady(true);
+      return;
+    }
+    
+    // If user is student, wait for tutor
+    if (userRole === 'student') {
+      // Check if tutor is already in participants
+      const hasTutor = participants.some(p => p.role === 'tutor');
+      
+      if (hasTutor || tutorJoined) {
+        setShowWaitingScreen(false);
+        setSessionReady(true);
+        console.log('✅ Tutor present, session ready!');
+      } else {
+        setShowWaitingScreen(true);
+        setSessionReady(false);
+        console.log('⏳ Waiting for tutor...');
+      }
+    }
+  }, [roleLoaded, userRole, participants, tutorJoined]);
+
+  // ============================================
+  // ✅ LISTEN FOR TUTOR JOINED EVENT
+  // ============================================
+  useEffect(() => {
+    const handleTutorJoined = () => {
+      console.log('👨‍🏫 Tutor joined event received!');
+      if (userRole === 'student') {
+        setShowWaitingScreen(false);
+        setSessionReady(true);
+      }
+    };
+    
+    window.addEventListener('tutor-joined', handleTutorJoined);
+    return () => window.removeEventListener('tutor-joined', handleTutorJoined);
+  }, [userRole]);
+
+  // ============================================
+  // ✅ DEBUG: LOG PARTICIPANTS
+  // ============================================
+  useEffect(() => {
+    if (participants.length > 0) {
+      console.log('👥 Participants:', participants);
+      const hasTutor = participants.some(p => p.role === 'tutor');
+      const hasStudent = participants.some(p => p.role === 'student');
+      console.log('📊 Room status:', { hasTutor, hasStudent, count: participants.length });
+    }
+  }, [participants]);
+
+  // ============================================
+  // WHITEBOARD STATE
+  // ============================================
   const [drawingData, setDrawingData] = useState([]);
   const [currentTool, setCurrentTool] = useState('pen');
   const [selectedColor, setSelectedColor] = useState('#1a1a2e');
@@ -168,9 +308,10 @@ const TutorSession = () => {
   const [canvasHistory, setCanvasHistory] = useState([]);
   const [historyIndex, setHistoryIndex] = useState(-1);
   const [maxHistory] = useState(50);
-  const [isTutorUser, setIsTutorUser] = useState(false);
 
-  // ===== CHAT STATE =====
+  // ============================================
+  // CHAT STATE
+  // ============================================
   const [messages, setMessages] = useState([]);
   const [newMessage, setNewMessage] = useState('');
   const [isTyping, setIsTyping] = useState(false);
@@ -201,7 +342,9 @@ const TutorSession = () => {
     startTime: Date.now()
   });
 
-  // ===== REFS =====
+  // ============================================
+  // REFS
+  // ============================================
   const canvasRef = useRef(null);
   const ctxRef = useRef(null);
   const messagesEndRef = useRef(null);
@@ -348,7 +491,6 @@ const TutorSession = () => {
         setCanvasHistory(newHistory);
         setHistoryIndex(newHistory.length - 1);
         
-        // Broadcast ENTIRE drawing data
         const currentDrawingData = drawingDataRef.current;
         console.log('📤 Broadcasting whiteboard data:', currentDrawingData.length, 'paths');
         broadcastWhiteboardUpdate('draw', currentDrawingData);
@@ -519,33 +661,6 @@ const TutorSession = () => {
   useEffect(() => {
     if (!isMobile) setShowChat(false);
   }, [isMobile]);
-
-  // ============================================
-  // SET USER ROLE
-  // ============================================
-  useEffect(() => {
-    const checkUserRole = async () => {
-      try {
-        const token = localStorage.getItem('accessToken');
-        if (token) {
-          const API_URL = process.env.REACT_APP_API_URL || 'https://eduspantech-backend.onrender.com/api';
-          const response = await fetch(`${API_URL}/auth/me`, {
-            headers: { 'Authorization': `Bearer ${token}` }
-          });
-          if (response.ok) {
-            const data = await response.json();
-            const user = data.user || data;
-            const isTutor = user.is_tutor === true || user.role === 'tutor';
-            setIsTutorUser(isTutor);
-            console.log('👤 User role check:', isTutor ? 'Tutor' : 'Student');
-          }
-        }
-      } catch (error) {
-        console.error('Failed to check user role:', error);
-      }
-    };
-    checkUserRole();
-  }, []);
 
   // ============================================
   // FORMAT TIME
@@ -856,7 +971,15 @@ const TutorSession = () => {
   };
 
   // ============================================
-  // RATING MODAL - FIX FLICKERING
+  // HANDLE LEAVE WAITING ROOM
+  // ============================================
+  const handleLeaveWaitingRoom = () => {
+    leaveWebRTCSession();
+    navigate('/my-sessions');
+  };
+
+  // ============================================
+  // RATING MODAL
   // ============================================
   const RatingModal = () => {
     if (!showRatingModal) return null;
@@ -948,8 +1071,17 @@ const TutorSession = () => {
   };
 
   // ============================================
-  // RENDER
+  // LOADING STATE
   // ============================================
+  if (!roleLoaded) {
+    return (
+      <div className="session-loading">
+        <div className="loading-spinner"></div>
+        <p>Loading session...</p>
+      </div>
+    );
+  }
+
   if (!tutor) {
     return (
       <div className="session-loading">
@@ -959,6 +1091,16 @@ const TutorSession = () => {
     );
   }
 
+  // ============================================
+  // WAITING FOR TUTOR SCREEN
+  // ============================================
+  if (showWaitingScreen && userRole === 'student') {
+    return <WaitingForTutor onLeave={handleLeaveWaitingRoom} />;
+  }
+
+  // ============================================
+  // MAIN RENDER
+  // ============================================
   return (
     <div className="session-container dark">
       {showRatingModal && <RatingModal />}
@@ -969,7 +1111,9 @@ const TutorSession = () => {
           <div className="session-info">
             <h2>Session with {tutor.name}</h2>
             <div className="session-meta">
-              <span className="session-status connected">● Live</span>
+              <span className={`session-status ${isConnected ? 'connected' : 'disconnected'}`}>
+                {isConnected ? '● Live' : '○ Connecting...'}
+              </span>
               <span className="session-timer">⏱ {formatTime(timeElapsed)}</span>
               <span className="session-participants">👥 {participants.length + 1}</span>
               <span className="session-stats">
@@ -1009,7 +1153,7 @@ const TutorSession = () => {
             </div>
             <div className="tutor-card-info">
               <span className="tutor-card-name">{tutor.name}</span>
-              <span className="tutor-card-role">{isTutorUser ? 'Tutor' : 'Student'}</span>
+              <span className="tutor-card-role">{isTutorUser ? '👨‍🏫 Tutor' : '👨‍🎓 Student'}</span>
             </div>
             <div className="tutor-card-controls">
               <button 
@@ -1113,7 +1257,7 @@ const TutorSession = () => {
             {participants.filter(p => p.role === 'student').map(p => (
               <div key={p.userId} className="participant-item">
                 <span className={`status-dot ${p.status === 'active' ? 'online' : 'offline'}`}></span>
-                <span>{p.userId.slice(0, 8)}</span>
+                <span>{p.userId?.slice(0, 8) || 'Student'}</span>
                 {!p.audioEnabled && <span>🔇</span>}
               </div>
             ))}

@@ -1,0 +1,183 @@
+/* src/pages/Admin/AdminContent.css */
+.admin-content {
+    padding: 0;
+}
+
+.content-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 24px;
+}
+
+.content-header h2 {
+    color: #ffffff;
+    font-size: 24px;
+    font-weight: 600;
+    margin: 0;
+}
+
+.add-btn {
+    padding: 10px 24px;
+    background: #4f46e5;
+    border: none;
+    border-radius: 8px;
+    color: white;
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.add-btn:hover {
+    background: #6366f1;
+    transform: translateY(-2px);
+}
+
+.subjects-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    gap: 16px;
+}
+
+.subject-card {
+    background: #111827;
+    border: 1px solid #1f2937;
+    border-radius: 12px;
+    padding: 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    transition: all 0.2s;
+    border-left: 4px solid #4f46e5;
+}
+
+.subject-card:hover {
+    transform: translateY(-2px);
+    border-color: #4f46e5;
+}
+
+.subject-icon {
+    width: 48px;
+    height: 48px;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 24px;
+    color: white;
+}
+
+.subject-info h4 {
+    color: #ffffff;
+    font-size: 16px;
+    font-weight: 600;
+    margin: 0;
+}
+
+.subject-info p {
+    color: #94a3b8;
+    font-size: 14px;
+    margin: 4px 0;
+}
+
+.subject-status {
+    font-size: 13px;
+    color: #10b981;
+}
+
+.subject-actions {
+    display: flex;
+    gap: 8px;
+    margin-top: 8px;
+}
+
+.subject-actions .action-btn {
+    padding: 6px 16px;
+    border: none;
+    border-radius: 6px;
+    font-size: 13px;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.subject-actions .action-btn.edit {
+    background: #4f46e5;
+    color: white;
+}
+
+.subject-actions .action-btn.edit:hover {
+    background: #6366f1;
+}
+
+.subject-actions .action-btn.delete {
+    background: #ef4444;
+    color: white;
+}
+
+.subject-actions .action-btn.delete:hover {
+    background: #dc2626;
+}
+
+.subject-modal .form-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+}
+
+.color-picker-grid {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+.color-option {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    cursor: pointer;
+    border: 2px solid transparent;
+    transition: all 0.2s;
+}
+
+.color-option.selected {
+    border-color: #ffffff;
+    transform: scale(1.1);
+}
+
+.color-option:hover {
+    transform: scale(1.1);
+}
+
+.modal-btn.save {
+    background: #4f46e5;
+    color: white;
+}
+
+.modal-btn.save:hover {
+    background: #6366f1;
+}
+
+.admin-content-loading {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 400px;
+    color: #94a3b8;
+}
+
+@media (max-width: 768px) {
+    .content-header {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 12px;
+    }
+
+    .subjects-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .subject-modal .form-row {
+        grid-template-columns: 1fr;
+    }
+}

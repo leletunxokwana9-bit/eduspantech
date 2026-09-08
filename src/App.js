@@ -1,558 +1,345 @@
-// backend/src/app.js - COMPLETE WITH ALL ROUTES (VIDEO + SHIFTS + WEBRTC)
-const express = require('express');
-const cors = require('cors');
-const helmet = require('helmet');
-const compression = require('compression');
-const http = require('http');
-const { errorHandler } = require('./middleware/errorHandler');
-const routes = require('./routes');
-const authenticateToken = require('./middleware/auth');
-const { getEarnings, getEarningsSummary } = require('./controllers/earningsController');
-const { supabase } = require('./config/database');
-const WebRTCSignalingServer = require('./webrtc/webrtcServer');
+// src/App.js - COMPLETE WITH ADMIN ROUTES
+import React, { Suspense, lazy } from 'react';
+import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
+import Navbar from './components/Navbar';
+import Footer from './components/Footer';
+import Home from './pages/Home';
+import Login from './pages/Login';
+import Register from './pages/Register';
+import Dashboard from './pages/Dashboard';
+import Subjects from './pages/Subjects';
+import SubjectDetail from './pages/SubjectDetail';
+import Curriculum from './pages/Curriculum';
+import CurriculumDetail from './pages/CurriculumDetail';
+import Tutors from './pages/Tutors';
+import Pricing from './pages/Pricing';
+import Resources from './pages/Resources';
+import ResourceDetail from './pages/ResourceDetail';
+import Terms from './pages/Terms';
+import Privacy from './pages/Privacy';
+import TutorSession from './pages/TutorSession';
+import Checkout from './pages/Checkout';
+import PaymentSuccess from './pages/PaymentSuccess';
+import SearchResults from './pages/SearchResults';
+import { LanguageProvider } from './context/LanguageContext';
+import { SessionSettingsProvider } from './context/SessionSettingsContext';
+import { ThemeProvider } from './context/ThemeContext';
+import { SoundProvider } from './context/SoundContext';
+import './App.css';
+import Profile from './pages/Profile';
+import Settings from './pages/Settings';
+import Help from './pages/Help';
+import Practice from './pages/Practice';
+import VerifyEmail from './pages/VerifyEmail';
+import ChatWidget from './components/ChatWidget';
+import TutorDashboard from './pages/TutorDashboard';
+import AddTutor from './pages/Admin/AddTutor';
+import TutorStudents from './pages/TutorStudents';
+import TutorEarnings from './pages/TutorEarnings';
+import Notifications from './pages/Notifications';
+import ForgotPassword from './pages/ForgotPassword';
+import Team from './pages/Team';
+import Timetable from './pages/Timetable';
 
-// ===== GLOBAL ERROR HANDLERS =====
-process.on('uncaughtException', (err) => {
-  console.error('💥 UNCAUGHT EXCEPTION:', err);
-  console.error('Stack:', err.stack);
-});
+// ============================================
+// ADMIN ROUTES - Direct imports (not lazy)
+// ============================================
+import AdminLayout from './pages/Admin/AdminLayout';
+import AdminDashboard from './pages/Admin/AdminDashboard';
+import AdminUsers from './pages/Admin/AdminUsers';
+import AdminTutors from './pages/Admin/AdminTutors';
+import AdminContent from './pages/Admin/AdminContent';
+import AdminPayments from './pages/Admin/AdminPayments';
+import AdminAnalytics from './pages/Admin/AdminAnalytics';
+import AdminSettings from './pages/Admin/AdminSettings';
+import AdminActivity from './pages/Admin/AdminActivity';
 
-process.on('unhandledRejection', (reason, promise) => {
-  console.error('💥 UNHANDLED REJECTION:', reason);
-  console.error('Stack:', reason?.stack);
-});
-
-const app = express();
-
-console.log('🚀 SERVER STARTUP - v3.0');
-
-// ===== CORS CONFIGURATION - ALLOW ALL =====
-app.use(cors({
-  origin: '*',
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'],
-  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept', 'Origin', 'X-CSRF-Token'],
-  exposedHeaders: ['Content-Range', 'X-Content-Range'],
-  maxAge: 86400
-}));
-
-// ===== SECURITY & PERFORMANCE =====
-app.use(helmet({
-  crossOriginResourcePolicy: { policy: "cross-origin" },
-  crossOriginOpenerPolicy: { policy: "same-origin-allow-popups" },
-  crossOriginEmbedderPolicy: false
-}));
-
-app.use(compression());
-app.use(express.json({ limit: '10mb' }));
-app.use(express.urlencoded({ extended: true, limit: '10mb' }));
-
-// ===== REQUEST LOGGING =====
-app.use((req, res, next) => {
-  console.log(`📨 ${req.method} ${req.path}`);
-  console.log(`📌 Origin: ${req.headers.origin}`);
-  next();
-});
-
-// ===== ROOT ROUTE =====
-app.get('/', (req, res) => {
-  res.json({
-    name: 'EduSpantech API',
-    version: '1.0.0',
-    status: 'healthy',
-    environment: process.env.NODE_ENV || 'development',
-    endpoints: {
-      auth: '/api/auth',
-      content: '/api/content',
-      earnings: '/api/earnings',
-      tutors: '/api/tutors',
-      sessions: '/api/sessions',
-      health: '/api/health',
-      shifts: '/api/shifts',
-      video: '/api/tutor/video',
-      webrtc: 'ws://localhost:3000/webrtc',
-      webrtcRooms: '/api/webrtc/rooms'
-    }
-  });
-});
-
-// ===== HEALTH CHECK =====
-app.get('/health', (req, res) => {
-  res.json({ 
-    status: 'healthy', 
-    timestamp: new Date().toISOString(),
-    uptime: process.uptime()
-  });
-});
-
-app.get('/api/health', (req, res) => {
-  res.json({
-    status: 'healthy',
-    message: 'EduSpantech API is running',
-    timestamp: new Date().toISOString(),
-    uptime: process.uptime(),
-    environment: process.env.NODE_ENV || 'development',
-    version: '1.0.0',
-    endpoints: {
-      earnings: '/api/earnings',
-      earningsTest: '/api/earnings/test',
-      earningsSummary: '/api/earnings/summary',
-      shifts: '/api/shifts',
-      video: '/api/tutor/video',
-      webrtc: 'ws://localhost:3000/webrtc'
-    }
-  });
-});
-
-// ============================================================
-// ✅ SHIFTS ROUTE
-// ============================================================
-app.get('/api/shifts', async (req, res) => {
-  try {
-    console.log('📋 Fetching shifts...');
-    const { data: shifts, error } = await supabase
-      .from('shifts')
-      .select('*')
-      .eq('is_active', true)
-      .order('display_order', { ascending: true });
-    
-    if (error) {
-      console.error('❌ Error fetching shifts:', error);
-      return res.status(500).json({ success: false, error: error.message });
-    }
-    
-    console.log(`✅ Found ${shifts?.length || 0} shifts`);
-    res.json({
-      success: true,
-      shifts: shifts || []
-    });
-  } catch (error) {
-    console.error('❌ Get shifts error:', error);
-    res.status(500).json({ success: false, error: error.message });
+// ============================================
+// ERROR BOUNDARY COMPONENT
+// ============================================
+class ErrorBoundary extends React.Component {
+  constructor(props) {
+    super(props);
+    this.state = { hasError: false, error: null, errorInfo: null };
   }
-});
 
-// ============================================================
-// ✅ TUTOR INTRO VIDEO ROUTES
-// ============================================================
-
-// Upload tutor intro video (protected)
-app.post('/api/tutor/video', authenticateToken, async (req, res) => {
-  try {
-    const userId = req.user.id;
-    const { videoUrl, thumbnail, duration, videoType, youtubeId, youtubeUrl } = req.body;
-    
-    console.log('📤 Video upload request for user:', userId);
-    
-    const { data: user, error } = await supabase
-      .from('users')
-      .select('is_tutor, email, name')
-      .eq('id', userId)
-      .single();
-    
-    if (error || !user?.is_tutor) {
-      console.log('❌ User is not a tutor:', userId);
-      return res.status(403).json({ error: 'Only tutors can upload intro videos' });
-    }
-    
-    const isYouTube = videoType === 'youtube' || youtubeId || youtubeUrl;
-    let videoData = {};
-    
-    if (isYouTube && youtubeUrl) {
-      const extractYouTubeId = (url) => {
-        const patterns = [
-          /(?:youtube\.com\/watch\?v=)([a-zA-Z0-9_-]+)/,
-          /(?:youtu\.be\/)([a-zA-Z0-9_-]+)/,
-          /(?:youtube\.com\/embed\/)([a-zA-Z0-9_-]+)/
-        ];
-        for (const pattern of patterns) {
-          const match = url.match(pattern);
-          if (match) return match[1];
-        }
-        return null;
-      };
-      
-      const extractedId = extractYouTubeId(youtubeUrl) || youtubeId;
-      const thumbnailUrl = thumbnail || `https://img.youtube.com/vi/${extractedId}/maxresdefault.jpg`;
-      
-      videoData = {
-        intro_video_type: 'youtube',
-        intro_video_youtube_url: youtubeUrl,
-        intro_video_youtube_id: extractedId,
-        intro_video_url: `https://www.youtube.com/embed/${extractedId}`,
-        intro_video_thumbnail: thumbnailUrl,
-        intro_video_duration: duration || 0,
-        intro_video_uploaded_at: new Date().toISOString(),
-        intro_video_approved: true,
-        intro_video_processed: true,
-        intro_video_views: 0
-      };
-      console.log('✅ YouTube video processed:', extractedId);
-    } else if (videoUrl) {
-      videoData = {
-        intro_video_type: 'upload',
-        intro_video_url: videoUrl,
-        intro_video_thumbnail: thumbnail || null,
-        intro_video_duration: duration || 0,
-        intro_video_uploaded_at: new Date().toISOString(),
-        intro_video_approved: false,
-        intro_video_processed: false,
-        intro_video_views: 0
-      };
-      console.log('✅ Uploaded video processed');
-    } else {
-      return res.status(400).json({ error: 'No video URL or YouTube URL provided' });
-    }
-    
-    const { error: updateError } = await supabase
-      .from('users')
-      .update(videoData)
-      .eq('id', userId);
-    
-    if (updateError) {
-      console.error('❌ Update error:', updateError);
-      return res.status(500).json({ error: 'Failed to save video: ' + updateError.message });
-    }
-    
-    console.log('✅ Video saved successfully for user:', userId);
-    
-    res.json({ 
-      success: true, 
-      message: isYouTube ? 'YouTube video added successfully' : 'Video uploaded successfully',
-      type: isYouTube ? 'youtube' : 'upload',
-      video: videoData
-    });
-  } catch (error) {
-    console.error('❌ Video upload error:', error);
-    res.status(500).json({ error: error.message });
+  static getDerivedStateFromError(error) {
+    return { hasError: true, error };
   }
-});
 
-// Delete tutor intro video (protected)
-app.delete('/api/tutor/video', authenticateToken, async (req, res) => {
-  try {
-    const userId = req.user.id;
-    
-    const { data: user, error: userError } = await supabase
-      .from('users')
-      .select('is_tutor')
-      .eq('id', userId)
-      .single();
-    
-    if (userError || !user?.is_tutor) {
-      return res.status(403).json({ 
-        success: false, 
-        error: 'Only tutors can manage intro videos' 
-      });
-    }
-    
-    const { error: updateError } = await supabase
-      .from('users')
-      .update({
-        intro_video_url: null,
-        intro_video_thumbnail: null,
-        intro_video_duration: null,
-        intro_video_uploaded_at: null,
-        intro_video_approved: false,
-        intro_video_processed: false,
-        intro_video_views: 0,
-        intro_video_type: null,
-        intro_video_youtube_id: null,
-        intro_video_youtube_url: null
-      })
-      .eq('id', userId);
-    
-    if (updateError) {
-      console.error('❌ Update error:', updateError);
-      return res.status(500).json({ 
-        success: false, 
-        error: 'Failed to remove video' 
-      });
-    }
-    
-    res.json({ 
-      success: true, 
-      message: 'Video removed successfully' 
-    });
-  } catch (error) {
-    console.error('❌ Video removal error:', error);
-    res.status(500).json({ 
-      success: false, 
-      error: error.message 
-    });
+  componentDidCatch(error, errorInfo) {
+    console.error('❌ React Error Boundary caught an error:', error);
+    console.error('Error Info:', errorInfo);
+    this.setState({ errorInfo });
   }
-});
 
-// Get tutor intro video (public)
-app.get('/api/tutor/:tutorId/video', async (req, res) => {
-  try {
-    const { tutorId } = req.params;
-    console.log('🔍 Fetching video for tutor:', tutorId);
-    
-    const { data: user, error } = await supabase
-      .from('users')
-      .select(`
-        intro_video_url,
-        intro_video_thumbnail,
-        intro_video_duration,
-        intro_video_views,
-        intro_video_approved,
-        intro_video_type,
-        intro_video_youtube_id,
-        intro_video_youtube_url,
-        name
-      `)
-      .eq('id', tutorId)
-      .single();
-    
-    if (error || !user) {
-      console.log('❌ Tutor not found:', tutorId);
-      return res.status(404).json({ error: 'Tutor not found' });
+  render() {
+    if (this.state.hasError) {
+      return (
+        <div style={{
+          padding: '60px 20px',
+          textAlign: 'center',
+          minHeight: '100vh',
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          justifyContent: 'center',
+          background: '#0a0e1a',
+          color: '#fff'
+        }}>
+          <h1 style={{ color: '#ef4444', fontSize: '28px' }}>⚠️ Something went wrong</h1>
+          <p style={{ color: '#94a3b8', marginTop: '12px', maxWidth: '500px' }}>
+            {this.state.error?.message || 'An unexpected error occurred'}
+          </p>
+          {this.state.errorInfo && (
+            <details style={{ 
+              marginTop: '20px', 
+              color: '#94a3b8', 
+              fontSize: '14px',
+              textAlign: 'left',
+              maxWidth: '600px',
+              background: '#1a1a2e',
+              padding: '16px',
+              borderRadius: '8px'
+            }}>
+              <summary>Technical Details</summary>
+              <pre style={{ 
+                marginTop: '12px', 
+                fontSize: '12px',
+                overflow: 'auto',
+                maxHeight: '200px'
+              }}>
+                {this.state.errorInfo.componentStack}
+              </pre>
+            </details>
+          )}
+          <button 
+            onClick={() => window.location.reload()}
+            style={{
+              marginTop: '24px',
+              padding: '12px 32px',
+              background: '#4f46e5',
+              color: 'white',
+              border: 'none',
+              borderRadius: '8px',
+              cursor: 'pointer',
+              fontSize: '16px',
+              transition: 'background 0.3s'
+            }}
+            onMouseEnter={(e) => e.target.style.background = '#6366f1'}
+            onMouseLeave={(e) => e.target.style.background = '#4f46e5'}
+          >
+            Refresh Page
+          </button>
+        </div>
+      );
     }
-    
-    res.json({
-      success: true,
-      video: {
-        url: user.intro_video_url,
-        thumbnail: user.intro_video_thumbnail,
-        duration: user.intro_video_duration,
-        views: user.intro_video_views || 0,
-        approved: user.intro_video_approved || false,
-        tutorName: user.name,
-        type: user.intro_video_type || 'upload',
-        youtubeId: user.intro_video_youtube_id,
-        youtubeUrl: user.intro_video_youtube_url
-      }
-    });
-  } catch (error) {
-    console.error('❌ Get video error:', error);
-    res.status(500).json({ error: error.message });
+
+    return this.props.children;
   }
-});
-
-// Increment video views (public)
-app.post('/api/tutor/:tutorId/video/views', async (req, res) => {
-  try {
-    const { tutorId } = req.params;
-    console.log('👁️ Incrementing views for tutor:', tutorId);
-    
-    const { data: current, error: fetchError } = await supabase
-      .from('users')
-      .select('intro_video_views')
-      .eq('id', tutorId)
-      .single();
-    
-    if (fetchError) {
-      console.error('❌ Fetch error:', fetchError);
-      return res.status(404).json({ error: 'Tutor not found' });
-    }
-    
-    const currentViews = current.intro_video_views || 0;
-    const newViews = currentViews + 1;
-    
-    const { data, error } = await supabase
-      .from('users')
-      .update({ intro_video_views: newViews })
-      .eq('id', tutorId)
-      .select('intro_video_views')
-      .single();
-    
-    if (error) {
-      console.error('❌ Increment views error:', error);
-      return res.status(500).json({ error: 'Failed to increment views' });
-    }
-    
-    console.log('✅ Views updated:', newViews);
-    res.json({
-      success: true,
-      views: data.intro_video_views
-    });
-  } catch (error) {
-    console.error('❌ Increment views error:', error);
-    res.status(500).json({ error: error.message });
-  }
-});
-
-// Get all tutors with video info (public)
-app.get('/api/tutors/videos', async (req, res) => {
-  try {
-    const { data: tutors, error } = await supabase
-      .from('users')
-      .select(`
-        id,
-        name,
-        email,
-        avatar,
-        tutor_tier,
-        tutor_subjects,
-        intro_video_url,
-        intro_video_thumbnail,
-        intro_video_duration,
-        intro_video_views,
-        intro_video_type,
-        intro_video_youtube_id,
-        intro_video_approved
-      `)
-      .eq('is_tutor', true)
-      .eq('tutor_approved', true)
-      .not('intro_video_url', 'is', null);
-    
-    if (error) {
-      console.error('❌ Error fetching tutors with videos:', error);
-      return res.status(500).json({ success: false, error: error.message });
-    }
-    
-    res.json({
-      success: true,
-      tutors: tutors || []
-    });
-  } catch (error) {
-    console.error('❌ Get tutors with videos error:', error);
-    res.status(500).json({ success: false, error: error.message });
-  }
-});
-
-// ============================================================
-// ✅ WEBRTC ROOM API ROUTES
-// ============================================================
-
-// Get room info (public)
-app.get('/api/webrtc/rooms/:roomId', (req, res) => {
-  const { roomId } = req.params;
-  const roomInfo = global.webrtcServer?.getRoomInfo(roomId);
-  if (roomInfo) {
-    res.json({ success: true, data: roomInfo });
-  } else {
-    res.json({ success: false, data: null });
-  }
-});
-
-// Get room participants (public)
-app.get('/api/webrtc/rooms/:roomId/participants', (req, res) => {
-  const { roomId } = req.params;
-  const participants = global.webrtcServer?.getRoomParticipants(roomId) || [];
-  res.json({ success: true, participants });
-});
-
-// End session (protected - tutor only)
-app.post('/api/webrtc/rooms/:roomId/end', authenticateToken, async (req, res) => {
-  const { roomId } = req.params;
-  const userId = req.user.id;
-  
-  // Verify user is the tutor for this room
-  try {
-    const { data: session, error } = await supabase
-      .from('sessions')
-      .select('tutor_id')
-      .eq('id', roomId)
-      .single();
-    
-    if (error || session?.tutor_id !== userId) {
-      return res.status(403).json({ 
-        success: false, 
-        error: 'Only the tutor can end this session' 
-      });
-    }
-    
-    global.webrtcServer?.endSession(roomId);
-    res.json({ success: true, message: 'Session ended successfully' });
-  } catch (error) {
-    console.error('❌ End session error:', error);
-    res.status(500).json({ success: false, error: error.message });
-  }
-});
-
-// ============================================================
-// ✅ DIRECT EARNINGS ROUTES REGISTRATION
-// ============================================================
-console.log('🔧 Registering earnings routes directly...');
-
-app.get('/api/earnings/test', (req, res) => {
-  console.log('✅ Earnings test route hit!');
-  res.json({
-    success: true,
-    message: 'Earnings test route is working!',
-    timestamp: new Date().toISOString()
-  });
-});
-
-console.log('📌 Registering GET /api/earnings (protected)...');
-app.get('/api/earnings', authenticateToken, getEarnings);
-
-console.log('📌 Registering GET /api/earnings/summary (protected)...');
-app.get('/api/earnings/summary', authenticateToken, getEarningsSummary);
-
-console.log('✅ Earnings routes registered:');
-console.log('  - GET /api/earnings/test (public)');
-console.log('  - GET /api/earnings (protected)');
-console.log('  - GET /api/earnings/summary (protected)');
-
-// ============================================================
-// API ROUTES - Mount the rest of the routes
-// ============================================================
-console.log('🔧 Mounting other API routes...');
-app.use('/api', routes);
-app.use('/api/v1', routes);
-console.log('✅ Other API routes mounted');
-
-// ===== 404 HANDLER =====
-app.use((req, res) => {
-  console.log(`❌ 404: ${req.method} ${req.path}`);
-  res.status(404).json({
-    success: false,
-    error: 'Not Found',
-    message: `Route ${req.method} ${req.path} not found`,
-    path: req.path,
-    method: req.method
-  });
-});
-
-// ===== ERROR HANDLER =====
-app.use(errorHandler);
-
-// ===== START SERVER WITH WEBRTC =====
-if (require.main === module) {
-  const PORT = process.env.PORT || 3000;
-  
-  // Create HTTP server from app
-  const server = http.createServer(app);
-  
-  // Initialize WebRTC signaling server
-  const webrtcServer = new WebRTCSignalingServer(server);
-  global.webrtcServer = webrtcServer;
-  
-  server.listen(PORT, () => {
-    console.log(`✅ Server started on port ${PORT}`);
-    console.log(`🌍 Environment: ${process.env.NODE_ENV || 'development'}`);
-    console.log(`🔗 API URL: http://localhost:${PORT}/api/health`);
-    console.log(`🔊 WebRTC Signaling: ws://localhost:${PORT}/webrtc`);
-    console.log(`📋 Routes registered:`);
-    console.log(`  GET  /api/shifts`);
-    console.log(`  POST /api/tutor/video`);
-    console.log(`  DELETE /api/tutor/video`);
-    console.log(`  GET  /api/tutor/:tutorId/video`);
-    console.log(`  GET  /api/webrtc/rooms/:roomId`);
-    console.log(`  GET  /api/webrtc/rooms/:roomId/participants`);
-    console.log(`  POST /api/webrtc/rooms/:roomId/end`);
-    console.log(`  WS   /webrtc`);
-  });
-
-  process.on('SIGTERM', () => {
-    console.log('🛑 SIGTERM received, closing server...');
-    webrtcServer.shutdown();
-    server.close(() => {
-      console.log('✅ Server closed');
-      process.exit(0);
-    });
-  });
-
-  process.on('SIGINT', () => {
-    console.log('🛑 SIGINT received, closing server...');
-    webrtcServer.shutdown();
-    server.close(() => {
-      console.log('✅ Server closed');
-      process.exit(0);
-    });
-  });
 }
 
-module.exports = app;
+// ============================================
+// LAZY LOAD WITH ERROR HANDLING
+// ============================================
+const withLazyErrorHandling = (importFn, componentName) => {
+  return lazy(() => 
+    importFn()
+      .then(module => {
+        console.log(`✅ ${componentName} loaded successfully`);
+        return module;
+      })
+      .catch(err => {
+        console.error(`❌ Failed to load ${componentName}:`, err);
+        return {
+          default: () => (
+            <div style={{
+              padding: '60px 20px',
+              textAlign: 'center',
+              color: '#ef4444',
+              minHeight: '100vh',
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              justifyContent: 'center',
+              background: '#0a0e1a'
+            }}>
+              <h2>⚠️ Failed to load {componentName}</h2>
+              <p style={{ color: '#94a3b8', marginTop: '12px' }}>
+                {err.message || 'An error occurred loading this page'}
+              </p>
+              <button 
+                onClick={() => window.location.reload()}
+                style={{
+                  marginTop: '24px',
+                  padding: '12px 32px',
+                  background: '#4f46e5',
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: '8px',
+                  cursor: 'pointer',
+                  fontSize: '16px'
+                }}
+              >
+                Refresh Page
+              </button>
+            </div>
+          )
+        };
+      })
+  );
+};
+
+// ============================================
+// LAZY LOADED COMPONENTS
+// ============================================
+const MyCourses = withLazyErrorHandling(
+  () => import('./pages/MyCourses'),
+  'MyCourses'
+);
+
+const MySessions = withLazyErrorHandling(
+  () => import('./pages/MySessions'),
+  'MySessions'
+);
+
+// ============================================
+// LAZY LOAD FALLBACK COMPONENT
+// ============================================
+const PageLoader = () => (
+  <div style={{
+    minHeight: '100vh',
+    display: 'flex',
+    flexDirection: 'column',
+    alignItems: 'center',
+    justifyContent: 'center',
+    background: '#0a0e1a',
+    color: '#94a3b8',
+    gap: '16px'
+  }}>
+    <div style={{
+      width: '40px',
+      height: '40px',
+      border: '3px solid rgba(79, 70, 229, 0.2)',
+      borderTopColor: '#4f46e5',
+      borderRadius: '50%',
+      animation: 'spin 0.8s linear infinite'
+    }}></div>
+    <p>Loading...</p>
+    <style>{`
+      @keyframes spin {
+        to { transform: rotate(360deg); }
+      }
+    `}</style>
+  </div>
+);
+
+// ============================================
+// MAIN APP COMPONENT
+// ============================================
+function App() {
+  console.log('🚀 App starting...');
+  console.log('📋 Environment:', process.env.NODE_ENV);
+  
+  return (
+    <ErrorBoundary>
+      <Router>
+        <SoundProvider>
+          <ThemeProvider>
+            <LanguageProvider>
+              <SessionSettingsProvider>
+                <div className="app">
+                  <Navbar />
+                  <main className="app-main">
+                    <Suspense fallback={<PageLoader />}>
+                      <Routes>
+                        {/* ============================================
+                            CORE ROUTES - Always accessible
+                            ============================================ */}
+                        <Route path="/forgot-password" element={<ForgotPassword />} />
+                        <Route path="/login" element={<Login />} />
+                        <Route path="/register" element={<Register />} />
+                        <Route path="/verify-email" element={<VerifyEmail />} />
+                        
+                        {/* ============================================
+                            PUBLIC ROUTES - No authentication needed
+                            ============================================ */}
+                        <Route path="/" element={<Home />} />
+                        <Route path="/subjects" element={<Subjects />} />
+                        <Route path="/subjects/:subjectName" element={<SubjectDetail />} />
+                        <Route path="/curriculum" element={<Curriculum />} />
+                        <Route path="/curriculum/:countryId" element={<CurriculumDetail />} />
+                        <Route path="/tutors" element={<Tutors />} />
+                        <Route path="/pricing" element={<Pricing />} />
+                        <Route path="/resources" element={<Resources />} />
+                        <Route path="/resources/:vaultName/:resourceId" element={<ResourceDetail />} />
+                        <Route path="/resources/:vaultName" element={<ResourceDetail />} />
+                        <Route path="/resources/videos/:id" element={<ResourceDetail />} />
+                        <Route path="/resources/practice/:id" element={<ResourceDetail />} />
+                        <Route path="/resources/guides/:id" element={<ResourceDetail />} />
+                        <Route path="/terms" element={<Terms />} />
+                        <Route path="/privacy" element={<Privacy />} />
+                        <Route path="/search" element={<SearchResults />} />
+                        
+                        {/* ============================================
+                            TEAM ROUTE
+                            ============================================ */}
+                        <Route path="/team" element={<Team />} />
+                        
+                        {/* ============================================
+                            PROTECTED ROUTES - Require authentication
+                            ============================================ */}
+                        <Route path="/timetable" element={<Timetable />} />    
+                        <Route path="/dashboard" element={<Dashboard />} />
+                        <Route path="/profile" element={<Profile />} />
+                        <Route path="/settings" element={<Settings />} />
+                        <Route path="/help/*" element={<Help />} />
+                        <Route path="/practice/:id" element={<Practice />} />
+                        <Route path="/session/:sessionId" element={<TutorSession />} />
+                        <Route path="/checkout" element={<Checkout />} />
+                        <Route path="/payment-success" element={<PaymentSuccess />} />
+                        <Route path="/notifications" element={<Notifications />} />
+                        
+                        {/* ============================================
+                            TUTOR ROUTES - Require tutor role
+                            ============================================ */}
+                        <Route path="/tutor/dashboard" element={<TutorDashboard />} />
+                        <Route path="/tutor/session/:sessionId" element={<TutorSession />} />
+                        <Route path="/tutor/students" element={<TutorStudents />} />
+                        <Route path="/tutor/earnings" element={<TutorEarnings />} />
+                        
+                        {/* ============================================
+                            ADMIN ROUTES - Require admin role
+                            ============================================ */}
+                        <Route path="/admin" element={<AdminLayout />}>
+                          <Route index element={<AdminDashboard />} />
+                          <Route path="users" element={<AdminUsers />} />
+                          <Route path="tutors" element={<AdminTutors />} />
+                          <Route path="content" element={<AdminContent />} />
+                          <Route path="payments" element={<AdminPayments />} />
+                          <Route path="analytics" element={<AdminAnalytics />} />
+                          <Route path="settings" element={<AdminSettings />} />
+                          <Route path="activity" element={<AdminActivity />} />
+                        </Route>
+                        
+                        {/* ============================================
+                            LAZY LOADED ROUTES - With error handling
+                            ============================================ */}
+                        <Route path="/my-courses" element={<MyCourses />} />
+                        <Route path="/my-sessions" element={<MySessions />} />
+                      </Routes>
+                    </Suspense>
+                  </main>
+                  <Footer />
+                  <ChatWidget />
+                </div>
+              </SessionSettingsProvider>
+            </LanguageProvider>
+          </ThemeProvider>
+        </SoundProvider>
+      </Router>
+    </ErrorBoundary>
+  );
+}
+
+export default App;

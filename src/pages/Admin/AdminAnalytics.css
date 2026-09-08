@@ -1,0 +1,157 @@
+/* src/pages/Admin/AdminAnalytics.css */
+.admin-analytics {
+    padding: 0;
+}
+
+.analytics-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 24px;
+    flex-wrap: wrap;
+    gap: 16px;
+}
+
+.analytics-header h2 {
+    color: #ffffff;
+    font-size: 24px;
+    font-weight: 600;
+    margin: 0;
+}
+
+.period-selector {
+    display: flex;
+    gap: 8px;
+}
+
+.period-btn {
+    padding: 8px 20px;
+    background: #1f2937;
+    border: 1px solid #374151;
+    border-radius: 8px;
+    color: #94a3b8;
+    cursor: pointer;
+    font-size: 14px;
+    transition: all 0.2s;
+}
+
+.period-btn:hover {
+    background: #374151;
+}
+
+.period-btn.active {
+    background: #4f46e5;
+    border-color: #4f46e5;
+    color: white;
+}
+
+.analytics-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 20px;
+}
+
+.analytics-card {
+    background: #111827;
+    border: 1px solid #1f2937;
+    border-radius: 12px;
+    padding: 20px;
+}
+
+.analytics-card h3 {
+    color: #ffffff;
+    font-size: 16px;
+    font-weight: 600;
+    margin: 0 0 16px 0;
+}
+
+.chart-container {
+    height: 250px;
+    display: flex;
+    align-items: flex-end;
+    padding: 10px 0;
+}
+
+.chart-bars {
+    display: flex;
+    align-items: flex-end;
+    gap: 4px;
+    width: 100%;
+    height: 100%;
+}
+
+.chart-bar-wrapper {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    flex: 1;
+    height: 100%;
+    justify-content: flex-end;
+}
+
+.chart-bar {
+    width: 100%;
+    max-width: 24px;
+    min-height: 4px;
+    border-radius: 4px 4px 0 0;
+    transition: height 0.5s ease;
+}
+
+.chart-bar.revenue-bar {
+    background: linear-gradient(180deg, #4f46e5, #7c3aed);
+}
+
+.chart-bar.user-bar {
+    background: linear-gradient(180deg, #10b981, #34d399);
+}
+
+.chart-label {
+    color: #6b7280;
+    font-size: 10px;
+    margin-top: 4px;
+    transform: rotate(-45deg);
+    text-align: center;
+}
+
+.chart-total {
+    color: #94a3b8;
+    font-size: 14px;
+    margin-top: 16px;
+    padding-top: 12px;
+    border-top: 1px solid #1f2937;
+    text-align: center;
+}
+
+.no-data {
+    color: #6b7280;
+    text-align: center;
+    width: 100%;
+}
+
+.admin-analytics-loading {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 400px;
+    color: #94a3b8;
+}
+
+@media (max-width: 768px) {
+    .analytics-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .analytics-header {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .period-selector {
+        width: 100%;
+    }
+
+    .period-btn {
+        flex: 1;
+        text-align: center;
+    }
+}

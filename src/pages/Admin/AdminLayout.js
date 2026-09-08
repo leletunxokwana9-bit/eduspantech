@@ -21,26 +21,32 @@ const AdminLayout = () => {
     const checkAdminStatus = async () => {
         try {
             const token = localStorage.getItem('accessToken');
+            
             if (!token) {
-                navigate('/login');
+                navigate('/login?returnUrl=/admin');
                 return;
             }
 
             const response = await fetch(`${process.env.REACT_APP_API_URL}/auth/me`, {
                 headers: { 'Authorization': `Bearer ${token}` }
             });
+            
+            if (!response.ok) {
+                navigate('/login?returnUrl=/admin');
+                return;
+            }
+
             const data = await response.json();
 
             if (data.user?.is_admin) {
                 setAdmin(data.user);
+                setLoading(false);
             } else {
                 navigate('/dashboard');
             }
         } catch (error) {
             console.error('Admin auth error:', error);
-            navigate('/login');
-        } finally {
-            setLoading(false);
+            navigate('/login?returnUrl=/admin');
         }
     };
 
@@ -122,6 +128,9 @@ const AdminLayout = () => {
                         >
                             <span className="nav-icon">{item.icon}</span>
                             <span className="nav-label">{item.label}</span>
+                            {item.path === '/admin/activity' && unreadCount > 0 && (
+                                <span className="notification-badge">{unreadCount}</span>
+                            )}
                         </NavLink>
                     ))}
                 </nav>

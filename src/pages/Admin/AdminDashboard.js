@@ -121,7 +121,6 @@ const AdminDashboard = () => {
                 <p className="dashboard-subtitle">Real-time platform statistics and insights</p>
             </div>
 
-            {/* Stats Grid */}
             <div className="stats-grid">
                 <StatCard 
                     title="Total Users" 
@@ -168,7 +167,6 @@ const AdminDashboard = () => {
                 />
             </div>
 
-            {/* Charts Section */}
             <div className="charts-grid">
                 <div className="chart-card">
                     <h3>Revenue (Last 30 Days)</h3>
@@ -217,7 +215,6 @@ const AdminDashboard = () => {
                 </div>
             </div>
 
-            {/* Recent Activity */}
             <div className="recent-activity">
                 <h3>Recent Admin Activity</h3>
                 {recentActivity.length === 0 ? (

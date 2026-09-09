@@ -25,10 +25,36 @@ const AdminLayout = () => {
             
             // ✅ Redirect to admin login if no token
             if (!token) {
+                console.log('❌ No token found, redirecting to login');
                 navigate('/admin/login');
                 return;
             }
 
+            console.log('🔍 Token found, checking admin status...');
+
+            // ✅ FIX: Check token payload first
+            try {
+                const payload = JSON.parse(atob(token.split('.')[1]));
+                console.log('📦 Token payload:', payload);
+                console.log('📦 is_admin:', payload.is_admin);
+                
+                // ✅ If token has is_admin, skip the API call and go directly
+                if (payload.is_admin === true) {
+                    console.log('✅ Token has is_admin, setting admin directly');
+                    setAdmin({ 
+                        id: payload.id,
+                        name: payload.name || 'Admin',
+                        is_admin: true,
+                        is_super_admin: payload.is_super_admin || false
+                    });
+                    setLoading(false);
+                    return;
+                }
+            } catch (decodeError) {
+                console.log('⚠️ Could not decode token, proceeding with API check');
+            }
+
+            // ✅ If token doesn't have is_admin, check via API
             const response = await fetch(`${process.env.REACT_APP_API_URL || 'https://eduspantech-backend.onrender.com/api'}/auth/me`, {
                 headers: { 
                     'Authorization': `Bearer ${token}`,
@@ -36,7 +62,10 @@ const AdminLayout = () => {
                 }
             });
             
+            console.log('📡 /auth/me response status:', response.status);
+            
             if (!response.ok) {
+                console.log('❌ /auth/me failed, clearing token');
                 localStorage.removeItem('accessToken');
                 localStorage.removeItem('refreshToken');
                 localStorage.removeItem('user');
@@ -45,16 +74,17 @@ const AdminLayout = () => {
             }
 
             const data = await response.json();
+            console.log('✅ /auth/me success:', data);
 
             if (data.user?.is_admin) {
                 setAdmin(data.user);
                 setLoading(false);
             } else {
-                // User is logged in but not an admin - go to dashboard
+                console.log('❌ User is not admin, redirecting to dashboard');
                 navigate('/dashboard');
             }
         } catch (error) {
-            console.error('Admin auth error:', error);
+            console.error('❌ Admin auth error:', error);
             navigate('/admin/login');
         }
     };
@@ -147,7 +177,6 @@ const AdminLayout = () => {
                                 `nav-item ${isActive ? 'active' : ''}`
                             }
                             onClick={() => {
-                                // Close mobile sidebar if needed
                                 if (window.innerWidth <= 768) {
                                     setSidebarOpen(false);
                                 }

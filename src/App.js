@@ -1,6 +1,6 @@
-// src/App.js - COMPLETE WITH ADMIN ROUTES + ADMIN LOGIN LAYOUT
+// src/App.js - COMPLETE WITH ADMIN ROUTES + ADMIN LOGIN LAYOUT + ADMIN ROUTE CHECK
 import React, { Suspense, lazy } from 'react';
-import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, useLocation } from 'react-router-dom';
 import Navbar from './components/Navbar';
 import Footer from './components/Footer';
 import Home from './pages/Home';
@@ -188,7 +188,8 @@ const withLazyErrorHandling = (importFn, componentName) => {
                   fontSize: '16px'
                 }}
               >
-                Refresh Page              </button>
+                Refresh Page
+              </button>
             </div>
           )
         };
@@ -241,6 +242,112 @@ const PageLoader = () => (
 );
 
 // ============================================
+// WRAPPER COMPONENT FOR NAVBAR CONDITIONAL RENDERING
+// ============================================
+const AppContent = () => {
+  const location = useLocation();
+  const isAdminRoute = location.pathname.startsWith('/admin');
+  
+  return (
+    <div className="app">
+      {/* ✅ Hide Navbar on admin routes */}
+      {!isAdminRoute && <Navbar />}
+      <main className="app-main">
+        <Suspense fallback={<PageLoader />}>
+          <Routes>
+            {/* ============================================
+                ✅ ADMIN LOGIN - NO NAVBAR (Layout Route with Outlet)
+                ============================================ */}
+            <Route element={<AdminLoginLayout />}>
+              <Route path="/admin/login" element={<AdminLogin />} />
+            </Route>
+            
+            {/* ============================================
+                ADMIN ROUTES - With Sidebar (AdminLayout)
+                ============================================ */}
+            <Route path="/admin" element={<AdminLayout />}>
+              <Route index element={<AdminDashboard />} />
+              <Route path="dashboard" element={<AdminDashboard />} />
+              <Route path="users" element={<AdminUsers />} />
+              <Route path="tutors" element={<AdminTutors />} />
+              <Route path="content" element={<AdminContent />} />
+              <Route path="payments" element={<AdminPayments />} />
+              <Route path="analytics" element={<AdminAnalytics />} />
+              <Route path="settings" element={<AdminSettings />} />
+              <Route path="activity" element={<AdminActivity />} />
+              <Route path="profile" element={<AdminProfile />} />
+            </Route>
+            
+            {/* ============================================
+                CORE ROUTES - Always accessible
+                ============================================ */}
+            <Route path="/forgot-password" element={<ForgotPassword />} />
+            <Route path="/login" element={<Login />} />
+            <Route path="/register" element={<Register />} />
+            <Route path="/verify-email" element={<VerifyEmail />} />
+            
+            {/* ============================================
+                PUBLIC ROUTES - No authentication needed
+                ============================================ */}
+            <Route path="/" element={<Home />} />
+            <Route path="/subjects" element={<Subjects />} />
+            <Route path="/subjects/:subjectName" element={<SubjectDetail />} />
+            <Route path="/curriculum" element={<Curriculum />} />
+            <Route path="/curriculum/:countryId" element={<CurriculumDetail />} />
+            <Route path="/tutors" element={<Tutors />} />
+            <Route path="/pricing" element={<Pricing />} />
+            <Route path="/resources" element={<Resources />} />
+            <Route path="/resources/:vaultName/:resourceId" element={<ResourceDetail />} />
+            <Route path="/resources/:vaultName" element={<ResourceDetail />} />
+            <Route path="/resources/videos/:id" element={<ResourceDetail />} />
+            <Route path="/resources/practice/:id" element={<ResourceDetail />} />
+            <Route path="/resources/guides/:id" element={<ResourceDetail />} />
+            <Route path="/terms" element={<Terms />} />
+            <Route path="/privacy" element={<Privacy />} />
+            <Route path="/search" element={<SearchResults />} />
+            
+            {/* ============================================
+                TEAM ROUTE
+                ============================================ */}
+            <Route path="/team" element={<Team />} />
+            
+            {/* ============================================
+                PROTECTED ROUTES - Require authentication
+                ============================================ */}
+            <Route path="/timetable" element={<Timetable />} />    
+            <Route path="/dashboard" element={<Dashboard />} />
+            <Route path="/profile" element={<Profile />} />
+            <Route path="/settings" element={<Settings />} />
+            <Route path="/help/*" element={<Help />} />
+            <Route path="/practice/:id" element={<Practice />} />
+            <Route path="/session/:sessionId" element={<TutorSession />} />
+            <Route path="/checkout" element={<Checkout />} />
+            <Route path="/payment-success" element={<PaymentSuccess />} />
+            <Route path="/notifications" element={<Notifications />} />
+            
+            {/* ============================================
+                TUTOR ROUTES - Require tutor role
+                ============================================ */}
+            <Route path="/tutor/dashboard" element={<TutorDashboard />} />
+            <Route path="/tutor/session/:sessionId" element={<TutorSession />} />
+            <Route path="/tutor/students" element={<TutorStudents />} />
+            <Route path="/tutor/earnings" element={<TutorEarnings />} />
+            
+            {/* ============================================
+                LAZY LOADED ROUTES - With error handling
+                ============================================ */}
+            <Route path="/my-courses" element={<MyCourses />} />
+            <Route path="/my-sessions" element={<MySessions />} />
+          </Routes>
+        </Suspense>
+      </main>
+      <Footer />
+      <ChatWidget />
+    </div>
+  );
+};
+
+// ============================================
 // MAIN APP COMPONENT
 // ============================================
 function App() {
@@ -254,100 +361,7 @@ function App() {
           <ThemeProvider>
             <LanguageProvider>
               <SessionSettingsProvider>
-                <div className="app">
-                  <Navbar />
-                  <main className="app-main">
-                    <Suspense fallback={<PageLoader />}>
-                      <Routes>
-                        {/* ============================================
-                            ✅ ADMIN LOGIN - NO NAVBAR (Layout Route with Outlet)
-                            ============================================ */}
-                        <Route element={<AdminLoginLayout />}>
-                          <Route path="/admin/login" element={<AdminLogin />} />
-                        </Route>
-                        
-                        {/* ============================================
-                            ADMIN ROUTES - With Sidebar (AdminLayout)
-                            ============================================ */}
-                        <Route path="/admin" element={<AdminLayout />}>
-                          <Route index element={<AdminDashboard />} />
-                          <Route path="dashboard" element={<AdminDashboard />} />
-                          <Route path="users" element={<AdminUsers />} />
-                          <Route path="tutors" element={<AdminTutors />} />
-                          <Route path="content" element={<AdminContent />} />
-                          <Route path="payments" element={<AdminPayments />} />
-                          <Route path="analytics" element={<AdminAnalytics />} />
-                          <Route path="settings" element={<AdminSettings />} />
-                          <Route path="activity" element={<AdminActivity />} />
-                          <Route path="profile" element={<AdminProfile />} />
-                        </Route>
-                        
-                        {/* ============================================
-                            CORE ROUTES - Always accessible
-                            ============================================ */}
-                        <Route path="/forgot-password" element={<ForgotPassword />} />
-                        <Route path="/login" element={<Login />} />
-                        <Route path="/register" element={<Register />} />
-                        <Route path="/verify-email" element={<VerifyEmail />} />
-                        
-                        {/* ============================================
-                            PUBLIC ROUTES - No authentication needed
-                            ============================================ */}
-                        <Route path="/" element={<Home />} />
-                        <Route path="/subjects" element={<Subjects />} />
-                        <Route path="/subjects/:subjectName" element={<SubjectDetail />} />
-                        <Route path="/curriculum" element={<Curriculum />} />
-                        <Route path="/curriculum/:countryId" element={<CurriculumDetail />} />
-                        <Route path="/tutors" element={<Tutors />} />
-                        <Route path="/pricing" element={<Pricing />} />
-                        <Route path="/resources" element={<Resources />} />
-                        <Route path="/resources/:vaultName/:resourceId" element={<ResourceDetail />} />
-                        <Route path="/resources/:vaultName" element={<ResourceDetail />} />
-                        <Route path="/resources/videos/:id" element={<ResourceDetail />} />
-                        <Route path="/resources/practice/:id" element={<ResourceDetail />} />
-                        <Route path="/resources/guides/:id" element={<ResourceDetail />} />
-                        <Route path="/terms" element={<Terms />} />
-                        <Route path="/privacy" element={<Privacy />} />
-                        <Route path="/search" element={<SearchResults />} />
-                        
-                        {/* ============================================
-                            TEAM ROUTE
-                            ============================================ */}
-                        <Route path="/team" element={<Team />} />
-                        
-                        {/* ============================================
-                            PROTECTED ROUTES - Require authentication
-                            ============================================ */}
-                        <Route path="/timetable" element={<Timetable />} />    
-                        <Route path="/dashboard" element={<Dashboard />} />
-                        <Route path="/profile" element={<Profile />} />
-                        <Route path="/settings" element={<Settings />} />
-                        <Route path="/help/*" element={<Help />} />
-                        <Route path="/practice/:id" element={<Practice />} />
-                        <Route path="/session/:sessionId" element={<TutorSession />} />
-                        <Route path="/checkout" element={<Checkout />} />
-                        <Route path="/payment-success" element={<PaymentSuccess />} />
-                        <Route path="/notifications" element={<Notifications />} />
-                        
-                        {/* ============================================
-                            TUTOR ROUTES - Require tutor role
-                            ============================================ */}
-                        <Route path="/tutor/dashboard" element={<TutorDashboard />} />
-                        <Route path="/tutor/session/:sessionId" element={<TutorSession />} />
-                        <Route path="/tutor/students" element={<TutorStudents />} />
-                        <Route path="/tutor/earnings" element={<TutorEarnings />} />
-                        
-                        {/* ============================================
-                            LAZY LOADED ROUTES - With error handling
-                            ============================================ */}
-                        <Route path="/my-courses" element={<MyCourses />} />
-                        <Route path="/my-sessions" element={<MySessions />} />
-                      </Routes>
-                    </Suspense>
-                  </main>
-                  <Footer />
-                  <ChatWidget />
-                </div>
+                <AppContent />
               </SessionSettingsProvider>
             </LanguageProvider>
           </ThemeProvider>

@@ -10,7 +10,6 @@
   overflow: hidden;
 }
 
-/* Background Orbs */
 .admin-login-bg {
   position: fixed;
   top: 0;
@@ -53,7 +52,6 @@
   66% { transform: translate(-20px, 20px) scale(0.9); }
 }
 
-/* Login Card */
 .admin-login-card {
   position: relative;
   z-index: 1;
@@ -185,7 +183,6 @@
   color: rgba(255, 255, 255, 0.7);
 }
 
-/* Responsive */
 @media (max-width: 480px) {
   .admin-login-card {
     padding: 32px 20px;

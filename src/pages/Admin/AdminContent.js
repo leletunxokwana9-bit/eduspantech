@@ -36,7 +36,6 @@ const AdminContent = () => {
 
     const API_URL = process.env.REACT_APP_API_URL || 'https://eduspantech-backend.onrender.com/api';
 
-    // Helper functions for default values
     const getDefaultIcon = (name) => {
         if (!name) return '📚';
         const icons = {
@@ -87,7 +86,6 @@ const AdminContent = () => {
         fetchSubjects();
     }, []);
 
-    // Filter subjects when search term changes
     useEffect(() => {
         if (searchTerm.trim() === '') {
             setFilteredSubjects(subjects);
@@ -104,34 +102,7 @@ const AdminContent = () => {
         }
     }, [searchTerm, subjects]);
 
-    // ✅ FIXED: Better token handling with refresh
-    const refreshToken = async () => {
-        try {
-            const refreshToken = localStorage.getItem('refreshToken');
-            if (!refreshToken) return false;
-
-            const response = await fetch(`${API_URL}/auth/refresh`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ refreshToken })
-            });
-
-            if (response.ok) {
-                const data = await response.json();
-                localStorage.setItem('accessToken', data.accessToken);
-                if (data.refreshToken) {
-                    localStorage.setItem('refreshToken', data.refreshToken);
-                }
-                return true;
-            }
-            return false;
-        } catch (error) {
-            console.error('Refresh token error:', error);
-            return false;
-        }
-    };
-
-    const fetchSubjects = async (retryCount = 0) => {
+    const fetchSubjects = async () => {
         try {
             setLoading(true);
             setErrorMessage('');
@@ -139,15 +110,13 @@ const AdminContent = () => {
             const token = localStorage.getItem('accessToken');
             
             if (!token) {
-                setErrorMessage('No authentication token found. Please login again.');
+                setErrorMessage('Please login to continue');
                 setTimeout(() => {
                     window.location.href = '/admin/login';
-                }, 2000);
+                }, 1500);
                 setLoading(false);
                 return;
             }
-
-            console.log('🔍 Fetching subjects with token:', token.substring(0, 20) + '...');
 
             const response = await fetch(`${API_URL}/admin/content/subjects`, {
                 headers: { 
@@ -156,33 +125,10 @@ const AdminContent = () => {
                 }
             });
 
-            // ✅ If 401 and we haven't retried yet, try refreshing the token
-            if (response.status === 401 && retryCount === 0) {
-                console.log('🔄 Token expired, attempting refresh...');
-                const refreshed = await refreshToken();
-                if (refreshed) {
-                    console.log('✅ Token refreshed, retrying...');
-                    return fetchSubjects(retryCount + 1);
-                } else {
-                    setErrorMessage('Session expired. Please login again.');
-                    localStorage.removeItem('accessToken');
-                    localStorage.removeItem('refreshToken');
-                    setTimeout(() => {
-                        window.location.href = '/admin/login';
-                    }, 2000);
-                    setLoading(false);
-                    return;
-                }
-            }
-
-            // If still 401 after retry
             if (response.status === 401) {
                 setErrorMessage('Session expired. Please login again.');
                 localStorage.removeItem('accessToken');
                 localStorage.removeItem('refreshToken');
-                setTimeout(() => {
-                    window.location.href = '/admin/login';
-                }, 2000);
                 setLoading(false);
                 return;
             }
@@ -209,7 +155,7 @@ const AdminContent = () => {
                 }));
                 setSubjects(mappedSubjects);
                 setFilteredSubjects(mappedSubjects);
-                console.log(`✅ Loaded ${mappedSubjects.length} subjects`);
+                setErrorMessage('');
             } else {
                 setErrorMessage(data.error || 'Failed to load subjects');
             }
@@ -232,9 +178,8 @@ const AdminContent = () => {
             setErrorMessage('');
             setSuccessMessage('');
             
-            let token = localStorage.getItem('accessToken');
+            const token = localStorage.getItem('accessToken');
             
-            // Check if token exists
             if (!token) {
                 setErrorMessage('No authentication token found. Please login again.');
                 setActionLoading(false);
@@ -272,37 +217,10 @@ const AdminContent = () => {
                 body: JSON.stringify(payload)
             });
             
-            // If 401, try refreshing token and retry once
             if (response.status === 401) {
-                const refreshed = await refreshToken();
-                if (refreshed) {
-                    token = localStorage.getItem('accessToken');
-                    const retryResponse = await fetch(url, {
-                        method,
-                        headers: {
-                            'Authorization': `Bearer ${token}`,
-                            'Content-Type': 'application/json'
-                        },
-                        body: JSON.stringify(payload)
-                    });
-                    const retryData = await retryResponse.json();
-                    if (retryData.success) {
-                        setSuccessMessage(editingSubject ? 'Subject updated successfully!' : 'Subject created successfully!');
-                        setShowModal(false);
-                        setEditingSubject(null);
-                        resetForm();
-                        fetchSubjects();
-                        setTimeout(() => setSuccessMessage(''), 3000);
-                        setActionLoading(false);
-                        return;
-                    }
-                }
                 setErrorMessage('Session expired. Please login again.');
                 localStorage.removeItem('accessToken');
                 localStorage.removeItem('refreshToken');
-                setTimeout(() => {
-                    window.location.href = '/admin/login';
-                }, 2000);
                 setActionLoading(false);
                 return;
             }
@@ -332,7 +250,7 @@ const AdminContent = () => {
 
         try {
             setActionLoading(true);
-            let token = localStorage.getItem('accessToken');
+            const token = localStorage.getItem('accessToken');
             
             if (!token) {
                 setErrorMessage('No authentication token found. Please login again.');
@@ -345,32 +263,10 @@ const AdminContent = () => {
                 headers: { 'Authorization': `Bearer ${token}` }
             });
 
-            // If 401, try refreshing token and retry once
             if (response.status === 401) {
-                const refreshed = await refreshToken();
-                if (refreshed) {
-                    token = localStorage.getItem('accessToken');
-                    const retryResponse = await fetch(`${API_URL}/admin/content/subjects/${subjectId}`, {
-                        method: 'DELETE',
-                        headers: { 'Authorization': `Bearer ${token}` }
-                    });
-                    if (retryResponse.ok) {
-                        const data = await retryResponse.json();
-                        if (data.success) {
-                            setSuccessMessage('Subject deleted successfully!');
-                            fetchSubjects();
-                            setTimeout(() => setSuccessMessage(''), 3000);
-                            setActionLoading(false);
-                            return;
-                        }
-                    }
-                }
                 setErrorMessage('Session expired. Please login again.');
                 localStorage.removeItem('accessToken');
                 localStorage.removeItem('refreshToken');
-                setTimeout(() => {
-                    window.location.href = '/admin/login';
-                }, 2000);
                 setActionLoading(false);
                 return;
             }
@@ -394,7 +290,7 @@ const AdminContent = () => {
 
     const handleToggleStatus = async (subject) => {
         try {
-            let token = localStorage.getItem('accessToken');
+            const token = localStorage.getItem('accessToken');
             
             if (!token) {
                 setErrorMessage('No authentication token found. Please login again.');
@@ -413,38 +309,10 @@ const AdminContent = () => {
                 })
             });
 
-            // If 401, try refreshing token and retry once
             if (response.status === 401) {
-                const refreshed = await refreshToken();
-                if (refreshed) {
-                    token = localStorage.getItem('accessToken');
-                    const retryResponse = await fetch(`${API_URL}/admin/content/subjects/${subject.id}`, {
-                        method: 'PUT',
-                        headers: {
-                            'Authorization': `Bearer ${token}`,
-                            'Content-Type': 'application/json'
-                        },
-                        body: JSON.stringify({
-                            ...subject,
-                            is_active: !subject.is_active
-                        })
-                    });
-                    if (retryResponse.ok) {
-                        const data = await retryResponse.json();
-                        if (data.success) {
-                            fetchSubjects();
-                            setSuccessMessage(`Subject ${subject.is_active ? 'deactivated' : 'activated'} successfully!`);
-                            setTimeout(() => setSuccessMessage(''), 3000);
-                            return;
-                        }
-                    }
-                }
                 setErrorMessage('Session expired. Please login again.');
                 localStorage.removeItem('accessToken');
                 localStorage.removeItem('refreshToken');
-                setTimeout(() => {
-                    window.location.href = '/admin/login';
-                }, 2000);
                 return;
             }
 
@@ -528,7 +396,6 @@ const AdminContent = () => {
         setSearchTerm('');
     };
 
-    // Manual refresh button
     const handleRefresh = () => {
         fetchSubjects();
     };
@@ -576,10 +443,17 @@ const AdminContent = () => {
                             Login Again
                         </button>
                     )}
+                    {errorMessage.includes('Please login') && (
+                        <button 
+                            className="error-login-btn"
+                            onClick={() => window.location.href = '/admin/login'}
+                        >
+                            Login
+                        </button>
+                    )}
                 </div>
             )}
 
-            {/* ===== STATS CARDS ===== */}
             <div className="content-stats">
                 <div className="stat-item">
                     <span className="stat-number">{subjects.length}</span>
@@ -595,7 +469,6 @@ const AdminContent = () => {
                 </div>
             </div>
 
-            {/* ===== SEARCH BAR ===== */}
             <div className="content-search">
                 <div className="search-wrapper">
                     <span className="search-icon">🔍</span>
@@ -621,7 +494,6 @@ const AdminContent = () => {
                 </div>
             </div>
 
-            {/* ===== SUBJECTS GRID ===== */}
             <div className="subjects-grid">
                 {filteredSubjects.length === 0 ? (
                     <div className="empty-state">
@@ -678,7 +550,6 @@ const AdminContent = () => {
                 )}
             </div>
 
-            {/* ===== MODAL ===== */}
             {showModal && (
                 <div className="modal-overlay" onClick={() => setShowModal(false)}>
                     <div className="modal-content subject-modal" onClick={e => e.stopPropagation()}>

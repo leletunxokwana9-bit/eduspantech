@@ -83,13 +83,8 @@ const AdminContent = () => {
         return '#4f46e5';
     };
 
-    // ✅ FIX: ONLY FETCH ON ADMIN CONTENT PAGE
+    // ✅ FIX: FETCH SUBJECTS ON PAGE LOAD (removed route protection check)
     useEffect(() => {
-        const isAdminContentPage = window.location.pathname.includes('/admin/content');
-        if (!isAdminContentPage) {
-            setLoading(false);
-            return;
-        }
         fetchSubjects();
     }, []);
 

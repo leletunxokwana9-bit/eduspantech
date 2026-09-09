@@ -2,6 +2,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { API_BASE_URL } from '../services/api';
+import { authService } from '../services/authService';
 import './NotificationBell.css';
 
 const NotificationBell = () => {
@@ -10,18 +11,47 @@ const NotificationBell = () => {
   const [notifications, setNotifications] = useState([]);
   const [isOpen, setIsOpen] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [isAdmin, setIsAdmin] = useState(false);
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
   const dropdownRef = useRef(null);
 
+  // ✅ Check if user is admin before fetching
   useEffect(() => {
-    fetchUnreadCount();
-    fetchNotifications();
-
-    // Poll for new notifications every 30 seconds
-    const interval = setInterval(() => {
-      fetchUnreadCount();
-    }, 30000);
-
-    return () => clearInterval(interval);
+    const checkUser = async () => {
+      try {
+        const token = localStorage.getItem('accessToken');
+        if (!token) {
+          setIsAuthenticated(false);
+          setIsAdmin(false);
+          return;
+        }
+        
+        setIsAuthenticated(true);
+        const user = await authService.getCurrentUser();
+        
+        if (user?.is_admin) {
+          setIsAdmin(true);
+          fetchUnreadCount();
+          fetchNotifications();
+          
+          // Poll for new notifications every 30 seconds
+          const interval = setInterval(() => {
+            if (isAdmin) {
+              fetchUnreadCount();
+            }
+          }, 30000);
+          
+          return () => clearInterval(interval);
+        } else {
+          setIsAdmin(false);
+        }
+      } catch (error) {
+        console.error('Error checking user:', error);
+        setIsAdmin(false);
+      }
+    };
+    checkUser();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   useEffect(() => {
@@ -35,15 +65,23 @@ const NotificationBell = () => {
   }, []);
 
   const fetchUnreadCount = async () => {
+    // ✅ Only fetch if admin
+    if (!isAdmin) return;
+    
     try {
       const token = localStorage.getItem('accessToken');
       if (!token) return;
 
-      const response = await fetch(`${API_BASE_URL}/notifications/unread-count`, {
+      const response = await fetch(`${API_BASE_URL}/admin/notifications/unread-count`, {
         headers: {
           'Authorization': `Bearer ${token}`
         }
       });
+
+      if (response.status === 403 || response.status === 401) {
+        setIsAdmin(false);
+        return;
+      }
 
       if (response.ok) {
         const data = await response.json();
@@ -55,16 +93,24 @@ const NotificationBell = () => {
   };
 
   const fetchNotifications = async () => {
+    // ✅ Only fetch if admin
+    if (!isAdmin) return;
+    
     try {
       setLoading(true);
       const token = localStorage.getItem('accessToken');
       if (!token) return;
 
-      const response = await fetch(`${API_BASE_URL}/notifications`, {
+      const response = await fetch(`${API_BASE_URL}/admin/notifications`, {
         headers: {
           'Authorization': `Bearer ${token}`
         }
       });
+
+      if (response.status === 403 || response.status === 401) {
+        setIsAdmin(false);
+        return;
+      }
 
       if (response.ok) {
         const data = await response.json();
@@ -78,9 +124,12 @@ const NotificationBell = () => {
   };
 
   const markAsRead = async (notificationId) => {
+    // ✅ Only if admin
+    if (!isAdmin) return;
+    
     try {
       const token = localStorage.getItem('accessToken');
-      const response = await fetch(`${API_BASE_URL}/notifications/${notificationId}/read`, {
+      const response = await fetch(`${API_BASE_URL}/admin/notifications/${notificationId}/read`, {
         method: 'PUT',
         headers: {
           'Authorization': `Bearer ${token}`
@@ -101,9 +150,12 @@ const NotificationBell = () => {
   };
 
   const markAllAsRead = async () => {
+    // ✅ Only if admin
+    if (!isAdmin) return;
+    
     try {
       const token = localStorage.getItem('accessToken');
-      const response = await fetch(`${API_BASE_URL}/notifications/read-all`, {
+      const response = await fetch(`${API_BASE_URL}/admin/notifications/read-all`, {
         method: 'PUT',
         headers: {
           'Authorization': `Bearer ${token}`
@@ -189,6 +241,10 @@ const NotificationBell = () => {
   };
 
   const handleToggle = () => {
+    if (!isAdmin) {
+      navigate('/login');
+      return;
+    }
     setIsOpen(!isOpen);
     if (!isOpen) {
       fetchNotifications();
@@ -204,6 +260,11 @@ const NotificationBell = () => {
     }
     setIsOpen(false);
   };
+
+  // ✅ Don't render anything if not admin
+  if (!isAdmin) {
+    return null;
+  }
 
   return (
     <div className="notification-bell-wrapper" ref={dropdownRef}>

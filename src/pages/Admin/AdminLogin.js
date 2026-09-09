@@ -44,11 +44,20 @@ const AdminLogin = () => {
           localStorage.removeItem('user');
         }
       } else {
-        setError(data.error || data.message || 'Invalid credentials');
+        // ✅ Show user-friendly error message
+        if (response.status === 500) {
+          setError('Server error. Please try again later.');
+        } else if (response.status === 401) {
+          setError('Invalid email or password.');
+        } else if (response.status === 403) {
+          setError('Account not verified. Please check your email.');
+        } else {
+          setError(data.error || data.message || 'Login failed. Please try again.');
+        }
       }
     } catch (err) {
       console.error('Login error:', err);
-      setError('Network error. Please try again.');
+      setError('Unable to connect to server. Please check your internet connection.');
     } finally {
       setLoading(false);
     }

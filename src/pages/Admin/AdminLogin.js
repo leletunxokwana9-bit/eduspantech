@@ -44,7 +44,7 @@ const AdminLogin = () => {
           localStorage.removeItem('user');
         }
       } else {
-        // ✅ Show user-friendly error message
+        // Show user-friendly error message
         if (response.status === 500) {
           setError('Server error. Please try again later.');
         } else if (response.status === 401) {
@@ -82,7 +82,8 @@ const AdminLogin = () => {
           </div>
         )}
         
-        <form onSubmit={handleSubmit} className="admin-login-form">
+        {/* ✅ ADDED method="POST" TO PREVENT GET SUBMISSION */}
+        <form onSubmit={handleSubmit} method="POST" className="admin-login-form">
           <div className="form-group">
             <label>Email Address</label>
             <input

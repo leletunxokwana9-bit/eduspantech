@@ -1,4 +1,4 @@
-// src/pages/Admin/AdminLayout.js
+// src/pages/Admin/AdminLayout.js - COMPLETE WITH ADMIN LOGIN REDIRECT
 import React, { useState, useEffect } from 'react';
 import { Outlet, NavLink, useNavigate, useLocation } from 'react-router-dom';
 import './AdminLayout.css';
@@ -16,23 +16,31 @@ const AdminLayout = () => {
         checkAdminStatus();
         fetchNotifications();
         fetchUnreadCount();
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
 
     const checkAdminStatus = async () => {
         try {
             const token = localStorage.getItem('accessToken');
             
+            // ✅ Redirect to admin login if no token
             if (!token) {
-                navigate('/login?returnUrl=/admin');
+                navigate('/admin/login');
                 return;
             }
 
-            const response = await fetch(`${process.env.REACT_APP_API_URL}/auth/me`, {
-                headers: { 'Authorization': `Bearer ${token}` }
+            const response = await fetch(`${process.env.REACT_APP_API_URL || 'https://eduspantech-backend.onrender.com/api'}/auth/me`, {
+                headers: { 
+                    'Authorization': `Bearer ${token}`,
+                    'Content-Type': 'application/json'
+                }
             });
             
             if (!response.ok) {
-                navigate('/login?returnUrl=/admin');
+                localStorage.removeItem('accessToken');
+                localStorage.removeItem('refreshToken');
+                localStorage.removeItem('user');
+                navigate('/admin/login');
                 return;
             }
 
@@ -42,18 +50,21 @@ const AdminLayout = () => {
                 setAdmin(data.user);
                 setLoading(false);
             } else {
+                // User is logged in but not an admin - go to dashboard
                 navigate('/dashboard');
             }
         } catch (error) {
             console.error('Admin auth error:', error);
-            navigate('/login?returnUrl=/admin');
+            navigate('/admin/login');
         }
     };
 
     const fetchNotifications = async () => {
         try {
             const token = localStorage.getItem('accessToken');
-            const response = await fetch(`${process.env.REACT_APP_API_URL}/admin/notifications`, {
+            if (!token) return;
+            
+            const response = await fetch(`${process.env.REACT_APP_API_URL || 'https://eduspantech-backend.onrender.com/api'}/admin/notifications`, {
                 headers: { 'Authorization': `Bearer ${token}` }
             });
             const data = await response.json();
@@ -68,7 +79,9 @@ const AdminLayout = () => {
     const fetchUnreadCount = async () => {
         try {
             const token = localStorage.getItem('accessToken');
-            const response = await fetch(`${process.env.REACT_APP_API_URL}/admin/notifications/unread-count`, {
+            if (!token) return;
+            
+            const response = await fetch(`${process.env.REACT_APP_API_URL || 'https://eduspantech-backend.onrender.com/api'}/admin/notifications/unread-count`, {
                 headers: { 'Authorization': `Bearer ${token}` }
             });
             const data = await response.json();
@@ -88,12 +101,16 @@ const AdminLayout = () => {
         { path: '/admin/payments', icon: '💰', label: 'Payments' },
         { path: '/admin/analytics', icon: '📈', label: 'Analytics' },
         { path: '/admin/settings', icon: '⚙️', label: 'Settings' },
-        { path: '/admin/activity', icon: '📋', label: 'Activity Log' }
+        { path: '/admin/activity', icon: '📋', label: 'Activity Log' },
+        { path: '/admin/profile', icon: '👤', label: 'My Profile' }
     ];
 
     const handleLogout = () => {
         localStorage.removeItem('accessToken');
-        navigate('/login');
+        localStorage.removeItem('refreshToken');
+        localStorage.removeItem('user');
+        localStorage.removeItem('userRole');
+        navigate('/admin/login');
     };
 
     if (loading) {
@@ -103,6 +120,10 @@ const AdminLayout = () => {
                 <p>Loading Admin Panel...</p>
             </div>
         );
+    }
+
+    if (!admin) {
+        return null;
     }
 
     return (
@@ -125,6 +146,12 @@ const AdminLayout = () => {
                             className={({ isActive }) =>
                                 `nav-item ${isActive ? 'active' : ''}`
                             }
+                            onClick={() => {
+                                // Close mobile sidebar if needed
+                                if (window.innerWidth <= 768) {
+                                    setSidebarOpen(false);
+                                }
+                            }}
                         >
                             <span className="nav-icon">{item.icon}</span>
                             <span className="nav-label">{item.label}</span>
@@ -163,6 +190,7 @@ const AdminLayout = () => {
                     <button
                         className="toggle-sidebar"
                         onClick={() => setSidebarOpen(!sidebarOpen)}
+                        aria-label="Toggle sidebar"
                     >
                         {sidebarOpen ? '◀' : '▶'}
                     </button>
@@ -178,7 +206,7 @@ const AdminLayout = () => {
                         </span>
                     </div>
                     <div className="header-actions">
-                        <button className="header-btn" title="Notifications">
+                        <button className="header-btn" title="Notifications" onClick={fetchNotifications}>
                             🔔
                             {unreadCount > 0 && (
                                 <span className="header-badge">{unreadCount}</span>

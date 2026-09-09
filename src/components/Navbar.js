@@ -448,6 +448,9 @@ function Navbar() {
     );
   };
 
+  // ✅ Check if current path is an admin route
+  const isAdminRoute = location.pathname.startsWith('/admin');
+
   if (loading) {
     return (
       <header className="navbar" ref={menuRef}>
@@ -462,6 +465,11 @@ function Navbar() {
         </div>
       </header>
     );
+  }
+
+  // ✅ Don't render navbar on admin routes
+  if (isAdminRoute) {
+    return null;
   }
 
   return (
@@ -591,7 +599,7 @@ function Navbar() {
             </div>
           </div>
 
-          {/* ✅ FIXED: ONLY SHOW NOTIFICATION BELL FOR ADMIN USERS */}
+          {/* ✅ ONLY SHOW NOTIFICATION BELL FOR ADMIN USERS */}
           {isAuthenticated && isAdmin && <NotificationBell />}
 
           {isAuthenticated ? (

@@ -110,7 +110,9 @@
   background: rgba(79, 70, 229, 0.1);
 }
 
-/* ===== ADMIN NAVBAR STYLES ===== */
+/* ============================================
+   ADMIN NAVBAR STYLES
+   ============================================ */
 .admin-navbar {
   border-bottom: 2px solid rgba(245, 158, 11, 0.2) !important;
   background: rgba(20, 27, 45, 0.95) !important;
@@ -150,6 +152,16 @@
   border-bottom: 2px solid #f59e0b !important;
 }
 
+/* ============================================
+   HIDE NAVBAR ON ADMIN ROUTES
+   ============================================ */
+.navbar.hide-on-admin {
+  display: none !important;
+}
+
+/* ============================================
+   ADMIN DROPDOWN STYLES
+   ============================================ */
 .user-dropdown-toggle.admin-dropdown {
   border-color: rgba(245, 158, 11, 0.2);
 }
@@ -188,7 +200,9 @@
   color: #fbbf24 !important;
 }
 
-/* ===== TUTOR NAVIGATION ===== */
+/* ============================================
+   TUTOR NAVIGATION
+   ============================================ */
 .navbar-links a.tutor-nav-link {
   color: #34d399 !important;
 }
@@ -225,14 +239,18 @@
   border: 1px solid rgba(52, 211, 153, 0.15);
 }
 
-/* ===== NAVBAR ACTIONS ===== */
+/* ============================================
+   NAVBAR ACTIONS
+   ============================================ */
 .navbar-actions {
   display: flex;
   align-items: center;
   gap: 8px;
 }
 
-/* ===== SEARCH ===== */
+/* ============================================
+   SEARCH
+   ============================================ */
 .search-container {
   position: relative;
 }
@@ -385,7 +403,9 @@
   margin-bottom: 8px;
 }
 
-/* ===== LANGUAGE ===== */
+/* ============================================
+   LANGUAGE
+   ============================================ */
 .language-container {
   position: relative;
 }
@@ -489,7 +509,9 @@
   margin-left: 4px;
 }
 
-/* ===== USER DROPDOWN ===== */
+/* ============================================
+   USER DROPDOWN
+   ============================================ */
 .user-menu {
   position: relative;
   display: flex;
@@ -564,7 +586,9 @@
   transform: rotate(180deg);
 }
 
-/* ===== DROPDOWN MENU ===== */
+/* ============================================
+   DROPDOWN MENU
+   ============================================ */
 .user-dropdown {
   position: absolute;
   top: calc(100% + 8px);
@@ -700,7 +724,9 @@
   margin: 4px 16px;
 }
 
-/* ===== LOGIN / REGISTER BUTTONS ===== */
+/* ============================================
+   LOGIN / REGISTER BUTTONS
+   ============================================ */
 .login-button {
   padding: 8px 18px;
   color: var(--text-secondary);
@@ -732,7 +758,9 @@
   box-shadow: 0 4px 20px rgba(79, 70, 229, 0.3);
 }
 
-/* ===== MOBILE MENU ===== */
+/* ============================================
+   MOBILE MENU
+   ============================================ */
 .mobile-menu {
   display: none;
   width: 38px;
@@ -949,7 +977,9 @@
   background: rgba(239, 68, 68, 0.05);
 }
 
-/* ===== RESPONSIVE ===== */
+/* ============================================
+   RESPONSIVE
+   ============================================ */
 @media (max-width: 1024px) {
   .navbar-links {
     display: none;

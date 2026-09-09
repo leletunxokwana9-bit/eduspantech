@@ -4,8 +4,6 @@ import './AdminContent.css';
 
 const AdminContent = () => {
     const [subjects, setSubjects] = useState([]);
-    const [filteredSubjects, setFilteredSubjects] = useState([]);
-    const [searchTerm, setSearchTerm] = useState('');
     const [loading, setLoading] = useState(true);
     const [showModal, setShowModal] = useState(false);
     const [editingSubject, setEditingSubject] = useState(null);
@@ -32,12 +30,11 @@ const AdminContent = () => {
     const colors = ['#4f46e5', '#7c3aed', '#06b6d4', '#10b981', '#f59e0b', '#ef4444', '#ec4899', '#8b5cf6', '#14b8a6', '#f97316'];
     const tiers = ['TIER_1', 'TIER_2', 'TIER_3'];
     const regions = ['Global', 'Africa', 'Americas', 'Asia-Pacific', 'Europe', 'Middle East'];
+    const yearLevels = ['1ST_YEAR', '2ND_YEAR', '3RD_YEAR', '4TH_YEAR'];
     const tracks = ['BCom', 'BSc', 'ECP_Commerce', 'ECP_Science', 'Engineering', 'Arts'];
 
-    const API_URL = process.env.REACT_APP_API_URL || 'https://eduspantech-backend.onrender.com/api';
-
+    // Helper functions for default values
     const getDefaultIcon = (name) => {
-        if (!name) return '📚';
         const icons = {
             'Mathematics': '🔢',
             'Physics': '⚛️',
@@ -52,7 +49,7 @@ const AdminContent = () => {
             'Finance': '💰'
         };
         for (const [key, icon] of Object.entries(icons)) {
-            if (name.toLowerCase().includes(key.toLowerCase())) {
+            if (name && name.toLowerCase().includes(key.toLowerCase())) {
                 return icon;
             }
         }
@@ -60,8 +57,7 @@ const AdminContent = () => {
     };
 
     const getDefaultColor = (name) => {
-        if (!name) return '#4f46e5';
-        const colorMap = {
+        const colors = {
             'Mathematics': '#4f46e5',
             'Physics': '#06b6d4',
             'Chemistry': '#10b981',
@@ -74,8 +70,8 @@ const AdminContent = () => {
             'Computer': '#3b82f6',
             'Finance': '#10b981'
         };
-        for (const [key, color] of Object.entries(colorMap)) {
-            if (name.toLowerCase().includes(key.toLowerCase())) {
+        for (const [key, color] of Object.entries(colors)) {
+            if (name && name.toLowerCase().includes(key.toLowerCase())) {
                 return color;
             }
         }
@@ -86,56 +82,16 @@ const AdminContent = () => {
         fetchSubjects();
     }, []);
 
-    useEffect(() => {
-        if (searchTerm.trim() === '') {
-            setFilteredSubjects(subjects);
-        } else {
-            const term = searchTerm.toLowerCase().trim();
-            const filtered = subjects.filter(subject => 
-                subject.name.toLowerCase().includes(term) ||
-                (subject.code && subject.code.toLowerCase().includes(term)) ||
-                (subject.description && subject.description.toLowerCase().includes(term)) ||
-                (subject.track && subject.track.toLowerCase().includes(term)) ||
-                (subject.institution && subject.institution.toLowerCase().includes(term))
-            );
-            setFilteredSubjects(filtered);
-        }
-    }, [searchTerm, subjects]);
-
     const fetchSubjects = async () => {
         try {
             setLoading(true);
-            setErrorMessage('');
-            
             const token = localStorage.getItem('accessToken');
-            
-            if (!token) {
-                setErrorMessage('Please login to continue');
-                setTimeout(() => {
-                    window.location.href = '/admin/login';
-                }, 1500);
-                setLoading(false);
-                return;
-            }
-
-            const response = await fetch(`${API_URL}/admin/content/subjects`, {
-                headers: { 
-                    'Authorization': `Bearer ${token}`,
-                    'Content-Type': 'application/json'
-                }
+            const response = await fetch(`${process.env.REACT_APP_API_URL || 'https://eduspantech-backend.onrender.com/api'}/admin/content/subjects`, {
+                headers: { 'Authorization': `Bearer ${token}` }
             });
-
-            if (response.status === 401) {
-                setErrorMessage('Session expired. Please login again.');
-                localStorage.removeItem('accessToken');
-                localStorage.removeItem('refreshToken');
-                setLoading(false);
-                return;
-            }
-
             const data = await response.json();
-            
             if (data.success) {
+                // ✅ Map database fields to display fields
                 const mappedSubjects = (data.subjects || []).map(subject => ({
                     id: subject.id,
                     name: subject.name || 'Untitled',
@@ -147,6 +103,7 @@ const AdminContent = () => {
                     region: subject.region || 'Global',
                     display_order: subject.display_order || 0,
                     is_active: subject.is_active !== undefined ? subject.is_active : true,
+                    // University fields
                     code: subject.code || '',
                     track: subject.track || '',
                     year_level: subject.year_level || '1ST_YEAR',
@@ -154,14 +111,10 @@ const AdminContent = () => {
                     institution: subject.institution || ''
                 }));
                 setSubjects(mappedSubjects);
-                setFilteredSubjects(mappedSubjects);
-                setErrorMessage('');
-            } else {
-                setErrorMessage(data.error || 'Failed to load subjects');
             }
         } catch (error) {
             console.error('Error fetching subjects:', error);
-            setErrorMessage('Network error. Please try again.');
+            setErrorMessage('Failed to load subjects');
         } finally {
             setLoading(false);
         }
@@ -179,16 +132,9 @@ const AdminContent = () => {
             setSuccessMessage('');
             
             const token = localStorage.getItem('accessToken');
-            
-            if (!token) {
-                setErrorMessage('No authentication token found. Please login again.');
-                setActionLoading(false);
-                return;
-            }
-
             const url = editingSubject 
-                ? `${API_URL}/admin/content/subjects/${editingSubject.id}`
-                : `${API_URL}/admin/content/subjects`;
+                ? `${process.env.REACT_APP_API_URL || 'https://eduspantech-backend.onrender.com/api'}/admin/content/subjects/${editingSubject.id}`
+                : `${process.env.REACT_APP_API_URL || 'https://eduspantech-backend.onrender.com/api'}/admin/content/subjects`;
             const method = editingSubject ? 'PUT' : 'POST';
 
             const payload = {
@@ -201,6 +147,7 @@ const AdminContent = () => {
                 region: formData.region || 'Global',
                 display_order: parseInt(formData.display_order) || 0,
                 is_active: formData.is_active,
+                // University fields
                 code: formData.code || '',
                 track: formData.track || '',
                 year_level: formData.year_level || '1ST_YEAR',
@@ -217,14 +164,6 @@ const AdminContent = () => {
                 body: JSON.stringify(payload)
             });
             
-            if (response.status === 401) {
-                setErrorMessage('Session expired. Please login again.');
-                localStorage.removeItem('accessToken');
-                localStorage.removeItem('refreshToken');
-                setActionLoading(false);
-                return;
-            }
-            
             const data = await response.json();
             
             if (data.success) {
@@ -233,6 +172,7 @@ const AdminContent = () => {
                 setEditingSubject(null);
                 resetForm();
                 fetchSubjects();
+                
                 setTimeout(() => setSuccessMessage(''), 3000);
             } else {
                 setErrorMessage(data.error || 'Failed to save subject');
@@ -251,26 +191,10 @@ const AdminContent = () => {
         try {
             setActionLoading(true);
             const token = localStorage.getItem('accessToken');
-            
-            if (!token) {
-                setErrorMessage('No authentication token found. Please login again.');
-                setActionLoading(false);
-                return;
-            }
-
-            const response = await fetch(`${API_URL}/admin/content/subjects/${subjectId}`, {
+            const response = await fetch(`${process.env.REACT_APP_API_URL || 'https://eduspantech-backend.onrender.com/api'}/admin/content/subjects/${subjectId}`, {
                 method: 'DELETE',
                 headers: { 'Authorization': `Bearer ${token}` }
             });
-
-            if (response.status === 401) {
-                setErrorMessage('Session expired. Please login again.');
-                localStorage.removeItem('accessToken');
-                localStorage.removeItem('refreshToken');
-                setActionLoading(false);
-                return;
-            }
-
             const data = await response.json();
             
             if (data.success) {
@@ -291,13 +215,7 @@ const AdminContent = () => {
     const handleToggleStatus = async (subject) => {
         try {
             const token = localStorage.getItem('accessToken');
-            
-            if (!token) {
-                setErrorMessage('No authentication token found. Please login again.');
-                return;
-            }
-
-            const response = await fetch(`${API_URL}/admin/content/subjects/${subject.id}`, {
+            const response = await fetch(`${process.env.REACT_APP_API_URL || 'https://eduspantech-backend.onrender.com/api'}/admin/content/subjects/${subject.id}`, {
                 method: 'PUT',
                 headers: {
                     'Authorization': `Bearer ${token}`,
@@ -308,14 +226,6 @@ const AdminContent = () => {
                     is_active: !subject.is_active
                 })
             });
-
-            if (response.status === 401) {
-                setErrorMessage('Session expired. Please login again.');
-                localStorage.removeItem('accessToken');
-                localStorage.removeItem('refreshToken');
-                return;
-            }
-
             const data = await response.json();
             if (data.success) {
                 fetchSubjects();
@@ -388,18 +298,6 @@ const AdminContent = () => {
         return <span className="tier-badge" style={{ background: info.color }}>{info.label}</span>;
     };
 
-    const handleSearch = (e) => {
-        setSearchTerm(e.target.value);
-    };
-
-    const clearSearch = () => {
-        setSearchTerm('');
-    };
-
-    const handleRefresh = () => {
-        fetchSubjects();
-    };
-
     if (loading) {
         return (
             <div className="admin-content-loading">
@@ -417,9 +315,6 @@ const AdminContent = () => {
                     <p className="header-subtitle">Manage subjects, resources, and learning materials</p>
                 </div>
                 <div className="header-actions">
-                    <button className="refresh-btn" onClick={handleRefresh} title="Refresh subjects">
-                        🔄
-                    </button>
                     <button className="add-btn" onClick={openAddModal}>
                         ➕ Add Subject
                     </button>
@@ -435,22 +330,6 @@ const AdminContent = () => {
             {errorMessage && (
                 <div className="admin-content-error">
                     ❌ {errorMessage}
-                    {errorMessage.includes('Session expired') && (
-                        <button 
-                            className="error-login-btn"
-                            onClick={() => window.location.href = '/admin/login'}
-                        >
-                            Login Again
-                        </button>
-                    )}
-                    {errorMessage.includes('Please login') && (
-                        <button 
-                            className="error-login-btn"
-                            onClick={() => window.location.href = '/admin/login'}
-                        >
-                            Login
-                        </button>
-                    )}
                 </div>
             )}
 
@@ -469,44 +348,15 @@ const AdminContent = () => {
                 </div>
             </div>
 
-            <div className="content-search">
-                <div className="search-wrapper">
-                    <span className="search-icon">🔍</span>
-                    <input
-                        type="text"
-                        className="search-input"
-                        placeholder="Search by name, code, track, institution..."
-                        value={searchTerm}
-                        onChange={handleSearch}
-                    />
-                    {searchTerm && (
-                        <button className="clear-search" onClick={clearSearch}>
-                            ✕
-                        </button>
-                    )}
-                </div>
-                <div className="search-results-info">
-                    {searchTerm ? (
-                        <span>Showing {filteredSubjects.length} of {subjects.length} subjects</span>
-                    ) : (
-                        <span>{subjects.length} subjects total</span>
-                    )}
-                </div>
-            </div>
-
             <div className="subjects-grid">
-                {filteredSubjects.length === 0 ? (
+                {subjects.length === 0 ? (
                     <div className="empty-state">
                         <span className="empty-icon">📚</span>
-                        <h3>{searchTerm ? 'No matching subjects found' : 'No subjects yet'}</h3>
-                        <p>
-                            {searchTerm 
-                                ? `No subjects match "${searchTerm}". Try a different search term.`
-                                : 'Click "Add Subject" to create your first subject'}
-                        </p>
+                        <h3>No subjects yet</h3>
+                        <p>Click "Add Subject" to create your first subject</p>
                     </div>
                 ) : (
-                    filteredSubjects.map((subject) => (
+                    subjects.map((subject) => (
                         <div key={subject.id} className="subject-card" style={{ borderColor: subject.color || '#4f46e5' }}>
                             <div className="subject-card-header">
                                 <div className="subject-icon" style={{ background: subject.color || '#4f46e5' }}>
@@ -550,6 +400,7 @@ const AdminContent = () => {
                 )}
             </div>
 
+            {/* Add/Edit Modal */}
             {showModal && (
                 <div className="modal-overlay" onClick={() => setShowModal(false)}>
                     <div className="modal-content subject-modal" onClick={e => e.stopPropagation()}>
@@ -559,6 +410,7 @@ const AdminContent = () => {
                         </div>
 
                         <div className="modal-body">
+                            {/* Basic Fields */}
                             <div className="form-group">
                                 <label>Subject Name *</label>
                                 <input
@@ -639,6 +491,7 @@ const AdminContent = () => {
                                 </div>
                             </div>
 
+                            {/* University Fields */}
                             <div className="form-row">
                                 <div className="form-group half">
                                     <label>Course Code</label>

@@ -17,8 +17,11 @@ const AdminContent = () => {
         region: 'Global',
         display_order: 0,
         is_active: true,
-        youtube_playlist_id: '',
-        youtube_thumbnail: ''
+        code: '',
+        track: '',
+        year_level: '',
+        semester: '',
+        institution: ''
     });
     const [actionLoading, setActionLoading] = useState(false);
     const [successMessage, setSuccessMessage] = useState('');
@@ -27,6 +30,56 @@ const AdminContent = () => {
     const colors = ['#4f46e5', '#7c3aed', '#06b6d4', '#10b981', '#f59e0b', '#ef4444', '#ec4899', '#8b5cf6', '#14b8a6', '#f97316'];
     const tiers = ['TIER_1', 'TIER_2', 'TIER_3'];
     const regions = ['Global', 'Africa', 'Americas', 'Asia-Pacific', 'Europe', 'Middle East'];
+    const yearLevels = ['1ST_YEAR', '2ND_YEAR', '3RD_YEAR', '4TH_YEAR'];
+    const semesters = ['S1', 'S2', 'S3'];
+
+    // Helper: Get default icon based on subject name
+    const getDefaultIcon = (name) => {
+        if (!name) return '📚';
+        const icons = {
+            'Mathematics': '🔢',
+            'Math': '🔢',
+            'Physics': '⚛️',
+            'Chemistry': '🧪',
+            'Biology': '🧬',
+            'Life Sci': '🧬',
+            'Accounting': '📊',
+            'Economics': '📈',
+            'Business': '💼',
+            'Statistics': '📉',
+            'ECP': '📘'
+        };
+        for (const [key, icon] of Object.entries(icons)) {
+            if (name.toLowerCase().includes(key.toLowerCase())) {
+                return icon;
+            }
+        }
+        return '📚';
+    };
+
+    // Helper: Get default color based on subject name
+    const getDefaultColor = (name) => {
+        if (!name) return '#4f46e5';
+        const colors = {
+            'Mathematics': '#4f46e5',
+            'Math': '#4f46e5',
+            'Physics': '#06b6d4',
+            'Chemistry': '#10b981',
+            'Biology': '#22c55e',
+            'Life Sci': '#22c55e',
+            'Accounting': '#f59e0b',
+            'Economics': '#8b5cf6',
+            'Business': '#ec4899',
+            'Statistics': '#14b8a6',
+            'ECP': '#f97316'
+        };
+        for (const [key, color] of Object.entries(colors)) {
+            if (name.toLowerCase().includes(key.toLowerCase())) {
+                return color;
+            }
+        }
+        return '#4f46e5';
+    };
 
     useEffect(() => {
         fetchSubjects();
@@ -36,12 +89,29 @@ const AdminContent = () => {
         try {
             setLoading(true);
             const token = localStorage.getItem('accessToken');
-            const response = await fetch(`${process.env.REACT_APP_API_URL || 'https://eduspantech-backend.onrender.com/api'}/admin/content/subjects`, {
+            const response = await fetch(`${process.env.REACT_APP_API_URL || 'https://eduspantech-backend.onrender.com/api'}/content/subjects`, {
                 headers: { 'Authorization': `Bearer ${token}` }
             });
             const data = await response.json();
             if (data.success) {
-                setSubjects(data.subjects || []);
+                // ✅ Map database fields to display fields
+                const mappedSubjects = (data.subjects || []).map(subject => ({
+                    id: subject.id,
+                    name: subject.name,
+                    description: subject.description || subject.code || 'No description',
+                    long_description: subject.long_description || subject.description || `${subject.name} - ${subject.track || ''}`,
+                    icon: subject.icon || getDefaultIcon(subject.name),
+                    color: subject.color || getDefaultColor(subject.name),
+                    tier: subject.tier || subject.year_level || 'TIER_1',
+                    display_order: subject.display_order || 0,
+                    is_active: subject.is_active !== undefined ? subject.is_active : true,
+                    code: subject.code || '',
+                    track: subject.track || '',
+                    year_level: subject.year_level || '',
+                    semester: subject.semester || '',
+                    institution: subject.institution || ''
+                }));
+                setSubjects(mappedSubjects);
             }
         } catch (error) {
             console.error('Error fetching subjects:', error);
@@ -84,8 +154,11 @@ const AdminContent = () => {
                     region: formData.region,
                     display_order: parseInt(formData.display_order) || 0,
                     is_active: formData.is_active,
-                    youtube_playlist_id: formData.youtube_playlist_id,
-                    youtube_thumbnail: formData.youtube_thumbnail
+                    code: formData.code,
+                    track: formData.track,
+                    year_level: formData.year_level,
+                    semester: formData.semester,
+                    institution: formData.institution
                 })
             });
             
@@ -98,7 +171,6 @@ const AdminContent = () => {
                 resetForm();
                 fetchSubjects();
                 
-                // Clear success message after 3 seconds
                 setTimeout(() => setSuccessMessage(''), 3000);
             } else {
                 setErrorMessage(data.error || 'Failed to save subject');
@@ -176,8 +248,11 @@ const AdminContent = () => {
             region: subject.region || 'Global',
             display_order: subject.display_order || 0,
             is_active: subject.is_active !== undefined ? subject.is_active : true,
-            youtube_playlist_id: subject.youtube_playlist_id || '',
-            youtube_thumbnail: subject.youtube_thumbnail || ''
+            code: subject.code || '',
+            track: subject.track || '',
+            year_level: subject.year_level || '',
+            semester: subject.semester || '',
+            institution: subject.institution || ''
         });
         setShowModal(true);
     };
@@ -199,8 +274,11 @@ const AdminContent = () => {
             region: 'Global',
             display_order: subjects.length,
             is_active: true,
-            youtube_playlist_id: '',
-            youtube_thumbnail: ''
+            code: '',
+            track: '',
+            year_level: '',
+            semester: '',
+            institution: ''
         });
     };
 
@@ -210,7 +288,7 @@ const AdminContent = () => {
             'TIER_2': { label: 'Grade 10-11', color: '#f59e0b' },
             'TIER_3': { label: 'Grade 12+', color: '#ef4444' }
         };
-        const info = tierMap[tier] || { label: tier, color: '#6b7280' };
+        const info = tierMap[tier] || { label: tier || 'TIER_1', color: '#6b7280' };
         return <span className="tier-badge" style={{ background: info.color }}>{info.label}</span>;
     };
 
@@ -288,16 +366,20 @@ const AdminContent = () => {
                                             {subject.is_active ? '✅ Active' : '❌ Inactive'}
                                         </span>
                                     </div>
+                                    {subject.code && (
+                                        <div className="subject-code-badge">📌 {subject.code}</div>
+                                    )}
+                                    {subject.track && (
+                                        <div className="subject-track-badge">🎯 {subject.track}</div>
+                                    )}
+                                    {subject.institution && (
+                                        <div className="subject-institution-badge">🏛️ {subject.institution}</div>
+                                    )}
                                 </div>
                             </div>
-                            {subject.long_description && (
+                            {subject.long_description && subject.long_description !== subject.description && (
                                 <div className="subject-long-desc">
                                     {subject.long_description}
-                                </div>
-                            )}
-                            {subject.youtube_playlist_id && (
-                                <div className="subject-youtube">
-                                    ▶️ YouTube Playlist: {subject.youtube_playlist_id}
                                 </div>
                             )}
                             <div className="subject-actions">
@@ -353,6 +435,64 @@ const AdminContent = () => {
                                     onChange={(e) => setFormData({ ...formData, long_description: e.target.value })}
                                     placeholder="Detailed description for the subject page"
                                     rows="3"
+                                />
+                            </div>
+
+                            <div className="form-row">
+                                <div className="form-group half">
+                                    <label>Code</label>
+                                    <input
+                                        type="text"
+                                        value={formData.code}
+                                        onChange={(e) => setFormData({ ...formData, code: e.target.value })}
+                                        placeholder="e.g., MATH101, ACCN1014A"
+                                    />
+                                </div>
+                                <div className="form-group half">
+                                    <label>Track</label>
+                                    <input
+                                        type="text"
+                                        value={formData.track}
+                                        onChange={(e) => setFormData({ ...formData, track: e.target.value })}
+                                        placeholder="e.g., BSc, BCom, ECP_Commerce"
+                                    />
+                                </div>
+                            </div>
+
+                            <div className="form-row">
+                                <div className="form-group half">
+                                    <label>Year Level</label>
+                                    <select
+                                        value={formData.year_level}
+                                        onChange={(e) => setFormData({ ...formData, year_level: e.target.value })}
+                                    >
+                                        <option value="">Select year level</option>
+                                        {yearLevels.map(level => (
+                                            <option key={level} value={level}>{level.replace('_', ' ')}</option>
+                                        ))}
+                                    </select>
+                                </div>
+                                <div className="form-group half">
+                                    <label>Semester</label>
+                                    <select
+                                        value={formData.semester}
+                                        onChange={(e) => setFormData({ ...formData, semester: e.target.value })}
+                                    >
+                                        <option value="">Select semester</option>
+                                        {semesters.map(sem => (
+                                            <option key={sem} value={sem}>{sem}</option>
+                                        ))}
+                                    </select>
+                                </div>
+                            </div>
+
+                            <div className="form-group">
+                                <label>Institution</label>
+                                <input
+                                    type="text"
+                                    value={formData.institution}
+                                    onChange={(e) => setFormData({ ...formData, institution: e.target.value })}
+                                    placeholder="e.g., Wits: ACCN1014A, UP: FRK111"
                                 />
                             </div>
 
@@ -420,27 +560,6 @@ const AdminContent = () => {
                                         value={formData.color}
                                         onChange={(e) => setFormData({ ...formData, color: e.target.value })}
                                         className="color-input"
-                                    />
-                                </div>
-                            </div>
-
-                            <div className="form-row">
-                                <div className="form-group half">
-                                    <label>YouTube Playlist ID</label>
-                                    <input
-                                        type="text"
-                                        value={formData.youtube_playlist_id}
-                                        onChange={(e) => setFormData({ ...formData, youtube_playlist_id: e.target.value })}
-                                        placeholder="e.g., PLABC123DEF456"
-                                    />
-                                </div>
-                                <div className="form-group half">
-                                    <label>YouTube Thumbnail URL</label>
-                                    <input
-                                        type="text"
-                                        value={formData.youtube_thumbnail}
-                                        onChange={(e) => setFormData({ ...formData, youtube_thumbnail: e.target.value })}
-                                        placeholder="https://img.youtube.com/vi/ID/mqdefault.jpg"
                                     />
                                 </div>
                             </div>

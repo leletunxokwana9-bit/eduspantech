@@ -23,7 +23,11 @@ import {
   FiFolder,
   FiBarChart2,
   FiTrendingUp,
-  FiBookmark
+  FiBookmark,
+  FiShield,
+  FiPieChart,
+  FiCreditCard,
+  FiFileText
 } from "react-icons/fi";
 import { useHomeData } from "../hooks/useHomeData";
 import { useLanguage } from "../context/LanguageContext";
@@ -45,6 +49,7 @@ function Navbar() {
   const [user, setUser] = useState(null);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [isTutor, setIsTutor] = useState(false);
+  const [isAdmin, setIsAdmin] = useState(false);
   const [logoError, setLogoError] = useState(false);
   const location = useLocation();
   const navigate = useNavigate();
@@ -66,6 +71,16 @@ function Navbar() {
     );
   };
 
+  const checkIsAdmin = (userData) => {
+    if (!userData) return false;
+    return (
+      userData.is_admin === true ||
+      userData.is_super_admin === true ||
+      userData.role === 'admin' ||
+      userData.role === 'ADMIN'
+    );
+  };
+
   useEffect(() => {
     const checkAuth = async () => {
       const accessToken = localStorage.getItem('accessToken');
@@ -75,14 +90,14 @@ function Navbar() {
           const userData = await authService.getCurrentUserWithSubscription();
           if (userData) {
             setUser(userData);
-            const isTutorAccount = checkIsTutor(userData);
-            setIsTutor(isTutorAccount);
+            setIsTutor(checkIsTutor(userData));
+            setIsAdmin(checkIsAdmin(userData));
           } else {
             const fallbackUser = await authService.getCurrentUser();
             if (fallbackUser) {
               setUser(fallbackUser);
-              const isTutorAccount = checkIsTutor(fallbackUser);
-              setIsTutor(isTutorAccount);
+              setIsTutor(checkIsTutor(fallbackUser));
+              setIsAdmin(checkIsAdmin(fallbackUser));
             }
           }
         } catch (error) {
@@ -94,11 +109,13 @@ function Navbar() {
           setIsAuthenticated(false);
           setUser(null);
           setIsTutor(false);
+          setIsAdmin(false);
         }
       } else {
         setIsAuthenticated(false);
         setUser(null);
         setIsTutor(false);
+        setIsAdmin(false);
       }
     };
     checkAuth();
@@ -109,6 +126,7 @@ function Navbar() {
     setIsAuthenticated(false);
     setUser(null);
     setIsTutor(false);
+    setIsAdmin(false);
     setIsUserDropdownOpen(false);
     playClick();
     navigate('/');
@@ -313,7 +331,43 @@ function Navbar() {
   };
 
   // ============================================
-  // BASE NAV LINKS (Always visible)
+  // ADMIN NAV LINKS (Only show when admin)
+  // ============================================
+  const adminNavLinks = [
+    { path: "/admin/dashboard", label: "Dashboard", icon: <FiPieChart /> },
+    { path: "/admin/users", label: "Users", icon: <FiUsers /> },
+    { path: "/admin/tutors", label: "Tutors", icon: <FiUsers /> },
+    { path: "/admin/content", label: "Content", icon: <FiBook /> },
+    { path: "/admin/payments", label: "Payments", icon: <FiCreditCard /> },
+    { path: "/admin/analytics", label: "Analytics", icon: <FiBarChart2 /> },
+    { path: "/admin/settings", label: "Settings", icon: <FiSettings /> }
+  ];
+
+  // ============================================
+  // TUTOR NAV LINKS
+  // ============================================
+  const tutorNavLinks = [
+    { path: "/", label: "Home", icon: <FiHome /> },
+    { path: "/tutor/dashboard", label: "Dashboard", icon: <FiBarChart2 /> },
+    { path: "/my-sessions", label: "Sessions", icon: <FiCalendar /> },
+    { path: "/resources", label: "Resources", icon: <FiFolder /> }
+  ];
+
+  // ============================================
+  // STUDENT NAV LINKS
+  // ============================================
+  const studentNavLinks = [
+    { path: "/", label: "Home", icon: <FiHome /> },
+    { path: "/subjects", label: "Subjects", icon: <FiBook /> },
+    { path: "/curriculum", label: "Curriculum", icon: <FiGrid /> },
+    { path: "/tutors", label: "Tutors", icon: <FiUsers /> },
+    { path: "/pricing", label: "Pricing", icon: <FiDollarSign /> },
+    { path: "/resources", label: "Resources", icon: <FiFolder /> },
+    { path: "/timetable", label: "Timetable", icon: <FiCalendar /> }
+  ];
+
+  // ============================================
+  // BASE NAV LINKS (Not logged in)
   // ============================================
   const baseNavLinks = [
     { path: "/", label: "Home", icon: <FiHome /> },
@@ -324,26 +378,18 @@ function Navbar() {
     { path: "/resources", label: "Resources", icon: <FiFolder /> }
   ];
 
-  // ============================================
-  // STUDENT NAV LINKS - ✅ INCLUDES TIMETABLE (only when logged in)
-  // ============================================
-  const studentNavLinks = [
-    ...baseNavLinks,
-    { path: "/timetable", label: "Timetable", icon: <FiCalendar /> }
-  ];
+  // ✅ Determine which nav links to show
+  let navLinks = baseNavLinks;
+  if (isAdmin) {
+    navLinks = adminNavLinks;
+  } else if (isTutor) {
+    navLinks = tutorNavLinks;
+  } else if (isAuthenticated) {
+    navLinks = studentNavLinks;
+  }
 
-  // ============================================
-  // TUTOR NAV LINKS (TOP NAV)
-  // ============================================
-  const tutorNavLinks = [
-    { path: "/", label: "Home", icon: <FiHome /> },
-    { path: "/tutor/dashboard", label: "📊 Dashboard", icon: <FiBarChart2 /> },
-    { path: "/my-sessions", label: "📅 Sessions", icon: <FiCalendar /> },
-    { path: "/resources", label: "Resources", icon: <FiFolder /> }
-  ];
-
-  // ✅ TIMETABLE ONLY SHOWS WHEN AUTHENTICATED AND NOT TUTOR
-  const navLinks = isTutor ? tutorNavLinks : (isAuthenticated ? studentNavLinks : baseNavLinks);
+  // ✅ Admin doesn't need search in navbar
+  const showSearch = !isAdmin;
 
   const isActive = (path) => location.pathname === path;
 
@@ -419,14 +465,19 @@ function Navbar() {
   }
 
   return (
-    <header className="navbar" ref={menuRef}>
+    <header className={`navbar ${isAdmin ? 'admin-navbar' : ''}`} ref={menuRef}>
       <div className="navbar-container">
-        <Link to="/" className="logo" onClick={closeMenu}>
+        <Link to={isAdmin ? "/admin/dashboard" : "/"} className="logo" onClick={closeMenu}>
           {renderLogo()}
           <div className="logo-content">
             <span className="logo-title">EduSpantech</span>
-            <span className="logo-subtitle">{t('app.subtitle')}</span>
+            <span className="logo-subtitle">
+              {isAdmin ? 'Admin Panel' : t('app.subtitle')}
+            </span>
           </div>
+          {isAdmin && (
+            <span className="admin-badge">ADMIN</span>
+          )}
         </Link>
 
         <nav className="navbar-links">
@@ -434,7 +485,7 @@ function Navbar() {
             <Link
               key={link.path}
               to={link.path}
-              className={`${isActive(link.path) ? "active" : ""} ${isTutor ? 'tutor-nav-link' : 'student-nav-link'}`}
+              className={`${isActive(link.path) ? "active" : ""} ${isAdmin ? 'admin-nav-link' : ''} ${isTutor ? 'tutor-nav-link' : 'student-nav-link'}`}
               onClick={() => playClick()}
             >
               {link.icon && <span className="nav-icon">{link.icon}</span>}
@@ -444,70 +495,72 @@ function Navbar() {
         </nav>
 
         <div className="navbar-actions">
-          <div className="search-container" ref={searchRef}>
-            <button 
-              className={`search-button ${isSearchOpen ? 'active' : ''}`}
-              aria-label="Search"
-              onClick={toggleSearch}
-            >
-              <FiSearch />
-            </button>
-            
-            <div className={`search-dropdown ${isSearchOpen ? 'open' : ''}`}>
-              <form onSubmit={handleSearch} className="search-form">
-                <div className="search-input-wrapper">
-                  <input
-                    ref={searchInputRef}
-                    type="text"
-                    className="search-input"
-                    placeholder={t('nav.search')}
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                    onFocus={() => {
-                      if (searchQuery.trim().length >= 2 && searchResults.length > 0) {
-                        setShowSuggestions(true);
-                      }
-                    }}
-                  />
-                </div>
-                <button type="submit" className="search-submit">
-                  <FiSearch />
-                </button>
-              </form>
+          {showSearch && (
+            <div className="search-container" ref={searchRef}>
+              <button 
+                className={`search-button ${isSearchOpen ? 'active' : ''}`}
+                aria-label="Search"
+                onClick={toggleSearch}
+              >
+                <FiSearch />
+              </button>
+              
+              <div className={`search-dropdown ${isSearchOpen ? 'open' : ''}`}>
+                <form onSubmit={handleSearch} className="search-form">
+                  <div className="search-input-wrapper">
+                    <input
+                      ref={searchInputRef}
+                      type="text"
+                      className="search-input"
+                      placeholder={t('nav.search')}
+                      value={searchQuery}
+                      onChange={(e) => setSearchQuery(e.target.value)}
+                      onFocus={() => {
+                        if (searchQuery.trim().length >= 2 && searchResults.length > 0) {
+                          setShowSuggestions(true);
+                        }
+                      }}
+                    />
+                  </div>
+                  <button type="submit" className="search-submit">
+                    <FiSearch />
+                  </button>
+                </form>
 
-              {showSuggestions && (
-                <div className="search-results">
-                  {searchResults.length > 0 ? (
-                    searchResults.map((result, index) => (
-                      <div
-                        key={index}
-                        className="search-result-item"
-                        onClick={() => handleResultClick(result.path)}
-                      >
-                        <div className="result-icon">{result.icon}</div>
-                        <div className="result-info">
-                          <div className="result-title">{result.title}</div>
-                          <div className="result-subtitle">{result.subtitle}</div>
+                {showSuggestions && (
+                  <div className="search-results">
+                    {searchResults.length > 0 ? (
+                      searchResults.map((result, index) => (
+                        <div
+                          key={index}
+                          className="search-result-item"
+                          onClick={() => handleResultClick(result.path)}
+                        >
+                          <div className="result-icon">{result.icon}</div>
+                          <div className="result-info">
+                            <div className="result-title">{result.title}</div>
+                            <div className="result-subtitle">{result.subtitle}</div>
+                          </div>
+                          <span className="result-type">{getTypeLabel(result.type)}</span>
                         </div>
-                        <span className="result-type">{getTypeLabel(result.type)}</span>
-                      </div>
-                    ))
-                  ) : (
-                    searchQuery.trim().length >= 2 ? (
-                      <div className="search-empty-state">
-                        <span>🔍</span>
-                        <p>No results found for "{searchQuery}"</p>
-                      </div>
+                      ))
                     ) : (
-                      <div className="search-empty-state">
-                        <p>Type at least 2 characters to search</p>
-                      </div>
-                    )
-                  )}
-                </div>
-              )}
+                      searchQuery.trim().length >= 2 ? (
+                        <div className="search-empty-state">
+                          <span>🔍</span>
+                          <p>No results found for "{searchQuery}"</p>
+                        </div>
+                      ) : (
+                        <div className="search-empty-state">
+                          <p>Type at least 2 characters to search</p>
+                        </div>
+                      )
+                    )}
+                  </div>
+                )}
+              </div>
             </div>
-          </div>
+          )}
 
           <div className="language-container" ref={languageRef}>
             <button 
@@ -543,7 +596,7 @@ function Navbar() {
           {isAuthenticated ? (
             <div className="user-menu" ref={userDropdownRef}>
               <button 
-                className={`user-dropdown-toggle ${isUserDropdownOpen ? 'open' : ''} ${isTutor ? 'tutor-dropdown' : 'student-dropdown'}`}
+                className={`user-dropdown-toggle ${isUserDropdownOpen ? 'open' : ''} ${isAdmin ? 'admin-dropdown' : ''} ${isTutor ? 'tutor-dropdown' : 'student-dropdown'}`}
                 onClick={toggleUserDropdown}
                 aria-label="User menu"
               >
@@ -557,7 +610,7 @@ function Navbar() {
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
-                  background: isTutor ? 'linear-gradient(135deg, #059669, #10b981)' : 'linear-gradient(135deg, #4f46e5, #7c3aed)'
+                  background: isAdmin ? 'linear-gradient(135deg, #f59e0b, #d97706)' : isTutor ? 'linear-gradient(135deg, #059669, #10b981)' : 'linear-gradient(135deg, #4f46e5, #7c3aed)'
                 }}>
                   {getAvatarImage() ? (
                     <img 
@@ -571,19 +624,29 @@ function Navbar() {
                       {getUserInitial()}
                     </span>
                   )}
-                  {isTutor && (
+                  {isAdmin && (
+                    <span className="admin-badge-avatar" style={{
+                      position: 'absolute',
+                      bottom: '-2px',
+                      right: '-2px',
+                      fontSize: '10px',
+                      background: '#f59e0b',
+                      borderRadius: '50%',
+                      padding: '2px',
+                      border: '2px solid #141b2d'
+                    }} title="Admin">👑</span>
+                  )}
+                  {isTutor && !isAdmin && (
                     <span className="tutor-badge" style={{
                       position: 'absolute',
                       bottom: '-2px',
                       right: '-2px',
-                      fontSize: '12px',
+                      fontSize: '10px',
                       background: '#141b2d',
                       borderRadius: '50%',
                       padding: '2px',
                       border: '2px solid #141b2d'
-                    }} title="Tutor Account">
-                      👨‍🏫
-                    </span>
+                    }} title="Tutor Account">👨‍🏫</span>
                   )}
                 </div>
                 <span className="user-name">{getUserName()}</span>
@@ -602,7 +665,7 @@ function Navbar() {
                       display: 'flex',
                       alignItems: 'center',
                       justifyContent: 'center',
-                      background: isTutor ? 'linear-gradient(135deg, #059669, #10b981)' : 'linear-gradient(135deg, #4f46e5, #7c3aed)'
+                      background: isAdmin ? 'linear-gradient(135deg, #f59e0b, #d97706)' : isTutor ? 'linear-gradient(135deg, #059669, #10b981)' : 'linear-gradient(135deg, #4f46e5, #7c3aed)'
                     }}>
                       {getAvatarImage() ? (
                         <img 
@@ -620,7 +683,9 @@ function Navbar() {
                     <div className="dropdown-user-details">
                       <span className="dropdown-user-name">{user?.name || 'User'}</span>
                       <span className="dropdown-user-email">{user?.email || ''}</span>
-                      {isTutor ? (
+                      {isAdmin ? (
+                        <span className="dropdown-user-tier admin-tier">👑 Admin</span>
+                      ) : isTutor ? (
                         <span className="dropdown-user-tier tutor-tier">👨‍🏫 Tutor Account</span>
                       ) : (
                         <span className="dropdown-user-tier">🏅 {getUserTier()} Tier</span>
@@ -629,45 +694,46 @@ function Navbar() {
                   </div>
                 </div>
 
-                {!isTutor && (
-                  <div className="dropdown-items">
-                    <Link to="/profile" className="dropdown-item" onClick={() => { closeUserDropdown(); playClick(); }}>
-                      <FiUser className="dropdown-icon" />
-                      <span>Profile</span>
-                    </Link>
-                    
-                    <Link to="/settings" className="dropdown-item" onClick={() => { closeUserDropdown(); playClick(); }}>
-                      <FiSettings className="dropdown-icon" />
-                      <span>Settings</span>
-                    </Link>
-
-                    <Link to="/dashboard" className="dropdown-item" onClick={() => { closeUserDropdown(); playClick(); }}>
-                      <FiBookOpen className="dropdown-icon" />
+                {/* ✅ ADMIN DROPDOWN ITEMS */}
+                {isAdmin && (
+                  <div className="dropdown-items admin-dropdown-items">
+                    <Link to="/admin/dashboard" className="dropdown-item" onClick={() => { closeUserDropdown(); playClick(); }}>
+                      <FiPieChart className="dropdown-icon" />
                       <span>Dashboard</span>
                     </Link>
-
-                    <Link to="/my-courses" className="dropdown-item" onClick={() => { closeUserDropdown(); playClick(); }}>
-                      <FiAward className="dropdown-icon" />
-                      <span>My Courses</span>
+                    <Link to="/admin/users" className="dropdown-item" onClick={() => { closeUserDropdown(); playClick(); }}>
+                      <FiUsers className="dropdown-icon" />
+                      <span>Manage Users</span>
                     </Link>
-
-                    <Link to="/my-sessions" className="dropdown-item" onClick={() => { closeUserDropdown(); playClick(); }}>
-                      <FiClock className="dropdown-icon" />
-                      <span>My Sessions</span>
+                    <Link to="/admin/tutors" className="dropdown-item" onClick={() => { closeUserDropdown(); playClick(); }}>
+                      <FiUsers className="dropdown-icon" />
+                      <span>Manage Tutors</span>
                     </Link>
-
-                    <Link to="/timetable" className="dropdown-item" onClick={() => { closeUserDropdown(); playClick(); }}>
-                      <FiCalendar className="dropdown-icon" />
-                      <span>Timetable</span>
+                    <Link to="/admin/content" className="dropdown-item" onClick={() => { closeUserDropdown(); playClick(); }}>
+                      <FiBook className="dropdown-icon" />
+                      <span>Content Management</span>
                     </Link>
-
-                    <Link to="/help" className="dropdown-item" onClick={() => { closeUserDropdown(); playClick(); }}>
-                      <FiHelpCircle className="dropdown-icon" />
-                      <span>Help & Support</span>
+                    <Link to="/admin/payments" className="dropdown-item" onClick={() => { closeUserDropdown(); playClick(); }}>
+                      <FiCreditCard className="dropdown-icon" />
+                      <span>Payments</span>
                     </Link>
-
+                    <Link to="/admin/analytics" className="dropdown-item" onClick={() => { closeUserDropdown(); playClick(); }}>
+                      <FiBarChart2 className="dropdown-icon" />
+                      <span>Analytics</span>
+                    </Link>
+                    <Link to="/admin/settings" className="dropdown-item" onClick={() => { closeUserDropdown(); playClick(); }}>
+                      <FiSettings className="dropdown-icon" />
+                      <span>System Settings</span>
+                    </Link>
+                    <Link to="/admin/activity" className="dropdown-item" onClick={() => { closeUserDropdown(); playClick(); }}>
+                      <FiFileText className="dropdown-icon" />
+                      <span>Audit Log</span>
+                    </Link>
                     <div className="dropdown-divider"></div>
-
+                    <Link to="/admin/profile" className="dropdown-item" onClick={() => { closeUserDropdown(); playClick(); }}>
+                      <FiUser className="dropdown-icon" />
+                      <span>My Profile</span>
+                    </Link>
                     <button className="dropdown-item logout" onClick={handleLogout}>
                       <FiLogOut className="dropdown-icon" />
                       <span>Logout</span>
@@ -675,40 +741,73 @@ function Navbar() {
                   </div>
                 )}
 
-                {isTutor && (
+                {/* ✅ STUDENT DROPDOWN ITEMS */}
+                {!isAdmin && !isTutor && (
+                  <div className="dropdown-items">
+                    <Link to="/profile" className="dropdown-item" onClick={() => { closeUserDropdown(); playClick(); }}>
+                      <FiUser className="dropdown-icon" />
+                      <span>Profile</span>
+                    </Link>
+                    <Link to="/settings" className="dropdown-item" onClick={() => { closeUserDropdown(); playClick(); }}>
+                      <FiSettings className="dropdown-icon" />
+                      <span>Settings</span>
+                    </Link>
+                    <Link to="/dashboard" className="dropdown-item" onClick={() => { closeUserDropdown(); playClick(); }}>
+                      <FiBookOpen className="dropdown-icon" />
+                      <span>Dashboard</span>
+                    </Link>
+                    <Link to="/my-courses" className="dropdown-item" onClick={() => { closeUserDropdown(); playClick(); }}>
+                      <FiAward className="dropdown-icon" />
+                      <span>My Courses</span>
+                    </Link>
+                    <Link to="/my-sessions" className="dropdown-item" onClick={() => { closeUserDropdown(); playClick(); }}>
+                      <FiClock className="dropdown-icon" />
+                      <span>My Sessions</span>
+                    </Link>
+                    <Link to="/timetable" className="dropdown-item" onClick={() => { closeUserDropdown(); playClick(); }}>
+                      <FiCalendar className="dropdown-icon" />
+                      <span>Timetable</span>
+                    </Link>
+                    <Link to="/help" className="dropdown-item" onClick={() => { closeUserDropdown(); playClick(); }}>
+                      <FiHelpCircle className="dropdown-icon" />
+                      <span>Help & Support</span>
+                    </Link>
+                    <div className="dropdown-divider"></div>
+                    <button className="dropdown-item logout" onClick={handleLogout}>
+                      <FiLogOut className="dropdown-icon" />
+                      <span>Logout</span>
+                    </button>
+                  </div>
+                )}
+
+                {/* ✅ TUTOR DROPDOWN ITEMS */}
+                {!isAdmin && isTutor && (
                   <div className="dropdown-items tutor-dropdown-items">
                     <Link to="/profile" className="dropdown-item" onClick={() => { closeUserDropdown(); playClick(); }}>
                       <FiUser className="dropdown-icon" />
                       <span>My Profile</span>
                     </Link>
-                    
                     <Link to="/settings" className="dropdown-item" onClick={() => { closeUserDropdown(); playClick(); }}>
                       <FiSettings className="dropdown-icon" />
                       <span>Settings</span>
                     </Link>
-
                     <Link to="/tutor/dashboard" className="dropdown-item" onClick={() => { closeUserDropdown(); playClick(); }}>
                       <FiBarChart2 className="dropdown-icon" />
                       <span>Dashboard</span>
                     </Link>
-
                     <Link to="/tutor/students" className="dropdown-item" onClick={() => { closeUserDropdown(); playClick(); }}>
                       <FiUsers className="dropdown-icon" />
                       <span>My Students</span>
                     </Link>
-
                     <Link to="/tutor/earnings" className="dropdown-item" onClick={() => { closeUserDropdown(); playClick(); }}>
                       <FiTrendingUp className="dropdown-icon" />
                       <span>Earnings</span>
                     </Link>
-
                     <Link to="/help" className="dropdown-item" onClick={() => { closeUserDropdown(); playClick(); }}>
                       <FiHelpCircle className="dropdown-icon" />
                       <span>Help & Support</span>
                     </Link>
-
                     <div className="dropdown-divider"></div>
-
                     <button className="dropdown-item logout" onClick={handleLogout}>
                       <FiLogOut className="dropdown-icon" />
                       <span>Logout</span>
@@ -750,7 +849,38 @@ function Navbar() {
           
           <div className="mobile-divider"></div>
 
-          {isAuthenticated && !isTutor && (
+          {/* ✅ ADMIN MOBILE LINKS */}
+          {isAdmin && (
+            <>
+              <Link to="/admin/dashboard" className="mobile-dashboard" onClick={() => { closeMenu(); playClick(); }}>
+                <FiPieChart /> Dashboard
+              </Link>
+              <Link to="/admin/users" className="mobile-admin-users" onClick={() => { closeMenu(); playClick(); }}>
+                <FiUsers /> Manage Users
+              </Link>
+              <Link to="/admin/tutors" className="mobile-admin-tutors" onClick={() => { closeMenu(); playClick(); }}>
+                <FiUsers /> Manage Tutors
+              </Link>
+              <Link to="/admin/content" className="mobile-admin-content" onClick={() => { closeMenu(); playClick(); }}>
+                <FiBook /> Content
+              </Link>
+              <Link to="/admin/payments" className="mobile-admin-payments" onClick={() => { closeMenu(); playClick(); }}>
+                <FiCreditCard /> Payments
+              </Link>
+              <Link to="/admin/analytics" className="mobile-admin-analytics" onClick={() => { closeMenu(); playClick(); }}>
+                <FiBarChart2 /> Analytics
+              </Link>
+              <Link to="/admin/settings" className="mobile-admin-settings" onClick={() => { closeMenu(); playClick(); }}>
+                <FiSettings /> Settings
+              </Link>
+              <Link to="/admin/activity" className="mobile-admin-activity" onClick={() => { closeMenu(); playClick(); }}>
+                <FiFileText /> Audit Log
+              </Link>
+            </>
+          )}
+
+          {/* ✅ STUDENT MOBILE LINKS */}
+          {isAuthenticated && !isAdmin && !isTutor && (
             <>
               <Link to="/profile" className="mobile-profile" onClick={() => { closeMenu(); playClick(); }}>
                 <FiUser /> Profile
@@ -776,7 +906,8 @@ function Navbar() {
             </>
           )}
 
-          {isAuthenticated && isTutor && (
+          {/* ✅ TUTOR MOBILE LINKS */}
+          {isAuthenticated && !isAdmin && isTutor && (
             <>
               <Link to="/profile" className="mobile-profile" onClick={() => { closeMenu(); playClick(); }}>
                 <FiUser /> My Profile

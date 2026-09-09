@@ -1,4 +1,4 @@
-// src/App.js - COMPLETE WITH ADMIN ROUTES
+// src/App.js - COMPLETE WITH ADMIN ROUTES + ADMIN LOGIN LAYOUT
 import React, { Suspense, lazy } from 'react';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import Navbar from './components/Navbar';
@@ -53,6 +53,13 @@ import AdminPayments from './pages/Admin/AdminPayments';
 import AdminAnalytics from './pages/Admin/AdminAnalytics';
 import AdminSettings from './pages/Admin/AdminSettings';
 import AdminActivity from './pages/Admin/AdminActivity';
+import AdminLogin from './pages/Admin/AdminLogin';
+import AdminProfile from './pages/Admin/AdminProfile';
+
+// ============================================
+// ADMIN LOGIN LAYOUT (No Navbar)
+// ============================================
+import AdminLoginLayout from './pages/Admin/AdminLoginLayout';
 
 // ============================================
 // ERROR BOUNDARY COMPONENT
@@ -181,8 +188,7 @@ const withLazyErrorHandling = (importFn, componentName) => {
                   fontSize: '16px'
                 }}
               >
-                Refresh Page
-              </button>
+                Refresh Page              </button>
             </div>
           )
         };
@@ -254,6 +260,29 @@ function App() {
                     <Suspense fallback={<PageLoader />}>
                       <Routes>
                         {/* ============================================
+                            ✅ ADMIN LOGIN - NO NAVBAR (Layout Route with Outlet)
+                            ============================================ */}
+                        <Route element={<AdminLoginLayout />}>
+                          <Route path="/admin/login" element={<AdminLogin />} />
+                        </Route>
+                        
+                        {/* ============================================
+                            ADMIN ROUTES - With Sidebar (AdminLayout)
+                            ============================================ */}
+                        <Route path="/admin" element={<AdminLayout />}>
+                          <Route index element={<AdminDashboard />} />
+                          <Route path="dashboard" element={<AdminDashboard />} />
+                          <Route path="users" element={<AdminUsers />} />
+                          <Route path="tutors" element={<AdminTutors />} />
+                          <Route path="content" element={<AdminContent />} />
+                          <Route path="payments" element={<AdminPayments />} />
+                          <Route path="analytics" element={<AdminAnalytics />} />
+                          <Route path="settings" element={<AdminSettings />} />
+                          <Route path="activity" element={<AdminActivity />} />
+                          <Route path="profile" element={<AdminProfile />} />
+                        </Route>
+                        
+                        {/* ============================================
                             CORE ROUTES - Always accessible
                             ============================================ */}
                         <Route path="/forgot-password" element={<ForgotPassword />} />
@@ -307,20 +336,6 @@ function App() {
                         <Route path="/tutor/session/:sessionId" element={<TutorSession />} />
                         <Route path="/tutor/students" element={<TutorStudents />} />
                         <Route path="/tutor/earnings" element={<TutorEarnings />} />
-                        
-                        {/* ============================================
-                            ADMIN ROUTES - Require admin role
-                            ============================================ */}
-                        <Route path="/admin" element={<AdminLayout />}>
-                          <Route index element={<AdminDashboard />} />
-                          <Route path="users" element={<AdminUsers />} />
-                          <Route path="tutors" element={<AdminTutors />} />
-                          <Route path="content" element={<AdminContent />} />
-                          <Route path="payments" element={<AdminPayments />} />
-                          <Route path="analytics" element={<AdminAnalytics />} />
-                          <Route path="settings" element={<AdminSettings />} />
-                          <Route path="activity" element={<AdminActivity />} />
-                        </Route>
                         
                         {/* ============================================
                             LAZY LOADED ROUTES - With error handling

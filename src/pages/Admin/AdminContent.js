@@ -10,14 +10,23 @@ const AdminContent = () => {
     const [formData, setFormData] = useState({
         name: '',
         description: '',
-        icon: '',
+        long_description: '',
+        icon: '📚',
         color: '#4f46e5',
+        tier: 'TIER_1',
+        region: 'Global',
         display_order: 0,
-        is_active: true
+        is_active: true,
+        youtube_playlist_id: '',
+        youtube_thumbnail: ''
     });
     const [actionLoading, setActionLoading] = useState(false);
+    const [successMessage, setSuccessMessage] = useState('');
+    const [errorMessage, setErrorMessage] = useState('');
 
-    const colors = ['#4f46e5', '#7c3aed', '#06b6d4', '#10b981', '#f59e0b', '#ef4444', '#ec4899', '#8b5cf6'];
+    const colors = ['#4f46e5', '#7c3aed', '#06b6d4', '#10b981', '#f59e0b', '#ef4444', '#ec4899', '#8b5cf6', '#14b8a6', '#f97316'];
+    const tiers = ['TIER_1', 'TIER_2', 'TIER_3'];
+    const regions = ['Global', 'Africa', 'Americas', 'Asia-Pacific', 'Europe', 'Middle East'];
 
     useEffect(() => {
         fetchSubjects();
@@ -27,7 +36,7 @@ const AdminContent = () => {
         try {
             setLoading(true);
             const token = localStorage.getItem('accessToken');
-            const response = await fetch(`${process.env.REACT_APP_API_URL}/admin/content/subjects`, {
+            const response = await fetch(`${process.env.REACT_APP_API_URL || 'https://eduspantech-backend.onrender.com/api'}/admin/content/subjects`, {
                 headers: { 'Authorization': `Bearer ${token}` }
             });
             const data = await response.json();
@@ -36,6 +45,7 @@ const AdminContent = () => {
             }
         } catch (error) {
             console.error('Error fetching subjects:', error);
+            setErrorMessage('Failed to load subjects');
         } finally {
             setLoading(false);
         }
@@ -43,16 +53,19 @@ const AdminContent = () => {
 
     const handleSaveSubject = async () => {
         if (!formData.name.trim()) {
-            alert('Subject name is required');
+            setErrorMessage('Subject name is required');
             return;
         }
 
         try {
             setActionLoading(true);
+            setErrorMessage('');
+            setSuccessMessage('');
+            
             const token = localStorage.getItem('accessToken');
             const url = editingSubject 
-                ? `${process.env.REACT_APP_API_URL}/admin/content/subjects/${editingSubject.id}`
-                : `${process.env.REACT_APP_API_URL}/admin/content/subjects`;
+                ? `${process.env.REACT_APP_API_URL || 'https://eduspantech-backend.onrender.com/api'}/admin/content/subjects/${editingSubject.id}`
+                : `${process.env.REACT_APP_API_URL || 'https://eduspantech-backend.onrender.com/api'}/admin/content/subjects`;
             const method = editingSubject ? 'PUT' : 'POST';
 
             const response = await fetch(url, {
@@ -61,184 +74,395 @@ const AdminContent = () => {
                     'Authorization': `Bearer ${token}`,
                     'Content-Type': 'application/json'
                 },
-                body: JSON.stringify(formData)
+                body: JSON.stringify({
+                    name: formData.name.trim(),
+                    description: formData.description,
+                    long_description: formData.long_description,
+                    icon: formData.icon,
+                    color: formData.color,
+                    tier: formData.tier,
+                    region: formData.region,
+                    display_order: parseInt(formData.display_order) || 0,
+                    is_active: formData.is_active,
+                    youtube_playlist_id: formData.youtube_playlist_id,
+                    youtube_thumbnail: formData.youtube_thumbnail
+                })
             });
+            
             const data = await response.json();
             
             if (data.success) {
+                setSuccessMessage(editingSubject ? 'Subject updated successfully!' : 'Subject created successfully!');
                 setShowModal(false);
                 setEditingSubject(null);
-                setFormData({ name: '', description: '', icon: '', color: '#4f46e5', display_order: 0, is_active: true });
+                resetForm();
                 fetchSubjects();
+                
+                // Clear success message after 3 seconds
+                setTimeout(() => setSuccessMessage(''), 3000);
+            } else {
+                setErrorMessage(data.error || 'Failed to save subject');
             }
         } catch (error) {
             console.error('Error saving subject:', error);
+            setErrorMessage('Network error. Please try again.');
         } finally {
             setActionLoading(false);
         }
     };
 
     const handleDeleteSubject = async (subjectId) => {
-        if (!window.confirm('Are you sure you want to delete this subject?')) return;
+        if (!window.confirm('⚠️ Are you sure you want to delete this subject? This action cannot be undone.')) return;
 
         try {
+            setActionLoading(true);
             const token = localStorage.getItem('accessToken');
-            const response = await fetch(`${process.env.REACT_APP_API_URL}/admin/content/subjects/${subjectId}`, {
+            const response = await fetch(`${process.env.REACT_APP_API_URL || 'https://eduspantech-backend.onrender.com/api'}/admin/content/subjects/${subjectId}`, {
                 method: 'DELETE',
                 headers: { 'Authorization': `Bearer ${token}` }
             });
             const data = await response.json();
             
             if (data.success) {
+                setSuccessMessage('Subject deleted successfully!');
                 fetchSubjects();
+                setTimeout(() => setSuccessMessage(''), 3000);
+            } else {
+                setErrorMessage(data.error || 'Failed to delete subject');
             }
         } catch (error) {
             console.error('Error deleting subject:', error);
+            setErrorMessage('Network error. Please try again.');
+        } finally {
+            setActionLoading(false);
+        }
+    };
+
+    const handleToggleStatus = async (subject) => {
+        try {
+            const token = localStorage.getItem('accessToken');
+            const response = await fetch(`${process.env.REACT_APP_API_URL || 'https://eduspantech-backend.onrender.com/api'}/admin/content/subjects/${subject.id}`, {
+                method: 'PUT',
+                headers: {
+                    'Authorization': `Bearer ${token}`,
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    ...subject,
+                    is_active: !subject.is_active
+                })
+            });
+            const data = await response.json();
+            if (data.success) {
+                fetchSubjects();
+                setSuccessMessage(`Subject ${subject.is_active ? 'deactivated' : 'activated'} successfully!`);
+                setTimeout(() => setSuccessMessage(''), 3000);
+            }
+        } catch (error) {
+            console.error('Error toggling subject status:', error);
+            setErrorMessage('Failed to update subject status');
         }
     };
 
     const openEditModal = (subject) => {
         setEditingSubject(subject);
         setFormData({
-            name: subject.name,
+            name: subject.name || '',
             description: subject.description || '',
+            long_description: subject.long_description || subject.description || '',
             icon: subject.icon || '📚',
             color: subject.color || '#4f46e5',
+            tier: subject.tier || 'TIER_1',
+            region: subject.region || 'Global',
             display_order: subject.display_order || 0,
-            is_active: subject.is_active !== undefined ? subject.is_active : true
+            is_active: subject.is_active !== undefined ? subject.is_active : true,
+            youtube_playlist_id: subject.youtube_playlist_id || '',
+            youtube_thumbnail: subject.youtube_thumbnail || ''
         });
         setShowModal(true);
     };
 
     const openAddModal = () => {
         setEditingSubject(null);
-        setFormData({
-            name: '',
-            description: '',
-            icon: '📚',
-            color: '#4f46e5',
-            display_order: subjects.length,
-            is_active: true
-        });
+        resetForm();
         setShowModal(true);
     };
 
+    const resetForm = () => {
+        setFormData({
+            name: '',
+            description: '',
+            long_description: '',
+            icon: '📚',
+            color: '#4f46e5',
+            tier: 'TIER_1',
+            region: 'Global',
+            display_order: subjects.length,
+            is_active: true,
+            youtube_playlist_id: '',
+            youtube_thumbnail: ''
+        });
+    };
+
+    const getTierBadge = (tier) => {
+        const tierMap = {
+            'TIER_1': { label: 'Grade 8-9', color: '#10b981' },
+            'TIER_2': { label: 'Grade 10-11', color: '#f59e0b' },
+            'TIER_3': { label: 'Grade 12+', color: '#ef4444' }
+        };
+        const info = tierMap[tier] || { label: tier, color: '#6b7280' };
+        return <span className="tier-badge" style={{ background: info.color }}>{info.label}</span>;
+    };
+
     if (loading) {
-        return <div className="admin-content-loading">Loading content...</div>;
+        return (
+            <div className="admin-content-loading">
+                <div className="loading-spinner"></div>
+                <p>Loading content...</p>
+            </div>
+        );
     }
 
     return (
         <div className="admin-content">
             <div className="content-header">
-                <h2>Content Management</h2>
-                <button className="add-btn" onClick={openAddModal}>
-                    ➕ Add Subject
-                </button>
+                <div className="header-left">
+                    <h2>📚 Content Management</h2>
+                    <p className="header-subtitle">Manage subjects, resources, and learning materials</p>
+                </div>
+                <div className="header-actions">
+                    <button className="add-btn" onClick={openAddModal}>
+                        ➕ Add Subject
+                    </button>
+                </div>
+            </div>
+
+            {successMessage && (
+                <div className="admin-content-success">
+                    ✅ {successMessage}
+                </div>
+            )}
+
+            {errorMessage && (
+                <div className="admin-content-error">
+                    ❌ {errorMessage}
+                </div>
+            )}
+
+            <div className="content-stats">
+                <div className="stat-item">
+                    <span className="stat-number">{subjects.length}</span>
+                    <span className="stat-label">Total Subjects</span>
+                </div>
+                <div className="stat-item">
+                    <span className="stat-number">{subjects.filter(s => s.is_active).length}</span>
+                    <span className="stat-label">Active</span>
+                </div>
+                <div className="stat-item">
+                    <span className="stat-number">{subjects.filter(s => !s.is_active).length}</span>
+                    <span className="stat-label">Inactive</span>
+                </div>
             </div>
 
             <div className="subjects-grid">
-                {subjects.map((subject) => (
-                    <div key={subject.id} className="subject-card" style={{ borderColor: subject.color }}>
-                        <div className="subject-icon" style={{ background: subject.color }}>
-                            {subject.icon || '📚'}
-                        </div>
-                        <div className="subject-info">
-                            <h4>{subject.name}</h4>
-                            <p>{subject.description || 'No description'}</p>
-                            <span className="subject-status">
-                                {subject.is_active ? '✅ Active' : '❌ Inactive'}
-                            </span>
-                        </div>
-                        <div className="subject-actions">
-                            <button className="action-btn edit" onClick={() => openEditModal(subject)}>
-                                ✏️ Edit
-                            </button>
-                            <button className="action-btn delete" onClick={() => handleDeleteSubject(subject.id)}>
-                                🗑️ Delete
-                            </button>
-                        </div>
+                {subjects.length === 0 ? (
+                    <div className="empty-state">
+                        <span className="empty-icon">📚</span>
+                        <h3>No subjects yet</h3>
+                        <p>Click "Add Subject" to create your first subject</p>
                     </div>
-                ))}
+                ) : (
+                    subjects.map((subject) => (
+                        <div key={subject.id} className="subject-card" style={{ borderColor: subject.color || '#4f46e5' }}>
+                            <div className="subject-card-header">
+                                <div className="subject-icon" style={{ background: subject.color || '#4f46e5' }}>
+                                    {subject.icon || '📚'}
+                                </div>
+                                <div className="subject-info">
+                                    <h4>{subject.name}</h4>
+                                    <p>{subject.description || 'No description'}</p>
+                                    <div className="subject-meta">
+                                        {getTierBadge(subject.tier)}
+                                        <span className="region-badge">🌍 {subject.region || 'Global'}</span>
+                                        <span className={`status-badge ${subject.is_active ? 'active' : 'inactive'}`}>
+                                            {subject.is_active ? '✅ Active' : '❌ Inactive'}
+                                        </span>
+                                    </div>
+                                </div>
+                            </div>
+                            {subject.long_description && (
+                                <div className="subject-long-desc">
+                                    {subject.long_description}
+                                </div>
+                            )}
+                            {subject.youtube_playlist_id && (
+                                <div className="subject-youtube">
+                                    ▶️ YouTube Playlist: {subject.youtube_playlist_id}
+                                </div>
+                            )}
+                            <div className="subject-actions">
+                                <button className="action-btn toggle" onClick={() => handleToggleStatus(subject)}>
+                                    {subject.is_active ? '🔴 Deactivate' : '🟢 Activate'}
+                                </button>
+                                <button className="action-btn edit" onClick={() => openEditModal(subject)}>
+                                    ✏️ Edit
+                                </button>
+                                <button className="action-btn delete" onClick={() => handleDeleteSubject(subject.id)}>
+                                    🗑️ Delete
+                                </button>
+                            </div>
+                        </div>
+                    ))
+                )}
             </div>
 
-            {/* Modal */}
+            {/* Add/Edit Modal */}
             {showModal && (
                 <div className="modal-overlay" onClick={() => setShowModal(false)}>
                     <div className="modal-content subject-modal" onClick={e => e.stopPropagation()}>
-                        <h3>{editingSubject ? 'Edit Subject' : 'Add New Subject'}</h3>
-                        
-                        <div className="form-group">
-                            <label>Subject Name *</label>
-                            <input
-                                type="text"
-                                value={formData.name}
-                                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                                placeholder="Enter subject name"
-                            />
+                        <div className="modal-header">
+                            <h3>{editingSubject ? '✏️ Edit Subject' : '📚 Add New Subject'}</h3>
+                            <button className="modal-close" onClick={() => setShowModal(false)}>✕</button>
                         </div>
 
-                        <div className="form-group">
-                            <label>Description</label>
-                            <textarea
-                                value={formData.description}
-                                onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                                placeholder="Enter description"
-                                rows="3"
-                            />
-                        </div>
-
-                        <div className="form-row">
+                        <div className="modal-body">
                             <div className="form-group">
-                                <label>Icon</label>
+                                <label>Subject Name *</label>
                                 <input
                                     type="text"
-                                    value={formData.icon}
-                                    onChange={(e) => setFormData({ ...formData, icon: e.target.value })}
-                                    placeholder="e.g., 📚, 🔢"
+                                    value={formData.name}
+                                    onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                                    placeholder="e.g., Algebra, Geometry, Calculus"
                                 />
                             </div>
+
                             <div className="form-group">
-                                <label>Display Order</label>
+                                <label>Short Description</label>
                                 <input
-                                    type="number"
-                                    value={formData.display_order}
-                                    onChange={(e) => setFormData({ ...formData, display_order: parseInt(e.target.value) || 0 })}
-                                    min="0"
+                                    type="text"
+                                    value={formData.description}
+                                    onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                                    placeholder="Brief description shown on cards"
                                 />
                             </div>
-                        </div>
 
-                        <div className="form-group">
-                            <label>Color</label>
-                            <div className="color-picker-grid">
-                                {colors.map((color) => (
-                                    <div
-                                        key={color}
-                                        className={`color-option ${formData.color === color ? 'selected' : ''}`}
-                                        style={{ background: color }}
-                                        onClick={() => setFormData({ ...formData, color })}
+                            <div className="form-group">
+                                <label>Full Description</label>
+                                <textarea
+                                    value={formData.long_description}
+                                    onChange={(e) => setFormData({ ...formData, long_description: e.target.value })}
+                                    placeholder="Detailed description for the subject page"
+                                    rows="3"
+                                />
+                            </div>
+
+                            <div className="form-row">
+                                <div className="form-group half">
+                                    <label>Icon</label>
+                                    <input
+                                        type="text"
+                                        value={formData.icon}
+                                        onChange={(e) => setFormData({ ...formData, icon: e.target.value })}
+                                        placeholder="e.g., 📚, 🔢, ∫"
                                     />
-                                ))}
+                                </div>
+                                <div className="form-group half">
+                                    <label>Display Order</label>
+                                    <input
+                                        type="number"
+                                        value={formData.display_order}
+                                        onChange={(e) => setFormData({ ...formData, display_order: parseInt(e.target.value) || 0 })}
+                                        min="0"
+                                    />
+                                </div>
+                            </div>
+
+                            <div className="form-row">
+                                <div className="form-group half">
+                                    <label>Tier</label>
+                                    <select
+                                        value={formData.tier}
+                                        onChange={(e) => setFormData({ ...formData, tier: e.target.value })}
+                                    >
+                                        {tiers.map(tier => (
+                                            <option key={tier} value={tier}>
+                                                {tier} - {tier === 'TIER_1' ? 'Grade 8-9' : tier === 'TIER_2' ? 'Grade 10-11' : 'Grade 12+'}
+                                            </option>
+                                        ))}
+                                    </select>
+                                </div>
+                                <div className="form-group half">
+                                    <label>Region</label>
+                                    <select
+                                        value={formData.region}
+                                        onChange={(e) => setFormData({ ...formData, region: e.target.value })}
+                                    >
+                                        {regions.map(region => (
+                                            <option key={region} value={region}>{region}</option>
+                                        ))}
+                                    </select>
+                                </div>
+                            </div>
+
+                            <div className="form-group">
+                                <label>Color</label>
+                                <div className="color-picker-grid">
+                                    {colors.map((color) => (
+                                        <div
+                                            key={color}
+                                            className={`color-option ${formData.color === color ? 'selected' : ''}`}
+                                            style={{ background: color }}
+                                            onClick={() => setFormData({ ...formData, color })}
+                                        />
+                                    ))}
+                                    <input
+                                        type="color"
+                                        value={formData.color}
+                                        onChange={(e) => setFormData({ ...formData, color: e.target.value })}
+                                        className="color-input"
+                                    />
+                                </div>
+                            </div>
+
+                            <div className="form-row">
+                                <div className="form-group half">
+                                    <label>YouTube Playlist ID</label>
+                                    <input
+                                        type="text"
+                                        value={formData.youtube_playlist_id}
+                                        onChange={(e) => setFormData({ ...formData, youtube_playlist_id: e.target.value })}
+                                        placeholder="e.g., PLABC123DEF456"
+                                    />
+                                </div>
+                                <div className="form-group half">
+                                    <label>YouTube Thumbnail URL</label>
+                                    <input
+                                        type="text"
+                                        value={formData.youtube_thumbnail}
+                                        onChange={(e) => setFormData({ ...formData, youtube_thumbnail: e.target.value })}
+                                        placeholder="https://img.youtube.com/vi/ID/mqdefault.jpg"
+                                    />
+                                </div>
+                            </div>
+
+                            <div className="form-group checkbox">
+                                <label>
+                                    <input
+                                        type="checkbox"
+                                        checked={formData.is_active}
+                                        onChange={(e) => setFormData({ ...formData, is_active: e.target.checked })}
+                                    />
+                                    Active (visible to users)
+                                </label>
                             </div>
                         </div>
 
-                        <div className="form-group">
-                            <label>
-                                <input
-                                    type="checkbox"
-                                    checked={formData.is_active}
-                                    onChange={(e) => setFormData({ ...formData, is_active: e.target.checked })}
-                                />
-                                Active
-                            </label>
-                        </div>
-
-                        <div className="modal-actions">
+                        <div className="modal-footer">
                             <button className="modal-btn cancel" onClick={() => setShowModal(false)}>
                                 Cancel
                             </button>
                             <button className="modal-btn save" onClick={handleSaveSubject} disabled={actionLoading}>
-                                {actionLoading ? 'Saving...' : (editingSubject ? 'Update' : 'Create')}
+                                {actionLoading ? '⏳ Saving...' : (editingSubject ? '💾 Update Subject' : '➕ Create Subject')}
                             </button>
                         </div>
                     </div>

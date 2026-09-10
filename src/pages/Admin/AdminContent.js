@@ -992,8 +992,7 @@ const AdminContent = () => {
                             <div className="ac-form-row">
                                 <div className="ac-form-group ac-half">
                                     <label>Course Code</label>
-                                    <input
-                                        type="text"
+                                    <input                                        type="text"
                                         value={formData.code}
                                         onChange={(e) => setFormData({ ...formData, code: e.target.value })}
                                         placeholder="e.g., MATH101"
@@ -1052,7 +1051,7 @@ const AdminContent = () => {
                             </div>
 
                             {/* ============================================
-                                NEW: CONTENT BUILDER SECTION
+                                CONTENT BUILDER SECTION
                                 Only shown for new subjects (not editing)
                                ============================================ */}
                             {!editingSubject && (
@@ -1155,7 +1154,7 @@ const AdminContent = () => {
                     </div>
 
                     {/* ============================================
-                        NEW: NESTED RESOURCE DRAFT POPUP
+                        NESTED RESOURCE DRAFT POPUP
                         Renders above the subject modal
                        ============================================ */}
                     {showResourceDraftPopup && (
@@ -1360,7 +1359,12 @@ const AdminContent = () => {
                 </div>
             )}
 
-            {/* SUCCESS POPUP */}
+            {/* ============================================
+                SUCCESS POPUP
+                Simplified: since content is added inside the
+                Add Subject modal now, we no longer prompt the
+                user to navigate to a separate content page.
+               ============================================ */}
             {showSuccessPopup && (
                 <div className="ac-popup-overlay" onClick={() => { setShowSuccessPopup(false); setCreatedSubjectId(null); }}>
                     <div className="ac-popup ac-popup-small" onClick={e => e.stopPropagation()}>
@@ -1370,41 +1374,14 @@ const AdminContent = () => {
                         <div className="ac-popup-header centered">
                             <h3>Success!</h3>
                             <p>{successMessage}</p>
-                            {createdSubjectId && (
-                                <p style={{ marginTop: 8, color: 'rgba(255,255,255,0.6)', fontSize: 14 }}>
-                                    Now add topics, PDFs, videos, and other resources to this subject.
-                                </p>
-                            )}
                         </div>
                         <div className="ac-popup-footer centered">
-                            {createdSubjectId ? (
-                                <>
-                                    <button
-                                        className="ac-btn ac-btn-secondary"
-                                        onClick={() => { setShowSuccessPopup(false); setCreatedSubjectId(null); }}
-                                    >
-                                        Later
-                                    </button>
-                                    <button
-                                        className="ac-btn ac-btn-primary"
-                                        onClick={() => {
-                                            const id = createdSubjectId;
-                                            setShowSuccessPopup(false);
-                                            setCreatedSubjectId(null);
-                                            navigate(`/admin/content/${id}`);
-                                        }}
-                                    >
-                                        📖 Add Content Now
-                                    </button>
-                                </>
-                            ) : (
-                                <button
-                                    className="ac-btn ac-btn-primary"
-                                    onClick={() => { setShowSuccessPopup(false); setCreatedSubjectId(null); }}
-                                >
-                                    Continue
-                                </button>
-                            )}
+                            <button
+                                className="ac-btn ac-btn-primary"
+                                onClick={() => { setShowSuccessPopup(false); setCreatedSubjectId(null); }}
+                            >
+                                Continue
+                            </button>
                         </div>
                     </div>
                 </div>

@@ -1,4 +1,4 @@
-// src/pages/Admin/AdminLayout.js - COMPLETE WITH ADMIN LOGIN REDIRECT + AVATAR FIX
+// src/pages/Admin/AdminLayout.js - COMPLETE WITH AVATAR FIX
 import React, { useState, useEffect } from 'react';
 import { Outlet, NavLink, useNavigate, useLocation } from 'react-router-dom';
 import './AdminLayout.css';
@@ -20,15 +20,14 @@ const AdminLayout = () => {
     }, []);
 
     // ============================================
-    // ✅ FIXED: Always fetch full profile from API (includes avatar)
+    // CHECK ADMIN STATUS — ALWAYS FETCHES FULL PROFILE
     // ============================================
     const checkAdminStatus = async () => {
         try {
-            // ✅ Wait a moment for token to load from localStorage
             await new Promise(resolve => setTimeout(resolve, 150));
-            
+
             const token = localStorage.getItem('accessToken');
-            
+
             if (!token) {
                 console.log('❌ No token found, redirecting to login');
                 navigate('/admin/login');
@@ -37,19 +36,18 @@ const AdminLayout = () => {
 
             console.log('🔍 Token found, fetching admin profile...');
 
-            // ✅ ALWAYS fetch full profile from API (includes avatar)
             const response = await fetch(
                 `${process.env.REACT_APP_API_URL || 'https://eduspantech-backend.onrender.com/api'}/auth/me`,
                 {
-                    headers: { 
+                    headers: {
                         'Authorization': `Bearer ${token}`,
                         'Content-Type': 'application/json'
                     }
                 }
             );
-            
+
             console.log('📡 /auth/me response status:', response.status);
-            
+
             if (!response.ok) {
                 console.log('❌ /auth/me failed, clearing token');
                 localStorage.removeItem('accessToken');
@@ -60,17 +58,16 @@ const AdminLayout = () => {
             }
 
             const data = await response.json();
-            console.log('✅ /auth/me success:', data);
+            console.log('✅ /auth/me success — avatar:', data.user?.avatar);
 
             if (data.user?.is_admin) {
-                // ✅ Set FULL user data including avatar
                 setAdmin({
                     id: data.user.id,
                     name: data.user.name,
                     email: data.user.email,
-                    avatar: data.user.avatar,        // ✅ NOW INCLUDED
-                    bio: data.user.bio,
-                    phone: data.user.phone,
+                    avatar: data.user.avatar || null,
+                    bio: data.user.bio || '',
+                    phone: data.user.phone || '',
                     is_admin: data.user.is_admin,
                     is_super_admin: data.user.is_super_admin,
                     admin_role: data.user.admin_role
@@ -93,12 +90,10 @@ const AdminLayout = () => {
         try {
             const token = localStorage.getItem('accessToken');
             if (!token) return;
-            
+
             const response = await fetch(
                 `${process.env.REACT_APP_API_URL || 'https://eduspantech-backend.onrender.com/api'}/admin/notifications`,
-                {
-                    headers: { 'Authorization': `Bearer ${token}` }
-                }
+                { headers: { 'Authorization': `Bearer ${token}` } }
             );
             const data = await response.json();
             if (data.success) {
@@ -116,12 +111,10 @@ const AdminLayout = () => {
         try {
             const token = localStorage.getItem('accessToken');
             if (!token) return;
-            
+
             const response = await fetch(
                 `${process.env.REACT_APP_API_URL || 'https://eduspantech-backend.onrender.com/api'}/admin/notifications/unread-count`,
-                {
-                    headers: { 'Authorization': `Bearer ${token}` }
-                }
+                { headers: { 'Authorization': `Bearer ${token}` } }
             );
             const data = await response.json();
             if (data.success) {
@@ -175,6 +168,12 @@ const AdminLayout = () => {
     }
 
     // ============================================
+    // AVATAR RENDER — INLINE STYLES TO AVOID CSS CONFLICTS
+    // ============================================
+    const avatarSrc = admin?.avatar;
+    const avatarInitial = admin?.name?.[0]?.toUpperCase() || 'A';
+
+    // ============================================
     // MAIN RENDER
     // ============================================
     return (
@@ -212,21 +211,50 @@ const AdminLayout = () => {
                     ))}
                 </nav>
 
-                {/* ✅ ADMIN PROFILE WITH AVATAR */}
+                {/* ============================================
+                    ADMIN PROFILE WITH AVATAR — INLINE STYLES
+                    ============================================ */}
                 <div className="sidebar-footer">
                     <div className="admin-info">
-                        <div className="admin-avatar">
-                            {admin?.avatar ? (
-                                <img 
-                                    src={admin.avatar} 
+                        <div
+                            style={{
+                                width: '40px',
+                                height: '40px',
+                                borderRadius: '50%',
+                                overflow: 'hidden',
+                                flexShrink: 0,
+                                background: '#4f46e5',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                color: '#ffffff',
+                                fontWeight: '700',
+                                fontSize: '18px'
+                            }}
+                        >
+                            {avatarSrc ? (
+                                <img
+                                    src={avatarSrc}
                                     alt={admin.name}
+                                    style={{
+                                        width: '100%',
+                                        height: '100%',
+                                        objectFit: 'cover',
+                                        display: 'block'
+                                    }}
                                     onError={(e) => {
+                                        console.log('❌ Avatar image failed to load:', avatarSrc);
                                         e.target.style.display = 'none';
-                                        e.target.parentElement.textContent = admin?.name?.[0] || 'A';
+                                        if (e.target.parentElement) {
+                                            e.target.parentElement.textContent = avatarInitial;
+                                        }
+                                    }}
+                                    onLoad={() => {
+                                        console.log('✅ Avatar image loaded successfully:', avatarSrc);
                                     }}
                                 />
                             ) : (
-                                <span>{admin?.name?.[0] || 'A'}</span>
+                                <span>{avatarInitial}</span>
                             )}
                         </div>
                         <div className="admin-details">
@@ -264,9 +292,9 @@ const AdminLayout = () => {
                         </span>
                     </div>
                     <div className="header-actions">
-                        <button 
-                            className="header-btn" 
-                            title="Notifications" 
+                        <button
+                            className="header-btn"
+                            title="Notifications"
                             onClick={fetchNotifications}
                         >
                             🔔
@@ -274,9 +302,9 @@ const AdminLayout = () => {
                                 <span className="header-badge">{unreadCount}</span>
                             )}
                         </button>
-                        <button 
-                            className="header-btn" 
-                            title="Refresh" 
+                        <button
+                            className="header-btn"
+                            title="Refresh"
                             onClick={() => window.location.reload()}
                         >
                             🔄

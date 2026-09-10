@@ -1,4 +1,4 @@
-// src/pages/Admin/AdminLayout.js - COMPLETE WITH ADMIN LOGIN REDIRECT
+// src/pages/Admin/AdminLayout.js - COMPLETE WITH ADMIN LOGIN REDIRECT + AVATAR FIX
 import React, { useState, useEffect } from 'react';
 import { Outlet, NavLink, useNavigate, useLocation } from 'react-router-dom';
 import './AdminLayout.css';
@@ -19,48 +19,34 @@ const AdminLayout = () => {
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
 
+    // ============================================
+    // ✅ FIXED: Always fetch full profile from API (includes avatar)
+    // ============================================
     const checkAdminStatus = async () => {
         try {
+            // ✅ Wait a moment for token to load from localStorage
+            await new Promise(resolve => setTimeout(resolve, 150));
+            
             const token = localStorage.getItem('accessToken');
             
-            // ✅ Redirect to admin login if no token
             if (!token) {
                 console.log('❌ No token found, redirecting to login');
                 navigate('/admin/login');
                 return;
             }
 
-            console.log('🔍 Token found, checking admin status...');
+            console.log('🔍 Token found, fetching admin profile...');
 
-            // ✅ FIX: Check token payload first
-            try {
-                const payload = JSON.parse(atob(token.split('.')[1]));
-                console.log('📦 Token payload:', payload);
-                console.log('📦 is_admin:', payload.is_admin);
-                
-                // ✅ If token has is_admin, skip the API call and go directly
-                if (payload.is_admin === true) {
-                    console.log('✅ Token has is_admin, setting admin directly');
-                    setAdmin({ 
-                        id: payload.id,
-                        name: payload.name || 'Admin',
-                        is_admin: true,
-                        is_super_admin: payload.is_super_admin || false
-                    });
-                    setLoading(false);
-                    return;
+            // ✅ ALWAYS fetch full profile from API (includes avatar)
+            const response = await fetch(
+                `${process.env.REACT_APP_API_URL || 'https://eduspantech-backend.onrender.com/api'}/auth/me`,
+                {
+                    headers: { 
+                        'Authorization': `Bearer ${token}`,
+                        'Content-Type': 'application/json'
+                    }
                 }
-            } catch (decodeError) {
-                console.log('⚠️ Could not decode token, proceeding with API check');
-            }
-
-            // ✅ If token doesn't have is_admin, check via API
-            const response = await fetch(`${process.env.REACT_APP_API_URL || 'https://eduspantech-backend.onrender.com/api'}/auth/me`, {
-                headers: { 
-                    'Authorization': `Bearer ${token}`,
-                    'Content-Type': 'application/json'
-                }
-            });
+            );
             
             console.log('📡 /auth/me response status:', response.status);
             
@@ -77,7 +63,18 @@ const AdminLayout = () => {
             console.log('✅ /auth/me success:', data);
 
             if (data.user?.is_admin) {
-                setAdmin(data.user);
+                // ✅ Set FULL user data including avatar
+                setAdmin({
+                    id: data.user.id,
+                    name: data.user.name,
+                    email: data.user.email,
+                    avatar: data.user.avatar,        // ✅ NOW INCLUDED
+                    bio: data.user.bio,
+                    phone: data.user.phone,
+                    is_admin: data.user.is_admin,
+                    is_super_admin: data.user.is_super_admin,
+                    admin_role: data.user.admin_role
+                });
                 setLoading(false);
             } else {
                 console.log('❌ User is not admin, redirecting to dashboard');
@@ -89,14 +86,20 @@ const AdminLayout = () => {
         }
     };
 
+    // ============================================
+    // FETCH NOTIFICATIONS
+    // ============================================
     const fetchNotifications = async () => {
         try {
             const token = localStorage.getItem('accessToken');
             if (!token) return;
             
-            const response = await fetch(`${process.env.REACT_APP_API_URL || 'https://eduspantech-backend.onrender.com/api'}/admin/notifications`, {
-                headers: { 'Authorization': `Bearer ${token}` }
-            });
+            const response = await fetch(
+                `${process.env.REACT_APP_API_URL || 'https://eduspantech-backend.onrender.com/api'}/admin/notifications`,
+                {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                }
+            );
             const data = await response.json();
             if (data.success) {
                 setNotifications(data.notifications || []);
@@ -106,14 +109,20 @@ const AdminLayout = () => {
         }
     };
 
+    // ============================================
+    // FETCH UNREAD COUNT
+    // ============================================
     const fetchUnreadCount = async () => {
         try {
             const token = localStorage.getItem('accessToken');
             if (!token) return;
             
-            const response = await fetch(`${process.env.REACT_APP_API_URL || 'https://eduspantech-backend.onrender.com/api'}/admin/notifications/unread-count`, {
-                headers: { 'Authorization': `Bearer ${token}` }
-            });
+            const response = await fetch(
+                `${process.env.REACT_APP_API_URL || 'https://eduspantech-backend.onrender.com/api'}/admin/notifications/unread-count`,
+                {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                }
+            );
             const data = await response.json();
             if (data.success) {
                 setUnreadCount(data.count || 0);
@@ -123,6 +132,9 @@ const AdminLayout = () => {
         }
     };
 
+    // ============================================
+    // SIDEBAR MENU
+    // ============================================
     const menuItems = [
         { path: '/admin', icon: '📊', label: 'Dashboard' },
         { path: '/admin/users', icon: '👥', label: 'Users' },
@@ -135,6 +147,9 @@ const AdminLayout = () => {
         { path: '/admin/profile', icon: '👤', label: 'My Profile' }
     ];
 
+    // ============================================
+    // LOGOUT
+    // ============================================
     const handleLogout = () => {
         localStorage.removeItem('accessToken');
         localStorage.removeItem('refreshToken');
@@ -143,6 +158,9 @@ const AdminLayout = () => {
         navigate('/admin/login');
     };
 
+    // ============================================
+    // LOADING STATE
+    // ============================================
     if (loading) {
         return (
             <div className="admin-loading">
@@ -156,6 +174,9 @@ const AdminLayout = () => {
         return null;
     }
 
+    // ============================================
+    // MAIN RENDER
+    // ============================================
     return (
         <div className={`admin-layout ${sidebarOpen ? 'sidebar-open' : 'sidebar-closed'}`}>
             {/* Sidebar */}
@@ -191,11 +212,19 @@ const AdminLayout = () => {
                     ))}
                 </nav>
 
+                {/* ✅ ADMIN PROFILE WITH AVATAR */}
                 <div className="sidebar-footer">
                     <div className="admin-info">
                         <div className="admin-avatar">
                             {admin?.avatar ? (
-                                <img src={admin.avatar} alt={admin.name} />
+                                <img 
+                                    src={admin.avatar} 
+                                    alt={admin.name}
+                                    onError={(e) => {
+                                        e.target.style.display = 'none';
+                                        e.target.parentElement.textContent = admin?.name?.[0] || 'A';
+                                    }}
+                                />
                             ) : (
                                 <span>{admin?.name?.[0] || 'A'}</span>
                             )}
@@ -235,7 +264,11 @@ const AdminLayout = () => {
                         </span>
                     </div>
                     <div className="header-actions">
-                        <button className="header-btn" title="Notifications" onClick={fetchNotifications}>
+                        <button 
+                            className="header-btn" 
+                            title="Notifications" 
+                            onClick={fetchNotifications}
+                        >
                             🔔
                             {unreadCount > 0 && (
                                 <span className="header-badge">{unreadCount}</span>

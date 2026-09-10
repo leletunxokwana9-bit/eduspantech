@@ -46,6 +46,27 @@ const AdminContent = () => {
     const [toggleTarget, setToggleTarget] = useState(null);
     const [toggleLoading, setToggleLoading] = useState(false);
 
+    // ============================================
+    // NEW: CONTENT BUILDER STATES
+    // ============================================
+    const [builderTopics, setBuilderTopics] = useState([]);
+    const [builderResources, setBuilderResources] = useState([]);
+    const [newTopicName, setNewTopicName] = useState('');
+    const [newTopicDesc, setNewTopicDesc] = useState('');
+    const [showResourceDraftPopup, setShowResourceDraftPopup] = useState(false);
+    const [resourceDraft, setResourceDraft] = useState({
+        name: '',
+        type: 'pdf',
+        url: '',
+        description: '',
+        topicIndex: '',
+        youtube_id: '',
+        thumbnail_url: '',
+        duration: '',
+        difficulty: 'beginner',
+        is_free: false
+    });
+
     const colors = ['#4f46e5', '#7c3aed', '#06b6d4', '#10b981', '#f59e0b', '#ef4444', '#ec4899', '#8b5cf6', '#14b8a6', '#f97316'];
     const regions = ['Global', 'Africa', 'Americas', 'Asia-Pacific', 'Europe', 'Middle East'];
     const tracks = ['BCom', 'BSc', 'ECP_Commerce', 'ECP_Science', 'Engineering', 'Arts'];
@@ -202,6 +223,191 @@ const AdminContent = () => {
     };
 
     // ============================================
+    // NEW: CONTENT BUILDER HELPERS
+    // ============================================
+    const parseYouTubeId = (url) => {
+        if (!url) return null;
+        const patterns = [
+            /(?:youtube\.com\/watch\?v=)([a-zA-Z0-9_-]+)/,
+            /(?:youtu\.be\/)([a-zA-Z0-9_-]+)/,
+            /(?:youtube\.com\/embed\/)([a-zA-Z0-9_-]+)/,
+            /(?:youtube\.com\/shorts\/)([a-zA-Z0-9_-]+)/
+        ];
+        for (const p of patterns) {
+            const m = url.match(p);
+            if (m) return m[1];
+        }
+        return null;
+    };
+
+    const handleResourceUrlChange = (url) => {
+        setResourceDraft(prev => {
+            const next = { ...prev, url };
+            if (url && (url.includes('youtube.com') || url.includes('youtu.be'))) {
+                const yt = parseYouTubeId(url);
+                if (yt) {
+                    next.youtube_id = yt;
+                    next.thumbnail_url = `https://img.youtube.com/vi/${yt}/maxresdefault.jpg`;
+                }
+            }
+            return next;
+        });
+    };
+
+    const addTopicToBuilder = () => {
+        if (!newTopicName.trim()) return;
+        setBuilderTopics(prev => [
+            ...prev,
+            {
+                id: `local-topic-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+                name: newTopicName.trim(),
+                description: newTopicDesc.trim(),
+                display_order: prev.length,
+                is_active: true
+            }
+        ]);
+        setNewTopicName('');
+        setNewTopicDesc('');
+    };
+
+    const removeTopicFromBuilder = (id) => {
+        setBuilderTopics(prev => prev.filter(t => t.id !== id));
+        setBuilderResources(prev => prev.map(r =>
+            r.topicLocalId === id ? { ...r, topicLocalId: null } : r
+        ));
+    };
+
+    const openAddResourceDraft = () => {
+        setResourceDraft({
+            name: '',
+            type: 'pdf',
+            url: '',
+            description: '',
+            topicIndex: '',
+            youtube_id: '',
+            thumbnail_url: '',
+            duration: '',
+            difficulty: 'beginner',
+            is_free: false
+        });
+        setShowResourceDraftPopup(true);
+    };
+
+    const confirmAddResourceDraft = () => {
+        if (!resourceDraft.name.trim()) {
+            setErrorMessage('Resource name is required');
+            setShowErrorPopup(true);
+            return;
+        }
+        if (resourceDraft.type !== 'practice' && !resourceDraft.url.trim()) {
+            setErrorMessage('URL is required for this resource type');
+            setShowErrorPopup(true);
+            return;
+        }
+
+        const topicLocalId = resourceDraft.topicIndex !== ''
+            ? builderTopics[Number(resourceDraft.topicIndex)]?.id || null
+            : null;
+
+        setBuilderResources(prev => [
+            ...prev,
+            {
+                id: `local-res-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+                name: resourceDraft.name.trim(),
+                type: resourceDraft.type,
+                url: resourceDraft.url.trim(),
+                description: resourceDraft.description.trim(),
+                topicLocalId,
+                youtube_id: resourceDraft.youtube_id,
+                thumbnail_url: resourceDraft.thumbnail_url,
+                duration: resourceDraft.duration,
+                difficulty: resourceDraft.difficulty,
+                is_free: resourceDraft.is_free,
+                display_order: prev.length,
+                is_active: true
+            }
+        ]);
+        setShowResourceDraftPopup(false);
+    };
+
+    const removeResourceDraft = (id) => {
+        setBuilderResources(prev => prev.filter(r => r.id !== id));
+    };
+
+    const getResourceIcon = (type) => ({
+        video: '🎬',
+        pdf: '📄',
+        practice: '✏️',
+        guide: '📖',
+        quiz: '📝',
+        link: '🔗'
+    }[type] || '📎');
+
+    // NEW: Persist topics + resources after subject creation
+    const persistBuilderContent = async (subjectId, token) => {
+        const topicIdMap = {};
+
+        // 1. Create topics first
+        for (const t of builderTopics) {
+            try {
+                const r = await fetch(`${API_URL}/admin/content/topics`, {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${token}`,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        subject_id: subjectId,
+                        name: t.name,
+                        description: t.description || '',
+                        display_order: t.display_order || 0,
+                        is_active: true
+                    })
+                });
+                const d = await r.json();
+                const realId = d.topic?.id || d.data?.id || d.id;
+                if (realId) topicIdMap[t.id] = realId;
+            } catch (e) {
+                console.error('Failed to create topic:', t.name, e);
+            }
+        }
+
+        // 2. Create resources with mapped topic ids
+        for (const res of builderResources) {
+            try {
+                const payload = {
+                    subject_id: subjectId,
+                    topic_id: res.topicLocalId ? (topicIdMap[res.topicLocalId] || null) : null,
+                    subtopic_id: null,
+                    name: res.name,
+                    description: res.description,
+                    type: res.type,
+                    url: res.url,
+                    youtube_id: res.youtube_id || '',
+                    thumbnail_url: res.thumbnail_url || '',
+                    duration: res.duration || '',
+                    difficulty: res.difficulty || 'beginner',
+                    content: { problems: [] },
+                    is_free: res.is_free || false,
+                    is_featured: false,
+                    display_order: res.display_order || 0,
+                    is_active: true
+                };
+                await fetch(`${API_URL}/admin/content/resources`, {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${token}`,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(payload)
+                });
+            } catch (e) {
+                console.error('Failed to create resource:', res.name, e);
+            }
+        }
+    };
+
+    // ============================================
     // SAVE SUBJECT
     // ============================================
     const handleSaveSubject = async () => {
@@ -265,12 +471,17 @@ const AdminContent = () => {
                     });
                     const retryData = await retryResponse.json();
                     if (retryData.success) {
+                        const newId = retryData.subject?.id || retryData.data?.id || retryData.id;
+                        // NEW: persist builder content before resetting
+                        if (!editingSubject && newId) {
+                            await persistBuilderContent(newId, token);
+                        }
                         setShowModal(false);
                         setEditingSubject(null);
                         resetForm();
                         fetchSubjects();
                         setSuccessMessage(editingSubject ? 'Subject updated successfully!' : 'Subject created successfully!');
-                        setCreatedSubjectId(!editingSubject ? retryData.subject?.id : null);
+                        setCreatedSubjectId(!editingSubject ? newId : null);
                         setShowSuccessPopup(true);
                         setActionLoading(false);
                         return;
@@ -287,12 +498,17 @@ const AdminContent = () => {
 
             const data = await response.json();
             if (data.success) {
+                const newId = data.subject?.id || data.data?.id || data.id;
+                // NEW: persist builder content before resetting
+                if (!editingSubject && newId) {
+                    await persistBuilderContent(newId, token);
+                }
                 setShowModal(false);
                 setEditingSubject(null);
                 resetForm();
                 fetchSubjects();
                 setSuccessMessage(editingSubject ? 'Subject updated successfully!' : 'Subject created successfully!');
-                setCreatedSubjectId(!editingSubject ? data.subject?.id : null);
+                setCreatedSubjectId(!editingSubject ? newId : null);
                 setShowSuccessPopup(true);
             } else {
                 setErrorMessage(data.error || 'Failed to save subject');
@@ -520,6 +736,23 @@ const AdminContent = () => {
             year_level: '1ST_YEAR',
             semester: '',
             institution: ''
+        });
+        // NEW: reset builder state
+        setBuilderTopics([]);
+        setBuilderResources([]);
+        setNewTopicName('');
+        setNewTopicDesc('');
+        setResourceDraft({
+            name: '',
+            type: 'pdf',
+            url: '',
+            description: '',
+            topicIndex: '',
+            youtube_id: '',
+            thumbnail_url: '',
+            duration: '',
+            difficulty: 'beginner',
+            is_free: false
         });
     };
 
@@ -817,6 +1050,98 @@ const AdminContent = () => {
                                     <span>Active (visible to users)</span>
                                 </label>
                             </div>
+
+                            {/* ============================================
+                                NEW: CONTENT BUILDER SECTION
+                                Only shown for new subjects (not editing)
+                               ============================================ */}
+                            {!editingSubject && (
+                                <div className="ac-builder-section">
+                                    <div className="ac-builder-header">
+                                        <h4>📚 Add Topics & Resources</h4>
+                                        <p>Optionally build the subject content now. You can also add more later from the subject's page.</p>
+                                    </div>
+
+                                    {/* TOPICS */}
+                                    <div className="ac-form-group">
+                                        <label>Topics</label>
+                                        <div className="ac-inline-add">
+                                            <input
+                                                type="text"
+                                                value={newTopicName}
+                                                onChange={e => setNewTopicName(e.target.value)}
+                                                placeholder="Topic name e.g. Linear Equations"
+                                                onKeyDown={e => e.key === 'Enter' && (e.preventDefault(), addTopicToBuilder())}
+                                            />
+                                            <input
+                                                type="text"
+                                                value={newTopicDesc}
+                                                onChange={e => setNewTopicDesc(e.target.value)}
+                                                placeholder="Description (optional)"
+                                            />
+                                            <button
+                                                type="button"
+                                                className="ac-btn ac-btn-primary ac-btn-small"
+                                                onClick={addTopicToBuilder}
+                                            >
+                                                ➕ Add Topic
+                                            </button>
+                                        </div>
+
+                                        {builderTopics.length > 0 && (
+                                            <ul className="ac-builder-list">
+                                                {builderTopics.map((t, i) => (
+                                                    <li key={t.id}>
+                                                        <span className="ac-builder-index">{i + 1}</span>
+                                                        <span className="ac-builder-name">📖 {t.name}</span>
+                                                        {t.description && <span className="ac-builder-desc">— {t.description}</span>}
+                                                        <button
+                                                            type="button"
+                                                            className="ac-builder-remove"
+                                                            onClick={() => removeTopicFromBuilder(t.id)}
+                                                        >✕</button>
+                                                    </li>
+                                                ))}
+                                            </ul>
+                                        )}
+                                    </div>
+
+                                    {/* RESOURCES */}
+                                    <div className="ac-form-group">
+                                        <label>Resources (PDFs, Videos, Links, Practice…)</label>
+                                        <button
+                                            type="button"
+                                            className="ac-btn ac-btn-secondary ac-btn-small"
+                                            onClick={openAddResourceDraft}
+                                        >
+                                            ➕ Add Resource
+                                        </button>
+
+                                        {builderResources.length > 0 && (
+                                            <ul className="ac-builder-list">
+                                                {builderResources.map(r => {
+                                                    const topicName = r.topicLocalId
+                                                        ? builderTopics.find(t => t.id === r.topicLocalId)?.name
+                                                        : null;
+                                                    return (
+                                                        <li key={r.id}>
+                                                            <span className="ac-builder-icon">{getResourceIcon(r.type)}</span>
+                                                            <span className="ac-builder-name">{r.name}</span>
+                                                            <span className="ac-builder-tag">{r.type}</span>
+                                                            {topicName && <span className="ac-builder-tag">in: {topicName}</span>}
+                                                            <button
+                                                                type="button"
+                                                                className="ac-builder-remove"
+                                                                onClick={() => removeResourceDraft(r.id)}
+                                                            >✕</button>
+                                                        </li>
+                                                    );
+                                                })}
+                                            </ul>
+                                        )}
+                                    </div>
+                                </div>
+                            )}
                         </div>
 
                         <div className="ac-popup-footer">
@@ -828,6 +1153,144 @@ const AdminContent = () => {
                             </button>
                         </div>
                     </div>
+
+                    {/* ============================================
+                        NEW: NESTED RESOURCE DRAFT POPUP
+                        Renders above the subject modal
+                       ============================================ */}
+                    {showResourceDraftPopup && (
+                        <div
+                            className="ac-popup-overlay ac-nested"
+                            onClick={e => { e.stopPropagation(); setShowResourceDraftPopup(false); }}
+                        >
+                            <div className="ac-popup" onClick={e => e.stopPropagation()}>
+                                <button className="ac-popup-close" onClick={() => setShowResourceDraftPopup(false)}>✕</button>
+                                <div className="ac-popup-header">
+                                    <div className="ac-popup-icon">{getResourceIcon(resourceDraft.type)}</div>
+                                    <h3>Add Resource</h3>
+                                    <p>This will be saved when you create the subject.</p>
+                                </div>
+
+                                <div className="ac-popup-body">
+                                    <div className="ac-form-group">
+                                        <label>Resource Type *</label>
+                                        <select
+                                            value={resourceDraft.type}
+                                            onChange={e => setResourceDraft({ ...resourceDraft, type: e.target.value, youtube_id: '', thumbnail_url: '' })}
+                                        >
+                                            <option value="pdf">📄 PDF Document</option>
+                                            <option value="video">🎬 Video (YouTube)</option>
+                                            <option value="practice">✏️ Practice Problems</option>
+                                            <option value="guide">📖 Study Guide</option>
+                                            <option value="quiz">📝 Quiz</option>
+                                            <option value="link">🔗 External Link</option>
+                                        </select>
+                                    </div>
+
+                                    <div className="ac-form-group">
+                                        <label>Resource Name *</label>
+                                        <input
+                                            value={resourceDraft.name}
+                                            onChange={e => setResourceDraft({ ...resourceDraft, name: e.target.value })}
+                                            placeholder="e.g. Intro to Algebra"
+                                        />
+                                    </div>
+
+                                    <div className="ac-form-group">
+                                        <label>Attach to Topic (optional)</label>
+                                        <select
+                                            value={resourceDraft.topicIndex}
+                                            onChange={e => setResourceDraft({ ...resourceDraft, topicIndex: e.target.value })}
+                                        >
+                                            <option value="">— General (subject-level) —</option>
+                                            {builderTopics.map((t, i) => (
+                                                <option key={t.id} value={i}>{t.name}</option>
+                                            ))}
+                                        </select>
+                                    </div>
+
+                                    {resourceDraft.type !== 'practice' && (
+                                        <div className="ac-form-group">
+                                            <label>
+                                                {resourceDraft.type === 'video' ? 'YouTube URL *' : 'URL *'}
+                                            </label>
+                                            <input
+                                                value={resourceDraft.url}
+                                                onChange={e => handleResourceUrlChange(e.target.value)}
+                                                placeholder="https://..."
+                                            />
+                                        </div>
+                                    )}
+
+                                    {resourceDraft.youtube_id && (
+                                        <div className="ac-youtube-preview">
+                                            <img src={`https://img.youtube.com/vi/${resourceDraft.youtube_id}/mqdefault.jpg`} alt="preview" />
+                                            <span>✅ YouTube detected: {resourceDraft.youtube_id}</span>
+                                        </div>
+                                    )}
+
+                                    <div className="ac-form-group">
+                                        <label>Description</label>
+                                        <textarea
+                                            rows="2"
+                                            value={resourceDraft.description}
+                                            onChange={e => setResourceDraft({ ...resourceDraft, description: e.target.value })}
+                                        />
+                                    </div>
+
+                                    {resourceDraft.type === 'video' && (
+                                        <div className="ac-form-row">
+                                            <div className="ac-form-group ac-half">
+                                                <label>Duration</label>
+                                                <input
+                                                    value={resourceDraft.duration}
+                                                    onChange={e => setResourceDraft({ ...resourceDraft, duration: e.target.value })}
+                                                    placeholder="e.g. 12:34"
+                                                />
+                                            </div>
+                                            <div className="ac-form-group ac-half">
+                                                <label>Difficulty</label>
+                                                <select
+                                                    value={resourceDraft.difficulty}
+                                                    onChange={e => setResourceDraft({ ...resourceDraft, difficulty: e.target.value })}
+                                                >
+                                                    <option value="beginner">Beginner</option>
+                                                    <option value="intermediate">Intermediate</option>
+                                                    <option value="advanced">Advanced</option>
+                                                </select>
+                                            </div>
+                                        </div>
+                                    )}
+
+                                    <div className="ac-form-group ac-checkbox">
+                                        <label>
+                                            <input
+                                                type="checkbox"
+                                                checked={resourceDraft.is_free}
+                                                onChange={e => setResourceDraft({ ...resourceDraft, is_free: e.target.checked })}
+                                            />
+                                            <span>Free preview</span>
+                                        </label>
+                                    </div>
+                                </div>
+
+                                <div className="ac-popup-footer">
+                                    <button
+                                        className="ac-btn ac-btn-secondary"
+                                        onClick={() => setShowResourceDraftPopup(false)}
+                                    >
+                                        Cancel
+                                    </button>
+                                    <button
+                                        className="ac-btn ac-btn-primary"
+                                        onClick={confirmAddResourceDraft}
+                                    >
+                                        ➕ Add to List
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    )}
                 </div>
             )}
 

@@ -1,3 +1,4 @@
+// src/pages/SubjectDetail.js
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useHomeData } from '../hooks/useHomeData';
@@ -10,7 +11,7 @@ import { API_BASE_URL } from '../services/api';
 const SubjectDetail = () => {
   const { subjectName } = useParams();
   const navigate = useNavigate();
-  const { data, loading, error } = useHomeData();
+  const { data, loading: homeLoading, error: homeError } = useHomeData();
   const [activeTab, setActiveTab] = useState('overview');
   const [isEnrolling, setIsEnrolling] = useState(false);
   const [enrollmentStatus, setEnrollmentStatus] = useState(null);
@@ -20,13 +21,19 @@ const SubjectDetail = () => {
   const [showLoginPrompt, setShowLoginPrompt] = useState(false);
   const [selectedSubject, setSelectedSubject] = useState(null);
 
+  // ===== CONTENT TREE STATE =====
+  const [contentTree, setContentTree] = useState({ topics: [], subjectResources: [] });
+  const [contentLoading, setContentLoading] = useState(true);
+  const [expandedTopics, setExpandedTopics] = useState({});
+  const [activeResource, setActiveResource] = useState(null);
+
   // ===== SOUND HOOK =====
-  const { 
-    playClick, 
-    playTabSwitch, 
+  const {
+    playClick,
+    playTabSwitch,
     playPageTransition,
-    playEnrollSuccess, 
-    playEnrollFail, 
+    playEnrollSuccess,
+    playEnrollFail,
     playAlreadyEnrolled,
     playEnrollComplete,
     playSubscriptionCreated,
@@ -36,7 +43,7 @@ const SubjectDetail = () => {
 
   // Make sure subjects is always an array
   const subjects = Array.isArray(data?.subjects) ? data.subjects : [];
-  
+
   // Find subject - handles both slug and exact name
   const subject = subjects.find((item) => {
     if (!item?.name) return false;
@@ -48,13 +55,13 @@ const SubjectDetail = () => {
   const getSubscriptionFromToken = () => {
     const token = localStorage.getItem('accessToken');
     if (!token) return null;
-    
+
     try {
       const tokenParts = token.split('.');
       if (tokenParts.length === 3) {
         const payload = JSON.parse(atob(tokenParts[1]));
         console.log('📦 Token payload:', payload);
-        
+
         return {
           tier: payload.subscriptionTier || payload.tier || null,
           status: payload.subscriptionStatus || 'active',
@@ -87,7 +94,7 @@ const SubjectDetail = () => {
           const userData = await authService.getCurrentUserWithSubscription();
           if (userData) {
             setUser(userData);
-            
+
             // If userData has subscription, use it
             if (userData.subscription) {
               setSubscription(userData.subscription);
@@ -110,13 +117,36 @@ const SubjectDetail = () => {
     checkAuth();
   }, []);
 
+  // ===== FETCH CONTENT TREE =====
+  useEffect(() => {
+    const fetchContentTree = async () => {
+      if (!subject?.id) return;
+      try {
+        setContentLoading(true);
+        const res = await fetch(`${API_BASE_URL}/content/subjects/${subject.id}/full`);
+        const json = await res.json();
+        if (json.success) {
+          setContentTree({
+            topics: json.topics || [],
+            subjectResources: json.subjectResources || []
+          });
+        }
+      } catch (err) {
+        console.error('Failed to fetch content tree:', err);
+      } finally {
+        setContentLoading(false);
+      }
+    };
+    fetchContentTree();
+  }, [subject?.id]);
+
   // If subject not found, redirect
   useEffect(() => {
-    if (!loading && !subject && data) {
+    if (!homeLoading && !subject && data) {
       playPageTransition();
       navigate('/subjects');
     }
-  }, [loading, subject, data, navigate, playPageTransition]);
+  }, [homeLoading, subject, data, navigate, playPageTransition]);
 
   const getCohortTier = () => {
     if (subject?.name === 'Algebra' || subject?.name === 'Geometry') return 'Tier 1';
@@ -183,7 +213,7 @@ const SubjectDetail = () => {
     </div>
   );
 
-  // ===== ENROLLMENT FUNCTION WITH FIX =====
+  // ===== ENROLLMENT FUNCTION =====
   const handleEnroll = async () => {
     console.log('🚀 ENROLLMENT STARTED');
     playClick();
@@ -206,7 +236,7 @@ const SubjectDetail = () => {
     try {
       const subjectId = subject.id;
       console.log('📚 Subject ID:', subjectId);
-      
+
       // Get token
       const token = localStorage.getItem('accessToken');
       if (!token) {
@@ -282,7 +312,7 @@ const SubjectDetail = () => {
       } else if (enrollmentResponse.status === 400) {
         const errorData = await enrollmentResponse.json();
         console.log('📄 Error data:', errorData);
-        
+
         if (errorData.error && errorData.error.toLowerCase().includes('already enrolled')) {
           // ===== ALREADY ENROLLED SOUND =====
           playAlreadyEnrolled();
@@ -332,7 +362,7 @@ const SubjectDetail = () => {
   // ===== HANDLE ENROLLMENT ACTION WITH SOUNDS =====
   const handleEnrollmentAction = () => {
     if (!enrollmentStatus) return;
-    
+
     playClick();
 
     switch (enrollmentStatus.action) {
@@ -370,47 +400,60 @@ const SubjectDetail = () => {
   };
 
   // ============================================
-  // HANDLE RESOURCE CLICK WITH SOUNDS
+  // RESOURCE HANDLING
   // ============================================
+  const getResourceIcon = (type) => ({
+    video: '🎬',
+    pdf: '📄',
+    practice: '✏️',
+    guide: '📖',
+    quiz: '📝',
+    link: '🔗'
+  }[type] || '📎');
+
   const handleResourceClick = (resource) => {
     console.log('📄 Resource clicked:', resource);
     playClick();
-    
-    if (resource.path) {
-      playPageTransition();
-      navigate(resource.path);
-      return;
+    setActiveResource(resource);
+  };
+
+  const toggleTopic = (topicId) => {
+    playClick();
+    setExpandedTopics(prev => ({
+      ...prev,
+      [topicId]: prev[topicId] === false ? true : false
+    }));
+  };
+
+  const renderResourceViewer = (r) => {
+    if (r.type === 'video' && r.youtube_id) {
+      return (
+        <div className="sd-viewer-embed">
+          <iframe
+            src={`https://www.youtube.com/embed/${r.youtube_id}`}
+            title={r.name}
+            frameBorder="0"
+            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+            allowFullScreen
+          />
+        </div>
+      );
     }
-    
-    if (resource.id && resource.type) {
-      const id = resource.id;
-      
-      switch (resource.type) {
-        case 'video':
-          playPageTransition();
-          navigate(`/resources/videos/${id}`);
-          break;
-        case 'practice':
-          playPageTransition();
-          navigate(`/resources/practice/${id}`);
-          break;
-        case 'guide':
-          playPageTransition();
-          navigate(`/resources/guides/${id}`);
-          break;
-        case 'interactive':
-          playPageTransition();
-          navigate(`/resources/interactive/${id}`);
-          break;
-        default:
-          playPageTransition();
-          navigate(`/resources/${id}`);
-      }
-      return;
+    if (r.type === 'pdf') {
+      return (
+        <div className="sd-viewer-embed">
+          <iframe src={r.url} title={r.name} />
+          <a href={r.url} target="_blank" rel="noopener noreferrer" className="sd-open-link">
+            📄 Open in new tab
+          </a>
+        </div>
+      );
     }
-    
-    playPageTransition();
-    navigate('/resources');
+    return (
+      <a href={r.url} target="_blank" rel="noopener noreferrer" className="sd-open-link">
+        🔗 Open Resource
+      </a>
+    );
   };
 
   // ===== HANDLE TAB SWITCH WITH SOUNDS =====
@@ -423,12 +466,11 @@ const SubjectDetail = () => {
 
   const tabs = [
     { id: 'overview', label: '📋 Overview' },
-    { id: 'topics', label: '📚 Topics' },
-    { id: 'schedule', label: '🕐 Schedule' },
-    { id: 'resources', label: '📄 Resources' }
+    { id: 'topics', label: '📚 Topics & Content' },
+    { id: 'schedule', label: '🕐 Schedule' }
   ];
 
-  if (loading || isCheckingAuth) {
+  if (homeLoading || isCheckingAuth) {
     return (
       <div className="subject-detail-container loading">
         <div className="loading-spinner"></div>
@@ -437,12 +479,12 @@ const SubjectDetail = () => {
     );
   }
 
-  if (error) {
+  if (homeError) {
     return (
       <div className="subject-detail-container error">
         <div className="error-icon">⚠️</div>
         <h2>Error loading subject</h2>
-        <p>{error}</p>
+        <p>{homeError}</p>
         <button className="retry-button" onClick={() => window.location.reload()}>
           Try Again
         </button>
@@ -486,7 +528,9 @@ const SubjectDetail = () => {
           >
             {isEnrolling ? '⏳ Enrolling...' : '📚 Enroll Now'}
           </button>
-          <button className="btn btn-secondary" onClick={() => { playClick(); }}>📝 View Syllabus</button>
+          <button className="btn btn-secondary" onClick={() => { playClick(); }}>
+            📝 View Syllabus
+          </button>
         </div>
       </div>
 
@@ -606,28 +650,128 @@ const SubjectDetail = () => {
                   <p><strong>🎯 Tier:</strong> {getCohortTier()}</p>
                   <p><strong>🌍 Region:</strong> {getRegion()}</p>
                   <p><strong>☁️ AWS Hub:</strong> {getAWSRegion()}</p>
-                  <p><strong>📖 Topics:</strong> {subject.topics?.length || 0}</p>
-                  <p><strong>📄 Resources:</strong> {subject.resources?.length || 0}</p>
+                  <p><strong>📖 Topics:</strong> {contentTree.topics.length}</p>
+                  <p><strong>📄 Resources:</strong> {
+                    contentTree.topics.reduce((a, t) =>
+                      a + (t.resources?.length || 0) +
+                      (t.subtopics?.reduce((b, s) => b + (s.resources?.length || 0), 0) || 0), 0
+                    ) + contentTree.subjectResources.length
+                  }</p>
                 </div>
               </>
             )}
 
             {activeTab === 'topics' && (
               <>
-                <h3>📚 Topics Covered</h3>
-                <div className="topics-grid">
-                  {subject.topics?.map((topic) => (
-                    <div key={topic.id} className="topic-card">
-                      <h4>{topic.name}</h4>
-                      <p>{topic.description}</p>
-                      <div className="subtopics">
-                        <span className="subtopic-tag">📖 Study</span>
-                        <span className="subtopic-tag">✏️ Practice</span>
-                        <span className="subtopic-tag">🎯 Master</span>
+                <h3>📚 Topics & Content</h3>
+                {contentLoading ? (
+                  <div className="loading-spinner-small">
+                    <div className="loading-spinner"></div>
+                    <p>Loading content...</p>
+                  </div>
+                ) : (contentTree.topics.length === 0 && contentTree.subjectResources.length === 0) ? (
+                  <div className="no-resources">
+                    <span>📚</span>
+                    <p>No content published yet for this subject.</p>
+                    <p className="no-resources-sub">Content will be added soon.</p>
+                  </div>
+                ) : (
+                  <div className="sd-topic-tree">
+
+                    {/* Subject-level resources */}
+                    {contentTree.subjectResources.length > 0 && (
+                      <div className="sd-topic-block">
+                        <h4 className="sd-topic-title">📌 General Resources</h4>
+                        <div className="sd-resource-list">
+                          {contentTree.subjectResources.map(r => (
+                            <div
+                              key={r.id}
+                              className="sd-resource-card"
+                              onClick={() => handleResourceClick(r)}
+                            >
+                              <span className="sd-res-icon">{getResourceIcon(r.type)}</span>
+                              <div className="sd-res-body">
+                                <div className="sd-res-name">{r.name}</div>
+                                {r.description && <div className="sd-res-desc">{r.description}</div>}
+                              </div>
+                              {r.is_free && <span className="sd-res-free">FREE</span>}
+                            </div>
+                          ))}
+                        </div>
                       </div>
-                    </div>
-                  ))}
-                </div>
+                    )}
+
+                    {/* Topics */}
+                    {contentTree.topics.map(topic => {
+                      const isExpanded = expandedTopics[topic.id] !== false;
+                      const topicResCount =
+                        (topic.resources?.length || 0) +
+                        (topic.subtopics?.reduce((a, s) => a + (s.resources?.length || 0), 0) || 0);
+
+                      return (
+                        <div key={topic.id} className="sd-topic-block">
+                          <h4
+                            className="sd-topic-title clickable"
+                            onClick={() => toggleTopic(topic.id)}
+                          >
+                            <span className="sd-toggle">{isExpanded ? '▼' : '▶'}</span>
+                            <span>📖 {topic.name}</span>
+                            <span className="sd-topic-count">{topicResCount} resources</span>
+                          </h4>
+                          {topic.description && <p className="sd-topic-desc">{topic.description}</p>}
+
+                          {isExpanded && (
+                            <>
+                              {topic.resources?.length > 0 && (
+                                <div className="sd-resource-list">
+                                  {topic.resources.map(r => (
+                                    <div
+                                      key={r.id}
+                                      className="sd-resource-card"
+                                      onClick={() => handleResourceClick(r)}
+                                    >
+                                      <span className="sd-res-icon">{getResourceIcon(r.type)}</span>
+                                      <div className="sd-res-body">
+                                        <div className="sd-res-name">{r.name}</div>
+                                        {r.description && <div className="sd-res-desc">{r.description}</div>}
+                                      </div>
+                                      {r.is_free && <span className="sd-res-free">FREE</span>}
+                                    </div>
+                                  ))}
+                                </div>
+                              )}
+
+                              {topic.subtopics?.map(sub => (
+                                <div key={sub.id} className="sd-subtopic-block">
+                                  <h5 className="sd-subtopic-title">↳ {sub.name}</h5>
+                                  {sub.description && <p className="sd-subtopic-desc">{sub.description}</p>}
+                                  {sub.resources?.length > 0 && (
+                                    <div className="sd-resource-list">
+                                      {sub.resources.map(r => (
+                                        <div
+                                          key={r.id}
+                                          className="sd-resource-card"
+                                          onClick={() => handleResourceClick(r)}
+                                        >
+                                          <span className="sd-res-icon">{getResourceIcon(r.type)}</span>
+                                          <div className="sd-res-body">
+                                            <div className="sd-res-name">{r.name}</div>
+                                            {r.description && <div className="sd-res-desc">{r.description}</div>}
+                                          </div>
+                                          {r.is_free && <span className="sd-res-free">FREE</span>}
+                                        </div>
+                                      ))}
+                                    </div>
+                                  )}
+                                </div>
+                              ))}
+                            </>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
               </>
             )}
 
@@ -662,54 +806,23 @@ const SubjectDetail = () => {
                 </div>
               </>
             )}
-
-            {activeTab === 'resources' && (
-              <>
-                <h3>📄 Learning Resources</h3>
-                <div className="resources-grid">
-                  {subject.resources && subject.resources.length > 0 ? (
-                    subject.resources.map((resource) => (
-                      <div 
-                        key={resource.id} 
-                        className="resource-card"
-                        onClick={() => handleResourceClick(resource)}
-                        style={{ cursor: 'pointer' }}
-                        role="button"
-                        tabIndex={0}
-                        onKeyDown={(e) => {
-                          if (e.key === 'Enter' || e.key === ' ') {
-                            e.preventDefault();
-                            handleResourceClick(resource);
-                          }
-                        }}
-                      >
-                        <div className="resource-icon">
-                          {resource.type === 'guide' && '📖'}
-                          {resource.type === 'practice' && '✏️'}
-                          {resource.type === 'video' && '🎬'}
-                          {resource.type === 'interactive' && '🎮'}
-                          {!resource.type && '📄'}
-                        </div>
-                        <div className="resource-info">
-                          <h4>{resource.name}</h4>
-                          <span className="resource-type">{resource.type || 'Resource'}</span>
-                        </div>
-                        <span className="resource-link">View →</span>
-                      </div>
-                    ))
-                  ) : (
-                    <div className="no-resources">
-                      <span>📚</span>
-                      <p>No resources available for this subject yet.</p>
-                      <p className="no-resources-sub">Resources will be added soon.</p>
-                    </div>
-                  )}
-                </div>
-              </>
-            )}
           </div>
         </div>
       </div>
+
+      {/* Resource Viewer Popup */}
+      {activeResource && (
+        <div className="sd-viewer-overlay" onClick={() => setActiveResource(null)}>
+          <div className="sd-viewer" onClick={e => e.stopPropagation()}>
+            <button className="sd-viewer-close" onClick={() => setActiveResource(null)}>✕</button>
+            <h2>{getResourceIcon(activeResource.type)} {activeResource.name}</h2>
+            {activeResource.description && (
+              <p className="sd-viewer-desc">{activeResource.description}</p>
+            )}
+            {renderResourceViewer(activeResource)}
+          </div>
+        </div>
+      )}
     </div>
   );
 };

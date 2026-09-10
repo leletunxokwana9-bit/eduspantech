@@ -1440,3 +1440,18 @@
     background: rgba(239, 68, 68, 0.1);
     color: #ef4444;
 }
+/* ============================================
+   ADD AT BOTTOM OF AdminContent.css
+   ============================================ */
+
+.action-btn.content {
+    background: rgba(52, 211, 153, 0.1);
+    color: #34d399;
+    border: 1px solid rgba(52, 211, 153, 0.2);
+}
+
+.action-btn.content:hover {
+    background: rgba(52, 211, 153, 0.2);
+    border-color: rgba(52, 211, 153, 0.4);
+    transform: translateY(-1px);
+}

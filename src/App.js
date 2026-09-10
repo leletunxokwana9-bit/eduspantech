@@ -49,6 +49,7 @@ import AdminDashboard from './pages/Admin/AdminDashboard';
 import AdminUsers from './pages/Admin/AdminUsers';
 import AdminTutors from './pages/Admin/AdminTutors';
 import AdminContent from './pages/Admin/AdminContent';
+import AdminSubjectContent from './pages/Admin/AdminSubjectContent';
 import AdminPayments from './pages/Admin/AdminPayments';
 import AdminAnalytics from './pages/Admin/AdminAnalytics';
 import AdminSettings from './pages/Admin/AdminSettings';
@@ -60,6 +61,11 @@ import AdminProfile from './pages/Admin/AdminProfile';
 // ADMIN LOGIN LAYOUT (No Navbar)
 // ============================================
 import AdminLoginLayout from './pages/Admin/AdminLoginLayout';
+
+// ============================================
+// PUBLIC SUBJECT CONTENT (Student view)
+// ============================================
+import SubjectContent from './pages/SubjectContent';
 
 // ============================================
 // ERROR BOUNDARY COMPONENT
@@ -99,9 +105,9 @@ class ErrorBoundary extends React.Component {
             {this.state.error?.message || 'An unexpected error occurred'}
           </p>
           {this.state.errorInfo && (
-            <details style={{ 
-              marginTop: '20px', 
-              color: '#94a3b8', 
+            <details style={{
+              marginTop: '20px',
+              color: '#94a3b8',
               fontSize: '14px',
               textAlign: 'left',
               maxWidth: '600px',
@@ -110,8 +116,8 @@ class ErrorBoundary extends React.Component {
               borderRadius: '8px'
             }}>
               <summary>Technical Details</summary>
-              <pre style={{ 
-                marginTop: '12px', 
+              <pre style={{
+                marginTop: '12px',
                 fontSize: '12px',
                 overflow: 'auto',
                 maxHeight: '200px'
@@ -120,7 +126,7 @@ class ErrorBoundary extends React.Component {
               </pre>
             </details>
           )}
-          <button 
+          <button
             onClick={() => window.location.reload()}
             style={{
               marginTop: '24px',
@@ -150,7 +156,7 @@ class ErrorBoundary extends React.Component {
 // LAZY LOAD WITH ERROR HANDLING
 // ============================================
 const withLazyErrorHandling = (importFn, componentName) => {
-  return lazy(() => 
+  return lazy(() =>
     importFn()
       .then(module => {
         console.log(`✅ ${componentName} loaded successfully`);
@@ -175,7 +181,7 @@ const withLazyErrorHandling = (importFn, componentName) => {
               <p style={{ color: '#94a3b8', marginTop: '12px' }}>
                 {err.message || 'An error occurred loading this page'}
               </p>
-              <button 
+              <button
                 onClick={() => window.location.reload()}
                 style={{
                   marginTop: '24px',
@@ -247,7 +253,7 @@ const PageLoader = () => (
 const AppContent = () => {
   const location = useLocation();
   const isAdminRoute = location.pathname.startsWith('/admin');
-  
+
   return (
     <div className="app">
       {/* ✅ Hide Navbar on admin routes */}
@@ -261,7 +267,7 @@ const AppContent = () => {
             <Route element={<AdminLoginLayout />}>
               <Route path="/admin/login" element={<AdminLogin />} />
             </Route>
-            
+
             {/* ============================================
                 ADMIN ROUTES - With Sidebar (AdminLayout)
                 ============================================ */}
@@ -271,13 +277,14 @@ const AppContent = () => {
               <Route path="users" element={<AdminUsers />} />
               <Route path="tutors" element={<AdminTutors />} />
               <Route path="content" element={<AdminContent />} />
+              <Route path="content/:subjectId" element={<AdminSubjectContent />} />
               <Route path="payments" element={<AdminPayments />} />
               <Route path="analytics" element={<AdminAnalytics />} />
               <Route path="settings" element={<AdminSettings />} />
               <Route path="activity" element={<AdminActivity />} />
               <Route path="profile" element={<AdminProfile />} />
             </Route>
-            
+
             {/* ============================================
                 CORE ROUTES - Always accessible
                 ============================================ */}
@@ -285,7 +292,7 @@ const AppContent = () => {
             <Route path="/login" element={<Login />} />
             <Route path="/register" element={<Register />} />
             <Route path="/verify-email" element={<VerifyEmail />} />
-            
+
             {/* ============================================
                 PUBLIC ROUTES - No authentication needed
                 ============================================ */}
@@ -305,16 +312,19 @@ const AppContent = () => {
             <Route path="/terms" element={<Terms />} />
             <Route path="/privacy" element={<Privacy />} />
             <Route path="/search" element={<SearchResults />} />
-            
+
+            {/* ✅ PUBLIC SUBJECT CONTENT VIEWER */}
+            <Route path="/subject-content/:subjectId" element={<SubjectContent />} />
+
             {/* ============================================
                 TEAM ROUTE
                 ============================================ */}
             <Route path="/team" element={<Team />} />
-            
+
             {/* ============================================
                 PROTECTED ROUTES - Require authentication
                 ============================================ */}
-            <Route path="/timetable" element={<Timetable />} />    
+            <Route path="/timetable" element={<Timetable />} />
             <Route path="/dashboard" element={<Dashboard />} />
             <Route path="/profile" element={<Profile />} />
             <Route path="/settings" element={<Settings />} />
@@ -324,7 +334,7 @@ const AppContent = () => {
             <Route path="/checkout" element={<Checkout />} />
             <Route path="/payment-success" element={<PaymentSuccess />} />
             <Route path="/notifications" element={<Notifications />} />
-            
+
             {/* ============================================
                 TUTOR ROUTES - Require tutor role
                 ============================================ */}
@@ -332,7 +342,7 @@ const AppContent = () => {
             <Route path="/tutor/session/:sessionId" element={<TutorSession />} />
             <Route path="/tutor/students" element={<TutorStudents />} />
             <Route path="/tutor/earnings" element={<TutorEarnings />} />
-            
+
             {/* ============================================
                 LAZY LOADED ROUTES - With error handling
                 ============================================ */}
@@ -353,7 +363,7 @@ const AppContent = () => {
 function App() {
   console.log('🚀 App starting...');
   console.log('📋 Environment:', process.env.NODE_ENV);
-  
+
   return (
     <ErrorBoundary>
       <Router>

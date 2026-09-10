@@ -1432,3 +1432,242 @@
 [data-theme="light"] .login-prompt-hint .login-link:hover {
   color: #4338ca;
 }
+/* ============================================
+   SUBJECT DETAIL — CONTENT TREE (NEW)
+   ============================================ */
+
+.sd-topic-tree {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.sd-topic-block {
+  background: #141b2d;
+  border-radius: 12px;
+  padding: 16px;
+  border: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.sd-topic-title {
+  font-size: 16px;
+  font-weight: 600;
+  color: #ffffff;
+  margin: 0 0 8px 0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.sd-topic-title.clickable {
+  cursor: pointer;
+  user-select: none;
+}
+
+.sd-topic-title.clickable:hover {
+  color: #818cf8;
+}
+
+.sd-toggle {
+  font-size: 12px;
+  width: 16px;
+  display: inline-block;
+}
+
+.sd-topic-count {
+  margin-left: auto;
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.4);
+  font-weight: 400;
+}
+
+.sd-topic-desc {
+  font-size: 13px;
+  color: rgba(255, 255, 255, 0.5);
+  margin: 0 0 12px 0;
+}
+
+.sd-subtopic-block {
+  margin-top: 12px;
+  padding-left: 16px;
+  border-left: 2px solid rgba(79, 70, 229, 0.3);
+}
+
+.sd-subtopic-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: #ffffff;
+  margin: 0 0 4px 0;
+}
+
+.sd-subtopic-desc {
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.5);
+  margin: 0 0 8px 0;
+}
+
+.sd-resource-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.sd-resource-card {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 14px;
+  background: rgba(255, 255, 255, 0.03);
+  border-radius: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.04);
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.sd-resource-card:hover {
+  background: rgba(79, 70, 229, 0.1);
+  border-color: rgba(79, 70, 229, 0.3);
+  transform: translateX(2px);
+}
+
+.sd-res-icon {
+  font-size: 20px;
+  flex-shrink: 0;
+}
+
+.sd-res-body {
+  flex: 1;
+  min-width: 0;
+}
+
+.sd-res-name {
+  font-size: 14px;
+  font-weight: 500;
+  color: #ffffff;
+}
+
+.sd-res-desc {
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.5);
+  margin-top: 2px;
+}
+
+.sd-res-free {
+  background: rgba(34, 197, 94, 0.15);
+  color: #22c55e;
+  padding: 2px 10px;
+  border-radius: 10px;
+  font-size: 10px;
+  font-weight: 700;
+}
+
+/* ============================================
+   RESOURCE VIEWER POPUP
+   ============================================ */
+.sd-viewer-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.85);
+  backdrop-filter: blur(12px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 10000;
+  padding: 20px;
+}
+
+.sd-viewer {
+  background: #141b2d;
+  border-radius: 20px;
+  padding: 28px;
+  max-width: 900px;
+  width: 100%;
+  max-height: 90vh;
+  overflow-y: auto;
+  position: relative;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  box-shadow: 0 25px 80px rgba(0, 0, 0, 0.6);
+}
+
+.sd-viewer-close {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  color: #ffffff;
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  cursor: pointer;
+  font-size: 16px;
+  transition: all 0.2s;
+}
+
+.sd-viewer-close:hover {
+  background: rgba(239, 68, 68, 0.15);
+  color: #ef4444;
+  transform: rotate(90deg);
+}
+
+.sd-viewer h2 {
+  font-size: 20px;
+  margin: 0 0 8px;
+  color: #ffffff;
+}
+
+.sd-viewer-desc {
+  color: rgba(255, 255, 255, 0.6);
+  font-size: 14px;
+  margin: 0 0 20px;
+}
+
+.sd-viewer-embed iframe {
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  border-radius: 12px;
+  border: none;
+  background: #000;
+}
+
+.sd-viewer-embed iframe[title*="pdf" i],
+.sd-viewer-embed iframe[title*="PDF"] {
+  aspect-ratio: unset;
+  height: 600px;
+  background: #ffffff;
+}
+
+.sd-open-link {
+  display: inline-block;
+  margin-top: 16px;
+  padding: 12px 24px;
+  background: linear-gradient(135deg, #4f46e5, #7c3aed);
+  color: #ffffff;
+  border-radius: 12px;
+  text-decoration: none;
+  font-weight: 600;
+  transition: all 0.2s;
+}
+
+.sd-open-link:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 24px rgba(79, 70, 229, 0.4);
+}
+
+/* Small loading spinner */
+.loading-spinner-small {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 40px 20px;
+  color: rgba(255, 255, 255, 0.5);
+}
+
+.loading-spinner-small .loading-spinner {
+  margin-bottom: 12px;
+}
+
+/* Ensure the resource tabs render even if no prior CSS */
+.sd-topic-tree .sd-resource-list + .sd-subtopic-block {
+  margin-top: 12px;
+}

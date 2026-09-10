@@ -544,3 +544,46 @@
     font-size: 12px;
   }
 }
+/* ============================================
+   RESOURCE DETAIL — ADD AT BOTTOM
+   ============================================ */
+
+.pdf-embed-wrapper {
+  width: 100%;
+}
+
+.open-in-tab-btn {
+  display: inline-block;
+  margin-top: 16px;
+  padding: 12px 24px;
+  background: linear-gradient(135deg, #4f46e5, #7c3aed);
+  color: #ffffff;
+  border-radius: 12px;
+  text-decoration: none;
+  font-weight: 600;
+  transition: all 0.2s;
+}
+
+.open-in-tab-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 24px rgba(79, 70, 229, 0.4);
+}
+
+.video-player-container {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+@media (min-width: 900px) {
+  .video-player-container {
+    flex-direction: row;
+    align-items: flex-start;
+  }
+  .video-player {
+    flex: 1;
+  }
+  .video-info {
+    flex: 0 0 300px;
+  }
+}

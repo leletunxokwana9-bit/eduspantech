@@ -73,7 +73,8 @@ const Subjects = () => {
     code: subject.code,
     track: subject.track,
     semester: subject.semester,
-    institution: subject.institution
+    institution: subject.institution,
+    topics: subject.topics || []
   })) : [];
 
   const handleViewSubject = (subject) => {
@@ -94,8 +95,8 @@ const Subjects = () => {
 
       <div className="subjects-page-grid">
         {subjects.map((subject) => (
-          <div 
-            key={subject.id} 
+          <div
+            key={subject.id}
             className="subjects-page-card"
             onClick={() => handleViewSubject(subject)}
           >

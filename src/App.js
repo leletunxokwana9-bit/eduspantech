@@ -1,4 +1,4 @@
-// src/App.js - COMPLETE WITH ADMIN ROUTES + ADMIN LOGIN LAYOUT + ADMIN ROUTE CHECK
+// src/App.js - COMPLETE WITH ADMIN ROUTES + ADMIN LOGIN LAYOUT + ADMIN ROUTE CHECK + TUTOR APPLICATION
 import React, { Suspense, lazy } from 'react';
 import { BrowserRouter as Router, Routes, Route, useLocation } from 'react-router-dom';
 import Navbar from './components/Navbar';
@@ -40,6 +40,11 @@ import Notifications from './pages/Notifications';
 import ForgotPassword from './pages/ForgotPassword';
 import Team from './pages/Team';
 import Timetable from './pages/Timetable';
+
+// ============================================
+// TUTOR APPLICATION (Public)
+// ============================================
+import BecomeATutor from './pages/BecomeATutor';
 
 // ============================================
 // ADMIN ROUTES - Direct imports (not lazy)
@@ -320,6 +325,11 @@ const AppContent = () => {
                 TEAM ROUTE
                 ============================================ */}
             <Route path="/team" element={<Team />} />
+
+            {/* ============================================
+                ✅ BECOME A TUTOR - Public application
+                ============================================ */}
+            <Route path="/become-a-tutor" element={<BecomeATutor />} />
 
             {/* ============================================
                 PROTECTED ROUTES - Require authentication

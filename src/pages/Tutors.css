@@ -1981,3 +1981,159 @@
     font-size: 20px;
   }
 }
+/* ============================================
+   BECOME A TUTOR CTA BANNER
+   Placed at top of Tutors page
+   ============================================ */
+.become-tutor-banner {
+  background: linear-gradient(135deg, rgba(217,119,6,0.14), rgba(79,70,229,0.14));
+  border: 1px solid rgba(251,191,36,0.28);
+  border-radius: 20px;
+  margin: 0 auto 40px;
+  max-width: 1100px;
+  padding: 26px 32px;
+  position: relative;
+  overflow: hidden;
+  animation: fadeInUp 0.6s ease-out;
+}
+
+.become-tutor-banner::before {
+  content: '';
+  position: absolute;
+  top: -60%;
+  right: -5%;
+  width: 400px;
+  height: 400px;
+  background: radial-gradient(circle, rgba(251,191,36,0.15), transparent 70%);
+  pointer-events: none;
+}
+
+.btb-inner {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 24px;
+  flex-wrap: wrap;
+  position: relative;
+  z-index: 1;
+}
+
+.btb-left {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  flex: 1;
+  min-width: 260px;
+}
+
+.btb-icon {
+  font-size: 44px;
+  flex-shrink: 0;
+  filter: drop-shadow(0 4px 12px rgba(251,191,36,0.3));
+}
+
+.btb-left h2 {
+  font-size: 21px;
+  font-weight: 700;
+  color: #ffffff;
+  margin: 0 0 5px 0;
+  letter-spacing: -0.3px;
+}
+
+.btb-left p {
+  font-size: 14px;
+  color: rgba(255,255,255,0.6);
+  margin: 0;
+  line-height: 1.5;
+}
+
+.btb-right {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 10px;
+}
+
+.btb-btn-primary {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 13px 26px;
+  background: linear-gradient(135deg, #fbbf24, #d97706);
+  color: #16110a;
+  text-decoration: none;
+  border-radius: 12px;
+  font-size: 15px;
+  font-weight: 700;
+  white-space: nowrap;
+  transition: all 0.25s ease;
+  box-shadow: 0 6px 20px rgba(217,119,6,0.25);
+}
+
+.btb-btn-primary:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 12px 32px rgba(217,119,6,0.4);
+}
+
+.btb-stats {
+  display: flex;
+  gap: 14px;
+  font-size: 12px;
+  color: rgba(255,255,255,0.55);
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+.btb-stats span {
+  white-space: nowrap;
+}
+
+/* ===== Responsive ===== */
+@media (max-width: 768px) {
+  .become-tutor-banner {
+    padding: 22px 20px;
+    margin: 0 12px 28px;
+    border-radius: 16px;
+  }
+  .btb-inner {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .btb-left {
+    min-width: auto;
+  }
+  .btb-right {
+    align-items: stretch;
+  }
+  .btb-btn-primary {
+    width: 100%;
+    justify-content: center;
+  }
+  .btb-stats {
+    justify-content: center;
+  }
+  .btb-left h2 {
+    font-size: 18px;
+  }
+  .btb-icon {
+    font-size: 34px;
+  }
+}
+
+/* ===== Light theme ===== */
+[data-theme="light"] .become-tutor-banner {
+  background: linear-gradient(135deg, rgba(217,119,6,0.08), rgba(79,70,229,0.08));
+  border-color: rgba(217,119,6,0.2);
+}
+
+[data-theme="light"] .btb-left h2 {
+  color: #0f172a;
+}
+
+[data-theme="light"] .btb-left p {
+  color: rgba(0,0,0,0.55);
+}
+
+[data-theme="light"] .btb-stats {
+  color: rgba(0,0,0,0.5);
+}

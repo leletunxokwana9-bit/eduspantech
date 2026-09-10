@@ -1,6 +1,6 @@
-// src/pages/Tutors.js - COMPLETE WITH FULL PAGE BACKGROUND FIX
+// src/pages/Tutors.js - COMPLETE WITH FULL PAGE BACKGROUND + BECOME A TUTOR BANNER
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import { tutorService } from '../services/tutorService';
 import sessionService from '../services/sessionService';
 import './Tutors.css';
@@ -147,7 +147,6 @@ const Tutors = () => {
     const views = tutor.intro_video_views || 0;
 
     if (!hasVideoFile) {
-      // ===== NO VIDEO - Show blurred avatar with friendly message =====
       const avatarColor = getAvatarColor(tutor.name);
       const initials = getInitials(tutor.name);
       
@@ -179,7 +178,6 @@ const Tutors = () => {
       );
     }
 
-    // ===== HAS VIDEO - Show thumbnail with play button =====
     const formatDuration = (seconds) => {
       const mins = Math.floor(seconds / 60);
       const secs = seconds % 60;
@@ -670,6 +668,33 @@ const Tutors = () => {
       <SuccessModal />
 
       <div className="tutors-page">
+
+        {/* ============================================
+            BECOME A TUTOR CTA BANNER
+            Placed above header so tutors see it first
+           ============================================ */}
+        <section className="become-tutor-banner">
+          <div className="btb-inner">
+            <div className="btb-left">
+              <span className="btb-icon">👨‍🏫</span>
+              <div>
+                <h2>Are you a mathematics tutor?</h2>
+                <p>Join our network. Teach students across 9 global regions. Earn on your terms.</p>
+              </div>
+            </div>
+            <div className="btb-right">
+              <Link to="/become-a-tutor" className="btb-btn-primary">
+                Become a Tutor →
+              </Link>
+              <div className="btb-stats">
+                <span>💰 R250–600/hr</span>
+                <span>🌍 24/7 shifts</span>
+                <span>📄 No signup fee</span>
+              </div>
+            </div>
+          </div>
+        </section>
+
         <div className="tutors-page-header">
           <h1>👨‍🏫 Our Expert Tutors</h1>
           <p>{totalTutors} Centralised Tutors • 24/7 Global Coverage</p>
@@ -701,7 +726,6 @@ const Tutors = () => {
                         className="tutors-page-tutor-card"
                         onClick={() => handleTutorCardClick(tutor)}
                       >
-                        {/* ===== VIDEO THUMBNAIL ===== */}
                         <div className="tutor-card-video-section">
                           {renderVideoThumbnail(tutor)}
                         </div>

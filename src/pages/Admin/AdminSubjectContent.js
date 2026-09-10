@@ -345,6 +345,29 @@ const AdminSubjectContent = () => {
         link: '🔗'
     }[type] || '📎');
 
+    // ============================================
+    // NEW: Group resources so nothing gets lost
+    // ============================================
+    const knownTopicIds = new Set(topics.map(t => t.id));
+    const knownSubtopicIds = new Set(
+        Object.values(subtopics).flat().map(s => s.id)
+    );
+
+    // 1. Subject-level (no topic_id) OR orphaned (topic_id points nowhere)
+    const generalResources = resources.filter(r => {
+        if (!r.topic_id) return true;
+        if (!knownTopicIds.has(r.topic_id)) return true;
+        return false;
+    });
+
+    // 2. Resources under a specific topic (not a subtopic)
+    const resourcesForTopic = (topicId) =>
+        resources.filter(r => r.topic_id === topicId && !r.subtopic_id);
+
+    // 3. Resources under a specific subtopic
+    const resourcesForSubtopic = (subtopicId) =>
+        resources.filter(r => r.subtopic_id === subtopicId);
+
     if (loading) {
         return (
             <div className="asc-loading">
@@ -369,8 +392,48 @@ const AdminSubjectContent = () => {
                 </button>
             </div>
 
+            {/* ============================================
+                NEW: GENERAL / ORPHAN RESOURCES SECTION
+                Shown whenever resources exist that aren't
+                attached to any topic or subtopic
+               ============================================ */}
+            {generalResources.length > 0 && (
+                <div className="asc-topic-card asc-general-card">
+                    <div className="asc-topic-header">
+                        <div>
+                            <h3>📌 General Resources</h3>
+                            <p>Resources not attached to a specific topic</p>
+                            <span className="asc-topic-meta">
+                                {generalResources.length} resources
+                            </span>
+                        </div>
+                        <div className="asc-topic-actions">
+                            <button onClick={() => openAddResource(null, null)}>➕ Resource</button>
+                        </div>
+                    </div>
+                    <div className="asc-resource-list">
+                        {generalResources.map(r => (
+                            <div key={r.id} className="asc-resource-item">
+                                <span className="asc-resource-icon">{getResourceIcon(r.type)}</span>
+                                <div className="asc-resource-info">
+                                    <span className="asc-resource-name">{r.name}</span>
+                                    <span className="asc-resource-type">{r.type}</span>
+                                </div>
+                                <div className="asc-resource-actions">
+                                    <button onClick={() => openEditResource(r, null, null)}>✏️</button>
+                                    <button onClick={() => {
+                                        setDeleteTarget({ type: 'resource', id: r.id, name: r.name });
+                                        setShowDeletePopup(true);
+                                    }}>🗑️</button>
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+            )}
+
             <div className="asc-topics">
-                {topics.length === 0 ? (
+                {topics.length === 0 && generalResources.length === 0 ? (
                     <div className="asc-empty">
                         <span>📖</span>
                         <h3>No topics yet</h3>
@@ -378,10 +441,10 @@ const AdminSubjectContent = () => {
                     </div>
                 ) : (
                     topics.map(topic => {
-                        const tResources = resources.filter(r => r.topic_id === topic.id && !r.subtopic_id);
+                        const tResources = resourcesForTopic(topic.id);
                         const tSubs = subtopics[topic.id] || [];
                         const totalRes = tResources.length + tSubs.reduce(
-                            (a, s) => a + resources.filter(r => r.subtopic_id === s.id).length, 0
+                            (a, s) => a + resourcesForSubtopic(s.id).length, 0
                         );
 
                         return (
@@ -429,7 +492,7 @@ const AdminSubjectContent = () => {
                                 {tSubs.length > 0 && (
                                     <div className="asc-subtopics">
                                         {tSubs.map(sub => {
-                                            const subRes = resources.filter(r => r.subtopic_id === sub.id);
+                                            const subRes = resourcesForSubtopic(sub.id);
                                             return (
                                                 <div key={sub.id} className="asc-subtopic-card">
                                                     <div className="asc-subtopic-header">
@@ -552,6 +615,7 @@ const AdminSubjectContent = () => {
                             {parentTopic && (
                                 <p>in {parentTopic.name}{parentSubtopic ? ` → ${parentSubtopic.name}` : ''}</p>
                             )}
+                            {!parentTopic && <p>General (subject-level)</p>}
                         </div>
                         <div className="asc-popup-body">
                             <div className="asc-form-group">

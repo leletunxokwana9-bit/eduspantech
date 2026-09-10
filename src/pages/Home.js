@@ -420,7 +420,25 @@ const TeamCarousel = ({ members, onViewAll }) => {
   const [showLeftArrow, setShowLeftArrow] = useState(false);
   const [showRightArrow, setShowRightArrow] = useState(true);
 
-  // ✅ FIX: Return null if no members or members is not an array
+  const handleScroll = () => {
+    if (scrollRef.current) {
+      const { scrollLeft, scrollWidth, clientWidth } = scrollRef.current;
+      setShowLeftArrow(scrollLeft > 20);
+      setShowRightArrow(scrollLeft < scrollWidth - clientWidth - 20);
+    }
+  };
+
+  // ✅ HOOKS MUST COME BEFORE ANY EARLY RETURN
+  useEffect(() => {
+    const current = scrollRef.current;
+    if (!current) return;
+    current.addEventListener('scroll', handleScroll);
+    handleScroll();
+    return () => current.removeEventListener('scroll', handleScroll);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Early return now SAFE — after all hooks
   if (!members || !Array.isArray(members) || members.length === 0) {
     return null;
   }
@@ -436,23 +454,6 @@ const TeamCarousel = ({ members, onViewAll }) => {
       });
     }
   };
-
-  const handleScroll = () => {
-    if (scrollRef.current) {
-      const { scrollLeft, scrollWidth, clientWidth } = scrollRef.current;
-      setShowLeftArrow(scrollLeft > 20);
-      setShowRightArrow(scrollLeft < scrollWidth - clientWidth - 20);
-    }
-  };
-
-  useEffect(() => {
-    const current = scrollRef.current;
-    if (current) {
-      current.addEventListener('scroll', handleScroll);
-      handleScroll();
-      return () => current.removeEventListener('scroll', handleScroll);
-    }
-  }, []);
 
   return (
     <div className="team-carousel-wrapper">
@@ -916,9 +917,6 @@ function Home() {
           </div>
         </section>
 
-        {/* ============================================
-            TEAM CAROUSEL SECTION
-            ============================================ */}
         {teamMembers && teamMembers.length > 0 && (
           <section className="team-carousel-section">
             <div className="container">
@@ -1139,9 +1137,6 @@ function Home() {
         </div>
       </section>
 
-      {/* ============================================
-          QUICK ACTIONS
-          ============================================ */}
       {isAuthenticated && !isTutor && (
         <section className="quick-actions-section">
           <div className="container">
@@ -1232,9 +1227,6 @@ function Home() {
         </div>
       </section>
 
-      {/* ============================================
-          TEAM CAROUSEL SECTION
-          ============================================ */}
       {teamMembers && teamMembers.length > 0 && (
         <section className="team-carousel-section">
           <div className="container">

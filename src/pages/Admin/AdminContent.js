@@ -1,8 +1,10 @@
 // src/pages/Admin/AdminContent.js
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import './AdminContent.css';
 
 const AdminContent = () => {
+    const navigate = useNavigate();
     const [subjects, setSubjects] = useState([]);
     const [filteredSubjects, setFilteredSubjects] = useState([]);
     const [searchTerm, setSearchTerm] = useState('');
@@ -31,14 +33,15 @@ const AdminContent = () => {
     // ============================================
     const [showSuccessPopup, setShowSuccessPopup] = useState(false);
     const [successMessage, setSuccessMessage] = useState('');
-    
+    const [createdSubjectId, setCreatedSubjectId] = useState(null);
+
     const [showErrorPopup, setShowErrorPopup] = useState(false);
     const [errorMessage, setErrorMessage] = useState('');
-    
+
     const [showDeletePopup, setShowDeletePopup] = useState(false);
     const [deleteTarget, setDeleteTarget] = useState(null);
     const [deleteLoading, setDeleteLoading] = useState(false);
-    
+
     const [showTogglePopup, setShowTogglePopup] = useState(false);
     const [toggleTarget, setToggleTarget] = useState(null);
     const [toggleLoading, setToggleLoading] = useState(false);
@@ -267,6 +270,7 @@ const AdminContent = () => {
                         resetForm();
                         fetchSubjects();
                         setSuccessMessage(editingSubject ? 'Subject updated successfully!' : 'Subject created successfully!');
+                        setCreatedSubjectId(!editingSubject ? retryData.subject?.id : null);
                         setShowSuccessPopup(true);
                         setActionLoading(false);
                         return;
@@ -288,6 +292,7 @@ const AdminContent = () => {
                 resetForm();
                 fetchSubjects();
                 setSuccessMessage(editingSubject ? 'Subject updated successfully!' : 'Subject created successfully!');
+                setCreatedSubjectId(!editingSubject ? data.subject?.id : null);
                 setShowSuccessPopup(true);
             } else {
                 setErrorMessage(data.error || 'Failed to save subject');
@@ -302,7 +307,7 @@ const AdminContent = () => {
     };
 
     // ============================================
-    // DELETE SUBJECT - SHOW POPUP FIRST
+    // DELETE SUBJECT
     // ============================================
     const handleDeleteClick = (subject) => {
         setDeleteTarget(subject);
@@ -343,6 +348,7 @@ const AdminContent = () => {
                             setDeleteTarget(null);
                             fetchSubjects();
                             setSuccessMessage('Subject deleted successfully!');
+                            setCreatedSubjectId(null);
                             setShowSuccessPopup(true);
                             setDeleteLoading(false);
                             return;
@@ -365,6 +371,7 @@ const AdminContent = () => {
                 setDeleteTarget(null);
                 fetchSubjects();
                 setSuccessMessage('Subject deleted successfully!');
+                setCreatedSubjectId(null);
                 setShowSuccessPopup(true);
             } else {
                 setShowDeletePopup(false);
@@ -381,7 +388,7 @@ const AdminContent = () => {
     };
 
     // ============================================
-    // TOGGLE STATUS - SHOW POPUP FIRST
+    // TOGGLE STATUS
     // ============================================
     const handleToggleClick = (subject) => {
         setToggleTarget(subject);
@@ -430,6 +437,7 @@ const AdminContent = () => {
                             setToggleTarget(null);
                             fetchSubjects();
                             setSuccessMessage(`Subject ${toggleTarget.is_active ? 'deactivated' : 'activated'} successfully!`);
+                            setCreatedSubjectId(null);
                             setShowSuccessPopup(true);
                             setToggleLoading(false);
                             return;
@@ -452,6 +460,7 @@ const AdminContent = () => {
                 setToggleTarget(null);
                 fetchSubjects();
                 setSuccessMessage(`Subject ${toggleTarget.is_active ? 'deactivated' : 'activated'} successfully!`);
+                setCreatedSubjectId(null);
                 setShowSuccessPopup(true);
             } else {
                 setShowTogglePopup(false);
@@ -539,9 +548,7 @@ const AdminContent = () => {
 
     return (
         <div className="admin-content">
-            {/* ============================================
-                PAGE HEADER
-                ============================================ */}
+            {/* PAGE HEADER */}
             <div className="content-header">
                 <div className="header-left">
                     <h2>📚 Content Management</h2>
@@ -553,9 +560,7 @@ const AdminContent = () => {
                 </div>
             </div>
 
-            {/* ============================================
-                STATS CARDS
-                ============================================ */}
+            {/* STATS CARDS */}
             <div className="content-stats">
                 <div className="stat-item">
                     <span className="stat-number">{subjects.length}</span>
@@ -571,9 +576,7 @@ const AdminContent = () => {
                 </div>
             </div>
 
-            {/* ============================================
-                SEARCH BAR
-                ============================================ */}
+            {/* SEARCH BAR */}
             <div className="content-search">
                 <div className="search-wrapper">
                     <span className="search-icon">🔍</span>
@@ -597,9 +600,7 @@ const AdminContent = () => {
                 </div>
             </div>
 
-            {/* ============================================
-                SUBJECTS GRID
-                ============================================ */}
+            {/* SUBJECTS GRID */}
             <div className="subjects-grid">
                 {filteredSubjects.length === 0 ? (
                     <div className="empty-state">
@@ -639,6 +640,12 @@ const AdminContent = () => {
                                 <div className="subject-long-desc">{subject.long_description}</div>
                             )}
                             <div className="subject-actions">
+                                <button
+                                    className="action-btn content"
+                                    onClick={() => navigate(`/admin/content/${subject.id}`)}
+                                >
+                                    📖 Manage Content
+                                </button>
                                 <button className="action-btn toggle" onClick={() => handleToggleClick(subject)}>
                                     {subject.is_active ? '🔴 Deactivate' : '🟢 Activate'}
                                 </button>
@@ -654,9 +661,7 @@ const AdminContent = () => {
                 )}
             </div>
 
-            {/* ============================================
-                EDIT/ADD SUBJECT MODAL
-                ============================================ */}
+            {/* EDIT/ADD SUBJECT MODAL */}
             {showModal && (
                 <div className="ac-popup-overlay" onClick={() => setShowModal(false)}>
                     <div className="ac-popup ac-popup-large" onClick={e => e.stopPropagation()}>
@@ -826,9 +831,7 @@ const AdminContent = () => {
                 </div>
             )}
 
-            {/* ============================================
-                DELETE CONFIRMATION POPUP
-                ============================================ */}
+            {/* DELETE CONFIRMATION POPUP */}
             {showDeletePopup && deleteTarget && (
                 <div className="ac-popup-overlay" onClick={() => !deleteLoading && setShowDeletePopup(false)}>
                     <div className="ac-popup ac-popup-small" onClick={e => e.stopPropagation()}>
@@ -859,9 +862,7 @@ const AdminContent = () => {
                 </div>
             )}
 
-            {/* ============================================
-                TOGGLE STATUS CONFIRMATION POPUP
-                ============================================ */}
+            {/* TOGGLE STATUS CONFIRMATION POPUP */}
             {showTogglePopup && toggleTarget && (
                 <div className="ac-popup-overlay" onClick={() => !toggleLoading && setShowTogglePopup(false)}>
                     <div className="ac-popup ac-popup-small" onClick={e => e.stopPropagation()}>
@@ -896,11 +897,9 @@ const AdminContent = () => {
                 </div>
             )}
 
-            {/* ============================================
-                SUCCESS POPUP
-                ============================================ */}
+            {/* SUCCESS POPUP */}
             {showSuccessPopup && (
-                <div className="ac-popup-overlay" onClick={() => setShowSuccessPopup(false)}>
+                <div className="ac-popup-overlay" onClick={() => { setShowSuccessPopup(false); setCreatedSubjectId(null); }}>
                     <div className="ac-popup ac-popup-small" onClick={e => e.stopPropagation()}>
                         <div className="ac-popup-icon-wrapper success">
                             <span className="ac-popup-big-icon">✅</span>
@@ -908,19 +907,47 @@ const AdminContent = () => {
                         <div className="ac-popup-header centered">
                             <h3>Success!</h3>
                             <p>{successMessage}</p>
+                            {createdSubjectId && (
+                                <p style={{ marginTop: 8, color: 'rgba(255,255,255,0.6)', fontSize: 14 }}>
+                                    Now add topics, PDFs, videos, and other resources to this subject.
+                                </p>
+                            )}
                         </div>
                         <div className="ac-popup-footer centered">
-                            <button className="ac-btn ac-btn-primary" onClick={() => setShowSuccessPopup(false)}>
-                                Continue
-                            </button>
+                            {createdSubjectId ? (
+                                <>
+                                    <button
+                                        className="ac-btn ac-btn-secondary"
+                                        onClick={() => { setShowSuccessPopup(false); setCreatedSubjectId(null); }}
+                                    >
+                                        Later
+                                    </button>
+                                    <button
+                                        className="ac-btn ac-btn-primary"
+                                        onClick={() => {
+                                            const id = createdSubjectId;
+                                            setShowSuccessPopup(false);
+                                            setCreatedSubjectId(null);
+                                            navigate(`/admin/content/${id}`);
+                                        }}
+                                    >
+                                        📖 Add Content Now
+                                    </button>
+                                </>
+                            ) : (
+                                <button
+                                    className="ac-btn ac-btn-primary"
+                                    onClick={() => { setShowSuccessPopup(false); setCreatedSubjectId(null); }}
+                                >
+                                    Continue
+                                </button>
+                            )}
                         </div>
                     </div>
                 </div>
             )}
 
-            {/* ============================================
-                ERROR POPUP
-                ============================================ */}
+            {/* ERROR POPUP */}
             {showErrorPopup && (
                 <div className="ac-popup-overlay" onClick={() => setShowErrorPopup(false)}>
                     <div className="ac-popup ac-popup-small" onClick={e => e.stopPropagation()}>

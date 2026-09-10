@@ -17,7 +17,6 @@ const AdminContent = () => {
         color: '#4f46e5',
         tier: 'TIER_1',
         region: 'Global',
-        display_order: 0,
         is_active: true,
         code: '',
         track: '',
@@ -26,36 +25,40 @@ const AdminContent = () => {
         institution: ''
     });
     const [actionLoading, setActionLoading] = useState(false);
+
+    // ============================================
+    // DEDICATED POPUP STATES
+    // ============================================
+    const [showSuccessPopup, setShowSuccessPopup] = useState(false);
     const [successMessage, setSuccessMessage] = useState('');
+    
+    const [showErrorPopup, setShowErrorPopup] = useState(false);
     const [errorMessage, setErrorMessage] = useState('');
+    
+    const [showDeletePopup, setShowDeletePopup] = useState(false);
+    const [deleteTarget, setDeleteTarget] = useState(null);
+    const [deleteLoading, setDeleteLoading] = useState(false);
+    
+    const [showTogglePopup, setShowTogglePopup] = useState(false);
+    const [toggleTarget, setToggleTarget] = useState(null);
+    const [toggleLoading, setToggleLoading] = useState(false);
 
     const colors = ['#4f46e5', '#7c3aed', '#06b6d4', '#10b981', '#f59e0b', '#ef4444', '#ec4899', '#8b5cf6', '#14b8a6', '#f97316'];
-    const tiers = ['TIER_1', 'TIER_2', 'TIER_3'];
     const regions = ['Global', 'Africa', 'Americas', 'Asia-Pacific', 'Europe', 'Middle East'];
     const tracks = ['BCom', 'BSc', 'ECP_Commerce', 'ECP_Science', 'Engineering', 'Arts'];
 
     const API_URL = process.env.REACT_APP_API_URL || 'https://eduspantech-backend.onrender.com/api';
 
-    // Helper functions for default values
+    // Helper functions
     const getDefaultIcon = (name) => {
         if (!name) return '📚';
         const icons = {
-            'Mathematics': '🔢',
-            'Physics': '⚛️',
-            'Chemistry': '🧪',
-            'Biology': '🧬',
-            'Accounting': '📊',
-            'Economics': '📈',
-            'Business': '💼',
-            'Statistics': '📉',
-            'Engineering': '⚙️',
-            'Computer': '💻',
-            'Finance': '💰'
+            'Mathematics': '🔢', 'Physics': '⚛️', 'Chemistry': '🧪', 'Biology': '🧬',
+            'Accounting': '📊', 'Economics': '📈', 'Business': '💼', 'Statistics': '📉',
+            'Engineering': '⚙️', 'Computer': '💻', 'Finance': '💰'
         };
         for (const [key, icon] of Object.entries(icons)) {
-            if (name.toLowerCase().includes(key.toLowerCase())) {
-                return icon;
-            }
+            if (name.toLowerCase().includes(key.toLowerCase())) return icon;
         }
         return '📚';
     };
@@ -63,38 +66,27 @@ const AdminContent = () => {
     const getDefaultColor = (name) => {
         if (!name) return '#4f46e5';
         const colorMap = {
-            'Mathematics': '#4f46e5',
-            'Physics': '#06b6d4',
-            'Chemistry': '#10b981',
-            'Biology': '#22c55e',
-            'Accounting': '#f59e0b',
-            'Economics': '#8b5cf6',
-            'Business': '#ec4899',
-            'Statistics': '#14b8a6',
-            'Engineering': '#f97316',
-            'Computer': '#3b82f6',
-            'Finance': '#10b981'
+            'Mathematics': '#4f46e5', 'Physics': '#06b6d4', 'Chemistry': '#10b981',
+            'Biology': '#22c55e', 'Accounting': '#f59e0b', 'Economics': '#8b5cf6',
+            'Business': '#ec4899', 'Statistics': '#14b8a6', 'Engineering': '#f97316',
+            'Computer': '#3b82f6', 'Finance': '#10b981'
         };
         for (const [key, color] of Object.entries(colorMap)) {
-            if (name.toLowerCase().includes(key.toLowerCase())) {
-                return color;
-            }
+            if (name.toLowerCase().includes(key.toLowerCase())) return color;
         }
         return '#4f46e5';
     };
 
-    // ✅ FIX: FETCH SUBJECTS ON PAGE LOAD (removed route protection check)
     useEffect(() => {
         fetchSubjects();
     }, []);
 
-    // Filter subjects when search term changes
     useEffect(() => {
         if (searchTerm.trim() === '') {
             setFilteredSubjects(subjects);
         } else {
             const term = searchTerm.toLowerCase().trim();
-            const filtered = subjects.filter(subject => 
+            const filtered = subjects.filter(subject =>
                 subject.name.toLowerCase().includes(term) ||
                 (subject.code && subject.code.toLowerCase().includes(term)) ||
                 (subject.description && subject.description.toLowerCase().includes(term)) ||
@@ -105,23 +97,22 @@ const AdminContent = () => {
         }
     }, [searchTerm, subjects]);
 
+    // ============================================
+    // TOKEN REFRESH
+    // ============================================
     const refreshToken = async () => {
         try {
             const refreshToken = localStorage.getItem('refreshToken');
             if (!refreshToken) return false;
-
             const response = await fetch(`${API_URL}/auth/refresh`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ refreshToken })
             });
-
             if (response.ok) {
                 const data = await response.json();
                 localStorage.setItem('accessToken', data.accessToken);
-                if (data.refreshToken) {
-                    localStorage.setItem('refreshToken', data.refreshToken);
-                }
+                if (data.refreshToken) localStorage.setItem('refreshToken', data.refreshToken);
                 return true;
             }
             return false;
@@ -131,62 +122,51 @@ const AdminContent = () => {
         }
     };
 
+    // ============================================
+    // FETCH SUBJECTS
+    // ============================================
     const fetchSubjects = async (retryCount = 0) => {
         try {
             setLoading(true);
-            setErrorMessage('');
-            
             const token = localStorage.getItem('accessToken');
-            
             if (!token) {
                 setErrorMessage('No authentication token found. Please login again.');
-                setTimeout(() => {
-                    window.location.href = '/admin/login';
-                }, 2000);
+                setShowErrorPopup(true);
+                setTimeout(() => { window.location.href = '/admin/login'; }, 2000);
                 setLoading(false);
                 return;
             }
 
-            console.log('🔍 Fetching subjects with token:', token.substring(0, 20) + '...');
-
             const response = await fetch(`${API_URL}/admin/content/subjects`, {
-                headers: { 
+                headers: {
                     'Authorization': `Bearer ${token}`,
                     'Content-Type': 'application/json'
                 }
             });
 
             if (response.status === 401 && retryCount === 0) {
-                console.log('🔄 Token expired, attempting refresh...');
                 const refreshed = await refreshToken();
-                if (refreshed) {
-                    console.log('✅ Token refreshed, retrying...');
-                    return fetchSubjects(retryCount + 1);
-                } else {
-                    setErrorMessage('Session expired. Please login again.');
-                    localStorage.removeItem('accessToken');
-                    localStorage.removeItem('refreshToken');
-                    setTimeout(() => {
-                        window.location.href = '/admin/login';
-                    }, 2000);
-                    setLoading(false);
-                    return;
-                }
+                if (refreshed) return fetchSubjects(retryCount + 1);
+                setErrorMessage('Session expired. Please login again.');
+                setShowErrorPopup(true);
+                localStorage.removeItem('accessToken');
+                localStorage.removeItem('refreshToken');
+                setTimeout(() => { window.location.href = '/admin/login'; }, 2000);
+                setLoading(false);
+                return;
             }
 
             if (response.status === 401) {
                 setErrorMessage('Session expired. Please login again.');
+                setShowErrorPopup(true);
                 localStorage.removeItem('accessToken');
                 localStorage.removeItem('refreshToken');
-                setTimeout(() => {
-                    window.location.href = '/admin/login';
-                }, 2000);
+                setTimeout(() => { window.location.href = '/admin/login'; }, 2000);
                 setLoading(false);
                 return;
             }
 
             const data = await response.json();
-            
             if (data.success) {
                 const mappedSubjects = (data.subjects || []).map(subject => ({
                     id: subject.id,
@@ -197,7 +177,6 @@ const AdminContent = () => {
                     color: subject.color || getDefaultColor(subject.name),
                     tier: subject.tier || subject.year_level || 'TIER_1',
                     region: subject.region || 'Global',
-                    display_order: subject.display_order || 0,
                     is_active: subject.is_active !== undefined ? subject.is_active : true,
                     code: subject.code || '',
                     track: subject.track || '',
@@ -207,51 +186,51 @@ const AdminContent = () => {
                 }));
                 setSubjects(mappedSubjects);
                 setFilteredSubjects(mappedSubjects);
-                console.log(`✅ Loaded ${mappedSubjects.length} subjects`);
             } else {
                 setErrorMessage(data.error || 'Failed to load subjects');
+                setShowErrorPopup(true);
             }
         } catch (error) {
-            console.error('Error fetching subjects:', error);
             setErrorMessage('Network error. Please try again.');
+            setShowErrorPopup(true);
         } finally {
             setLoading(false);
         }
     };
 
+    // ============================================
+    // SAVE SUBJECT
+    // ============================================
     const handleSaveSubject = async () => {
         if (!formData.name.trim()) {
             setErrorMessage('Subject name is required');
+            setShowErrorPopup(true);
             return;
         }
 
         try {
             setActionLoading(true);
-            setErrorMessage('');
-            setSuccessMessage('');
-            
             let token = localStorage.getItem('accessToken');
-            
             if (!token) {
-                setErrorMessage('No authentication token found. Please login again.');
+                setErrorMessage('No authentication token found.');
+                setShowErrorPopup(true);
                 setActionLoading(false);
                 return;
             }
 
-            const url = editingSubject 
+            const url = editingSubject
                 ? `${API_URL}/admin/content/subjects/${editingSubject.id}`
                 : `${API_URL}/admin/content/subjects`;
             const method = editingSubject ? 'PUT' : 'POST';
 
             const payload = {
                 name: formData.name.trim(),
-                description: formData.description || formData.code || '',
+                description: formData.description || '',
                 long_description: formData.long_description || '',
                 icon: formData.icon || getDefaultIcon(formData.name),
                 color: formData.color || getDefaultColor(formData.name),
                 tier: formData.tier || 'TIER_1',
                 region: formData.region || 'Global',
-                display_order: parseInt(formData.display_order) || 0,
                 is_active: formData.is_active,
                 code: formData.code || '',
                 track: formData.track || '',
@@ -268,7 +247,7 @@ const AdminContent = () => {
                 },
                 body: JSON.stringify(payload)
             });
-            
+
             if (response.status === 401) {
                 const refreshed = await refreshToken();
                 if (refreshed) {
@@ -283,60 +262,68 @@ const AdminContent = () => {
                     });
                     const retryData = await retryResponse.json();
                     if (retryData.success) {
-                        setSuccessMessage(editingSubject ? 'Subject updated successfully!' : 'Subject created successfully!');
                         setShowModal(false);
                         setEditingSubject(null);
                         resetForm();
                         fetchSubjects();
-                        setTimeout(() => setSuccessMessage(''), 3000);
+                        setSuccessMessage(editingSubject ? 'Subject updated successfully!' : 'Subject created successfully!');
+                        setShowSuccessPopup(true);
                         setActionLoading(false);
                         return;
                     }
                 }
                 setErrorMessage('Session expired. Please login again.');
+                setShowErrorPopup(true);
                 localStorage.removeItem('accessToken');
                 localStorage.removeItem('refreshToken');
-                setTimeout(() => {
-                    window.location.href = '/admin/login';
-                }, 2000);
+                setTimeout(() => { window.location.href = '/admin/login'; }, 2000);
                 setActionLoading(false);
                 return;
             }
-            
+
             const data = await response.json();
-            
             if (data.success) {
-                setSuccessMessage(editingSubject ? 'Subject updated successfully!' : 'Subject created successfully!');
                 setShowModal(false);
                 setEditingSubject(null);
                 resetForm();
                 fetchSubjects();
-                setTimeout(() => setSuccessMessage(''), 3000);
+                setSuccessMessage(editingSubject ? 'Subject updated successfully!' : 'Subject created successfully!');
+                setShowSuccessPopup(true);
             } else {
                 setErrorMessage(data.error || 'Failed to save subject');
+                setShowErrorPopup(true);
             }
         } catch (error) {
-            console.error('Error saving subject:', error);
             setErrorMessage('Network error. Please try again.');
+            setShowErrorPopup(true);
         } finally {
             setActionLoading(false);
         }
     };
 
-    const handleDeleteSubject = async (subjectId) => {
-        if (!window.confirm('⚠️ Are you sure you want to delete this subject? This action cannot be undone.')) return;
+    // ============================================
+    // DELETE SUBJECT - SHOW POPUP FIRST
+    // ============================================
+    const handleDeleteClick = (subject) => {
+        setDeleteTarget(subject);
+        setShowDeletePopup(true);
+    };
+
+    const confirmDelete = async () => {
+        if (!deleteTarget) return;
 
         try {
-            setActionLoading(true);
-            let token = localStorage.getItem('accessToken');
-            
+            setDeleteLoading(true);
+            const token = localStorage.getItem('accessToken');
             if (!token) {
-                setErrorMessage('No authentication token found. Please login again.');
-                setActionLoading(false);
+                setErrorMessage('No authentication token found.');
+                setShowErrorPopup(true);
+                setShowDeletePopup(false);
+                setDeleteLoading(false);
                 return;
             }
 
-            const response = await fetch(`${API_URL}/admin/content/subjects/${subjectId}`, {
+            const response = await fetch(`${API_URL}/admin/content/subjects/${deleteTarget.id}`, {
                 method: 'DELETE',
                 headers: { 'Authorization': `Bearer ${token}` }
             });
@@ -344,116 +331,145 @@ const AdminContent = () => {
             if (response.status === 401) {
                 const refreshed = await refreshToken();
                 if (refreshed) {
-                    token = localStorage.getItem('accessToken');
-                    const retryResponse = await fetch(`${API_URL}/admin/content/subjects/${subjectId}`, {
+                    const newToken = localStorage.getItem('accessToken');
+                    const retryResponse = await fetch(`${API_URL}/admin/content/subjects/${deleteTarget.id}`, {
                         method: 'DELETE',
-                        headers: { 'Authorization': `Bearer ${token}` }
+                        headers: { 'Authorization': `Bearer ${newToken}` }
                     });
                     if (retryResponse.ok) {
                         const data = await retryResponse.json();
                         if (data.success) {
-                            setSuccessMessage('Subject deleted successfully!');
+                            setShowDeletePopup(false);
+                            setDeleteTarget(null);
                             fetchSubjects();
-                            setTimeout(() => setSuccessMessage(''), 3000);
-                            setActionLoading(false);
+                            setSuccessMessage('Subject deleted successfully!');
+                            setShowSuccessPopup(true);
+                            setDeleteLoading(false);
                             return;
                         }
                     }
                 }
                 setErrorMessage('Session expired. Please login again.');
+                setShowErrorPopup(true);
+                setShowDeletePopup(false);
                 localStorage.removeItem('accessToken');
                 localStorage.removeItem('refreshToken');
-                setTimeout(() => {
-                    window.location.href = '/admin/login';
-                }, 2000);
-                setActionLoading(false);
+                setTimeout(() => { window.location.href = '/admin/login'; }, 2000);
+                setDeleteLoading(false);
                 return;
             }
 
             const data = await response.json();
-            
             if (data.success) {
-                setSuccessMessage('Subject deleted successfully!');
+                setShowDeletePopup(false);
+                setDeleteTarget(null);
                 fetchSubjects();
-                setTimeout(() => setSuccessMessage(''), 3000);
+                setSuccessMessage('Subject deleted successfully!');
+                setShowSuccessPopup(true);
             } else {
+                setShowDeletePopup(false);
                 setErrorMessage(data.error || 'Failed to delete subject');
+                setShowErrorPopup(true);
             }
         } catch (error) {
-            console.error('Error deleting subject:', error);
+            setShowDeletePopup(false);
             setErrorMessage('Network error. Please try again.');
+            setShowErrorPopup(true);
         } finally {
-            setActionLoading(false);
+            setDeleteLoading(false);
         }
     };
 
-    const handleToggleStatus = async (subject) => {
+    // ============================================
+    // TOGGLE STATUS - SHOW POPUP FIRST
+    // ============================================
+    const handleToggleClick = (subject) => {
+        setToggleTarget(subject);
+        setShowTogglePopup(true);
+    };
+
+    const confirmToggle = async () => {
+        if (!toggleTarget) return;
+
         try {
-            let token = localStorage.getItem('accessToken');
-            
+            setToggleLoading(true);
+            const token = localStorage.getItem('accessToken');
             if (!token) {
-                setErrorMessage('No authentication token found. Please login again.');
+                setErrorMessage('No authentication token found.');
+                setShowErrorPopup(true);
+                setShowTogglePopup(false);
+                setToggleLoading(false);
                 return;
             }
 
-            const response = await fetch(`${API_URL}/admin/content/subjects/${subject.id}`, {
+            const response = await fetch(`${API_URL}/admin/content/subjects/${toggleTarget.id}`, {
                 method: 'PUT',
                 headers: {
                     'Authorization': `Bearer ${token}`,
                     'Content-Type': 'application/json'
                 },
-                body: JSON.stringify({
-                    ...subject,
-                    is_active: !subject.is_active
-                })
+                body: JSON.stringify({ is_active: !toggleTarget.is_active })
             });
 
             if (response.status === 401) {
                 const refreshed = await refreshToken();
                 if (refreshed) {
-                    token = localStorage.getItem('accessToken');
-                    const retryResponse = await fetch(`${API_URL}/admin/content/subjects/${subject.id}`, {
+                    const newToken = localStorage.getItem('accessToken');
+                    const retryResponse = await fetch(`${API_URL}/admin/content/subjects/${toggleTarget.id}`, {
                         method: 'PUT',
                         headers: {
-                            'Authorization': `Bearer ${token}`,
+                            'Authorization': `Bearer ${newToken}`,
                             'Content-Type': 'application/json'
                         },
-                        body: JSON.stringify({
-                            ...subject,
-                            is_active: !subject.is_active
-                        })
+                        body: JSON.stringify({ is_active: !toggleTarget.is_active })
                     });
                     if (retryResponse.ok) {
                         const data = await retryResponse.json();
                         if (data.success) {
+                            setShowTogglePopup(false);
+                            setToggleTarget(null);
                             fetchSubjects();
-                            setSuccessMessage(`Subject ${subject.is_active ? 'deactivated' : 'activated'} successfully!`);
-                            setTimeout(() => setSuccessMessage(''), 3000);
+                            setSuccessMessage(`Subject ${toggleTarget.is_active ? 'deactivated' : 'activated'} successfully!`);
+                            setShowSuccessPopup(true);
+                            setToggleLoading(false);
                             return;
                         }
                     }
                 }
                 setErrorMessage('Session expired. Please login again.');
+                setShowErrorPopup(true);
+                setShowTogglePopup(false);
                 localStorage.removeItem('accessToken');
                 localStorage.removeItem('refreshToken');
-                setTimeout(() => {
-                    window.location.href = '/admin/login';
-                }, 2000);
+                setTimeout(() => { window.location.href = '/admin/login'; }, 2000);
+                setToggleLoading(false);
                 return;
             }
 
             const data = await response.json();
             if (data.success) {
+                setShowTogglePopup(false);
+                setToggleTarget(null);
                 fetchSubjects();
-                setSuccessMessage(`Subject ${subject.is_active ? 'deactivated' : 'activated'} successfully!`);
-                setTimeout(() => setSuccessMessage(''), 3000);
+                setSuccessMessage(`Subject ${toggleTarget.is_active ? 'deactivated' : 'activated'} successfully!`);
+                setShowSuccessPopup(true);
+            } else {
+                setShowTogglePopup(false);
+                setErrorMessage(data.error || 'Failed to update subject');
+                setShowErrorPopup(true);
             }
         } catch (error) {
-            console.error('Error toggling subject status:', error);
-            setErrorMessage('Failed to update subject status');
+            setShowTogglePopup(false);
+            setErrorMessage('Network error. Please try again.');
+            setShowErrorPopup(true);
+        } finally {
+            setToggleLoading(false);
         }
     };
 
+    // ============================================
+    // MODAL HELPERS
+    // ============================================
     const openEditModal = (subject) => {
         setEditingSubject(subject);
         setFormData({
@@ -464,7 +480,6 @@ const AdminContent = () => {
             color: subject.color || getDefaultColor(subject.name),
             tier: subject.tier || 'TIER_1',
             region: subject.region || 'Global',
-            display_order: subject.display_order || 0,
             is_active: subject.is_active !== undefined ? subject.is_active : true,
             code: subject.code || '',
             track: subject.track || '',
@@ -490,7 +505,6 @@ const AdminContent = () => {
             color: '#4f46e5',
             tier: 'TIER_1',
             region: 'Global',
-            display_order: subjects.length,
             is_active: true,
             code: '',
             track: '',
@@ -514,18 +528,6 @@ const AdminContent = () => {
         return <span className="tier-badge" style={{ background: info.color }}>{info.label}</span>;
     };
 
-    const handleSearch = (e) => {
-        setSearchTerm(e.target.value);
-    };
-
-    const clearSearch = () => {
-        setSearchTerm('');
-    };
-
-    const handleRefresh = () => {
-        fetchSubjects();
-    };
-
     if (loading) {
         return (
             <div className="admin-content-loading">
@@ -537,41 +539,23 @@ const AdminContent = () => {
 
     return (
         <div className="admin-content">
+            {/* ============================================
+                PAGE HEADER
+                ============================================ */}
             <div className="content-header">
                 <div className="header-left">
                     <h2>📚 Content Management</h2>
                     <p className="header-subtitle">Manage subjects, resources, and learning materials</p>
                 </div>
                 <div className="header-actions">
-                    <button className="refresh-btn" onClick={handleRefresh} title="Refresh subjects">
-                        🔄
-                    </button>
-                    <button className="add-btn" onClick={openAddModal}>
-                        ➕ Add Subject
-                    </button>
+                    <button className="refresh-btn" onClick={fetchSubjects} title="Refresh subjects">🔄</button>
+                    <button className="add-btn" onClick={openAddModal}>➕ Add Subject</button>
                 </div>
             </div>
 
-            {successMessage && (
-                <div className="admin-content-success">
-                    ✅ {successMessage}
-                </div>
-            )}
-
-            {errorMessage && (
-                <div className="admin-content-error">
-                    ❌ {errorMessage}
-                    {errorMessage.includes('Session expired') && (
-                        <button 
-                            className="error-login-btn"
-                            onClick={() => window.location.href = '/admin/login'}
-                        >
-                            Login Again
-                        </button>
-                    )}
-                </div>
-            )}
-
+            {/* ============================================
+                STATS CARDS
+                ============================================ */}
             <div className="content-stats">
                 <div className="stat-item">
                     <span className="stat-number">{subjects.length}</span>
@@ -587,6 +571,9 @@ const AdminContent = () => {
                 </div>
             </div>
 
+            {/* ============================================
+                SEARCH BAR
+                ============================================ */}
             <div className="content-search">
                 <div className="search-wrapper">
                     <span className="search-icon">🔍</span>
@@ -595,12 +582,10 @@ const AdminContent = () => {
                         className="search-input"
                         placeholder="Search by name, code, track, institution..."
                         value={searchTerm}
-                        onChange={handleSearch}
+                        onChange={(e) => setSearchTerm(e.target.value)}
                     />
                     {searchTerm && (
-                        <button className="clear-search" onClick={clearSearch}>
-                            ✕
-                        </button>
+                        <button className="clear-search" onClick={() => setSearchTerm('')}>✕</button>
                     )}
                 </div>
                 <div className="search-results-info">
@@ -612,13 +597,16 @@ const AdminContent = () => {
                 </div>
             </div>
 
+            {/* ============================================
+                SUBJECTS GRID
+                ============================================ */}
             <div className="subjects-grid">
                 {filteredSubjects.length === 0 ? (
                     <div className="empty-state">
                         <span className="empty-icon">📚</span>
                         <h3>{searchTerm ? 'No matching subjects found' : 'No subjects yet'}</h3>
                         <p>
-                            {searchTerm 
+                            {searchTerm
                                 ? `No subjects match "${searchTerm}". Try a different search term.`
                                 : 'Click "Add Subject" to create your first subject'}
                         </p>
@@ -648,18 +636,16 @@ const AdminContent = () => {
                                 </div>
                             </div>
                             {subject.long_description && (
-                                <div className="subject-long-desc">
-                                    {subject.long_description}
-                                </div>
+                                <div className="subject-long-desc">{subject.long_description}</div>
                             )}
                             <div className="subject-actions">
-                                <button className="action-btn toggle" onClick={() => handleToggleStatus(subject)}>
+                                <button className="action-btn toggle" onClick={() => handleToggleClick(subject)}>
                                     {subject.is_active ? '🔴 Deactivate' : '🟢 Activate'}
                                 </button>
                                 <button className="action-btn edit" onClick={() => openEditModal(subject)}>
                                     ✏️ Edit
                                 </button>
-                                <button className="action-btn delete" onClick={() => handleDeleteSubject(subject.id)}>
+                                <button className="action-btn delete" onClick={() => handleDeleteClick(subject)}>
                                     🗑️ Delete
                                 </button>
                             </div>
@@ -668,16 +654,21 @@ const AdminContent = () => {
                 )}
             </div>
 
+            {/* ============================================
+                EDIT/ADD SUBJECT MODAL
+                ============================================ */}
             {showModal && (
-                <div className="modal-overlay" onClick={() => setShowModal(false)}>
-                    <div className="modal-content subject-modal" onClick={e => e.stopPropagation()}>
-                        <div className="modal-header">
-                            <h3>{editingSubject ? '✏️ Edit Subject' : '📚 Add New Subject'}</h3>
-                            <button className="modal-close" onClick={() => setShowModal(false)}>✕</button>
+                <div className="ac-popup-overlay" onClick={() => setShowModal(false)}>
+                    <div className="ac-popup ac-popup-large" onClick={e => e.stopPropagation()}>
+                        <button className="ac-popup-close" onClick={() => setShowModal(false)}>✕</button>
+                        <div className="ac-popup-header">
+                            <div className="ac-popup-icon">📚</div>
+                            <h3>{editingSubject ? 'Edit Subject' : 'Add New Subject'}</h3>
+                            <p>{editingSubject ? 'Update the subject details below' : 'Fill in the details to create a new subject'}</p>
                         </div>
 
-                        <div className="modal-body">
-                            <div className="form-group">
+                        <div className="ac-popup-body">
+                            <div className="ac-form-group">
                                 <label>Subject Name *</label>
                                 <input
                                     type="text"
@@ -687,7 +678,7 @@ const AdminContent = () => {
                                 />
                             </div>
 
-                            <div className="form-group">
+                            <div className="ac-form-group">
                                 <label>Short Description</label>
                                 <input
                                     type="text"
@@ -697,7 +688,7 @@ const AdminContent = () => {
                                 />
                             </div>
 
-                            <div className="form-group">
+                            <div className="ac-form-group">
                                 <label>Full Description</label>
                                 <textarea
                                     value={formData.long_description}
@@ -707,29 +698,17 @@ const AdminContent = () => {
                                 />
                             </div>
 
-                            <div className="form-row">
-                                <div className="form-group half">
+                            <div className="ac-form-row">
+                                <div className="ac-form-group ac-half">
                                     <label>Icon</label>
                                     <input
                                         type="text"
                                         value={formData.icon}
                                         onChange={(e) => setFormData({ ...formData, icon: e.target.value })}
-                                        placeholder="e.g., 📚, 🔢, ∫"
+                                        placeholder="📚"
                                     />
                                 </div>
-                                <div className="form-group half">
-                                    <label>Display Order</label>
-                                    <input
-                                        type="number"
-                                        value={formData.display_order}
-                                        onChange={(e) => setFormData({ ...formData, display_order: parseInt(e.target.value) || 0 })}
-                                        min="0"
-                                    />
-                                </div>
-                            </div>
-
-                            <div className="form-row">
-                                <div className="form-group half">
+                                <div className="ac-form-group ac-half">
                                     <label>Tier / Year Level</label>
                                     <select
                                         value={formData.tier}
@@ -744,7 +723,10 @@ const AdminContent = () => {
                                         <option value="4TH_YEAR">4TH_YEAR - University</option>
                                     </select>
                                 </div>
-                                <div className="form-group half">
+                            </div>
+
+                            <div className="ac-form-row">
+                                <div className="ac-form-group ac-half">
                                     <label>Region</label>
                                     <select
                                         value={formData.region}
@@ -755,19 +737,7 @@ const AdminContent = () => {
                                         ))}
                                     </select>
                                 </div>
-                            </div>
-
-                            <div className="form-row">
-                                <div className="form-group half">
-                                    <label>Course Code</label>
-                                    <input
-                                        type="text"
-                                        value={formData.code}
-                                        onChange={(e) => setFormData({ ...formData, code: e.target.value })}
-                                        placeholder="e.g., MATH101, ACCN1014A"
-                                    />
-                                </div>
-                                <div className="form-group half">
+                                <div className="ac-form-group ac-half">
                                     <label>Track / Program</label>
                                     <select
                                         value={formData.track}
@@ -781,34 +751,44 @@ const AdminContent = () => {
                                 </div>
                             </div>
 
-                            <div className="form-row">
-                                <div className="form-group half">
+                            <div className="ac-form-row">
+                                <div className="ac-form-group ac-half">
+                                    <label>Course Code</label>
+                                    <input
+                                        type="text"
+                                        value={formData.code}
+                                        onChange={(e) => setFormData({ ...formData, code: e.target.value })}
+                                        placeholder="e.g., MATH101"
+                                    />
+                                </div>
+                                <div className="ac-form-group ac-half">
                                     <label>Semester</label>
                                     <input
                                         type="text"
                                         value={formData.semester}
                                         onChange={(e) => setFormData({ ...formData, semester: e.target.value })}
-                                        placeholder="e.g., S1, S2, S3"
-                                    />
-                                </div>
-                                <div className="form-group half">
-                                    <label>Institution</label>
-                                    <input
-                                        type="text"
-                                        value={formData.institution}
-                                        onChange={(e) => setFormData({ ...formData, institution: e.target.value })}
-                                        placeholder="e.g., Wits, UP, UCT"
+                                        placeholder="e.g., S1, S2"
                                     />
                                 </div>
                             </div>
 
-                            <div className="form-group">
+                            <div className="ac-form-group">
+                                <label>Institution</label>
+                                <input
+                                    type="text"
+                                    value={formData.institution}
+                                    onChange={(e) => setFormData({ ...formData, institution: e.target.value })}
+                                    placeholder="e.g., Wits, UP, UCT"
+                                />
+                            </div>
+
+                            <div className="ac-form-group">
                                 <label>Color</label>
-                                <div className="color-picker-grid">
+                                <div className="ac-color-grid">
                                     {colors.map((color) => (
                                         <div
                                             key={color}
-                                            className={`color-option ${formData.color === color ? 'selected' : ''}`}
+                                            className={`ac-color-option ${formData.color === color ? 'selected' : ''}`}
                                             style={{ background: color }}
                                             onClick={() => setFormData({ ...formData, color })}
                                         />
@@ -817,29 +797,143 @@ const AdminContent = () => {
                                         type="color"
                                         value={formData.color}
                                         onChange={(e) => setFormData({ ...formData, color: e.target.value })}
-                                        className="color-input"
+                                        className="ac-color-input"
                                     />
                                 </div>
                             </div>
 
-                            <div className="form-group checkbox">
+                            <div className="ac-form-group ac-checkbox">
                                 <label>
                                     <input
                                         type="checkbox"
                                         checked={formData.is_active}
                                         onChange={(e) => setFormData({ ...formData, is_active: e.target.checked })}
                                     />
-                                    Active (visible to users)
+                                    <span>Active (visible to users)</span>
                                 </label>
                             </div>
                         </div>
 
-                        <div className="modal-footer">
-                            <button className="modal-btn cancel" onClick={() => setShowModal(false)}>
+                        <div className="ac-popup-footer">
+                            <button className="ac-btn ac-btn-secondary" onClick={() => setShowModal(false)}>
                                 Cancel
                             </button>
-                            <button className="modal-btn save" onClick={handleSaveSubject} disabled={actionLoading}>
+                            <button className="ac-btn ac-btn-primary" onClick={handleSaveSubject} disabled={actionLoading}>
                                 {actionLoading ? '⏳ Saving...' : (editingSubject ? '💾 Update Subject' : '➕ Create Subject')}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* ============================================
+                DELETE CONFIRMATION POPUP
+                ============================================ */}
+            {showDeletePopup && deleteTarget && (
+                <div className="ac-popup-overlay" onClick={() => !deleteLoading && setShowDeletePopup(false)}>
+                    <div className="ac-popup ac-popup-small" onClick={e => e.stopPropagation()}>
+                        <div className="ac-popup-icon-wrapper danger">
+                            <span className="ac-popup-big-icon">🗑️</span>
+                        </div>
+                        <div className="ac-popup-header centered">
+                            <h3>Delete Subject?</h3>
+                            <p>You're about to delete <strong>{deleteTarget.name}</strong>. This action cannot be undone.</p>
+                        </div>
+                        <div className="ac-popup-footer centered">
+                            <button
+                                className="ac-btn ac-btn-secondary"
+                                onClick={() => setShowDeletePopup(false)}
+                                disabled={deleteLoading}
+                            >
+                                Cancel
+                            </button>
+                            <button
+                                className="ac-btn ac-btn-danger"
+                                onClick={confirmDelete}
+                                disabled={deleteLoading}
+                            >
+                                {deleteLoading ? '⏳ Deleting...' : '🗑️ Delete'}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* ============================================
+                TOGGLE STATUS CONFIRMATION POPUP
+                ============================================ */}
+            {showTogglePopup && toggleTarget && (
+                <div className="ac-popup-overlay" onClick={() => !toggleLoading && setShowTogglePopup(false)}>
+                    <div className="ac-popup ac-popup-small" onClick={e => e.stopPropagation()}>
+                        <div className={`ac-popup-icon-wrapper ${toggleTarget.is_active ? 'warning' : 'success'}`}>
+                            <span className="ac-popup-big-icon">{toggleTarget.is_active ? '⚠️' : '✅'}</span>
+                        </div>
+                        <div className="ac-popup-header centered">
+                            <h3>{toggleTarget.is_active ? 'Deactivate Subject?' : 'Activate Subject?'}</h3>
+                            <p>
+                                {toggleTarget.is_active
+                                    ? `"${toggleTarget.name}" will be hidden from students.`
+                                    : `"${toggleTarget.name}" will be visible to students.`}
+                            </p>
+                        </div>
+                        <div className="ac-popup-footer centered">
+                            <button
+                                className="ac-btn ac-btn-secondary"
+                                onClick={() => setShowTogglePopup(false)}
+                                disabled={toggleLoading}
+                            >
+                                Cancel
+                            </button>
+                            <button
+                                className={`ac-btn ${toggleTarget.is_active ? 'ac-btn-warning' : 'ac-btn-primary'}`}
+                                onClick={confirmToggle}
+                                disabled={toggleLoading}
+                            >
+                                {toggleLoading ? '⏳ Processing...' : (toggleTarget.is_active ? '🔴 Deactivate' : '🟢 Activate')}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* ============================================
+                SUCCESS POPUP
+                ============================================ */}
+            {showSuccessPopup && (
+                <div className="ac-popup-overlay" onClick={() => setShowSuccessPopup(false)}>
+                    <div className="ac-popup ac-popup-small" onClick={e => e.stopPropagation()}>
+                        <div className="ac-popup-icon-wrapper success">
+                            <span className="ac-popup-big-icon">✅</span>
+                        </div>
+                        <div className="ac-popup-header centered">
+                            <h3>Success!</h3>
+                            <p>{successMessage}</p>
+                        </div>
+                        <div className="ac-popup-footer centered">
+                            <button className="ac-btn ac-btn-primary" onClick={() => setShowSuccessPopup(false)}>
+                                Continue
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* ============================================
+                ERROR POPUP
+                ============================================ */}
+            {showErrorPopup && (
+                <div className="ac-popup-overlay" onClick={() => setShowErrorPopup(false)}>
+                    <div className="ac-popup ac-popup-small" onClick={e => e.stopPropagation()}>
+                        <div className="ac-popup-icon-wrapper danger">
+                            <span className="ac-popup-big-icon">⚠️</span>
+                        </div>
+                        <div className="ac-popup-header centered">
+                            <h3>Something went wrong</h3>
+                            <p>{errorMessage}</p>
+                        </div>
+                        <div className="ac-popup-footer centered">
+                            <button className="ac-btn ac-btn-secondary" onClick={() => setShowErrorPopup(false)}>
+                                Close
                             </button>
                         </div>
                     </div>

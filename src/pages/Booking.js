@@ -1,6 +1,7 @@
 // src/pages/Booking.js
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../hooks/useAuth';
+import { API_BASE_URL } from '../services/api';
 import ShiftStatus from '../components/ShiftStatus';
 import './Booking.css';
 
@@ -23,7 +24,7 @@ const Booking = () => {
 
   const fetchShiftStatus = async () => {
     try {
-      const response = await fetch('/api/auth/check-shift', {
+      const response = await fetch(`${API_BASE_URL}/auth/check-shift`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -46,7 +47,7 @@ const Booking = () => {
   const fetchAvailableTutors = async () => {
     try {
       setLoading(true);
-      const response = await fetch('/api/auth/available-tutors', {
+      const response = await fetch(`${API_BASE_URL}/auth/available-tutors`, {
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('accessToken')}`
         }
@@ -76,7 +77,7 @@ const Booking = () => {
       setLoading(true);
       setError(null);
 
-      const response = await fetch('/api/sessions', {
+      const response = await fetch(`${API_BASE_URL}/sessions`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

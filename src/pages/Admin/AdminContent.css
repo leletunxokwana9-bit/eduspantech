@@ -974,3 +974,469 @@
     background: rgba(0, 0, 0, 0.06);
     color: #0f172a;
 }
+/* ============================================
+   DEDICATED POPUPS FOR ADMIN CONTENT
+   ============================================ */
+
+/* ===== OVERLAY ===== */
+.ac-popup-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.75);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 10000;
+    padding: 20px;
+    animation: acFadeIn 0.25s ease;
+}
+
+@keyframes acFadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+/* ===== POPUP CONTAINER ===== */
+.ac-popup {
+    background: #141b2d;
+    border-radius: 20px;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    box-shadow: 0 25px 80px rgba(0, 0, 0, 0.6);
+    max-height: 90vh;
+    overflow-y: auto;
+    position: relative;
+    animation: acSlideUp 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+    width: 100%;
+}
+
+@keyframes acSlideUp {
+    from {
+        opacity: 0;
+        transform: translateY(30px) scale(0.96);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+    }
+}
+
+.ac-popup-small { max-width: 420px; }
+.ac-popup-medium { max-width: 600px; }
+.ac-popup-large { max-width: 700px; }
+
+/* ===== CLOSE BUTTON ===== */
+.ac-popup-close {
+    position: absolute;
+    top: 16px;
+    right: 16px;
+    background: rgba(255, 255, 255, 0.04);
+    border: 1px solid rgba(255, 255, 255, 0.06);
+    color: rgba(255, 255, 255, 0.5);
+    width: 36px;
+    height: 36px;
+    border-radius: 10px;
+    font-size: 16px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s ease;
+    z-index: 10;
+}
+
+.ac-popup-close:hover {
+    background: rgba(239, 68, 68, 0.15);
+    border-color: rgba(239, 68, 68, 0.3);
+    color: #ef4444;
+    transform: rotate(90deg);
+}
+
+/* ===== ICON WRAPPER (for small popups) ===== */
+.ac-popup-icon-wrapper {
+    width: 80px;
+    height: 80px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 32px auto 0;
+    position: relative;
+}
+
+.ac-popup-icon-wrapper.success {
+    background: rgba(34, 197, 94, 0.1);
+    border: 2px solid rgba(34, 197, 94, 0.2);
+}
+
+.ac-popup-icon-wrapper.danger {
+    background: rgba(239, 68, 68, 0.1);
+    border: 2px solid rgba(239, 68, 68, 0.2);
+}
+
+.ac-popup-icon-wrapper.warning {
+    background: rgba(245, 158, 11, 0.1);
+    border: 2px solid rgba(245, 158, 11, 0.2);
+}
+
+.ac-popup-big-icon {
+    font-size: 40px;
+    line-height: 1;
+}
+
+/* ===== POPUP HEADER ===== */
+.ac-popup-header {
+    padding: 24px 24px 0 24px;
+    text-align: center;
+}
+
+.ac-popup-header.centered {
+    padding: 16px 32px 0 32px;
+}
+
+.ac-popup-icon {
+    font-size: 36px;
+    margin-bottom: 12px;
+    display: block;
+}
+
+.ac-popup-header h3 {
+    font-size: 20px;
+    font-weight: 700;
+    color: #ffffff;
+    margin: 0 0 8px 0;
+    letter-spacing: -0.3px;
+}
+
+.ac-popup-header p {
+    font-size: 14px;
+    color: rgba(255, 255, 255, 0.5);
+    margin: 0;
+    line-height: 1.5;
+}
+
+.ac-popup-header p strong {
+    color: #ffffff;
+    font-weight: 600;
+}
+
+/* ===== POPUP BODY ===== */
+.ac-popup-body {
+    padding: 24px 28px;
+}
+
+/* ===== FORM GROUPS ===== */
+.ac-form-group {
+    margin-bottom: 18px;
+}
+
+.ac-form-group label {
+    display: block;
+    font-size: 13px;
+    font-weight: 500;
+    color: rgba(255, 255, 255, 0.6);
+    margin-bottom: 6px;
+}
+
+.ac-form-group input,
+.ac-form-group select,
+.ac-form-group textarea {
+    width: 100%;
+    padding: 12px 16px;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 12px;
+    font-size: 14px;
+    background: rgba(255, 255, 255, 0.04);
+    color: #ffffff;
+    box-sizing: border-box;
+    transition: all 0.2s ease;
+    font-family: inherit;
+}
+
+.ac-form-group input::placeholder,
+.ac-form-group textarea::placeholder {
+    color: rgba(255, 255, 255, 0.3);
+}
+
+.ac-form-group input:focus,
+.ac-form-group select:focus,
+.ac-form-group textarea:focus {
+    outline: none;
+    border-color: #4f46e5;
+    box-shadow: 0 0 0 4px rgba(79, 70, 229, 0.15);
+    background: rgba(255, 255, 255, 0.06);
+}
+
+.ac-form-group select option {
+    background: #141b2d;
+    color: #ffffff;
+}
+
+.ac-form-group textarea {
+    resize: vertical;
+    min-height: 80px;
+}
+
+/* ===== FORM ROW (2 columns) ===== */
+.ac-form-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 14px;
+}
+
+.ac-form-group.ac-half {
+    margin-bottom: 18px;
+}
+
+/* ===== CHECKBOX ===== */
+.ac-form-group.ac-checkbox {
+    display: flex;
+    align-items: center;
+    margin-top: 8px;
+}
+
+.ac-form-group.ac-checkbox label {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    cursor: pointer;
+    color: rgba(255, 255, 255, 0.7);
+    font-weight: 400;
+    font-size: 14px;
+    margin-bottom: 0;
+}
+
+.ac-form-group.ac-checkbox input[type="checkbox"] {
+    width: 20px;
+    height: 20px;
+    accent-color: #4f46e5;
+    cursor: pointer;
+    flex-shrink: 0;
+}
+
+/* ===== COLOR PICKER ===== */
+.ac-color-grid {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    align-items: center;
+    padding: 4px 0;
+}
+
+.ac-color-option {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    cursor: pointer;
+    border: 3px solid transparent;
+    transition: all 0.2s ease;
+    flex-shrink: 0;
+}
+
+.ac-color-option:hover {
+    transform: scale(1.15);
+}
+
+.ac-color-option.selected {
+    border-color: #ffffff;
+    box-shadow: 0 0 0 4px rgba(79, 70, 229, 0.3);
+    transform: scale(1.1);
+}
+
+.ac-color-input {
+    width: 44px !important;
+    height: 44px !important;
+    padding: 2px !important;
+    border-radius: 50% !important;
+    cursor: pointer;
+    border: 2px solid rgba(255, 255, 255, 0.1) !important;
+    background: transparent !important;
+}
+
+/* ===== POPUP FOOTER ===== */
+.ac-popup-footer {
+    display: flex;
+    justify-content: flex-end;
+    gap: 12px;
+    padding: 0 28px 24px 28px;
+}
+
+.ac-popup-footer.centered {
+    justify-content: center;
+    padding: 20px 24px 28px 24px;
+}
+
+/* ===== BUTTONS ===== */
+.ac-btn {
+    padding: 12px 26px;
+    border: none;
+    border-radius: 12px;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    min-width: 110px;
+    font-family: inherit;
+}
+
+.ac-btn:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+.ac-btn-primary {
+    background: linear-gradient(135deg, #4f46e5, #7c3aed);
+    color: #ffffff;
+}
+
+.ac-btn-primary:hover:not(:disabled) {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 24px rgba(79, 70, 229, 0.4);
+}
+
+.ac-btn-secondary {
+    background: rgba(255, 255, 255, 0.05);
+    color: rgba(255, 255, 255, 0.7);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.ac-btn-secondary:hover:not(:disabled) {
+    background: rgba(255, 255, 255, 0.1);
+    color: #ffffff;
+}
+
+.ac-btn-danger {
+    background: linear-gradient(135deg, #ef4444, #dc2626);
+    color: #ffffff;
+}
+
+.ac-btn-danger:hover:not(:disabled) {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 24px rgba(239, 68, 68, 0.4);
+}
+
+.ac-btn-warning {
+    background: linear-gradient(135deg, #f59e0b, #d97706);
+    color: #ffffff;
+}
+
+.ac-btn-warning:hover:not(:disabled) {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 24px rgba(245, 158, 11, 0.4);
+}
+
+/* ===== RESPONSIVE ===== */
+@media (max-width: 640px) {
+    .ac-popup-large,
+    .ac-popup-medium {
+        max-width: 100%;
+    }
+
+    .ac-form-row {
+        grid-template-columns: 1fr;
+    }
+
+    .ac-popup-body {
+        padding: 20px;
+    }
+
+    .ac-popup-header {
+        padding: 20px 20px 0 20px;
+    }
+
+    .ac-popup-header.centered {
+        padding: 12px 20px 0 20px;
+    }
+
+    .ac-popup-footer {
+        flex-direction: column-reverse;
+        padding: 0 20px 20px 20px;
+    }
+
+    .ac-popup-footer.centered {
+        padding: 16px 20px 24px 20px;
+    }
+
+    .ac-btn {
+        width: 100%;
+    }
+
+    .ac-popup-icon-wrapper {
+        width: 70px;
+        height: 70px;
+        margin-top: 28px;
+    }
+
+    .ac-popup-big-icon {
+        font-size: 34px;
+    }
+
+    .ac-popup-header h3 {
+        font-size: 18px;
+    }
+}
+
+/* ===== LIGHT THEME ===== */
+[data-theme="light"] .ac-popup {
+    background: #ffffff;
+    border-color: rgba(0, 0, 0, 0.08);
+}
+
+[data-theme="light"] .ac-popup-header h3 {
+    color: #0f172a;
+}
+
+[data-theme="light"] .ac-popup-header p {
+    color: rgba(0, 0, 0, 0.5);
+}
+
+[data-theme="light"] .ac-popup-header p strong {
+    color: #0f172a;
+}
+
+[data-theme="light"] .ac-form-group label {
+    color: rgba(0, 0, 0, 0.6);
+}
+
+[data-theme="light"] .ac-form-group input,
+[data-theme="light"] .ac-form-group select,
+[data-theme="light"] .ac-form-group textarea {
+    background: #ffffff;
+    border-color: rgba(0, 0, 0, 0.08);
+    color: #0f172a;
+}
+
+[data-theme="light"] .ac-form-group input::placeholder,
+[data-theme="light"] .ac-form-group textarea::placeholder {
+    color: rgba(0, 0, 0, 0.3);
+}
+
+[data-theme="light"] .ac-form-group.ac-checkbox label {
+    color: rgba(0, 0, 0, 0.6);
+}
+
+[data-theme="light"] .ac-btn-secondary {
+    background: rgba(0, 0, 0, 0.04);
+    color: rgba(0, 0, 0, 0.6);
+    border-color: rgba(0, 0, 0, 0.08);
+}
+
+[data-theme="light"] .ac-btn-secondary:hover:not(:disabled) {
+    background: rgba(0, 0, 0, 0.08);
+    color: #0f172a;
+}
+
+[data-theme="light"] .ac-popup-close {
+    background: rgba(0, 0, 0, 0.04);
+    border-color: rgba(0, 0, 0, 0.06);
+    color: rgba(0, 0, 0, 0.4);
+}
+
+[data-theme="light"] .ac-popup-close:hover {
+    background: rgba(239, 68, 68, 0.1);
+    color: #ef4444;
+}

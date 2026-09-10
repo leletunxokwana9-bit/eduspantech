@@ -1,6 +1,7 @@
 // src/components/ShiftStatus.js
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../hooks/useAuth';
+import { API_BASE_URL } from '../services/api';
 import './ShiftStatus.css';
 
 const ShiftStatus = () => {
@@ -20,7 +21,7 @@ const ShiftStatus = () => {
   const fetchShiftStatus = async () => {
     try {
       setLoading(true);
-      const response = await fetch('/api/auth/check-shift', {
+      const response = await fetch(`${API_BASE_URL}/auth/check-shift`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

@@ -106,7 +106,6 @@ const Notifications = () => {
   const [categoryFilter, setCategoryFilter] = useState('all');
   const [query, setQuery] = useState('');
 
-  // ── Role seeded SYNCHRONOUSLY from the URL so the first render is correct
   const initialIsAdmin = typeof window !== 'undefined' &&
     window.location.pathname.startsWith('/admin');
 
@@ -122,13 +121,11 @@ const Notifications = () => {
     initialIsAdmin ? '/admin/notifications/read-all' : null
   );
 
-  // ── Refine role from the API (only upgrades student/tutor; never clobbers admin)
   useEffect(() => {
     const detect = async () => {
       const token = localStorage.getItem('accessToken');
       if (!token) { navigate('/login'); return; }
 
-      // If URL already tells us we're admin, keep it and skip the API call
       if (initialIsAdmin) return;
 
       let user = null;
@@ -168,7 +165,6 @@ const Notifications = () => {
     detect();
   }, [navigate, initialIsAdmin]);
 
-  // ── Fetch once feed path is known
   useEffect(() => {
     if (feedPath) fetchNotifications();
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -436,6 +432,37 @@ const NotificationCard = ({ notification, isAdmin, onOpen, onMarkRead }) => {
         </h3>
         <p className="nx-card-message">{notification.message}</p>
 
+        {/* ── Optional media (image) ── */}
+        {notification.media_url && notification.media_type === 'image' && (
+          <div className="nx-card-media" onClick={(e) => e.stopPropagation()}>
+            <img
+              src={notification.media_url}
+              alt={notification.media_alt || notification.title}
+              loading="lazy"
+              onError={(e) => {
+                const wrap = e.target.closest('.nx-card-media');
+                if (wrap) wrap.style.display = 'none';
+              }}
+            />
+          </div>
+        )}
+
+        {/* ── Optional media (video) ── */}
+        {notification.media_url && notification.media_type === 'video' && (
+          <div className="nx-card-media" onClick={(e) => e.stopPropagation()}>
+            <video
+              src={notification.media_url}
+              controls
+              preload="metadata"
+              playsInline
+              onError={(e) => {
+                const wrap = e.target.closest('.nx-card-media');
+                if (wrap) wrap.style.display = 'none';
+              }}
+            />
+          </div>
+        )}
+
         {isWarning && (actorName || m.category) && (
           <div className="nx-meta-block">
             {actorName && (
@@ -494,11 +521,6 @@ const NotificationCard = ({ notification, isAdmin, onOpen, onMarkRead }) => {
           </div>
 
           <div className="nx-card-actions" onClick={(e) => e.stopPropagation()}>
-            {notification.link && (
-              <button className="nx-btn nx-btn-primary nx-btn-sm" onClick={onOpen}>
-                Open <Icon name="arrow-right" size={14} />
-              </button>
-            )}
             {!isWarning && !isPlatform && m.session_id && (
               <button className="nx-btn nx-btn-primary nx-btn-sm" onClick={onOpen}>
                 View session <Icon name="arrow-right" size={14} />

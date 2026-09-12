@@ -697,3 +697,12 @@
   .nx-time-abs { display: none; }
   .nx-chip-muted { display: none; }
 }
+/* Platform tag next to title */
+.nx-platform-tag {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: rgba(129, 140, 248, 0.75);
+  margin-left: 6px;
+}

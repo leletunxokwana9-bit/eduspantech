@@ -58,5 +58,15 @@ export const tutorApplicationService = {
       body: JSON.stringify(payload)
     });
     return res.json();
+  },
+
+  // NEW — public track application (email + ID)
+  async track(email, idNumber) {
+    const res = await fetch(`${API}/tutors/applications/track`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email, id_number: idNumber })
+    });
+    return res.json();
   }
 };

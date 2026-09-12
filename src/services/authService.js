@@ -77,47 +77,127 @@ const authService = {
     }
   },
 
-  // ===== LOGIN =====
-  login: async (email, password) => {
+  // ============================================
+  // LOGIN — passes through ALL status fields
+  // (banned, inactive, retryAfter, attemptsLeft,
+  //  needsVerification) so the UI can react correctly
+  // ============================================
+  login: async (email, password, totp) => {
     try {
       console.log('📤 Sending login to:', `${API_BASE_URL}/auth/login`);
-      
+
+      const body = { email, password };
+      if (totp) body.totp = totp;
+
       const response = await fetch(`${API_BASE_URL}/auth/login`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ email, password }),
+        body: JSON.stringify(body),
       });
 
-      const data = await response.json();
-      
-      if (!response.ok) {
-        if (response.status === 401) {
-          throw new Error('Invalid email or password');
-        }
-        if (response.status === 403) {
-          throw new Error('Account not verified. Please check your email.');
-        }
-        throw new Error(data.error || 'Login failed');
-      }
+      let data = {};
+      try { data = await response.json(); } catch { /* non-JSON */ }
 
-      if (data.accessToken) {
+      // ============================================
+      // SUCCESS
+      // ============================================
+      if (response.ok && data.accessToken) {
         setTokens(data.accessToken, data.refreshToken);
         if (data.user) {
           localStorage.setItem('user', JSON.stringify(data.user));
         }
+        return {
+          success: true,
+          user: data.user || null,
+          accessToken: data.accessToken,
+          refreshToken: data.refreshToken
+        };
       }
 
+      // ============================================
+      // 429 — Too many attempts (locked)
+      // ============================================
+      if (response.status === 429) {
+        return {
+          success: false,
+          error: data.error || 'Too many failed attempts',
+          retryAfter: data.retryAfter || 900,
+          attemptsLeft: 0
+        };
+      }
+
+      // ============================================
+      // 403 — Banned OR Inactive OR Unverified
+      // ============================================
+      if (response.status === 403) {
+        // Banned
+        if (data.banned) {
+          return {
+            success: false,
+            error: data.error || 'Your account has been suspended',
+            banned: true,
+            bannedUntil: data.bannedUntil || null,
+            banReason: data.banReason || null
+          };
+        }
+        // Inactive / deleted
+        if (data.inactive) {
+          return {
+            success: false,
+            error: data.error || 'Your account is inactive',
+            inactive: true
+          };
+        }
+        // Needs email verification
+        if (data.needsVerification) {
+          return {
+            success: false,
+            error: data.error || 'Please verify your email before logging in',
+            needsVerification: true,
+            email: data.email
+          };
+        }
+        // Fallback 403
+        return {
+          success: false,
+          error: data.error || 'Access denied'
+        };
+      }
+
+      // ============================================
+      // 401 — Bad credentials OR 2FA required
+      // ============================================
+      if (response.status === 401) {
+        if (data.requires2FA) {
+          return {
+            success: false,
+            error: data.error || 'Two-factor code required',
+            requires2FA: true,
+            attemptsLeft: typeof data.attemptsLeft === 'number' ? data.attemptsLeft : null
+          };
+        }
+        return {
+          success: false,
+          error: data.error || 'Invalid email or password',
+          attemptsLeft: typeof data.attemptsLeft === 'number' ? data.attemptsLeft : null
+        };
+      }
+
+      // ============================================
+      // Any other error
+      // ============================================
       return {
-        success: true,
-        user: data.user || null,
-        accessToken: data.accessToken,
-        refreshToken: data.refreshToken
+        success: false,
+        error: data.error || 'Login failed'
       };
     } catch (error) {
       console.error('Login error:', error);
-      throw error;
+      return {
+        success: false,
+        error: error.message || 'Login failed. Please check your connection.'
+      };
     }
   },
 

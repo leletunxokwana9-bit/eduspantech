@@ -1,4 +1,4 @@
-// src/pages/Tutors.js - COMPLETE WITH FULL PAGE BACKGROUND + BECOME A TUTOR BANNER
+// src/pages/Tutors.js - COMPLETE WITH FULL PAGE BACKGROUND + BECOME A TUTOR + TRACK APPLICATION BANNER
 import React, { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { tutorService } from '../services/tutorService';
@@ -670,8 +670,7 @@ const Tutors = () => {
       <div className="tutors-page">
 
         {/* ============================================
-            BECOME A TUTOR CTA BANNER
-            Placed above header so tutors see it first
+            BECOME A TUTOR + TRACK APPLICATION CTA BANNER
            ============================================ */}
         <section className="become-tutor-banner">
           <div className="btb-inner">
@@ -683,9 +682,14 @@ const Tutors = () => {
               </div>
             </div>
             <div className="btb-right">
-              <Link to="/become-a-tutor" className="btb-btn-primary">
-                Become a Tutor →
-              </Link>
+              <div className="btb-buttons">
+                <Link to="/become-a-tutor" className="btb-btn-primary">
+                  Become a Tutor
+                </Link>
+                <Link to="/track-application" className="btb-btn-secondary">
+                  📄 Track Application
+                </Link>
+              </div>
               <div className="btb-stats">
                 <span>💰 R250–600/hr</span>
                 <span>🌍 24/7 shifts</span>

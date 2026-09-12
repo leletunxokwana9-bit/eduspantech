@@ -19,6 +19,14 @@ const Login = () => {
   const [isCheckingSession, setIsCheckingSession] = useState(true);
 
   // ============================================
+  // NEW: BANNED / INACTIVE / LOCKED STATE
+  // ============================================
+  const [bannedInfo, setBannedInfo] = useState(null);      // { message, bannedUntil, banReason }
+  const [inactive, setInactive] = useState(false);         // true when account deactivated
+  const [lockedInfo, setLockedInfo] = useState(null);      // { retryAfter }
+  const [attemptsLeft, setAttemptsLeft] = useState(null);  // number of tries left
+
+  // ============================================
   // ROBUST TUTOR CHECK
   // ============================================
   const checkIsTutor = (userData) => {
@@ -109,17 +117,66 @@ const Login = () => {
     setNeedsVerification(false);
     setRoleError('');
 
+    // NEW: reset banned/inactive/locked states on each attempt
+    setBannedInfo(null);
+    setInactive(false);
+    setLockedInfo(null);
+    setAttemptsLeft(null);
+
     try {
       const response = await authService.login(email, password);
       
       if (!response || !response.success) {
+        // --- 1. Banned ---
+        if (response?.banned) {
+          setBannedInfo({
+            message: response.error || 'Your account has been suspended.',
+            bannedUntil: response.bannedUntil,
+            banReason: response.banReason
+          });
+          setLoading(false);
+          return;
+        }
+
+        // --- 2. Inactive / deleted ---
+        if (response?.inactive) {
+          setInactive(true);
+          setLoading(false);
+          return;
+        }
+
+        // --- 3. Too many attempts (locked) ---
+        if (response?.retryAfter) {
+          setLockedInfo({
+            retryAfter: response.retryAfter,
+            message: response.error || 'Too many failed attempts.'
+          });
+          setLoading(false);
+          return;
+        }
+
+        // --- 4. Needs verification ---
         if (response?.needsVerification) {
           setNeedsVerification(true);
           setUnverifiedEmail(email);
           setError('Please verify your email before logging in.');
-        } else {
-          setError(response?.error || 'Login failed. Please try again.');
+          setLoading(false);
+          return;
         }
+
+        // --- 5. Wrong password, but attempts remain ---
+        if (typeof response?.attemptsLeft === 'number') {
+          setAttemptsLeft(response.attemptsLeft);
+          setError(
+            response.error ||
+            `Invalid email or password. ${response.attemptsLeft} attempt${response.attemptsLeft === 1 ? '' : 's'} remaining.`
+          );
+          setLoading(false);
+          return;
+        }
+
+        // --- 6. Fallback ---
+        setError(response?.error || 'Login failed. Please try again.');
         setLoading(false);
         return;
       }
@@ -159,7 +216,12 @@ const Login = () => {
       
     } catch (err) {
       console.error('Login error:', err);
-      if (err.message && err.message.toLowerCase().includes('verify')) {
+      // authService may throw for banned/inactive
+      if (err.message && err.message.toLowerCase().includes('suspend')) {
+        setBannedInfo({ message: err.message });
+      } else if (err.message && err.message.toLowerCase().includes('inactive')) {
+        setInactive(true);
+      } else if (err.message && err.message.toLowerCase().includes('verify')) {
         setNeedsVerification(true);
         setUnverifiedEmail(email);
         setError('Please verify your email before logging in.');
@@ -192,6 +254,10 @@ const Login = () => {
     setLoginRole(role);
     setRoleError('');
     setError('');
+    // NEW: clear blocked states when user switches role
+    setBannedInfo(null);
+    setInactive(false);
+    setLockedInfo(null);
   };
 
   // Show loading while checking session
@@ -323,6 +389,59 @@ const Login = () => {
               </div>
             )}
 
+            {/* ============================================ */}
+            {/* NEW: BANNED NOTICE */}
+            {/* ============================================ */}
+            {bannedInfo && (
+              <div className="login-banned-notice">
+                <div className="banned-icon">🚫</div>
+                <div className="banned-content">
+                  <p><strong>Account suspended</strong></p>
+                  <p>{bannedInfo.message}</p>
+                  {bannedInfo.banReason && (
+                    <p className="banned-reason">Reason: {bannedInfo.banReason}</p>
+                  )}
+                  <p className="banned-help">
+                    If you believe this is a mistake, contact{' '}
+                    <a href="mailto:support@eduspantech.com">support@eduspantech.com</a>
+                  </p>
+                </div>
+              </div>
+            )}
+
+            {/* ============================================ */}
+            {/* NEW: INACTIVE NOTICE */}
+            {/* ============================================ */}
+            {inactive && (
+              <div className="login-inactive-notice">
+                <div className="inactive-icon">⏸️</div>
+                <div className="inactive-content">
+                  <p><strong>Account inactive</strong></p>
+                  <p>Your account has been deactivated. You cannot sign in at this time.</p>
+                  <p className="inactive-help">
+                    Contact <a href="mailto:support@eduspantech.com">support@eduspantech.com</a> for assistance.
+                  </p>
+                </div>
+              </div>
+            )}
+
+            {/* ============================================ */}
+            {/* NEW: TOO MANY ATTEMPTS (LOCKED) NOTICE */}
+            {/* ============================================ */}
+            {lockedInfo && (
+              <div className="login-locked-notice">
+                <div className="locked-icon">🔒</div>
+                <div className="locked-content">
+                  <p><strong>Too many failed attempts</strong></p>
+                  <p>
+                    {lockedInfo.message} Please wait{' '}
+                    <strong>{Math.ceil((lockedInfo.retryAfter || 0) / 60)} minute(s)</strong>{' '}
+                    before trying again.
+                  </p>
+                </div>
+              </div>
+            )}
+
             {needsVerification && (
               <div className="login-verification-notice">
                 <div className="verification-icon">📧</div>
@@ -348,10 +467,15 @@ const Login = () => {
               </div>
             )}
 
-            {error && !needsVerification && !roleError && (
+            {error && !needsVerification && !roleError && !bannedInfo && !inactive && !lockedInfo && (
               <div className="login-error">
                 <span className="error-icon">✕</span>
                 {error}
+                {attemptsLeft !== null && attemptsLeft > 0 && (
+                  <span className="attempts-left">
+                    {' '}({attemptsLeft} attempt{attemptsLeft === 1 ? '' : 's'} left)
+                  </span>
+                )}
               </div>
             )}
 
@@ -364,7 +488,7 @@ const Login = () => {
                   onChange={(e) => setEmail(e.target.value.trim())}
                   placeholder="name@email.com"
                   required
-                  disabled={loading}
+                  disabled={loading || bannedInfo || inactive || lockedInfo}
                 />
               </div>
 
@@ -377,12 +501,13 @@ const Login = () => {
                     onChange={(e) => setPassword(e.target.value)}
                     placeholder="Enter your password"
                     required
-                    disabled={loading}
+                    disabled={loading || bannedInfo || inactive || lockedInfo}
                   />
                   <button
                     type="button"
                     className="toggle-password"
                     onClick={() => setShowPassword(!showPassword)}
+                    disabled={loading || bannedInfo || inactive || lockedInfo}
                   >
                     {showPassword ? '🙈' : '👁️'}
                   </button>
@@ -400,12 +525,22 @@ const Login = () => {
                 </Link>
               </div>
 
-              <button type="submit" disabled={loading} className="login-button">
+              <button
+                type="submit"
+                disabled={loading || !!bannedInfo || inactive || !!lockedInfo}
+                className="login-button"
+              >
                 {loading ? (
                   <>
                     <span className="spinner"></span>
                     Signing in...
                   </>
+                ) : lockedInfo ? (
+                  '🔒 Temporarily locked'
+                ) : bannedInfo ? (
+                  '🚫 Account suspended'
+                ) : inactive ? (
+                  '⏸️ Account inactive'
                 ) : (
                   loginRole === 'tutor' ? 'Sign in as Tutor →' : 'Sign In →'
                 )}

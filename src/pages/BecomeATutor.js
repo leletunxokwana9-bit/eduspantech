@@ -1,6 +1,6 @@
 // src/pages/BecomeATutor.js
 import React, { useState, useRef } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import { tutorApplicationService } from '../services/tutorApplicationService';
 import './BecomeATutor.css';
 
@@ -23,6 +23,9 @@ const STEPS = [
   { id: 4, label: 'Files' },
   { id: 5, label: 'Video & Submit' }
 ];
+
+// ID number must be digits only, 6–20 digits
+const ID_NUMBER_REGEX = /^\d{6,20}$/;
 
 const BecomeATutor = () => {
   const navigate = useNavigate();
@@ -88,6 +91,12 @@ const BecomeATutor = () => {
       const has = arr.includes(value);
       return { ...prev, [key]: has ? arr.filter(v => v !== value) : [...arr, value] };
     });
+  };
+
+  // Strip non-digits from ID number as the user types
+  const handleIdNumberChange = (e) => {
+    const digitsOnly = e.target.value.replace(/\D/g, '');
+    setForm(prev => ({ ...prev, id_number: digitsOnly }));
   };
 
   // ============================================
@@ -191,6 +200,10 @@ const BecomeATutor = () => {
       if (!form.full_name.trim()) return 'Full name is required';
       if (!form.email.trim()) return 'Email is required';
       if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email)) return 'Enter a valid email';
+      if (!form.id_number.trim()) return 'ID / passport number is required';
+      if (!ID_NUMBER_REGEX.test(form.id_number.trim())) {
+        return 'ID number must contain digits only (6–20 digits)';
+      }
     }
     if (step === 2) {
       if (form.subjects.length === 0) return 'Select at least one subject you can teach';
@@ -253,6 +266,10 @@ const BecomeATutor = () => {
           <h2>Application received!</h2>
           <p>Thanks, <strong>{form.full_name}</strong>. Our team will review your application within <strong>3–5 business days</strong>.</p>
           <p>We'll contact you at <strong>{form.email}</strong>.</p>
+          <p className="bat-success-track">
+            You can track your application status anytime on the{' '}
+            <Link to="/track-application">Track Application</Link> page using this email and your ID number.
+          </p>
           <button className="bat-btn-primary" onClick={() => navigate('/')}>Back to Home</button>
         </div>
       </div>
@@ -264,6 +281,9 @@ const BecomeATutor = () => {
       <div className="bat-hero">
         <h1>Become an EduSpantech Tutor</h1>
         <p>Join a network of world-class mathematics tutors delivering 24/7 learning across 9 AWS regions.</p>
+        <Link to="/track-application" className="bat-track-link">
+          📄 Already applied? Track your application status →
+        </Link>
       </div>
 
       <div className="bat-steps">
@@ -314,9 +334,22 @@ const BecomeATutor = () => {
                 <input value={form.city} onChange={e => setForm({ ...form, city: e.target.value })} placeholder="Cape Town" />
               </div>
             </div>
-            <div className="bat-form-group">
-              <label>Nationality</label>
-              <input value={form.nationality} onChange={e => setForm({ ...form, nationality: e.target.value })} placeholder="South African" />
+            <div className="bat-form-row">
+              <div className="bat-form-group">
+                <label>Nationality</label>
+                <input value={form.nationality} onChange={e => setForm({ ...form, nationality: e.target.value })} placeholder="South African" />
+              </div>
+              <div className="bat-form-group">
+                <label>ID / Passport Number *</label>
+                <input
+                  value={form.id_number}
+                  onChange={handleIdNumberChange}
+                  placeholder="e.g. 9001015800083"
+                  inputMode="numeric"
+                  maxLength={20}
+                />
+                <small>Digits only. You'll use this together with your email to track your application later.</small>
+              </div>
             </div>
             <div className="bat-form-group">
               <label>Languages you speak</label>

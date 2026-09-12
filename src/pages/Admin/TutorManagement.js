@@ -85,8 +85,8 @@ const TutorManagement = () => {
     <div className="tm-container">
       <div className="tm-header">
         <div>
-          <h1>👨‍🏫 Tutor Management</h1>
-          <p className="tm-subtitle">Review applications, verify credentials, approve new tutors</p>
+          <h1>📝 Tutor Applications</h1>
+          <p className="tm-subtitle">Review applicants, verify credentials, approve new tutors</p>
         </div>
         <button className="tm-refresh" onClick={load}>🔄 Refresh</button>
       </div>
@@ -107,7 +107,7 @@ const TutorManagement = () => {
       <div className="tm-search">
         <span>🔍</span>
         <input
-          placeholder="Search by name or email…"
+          placeholder="Search applicants by name or email…"
           value={search}
           onChange={e => setSearch(e.target.value)}
           onKeyDown={e => e.key === 'Enter' && load()}

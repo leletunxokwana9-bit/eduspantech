@@ -1,4 +1,4 @@
-// src/pages/Admin/AdminLayout.js - COMPLETE WITH AVATAR FIX
+// src/pages/Admin/AdminLayout.js - COMPLETE WITH AVATAR FIX + MEMBERS + TUTOR APPLICATIONS LABELS + DASHBOARD ACTIVE FIX
 import React, { useState, useEffect } from 'react';
 import { Outlet, NavLink, useNavigate, useLocation } from 'react-router-dom';
 import './AdminLayout.css';
@@ -127,11 +127,12 @@ const AdminLayout = () => {
 
     // ============================================
     // SIDEBAR MENU
+    // ✅ `end: true` on Dashboard so it only highlights on exact /admin
     // ============================================
     const menuItems = [
-        { path: '/admin', icon: '📊', label: 'Dashboard' },
-        { path: '/admin/users', icon: '👥', label: 'Users' },
-        { path: '/admin/tutors', icon: '👨‍🏫', label: 'Tutors' },
+        { path: '/admin', icon: '📊', label: 'Dashboard', end: true },
+        { path: '/admin/users', icon: '👥', label: 'Members' },
+        { path: '/admin/tutors', icon: '📝', label: 'Tutor Applications' },
         { path: '/admin/content', icon: '📚', label: 'Content' },
         { path: '/admin/payments', icon: '💰', label: 'Payments' },
         { path: '/admin/analytics', icon: '📈', label: 'Analytics' },
@@ -193,6 +194,7 @@ const AdminLayout = () => {
                         <NavLink
                             key={item.path}
                             to={item.path}
+                            end={item.end}
                             className={({ isActive }) =>
                                 `nav-item ${isActive ? 'active' : ''}`
                             }

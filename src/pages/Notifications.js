@@ -103,6 +103,7 @@ const Notifications = () => {
       'student_joined': '👤',
       'tutor_assigned': '👨‍🏫',
       'new_tutor': '👨‍🏫',
+      'warning': '⚠️',
       'system': '🔔',
       'default': '📌'
     };

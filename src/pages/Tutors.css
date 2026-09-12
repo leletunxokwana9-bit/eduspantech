@@ -2137,3 +2137,92 @@
 [data-theme="light"] .btb-stats {
   color: rgba(0,0,0,0.5);
 }
+
+/* ============================================
+   TRACK APPLICATION BUTTON (NEXT TO BECOME A TUTOR)
+   ============================================ */
+.btb-buttons {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.btb-btn-secondary {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 13px 22px;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  color: #ffffff;
+  text-decoration: none;
+  border-radius: 12px;
+  font-size: 14px;
+  font-weight: 600;
+  white-space: nowrap;
+  transition: all 0.25s ease;
+}
+
+.btb-btn-secondary:hover {
+  background: rgba(255, 255, 255, 0.12);
+  border-color: rgba(255, 255, 255, 0.3);
+  transform: translateY(-1px);
+}
+
+@media (max-width: 768px) {
+  .btb-buttons {
+    flex-direction: column;
+    align-items: stretch;
+    width: 100%;
+  }
+  .btb-btn-secondary {
+    width: 100%;
+    justify-content: center;
+  }
+}
+
+[data-theme="light"] .btb-btn-secondary {
+  background: rgba(0, 0, 0, 0.04);
+  border-color: rgba(0, 0, 0, 0.1);
+  color: #0f172a;
+}
+
+[data-theme="light"] .btb-btn-secondary:hover {
+  background: rgba(0, 0, 0, 0.08);
+}
+
+/* ============================================
+   TRACK LINK ON BecomeATutor PAGE
+   ============================================ */
+.bat-track-link {
+  display: inline-block;
+  margin-top: 12px;
+  font-size: 14px;
+  color: #fbbf24;
+  text-decoration: none;
+  font-weight: 500;
+  transition: color 0.2s ease;
+}
+
+.bat-track-link:hover {
+  color: #f59e0b;
+  text-decoration: underline;
+}
+
+.bat-success-track {
+  font-size: 13.5px;
+  color: rgba(255, 255, 255, 0.55) !important;
+  line-height: 1.5;
+  margin: 8px 0 16px !important;
+}
+
+.bat-success-track a {
+  color: #fbbf24;
+  text-decoration: none;
+  font-weight: 600;
+}
+
+.bat-success-track a:hover {
+  text-decoration: underline;
+}

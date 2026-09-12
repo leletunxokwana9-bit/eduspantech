@@ -888,3 +888,130 @@
     padding: 10px 14px;
   }
 }
+/* ============================================
+   BANNED / INACTIVE / LOCKED NOTICES
+   ============================================ */
+
+.login-banned-notice,
+.login-inactive-notice,
+.login-locked-notice {
+  display: flex;
+  gap: 14px;
+  padding: 16px 18px;
+  border-radius: 12px;
+  margin-bottom: 20px;
+  align-items: flex-start;
+}
+
+.login-banned-notice {
+  background: rgba(239, 68, 68, 0.1);
+  border: 1px solid rgba(239, 68, 68, 0.3);
+}
+
+.login-inactive-notice {
+  background: rgba(245, 158, 11, 0.1);
+  border: 1px solid rgba(245, 158, 11, 0.3);
+}
+
+.login-locked-notice {
+  background: rgba(148, 163, 184, 0.12);
+  border: 1px solid rgba(148, 163, 184, 0.3);
+}
+
+.banned-icon,
+.inactive-icon,
+.locked-icon {
+  font-size: 28px;
+  flex-shrink: 0;
+  line-height: 1;
+}
+
+.banned-content,
+.inactive-content,
+.locked-content {
+  flex: 1;
+  min-width: 0;
+}
+
+.banned-content p,
+.inactive-content p,
+.locked-content p {
+  margin: 0 0 6px 0;
+  font-size: 13.5px;
+  line-height: 1.5;
+}
+
+.login-banned-notice p { color: #fca5a5; }
+.login-inactive-notice p { color: #fcd34d; }
+.login-locked-notice p { color: #cbd5e1; }
+
+.banned-content strong,
+.inactive-content strong,
+.locked-content strong {
+  color: #fff;
+  font-size: 14.5px;
+}
+
+.banned-reason {
+  font-size: 12.5px !important;
+  opacity: 0.9;
+}
+
+.banned-help,
+.inactive-help {
+  font-size: 12.5px !important;
+  opacity: 0.85;
+  margin-top: 8px !important;
+}
+
+.banned-help a,
+.inactive-help a {
+  color: #a5b4fc;
+  text-decoration: none;
+  font-weight: 600;
+}
+
+.banned-help a:hover,
+.inactive-help a:hover {
+  text-decoration: underline;
+}
+
+/* Attempts-left hint inside the error box */
+.attempts-left {
+  opacity: 0.85;
+  font-weight: 600;
+}
+
+/* Disabled form controls look muted */
+.login-form input:disabled,
+.login-form .toggle-password:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.login-button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+/* Light theme */
+[data-theme="light"] .login-banned-notice {
+  background: rgba(239, 68, 68, 0.06);
+  border-color: rgba(239, 68, 68, 0.25);
+}
+[data-theme="light"] .login-banned-notice p { color: #dc2626; }
+[data-theme="light"] .login-banned-notice strong { color: #7f1d1d; }
+
+[data-theme="light"] .login-inactive-notice {
+  background: rgba(245, 158, 11, 0.08);
+  border-color: rgba(245, 158, 11, 0.25);
+}
+[data-theme="light"] .login-inactive-notice p { color: #d97706; }
+[data-theme="light"] .login-inactive-notice strong { color: #78350f; }
+
+[data-theme="light"] .login-locked-notice {
+  background: rgba(100, 116, 139, 0.08);
+  border-color: rgba(100, 116, 139, 0.25);
+}
+[data-theme="light"] .login-locked-notice p { color: #475569; }
+[data-theme="light"] .login-locked-notice strong { color: #1e293b; }

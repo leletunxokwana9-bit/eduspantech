@@ -389,8 +389,10 @@ const Notifications = () => {
                         <PaymentCard
                           key={n.id}
                           notification={n}
+                          isAdmin={isAdmin}
                           onOpen={() => handleCardClick(n)}
                           onMarkRead={() => markAsRead(n)}
+                          onNavigate={navigate}
                         />
                       ) : (
                         <NotificationCard
@@ -416,7 +418,7 @@ const Notifications = () => {
 // ─────────────────────────────────────────────────────────────
 // Payment card (salary / payout / bonus / session payment)
 // ─────────────────────────────────────────────────────────────
-const PaymentCard = ({ notification, onOpen, onMarkRead }) => {
+const PaymentCard = ({ notification, isAdmin, onOpen, onMarkRead, onNavigate }) => {
   const m = notification.metadata || {};
   const amount = m.amount ?? m.total ?? m.value ?? null;
   const currency = m.currency || 'ZAR';
@@ -446,6 +448,19 @@ const PaymentCard = ({ notification, onOpen, onMarkRead }) => {
     m.description ? m.description :
     '';
 
+  const handlePrimaryClick = (e) => {
+    e.stopPropagation();
+    if (!notification.is_read) onMarkRead && onMarkRead();
+    let target;
+    if (isSalary || isPayout) {
+      target = isAdmin ? '/admin/payments' : '/tutor/earnings';
+    } else {
+      target = notification.link || '/notifications';
+    }
+    if (onNavigate) onNavigate(target);
+    else if (typeof window !== 'undefined') window.location.href = target;
+  };
+
   return (
     <article
       className={`nx-pay-card ${!notification.is_read ? 'is-unread' : ''}`}
@@ -454,7 +469,6 @@ const PaymentCard = ({ notification, onOpen, onMarkRead }) => {
       tabIndex={0}
       onKeyDown={(e) => { if (e.key === 'Enter') onOpen(); }}
     >
-      {/* Glow accents */}
       <span className="nx-pay-glow nx-pay-glow-a" aria-hidden="true" />
       <span className="nx-pay-glow nx-pay-glow-b" aria-hidden="true" />
 
@@ -482,7 +496,6 @@ const PaymentCard = ({ notification, onOpen, onMarkRead }) => {
         <div className="nx-pay-subline">{subline}</div>
       )}
 
-      {/* Optional media */}
       {notification.media_url && notification.media_type === 'image' && (
         <div className="nx-pay-media" onClick={(e) => e.stopPropagation()}>
           <img
@@ -519,11 +532,9 @@ const PaymentCard = ({ notification, onOpen, onMarkRead }) => {
           </span>
         </div>
         <div className="nx-pay-actions">
-          {notification.link && (
-            <button className="nx-pay-btn nx-pay-btn-primary" onClick={onOpen}>
-              {isSalary || isPayout ? 'View earnings' : 'View details'} <Icon name="arrow-right" size={14} />
-            </button>
-          )}
+          <button className="nx-pay-btn nx-pay-btn-primary" onClick={handlePrimaryClick}>
+            {isSalary || isPayout ? 'View earnings' : 'View details'} <Icon name="arrow-right" size={14} />
+          </button>
           {!notification.is_read && (
             <button className="nx-pay-btn nx-pay-btn-ghost" onClick={onMarkRead}>
               Mark as read

@@ -1,7 +1,9 @@
-// src/pages/Admin/AdminLayout.js - COMPLETE WITH AVATAR FIX + MEMBERS + TUTOR APPLICATIONS LABELS + DASHBOARD ACTIVE FIX
-import React, { useState, useEffect } from 'react';
+// src/pages/Admin/AdminLayout.js
+import React, { useState, useEffect, useRef } from 'react';
 import { Outlet, NavLink, useNavigate, useLocation } from 'react-router-dom';
 import './AdminLayout.css';
+
+const API = process.env.REACT_APP_API_URL || 'https://eduspantech-backend.onrender.com/api';
 
 const AdminLayout = () => {
     const navigate = useNavigate();
@@ -11,45 +13,47 @@ const AdminLayout = () => {
     const [loading, setLoading] = useState(true);
     const [notifications, setNotifications] = useState([]);
     const [unreadCount, setUnreadCount] = useState(0);
+    const [bellOpen, setBellOpen] = useState(false);
+    const bellRef = useRef(null);
 
+    // ── Boot
     useEffect(() => {
         checkAdminStatus();
         fetchNotifications();
         fetchUnreadCount();
+
+        const interval = setInterval(() => {
+            fetchUnreadCount();
+        }, 30000);
+        return () => clearInterval(interval);
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
 
-    // ============================================
-    // CHECK ADMIN STATUS — ALWAYS FETCHES FULL PROFILE
-    // ============================================
+    // ── Close bell on outside click
+    useEffect(() => {
+        const onDoc = (e) => {
+            if (bellRef.current && !bellRef.current.contains(e.target)) {
+                setBellOpen(false);
+            }
+        };
+        document.addEventListener('mousedown', onDoc);
+        return () => document.removeEventListener('mousedown', onDoc);
+    }, []);
+
     const checkAdminStatus = async () => {
         try {
             await new Promise(resolve => setTimeout(resolve, 150));
-
             const token = localStorage.getItem('accessToken');
+            if (!token) { navigate('/admin/login'); return; }
 
-            if (!token) {
-                console.log('❌ No token found, redirecting to login');
-                navigate('/admin/login');
-                return;
-            }
-
-            console.log('🔍 Token found, fetching admin profile...');
-
-            const response = await fetch(
-                `${process.env.REACT_APP_API_URL || 'https://eduspantech-backend.onrender.com/api'}/auth/me`,
-                {
-                    headers: {
-                        'Authorization': `Bearer ${token}`,
-                        'Content-Type': 'application/json'
-                    }
+            const response = await fetch(`${API}/auth/me`, {
+                headers: {
+                    'Authorization': `Bearer ${token}`,
+                    'Content-Type': 'application/json'
                 }
-            );
-
-            console.log('📡 /auth/me response status:', response.status);
+            });
 
             if (!response.ok) {
-                console.log('❌ /auth/me failed, clearing token');
                 localStorage.removeItem('accessToken');
                 localStorage.removeItem('refreshToken');
                 localStorage.removeItem('user');
@@ -58,8 +62,6 @@ const AdminLayout = () => {
             }
 
             const data = await response.json();
-            console.log('✅ /auth/me success — avatar:', data.user?.avatar);
-
             if (data.user?.is_admin) {
                 setAdmin({
                     id: data.user.id,
@@ -74,27 +76,22 @@ const AdminLayout = () => {
                 });
                 setLoading(false);
             } else {
-                console.log('❌ User is not admin, redirecting to dashboard');
                 navigate('/dashboard');
             }
         } catch (error) {
-            console.error('❌ Admin auth error:', error);
+            console.error('Admin auth error:', error);
             navigate('/admin/login');
         }
     };
 
-    // ============================================
-    // FETCH NOTIFICATIONS
-    // ============================================
     const fetchNotifications = async () => {
         try {
             const token = localStorage.getItem('accessToken');
             if (!token) return;
 
-            const response = await fetch(
-                `${process.env.REACT_APP_API_URL || 'https://eduspantech-backend.onrender.com/api'}/admin/notifications`,
-                { headers: { 'Authorization': `Bearer ${token}` } }
-            );
+            const response = await fetch(`${API}/admin/notifications/feed`, {
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
             const data = await response.json();
             if (data.success) {
                 setNotifications(data.notifications || []);
@@ -104,18 +101,14 @@ const AdminLayout = () => {
         }
     };
 
-    // ============================================
-    // FETCH UNREAD COUNT
-    // ============================================
     const fetchUnreadCount = async () => {
         try {
             const token = localStorage.getItem('accessToken');
             if (!token) return;
 
-            const response = await fetch(
-                `${process.env.REACT_APP_API_URL || 'https://eduspantech-backend.onrender.com/api'}/admin/notifications/unread-count`,
-                { headers: { 'Authorization': `Bearer ${token}` } }
-            );
+            const response = await fetch(`${API}/admin/notifications/feed-unread-count`, {
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
             const data = await response.json();
             if (data.success) {
                 setUnreadCount(data.count || 0);
@@ -125,10 +118,52 @@ const AdminLayout = () => {
         }
     };
 
-    // ============================================
-    // SIDEBAR MENU
-    // ✅ `end: true` on Dashboard so it only highlights on exact /admin
-    // ============================================
+    const markAsRead = async (notification) => {
+        try {
+            const token = localStorage.getItem('accessToken');
+            const res = await fetch(`${API}/admin/notifications/${notification.id}/read`, {
+                method: 'PUT',
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+            if (res.ok) {
+                setNotifications(prev =>
+                    prev.map(n => n.id === notification.id ? { ...n, is_read: true } : n)
+                );
+                setUnreadCount(prev => Math.max(0, prev - 1));
+            }
+        } catch (error) {
+            console.error('mark as read error:', error);
+        }
+    };
+
+    const markAllAsRead = async () => {
+        try {
+            const token = localStorage.getItem('accessToken');
+            const res = await fetch(`${API}/admin/notifications/read-all`, {
+                method: 'PUT',
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+            if (res.ok) {
+                setNotifications(prev => prev.map(n => ({ ...n, is_read: true })));
+                setUnreadCount(0);
+            }
+        } catch (error) {
+            console.error('mark all error:', error);
+        }
+    };
+
+    const handleBellToggle = () => {
+        const next = !bellOpen;
+        setBellOpen(next);
+        if (next) fetchNotifications();
+    };
+
+    const handleNotificationClick = (notification) => {
+        if (!notification.is_read) markAsRead(notification);
+        if (notification.link) navigate(notification.link);
+        setBellOpen(false);
+    };
+
     const menuItems = [
         { path: '/admin', icon: '📊', label: 'Dashboard', end: true },
         { path: '/admin/users', icon: '👥', label: 'Members' },
@@ -141,9 +176,6 @@ const AdminLayout = () => {
         { path: '/admin/profile', icon: '👤', label: 'My Profile' }
     ];
 
-    // ============================================
-    // LOGOUT
-    // ============================================
     const handleLogout = () => {
         localStorage.removeItem('accessToken');
         localStorage.removeItem('refreshToken');
@@ -152,9 +184,6 @@ const AdminLayout = () => {
         navigate('/admin/login');
     };
 
-    // ============================================
-    // LOADING STATE
-    // ============================================
     if (loading) {
         return (
             <div className="admin-loading">
@@ -164,22 +193,28 @@ const AdminLayout = () => {
         );
     }
 
-    if (!admin) {
-        return null;
-    }
+    if (!admin) return null;
 
-    // ============================================
-    // AVATAR RENDER — INLINE STYLES TO AVOID CSS CONFLICTS
-    // ============================================
     const avatarSrc = admin?.avatar;
     const avatarInitial = admin?.name?.[0]?.toUpperCase() || 'A';
 
-    // ============================================
-    // MAIN RENDER
-    // ============================================
+    const getIcon = (type, source) => {
+        if (source === 'platform') return '📣';
+        switch (type) {
+            case 'warning': return '⚠️';
+            case 'session_booked': return '📚';
+            case 'session_accepted': return '✅';
+            case 'session_started': return '▶️';
+            case 'session_ended': return '📝';
+            case 'session_cancelled': return '❌';
+            case 'new_tutor': return '👨‍🏫';
+            case 'system': return '📣';
+            default: return '🔔';
+        }
+    };
+
     return (
         <div className={`admin-layout ${sidebarOpen ? 'sidebar-open' : 'sidebar-closed'}`}>
-            {/* Sidebar */}
             <aside className="admin-sidebar">
                 <div className="sidebar-header">
                     <div className="logo">
@@ -199,23 +234,15 @@ const AdminLayout = () => {
                                 `nav-item ${isActive ? 'active' : ''}`
                             }
                             onClick={() => {
-                                if (window.innerWidth <= 768) {
-                                    setSidebarOpen(false);
-                                }
+                                if (window.innerWidth <= 768) setSidebarOpen(false);
                             }}
                         >
                             <span className="nav-icon">{item.icon}</span>
                             <span className="nav-label">{item.label}</span>
-                            {item.path === '/admin/activity' && unreadCount > 0 && (
-                                <span className="notification-badge">{unreadCount}</span>
-                            )}
                         </NavLink>
                     ))}
                 </nav>
 
-                {/* ============================================
-                    ADMIN PROFILE WITH AVATAR — INLINE STYLES
-                    ============================================ */}
                 <div className="sidebar-footer">
                     <div className="admin-info">
                         <div
@@ -238,21 +265,12 @@ const AdminLayout = () => {
                                 <img
                                     src={avatarSrc}
                                     alt={admin.name}
-                                    style={{
-                                        width: '100%',
-                                        height: '100%',
-                                        objectFit: 'cover',
-                                        display: 'block'
-                                    }}
+                                    style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
                                     onError={(e) => {
-                                        console.log('❌ Avatar image failed to load:', avatarSrc);
                                         e.target.style.display = 'none';
                                         if (e.target.parentElement) {
                                             e.target.parentElement.textContent = avatarInitial;
                                         }
-                                    }}
-                                    onLoad={() => {
-                                        console.log('✅ Avatar image loaded successfully:', avatarSrc);
                                     }}
                                 />
                             ) : (
@@ -272,7 +290,6 @@ const AdminLayout = () => {
                 </div>
             </aside>
 
-            {/* Main Content */}
             <main className="admin-main">
                 <header className="admin-header">
                     <button
@@ -294,16 +311,87 @@ const AdminLayout = () => {
                         </span>
                     </div>
                     <div className="header-actions">
-                        <button
-                            className="header-btn"
-                            title="Notifications"
-                            onClick={fetchNotifications}
-                        >
-                            🔔
-                            {unreadCount > 0 && (
-                                <span className="header-badge">{unreadCount}</span>
+                        {/* ===== NOTIFICATIONS BELL ===== */}
+                        <div className="admin-bell-wrapper" ref={bellRef}>
+                            <button
+                                className={`header-btn admin-bell-btn ${bellOpen ? 'is-open' : ''}`}
+                                title="Notifications"
+                                onClick={handleBellToggle}
+                            >
+                                🔔
+                                {unreadCount > 0 && (
+                                    <span className="header-badge">{unreadCount}</span>
+                                )}
+                            </button>
+
+                            {bellOpen && (
+                                <div className="admin-bell-dropdown">
+                                    <div className="admin-bell-header">
+                                        <span>Notifications</span>
+                                        {unreadCount > 0 && (
+                                            <button
+                                                className="admin-bell-mark-all"
+                                                onClick={markAllAsRead}
+                                            >
+                                                Mark all read
+                                            </button>
+                                        )}
+                                    </div>
+
+                                    <div className="admin-bell-body">
+                                        {notifications.length === 0 ? (
+                                            <div className="admin-bell-empty">
+                                                <span>🔔</span>
+                                                <p>No notifications</p>
+                                            </div>
+                                        ) : (
+                                            notifications.slice(0, 8).map(n => (
+                                                <div
+                                                    key={n.id}
+                                                    className={`admin-bell-item ${!n.is_read ? 'unread' : ''}`}
+                                                    onClick={() => handleNotificationClick(n)}
+                                                >
+                                                    <span className="admin-bell-item-icon">
+                                                        {getIcon(n.type, n.source)}
+                                                    </span>
+                                                    <div className="admin-bell-item-content">
+                                                        <div className="admin-bell-item-title">
+                                                            {n.title}
+                                                            {n.source === 'platform' && (
+                                                                <span className="admin-bell-platform-tag"> · Platform</span>
+                                                            )}
+                                                        </div>
+                                                        <div className="admin-bell-item-message">{n.message}</div>
+                                                        <div className="admin-bell-item-time">
+                                                            {new Date(n.created_at).toLocaleString('en-GB', {
+                                                                day: 'numeric',
+                                                                month: 'short',
+                                                                hour: '2-digit',
+                                                                minute: '2-digit'
+                                                            })}
+                                                        </div>
+                                                    </div>
+                                                    {!n.is_read && <span className="admin-bell-dot" />}
+                                                </div>
+                                            ))
+                                        )}
+                                    </div>
+
+                                    <div className="admin-bell-footer">
+                                        <button
+                                            className="admin-bell-view-all"
+                                            onClick={() => {
+                                                setBellOpen(false);
+                                                navigate('/notifications');
+                                            }}
+                                        >
+                                            View all notifications →
+                                        </button>
+                                    </div>
+                                </div>
                             )}
-                        </button>
+                        </div>
+
                         <button
                             className="header-btn"
                             title="Refresh"

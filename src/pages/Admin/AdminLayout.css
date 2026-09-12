@@ -446,3 +446,181 @@
     color: #94a3b8 !important;
     font-size: 12px !important;
 }
+/* ============================================
+   ADMIN NOTIFICATIONS BELL
+   ============================================ */
+.admin-bell-wrapper {
+  position: relative;
+}
+
+.admin-bell-btn.is-open {
+  background: rgba(129, 140, 248, 0.15);
+}
+
+.admin-bell-dropdown {
+  position: absolute;
+  top: calc(100% + 10px);
+  right: 0;
+  width: 380px;
+  max-width: calc(100vw - 32px);
+  background: #131b2e;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 14px;
+  box-shadow: 0 20px 50px -12px rgba(0, 0, 0, 0.7);
+  z-index: 1000;
+  overflow: hidden;
+  animation: adminBellIn 0.15s ease;
+}
+
+@keyframes adminBellIn {
+  from { opacity: 0; transform: translateY(-4px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.admin-bell-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 16px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  color: #f1f5f9;
+}
+
+.admin-bell-mark-all {
+  background: transparent;
+  border: none;
+  color: #a5b4fc;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  padding: 4px 8px;
+  border-radius: 6px;
+  transition: background 0.15s;
+}
+.admin-bell-mark-all:hover {
+  background: rgba(129, 140, 248, 0.12);
+}
+
+.admin-bell-body {
+  max-height: 420px;
+  overflow-y: auto;
+}
+
+.admin-bell-empty {
+  text-align: center;
+  padding: 40px 20px;
+  color: rgba(241, 245, 249, 0.45);
+}
+.admin-bell-empty span {
+  font-size: 32px;
+  display: block;
+  margin-bottom: 8px;
+  opacity: 0.6;
+}
+.admin-bell-empty p {
+  margin: 0;
+  font-size: 13px;
+}
+
+.admin-bell-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 12px 16px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+  cursor: pointer;
+  transition: background 0.12s;
+}
+.admin-bell-item:hover {
+  background: rgba(255, 255, 255, 0.03);
+}
+.admin-bell-item.unread {
+  background: rgba(99, 102, 241, 0.05);
+}
+.admin-bell-item:last-child {
+  border-bottom: none;
+}
+
+.admin-bell-item-icon {
+  flex-shrink: 0;
+  font-size: 18px;
+  line-height: 1.4;
+}
+
+.admin-bell-item-content {
+  flex: 1;
+  min-width: 0;
+}
+
+.admin-bell-item-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: #f1f5f9;
+  line-height: 1.35;
+}
+
+.admin-bell-platform-tag {
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: rgba(129, 140, 248, 0.75);
+}
+
+.admin-bell-item-message {
+  font-size: 12.5px;
+  color: rgba(241, 245, 249, 0.6);
+  line-height: 1.45;
+  margin-top: 2px;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.admin-bell-item-time {
+  font-size: 11px;
+  color: rgba(241, 245, 249, 0.35);
+  margin-top: 4px;
+}
+
+.admin-bell-dot {
+  flex-shrink: 0;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #818cf8;
+  box-shadow: 0 0 0 3px rgba(129, 140, 248, 0.18);
+  margin-top: 6px;
+}
+
+.admin-bell-footer {
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
+  padding: 10px;
+  text-align: center;
+}
+
+.admin-bell-view-all {
+  background: transparent;
+  border: none;
+  color: #a5b4fc;
+  font-size: 12.5px;
+  font-weight: 600;
+  cursor: pointer;
+  padding: 6px 12px;
+  border-radius: 8px;
+  transition: background 0.15s;
+}
+.admin-bell-view-all:hover {
+  background: rgba(129, 140, 248, 0.12);
+}
+
+@media (max-width: 520px) {
+  .admin-bell-dropdown {
+    width: calc(100vw - 24px);
+    right: -60px;
+  }
+}

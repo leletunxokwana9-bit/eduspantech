@@ -1,708 +1,970 @@
-/* src/pages/Notifications.css — production-grade */
-:root {
-  --nx-bg: #0a0e1a;
-  --nx-bg-2: #0e1424;
-  --nx-surface: #131b2e;
-  --nx-surface-2: #182238;
-  --nx-border: rgba(255,255,255,0.07);
-  --nx-border-strong: rgba(255,255,255,0.13);
-  --nx-text: #f1f5f9;
-  --nx-text-2: rgba(241,245,249,0.68);
-  --nx-text-3: rgba(241,245,249,0.42);
-  --nx-indigo: #818cf8;
-  --nx-emerald: #34d399;
-  --nx-amber: #fbbf24;
-  --nx-rose: #fb7185;
-  --nx-slate: #94a3b8;
-}
+// src/pages/Notifications.js
+import React, { useState, useEffect, useMemo } from 'react';
+import { useNavigate, Link } from 'react-router-dom';
+import { API_BASE_URL } from '../services/api';
+import { authService } from '../services/authService';
+import faviconLogo from '../assets/favicon-96x96.png';
+import './Notifications.css';
 
-/* ───── Page shell ───── */
-.nx-page {
-  min-height: 100vh;
+// ─────────────────────────────────────────────────────────────
+// Icon + accent per notification type
+// ─────────────────────────────────────────────────────────────
+const TYPE_META = {
+  warning:               { icon: 'alert-triangle', label: 'Warning',           accent: 'amber',   category: 'Account' },
+  session_booked:        { icon: 'book',           label: 'Session Booked',    accent: 'indigo',  category: 'Sessions' },
+  session_accepted:      { icon: 'check',          label: 'Session Accepted',  accent: 'emerald', category: 'Sessions' },
+  session_started:       { icon: 'play',           label: 'Session Started',   accent: 'emerald', category: 'Sessions' },
+  session_ended:         { icon: 'check-circle',   label: 'Session Ended',     accent: 'slate',   category: 'Sessions' },
+  session_cancelled:     { icon: 'x',              label: 'Session Cancelled', accent: 'rose',    category: 'Sessions' },
+  payment_received:      { icon: 'credit-card',    label: 'Payment',           accent: 'emerald', category: 'Payments' },
+  subscription_renewed:  { icon: 'refresh',        label: 'Subscription',      accent: 'indigo',  category: 'Billing' },
+  subscription_expired:  { icon: 'alert-triangle', label: 'Subscription',      accent: 'amber',   category: 'Billing' },
+  student_joined:        { icon: 'user-plus',      label: 'New Student',       accent: 'indigo',  category: 'Students' },
+  tutor_assigned:        { icon: 'graduation-cap', label: 'Tutor Assigned',    accent: 'indigo',  category: 'Tutors' },
+  new_tutor:             { icon: 'graduation-cap', label: 'New Tutor',         accent: 'indigo',  category: 'Tutors' },
+  system:                { icon: 'info',           label: 'Platform',          accent: 'indigo',  category: 'System' },
+  default:               { icon: 'bell',           label: 'Notification',      accent: 'indigo',  category: 'General' },
+};
+
+// ─────────────────────────────────────────────────────────────
+// Inline SVG icons
+// ─────────────────────────────────────────────────────────────
+const Icon = ({ name, size = 20 }) => {
+  const common = {
+    width: size, height: size, viewBox: '0 0 24 24',
+    fill: 'none', stroke: 'currentColor', strokeWidth: 2,
+    strokeLinecap: 'round', strokeLinejoin: 'round',
+  };
+  switch (name) {
+    case 'alert-triangle': return <svg {...common}><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>;
+    case 'bell':           return <svg {...common}><path d="M6 8a6 6 0 1 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></svg>;
+    case 'book':           return <svg {...common}><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>;
+    case 'check':          return <svg {...common}><polyline points="20 6 9 17 4 12"/></svg>;
+    case 'check-circle':   return <svg {...common}><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>;
+    case 'play':           return <svg {...common}><polygon points="5 3 19 12 5 21 5 3"/></svg>;
+    case 'x':              return <svg {...common}><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>;
+    case 'credit-card':    return <svg {...common}><rect x="1" y="4" width="22" height="16" rx="2" ry="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg>;
+    case 'refresh':        return <svg {...common}><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>;
+    case 'user-plus':      return <svg {...common}><path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="8.5" cy="7" r="4"/><line x1="20" y1="8" x2="20" y2="14"/><line x1="23" y1="11" x2="17" y2="11"/></svg>;
+    case 'graduation-cap': return <svg {...common}><path d="M22 10v6M2 10l10-5 10 5-10 5z"/><path d="M6 12v5c3 3 9 3 12 0v-5"/></svg>;
+    case 'info':           return <svg {...common}><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>;
+    case 'search':         return <svg {...common}><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>;
+    case 'arrow-right':    return <svg {...common}><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>;
+    case 'clock':          return <svg {...common}><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>;
+    case 'inbox':          return <svg {...common}><polyline points="22 12 16 12 14 15 10 15 8 12 2 12"/><path d="M5.45 5.11 2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11z"/></svg>;
+    case 'megaphone':      return <svg {...common}><path d="m3 11 18-5v12L3 14v-3z"/><path d="M11.6 16.8a3 3 0 1 1-5.8-1.6"/></svg>;
+    case 'sparkles':       return <svg {...common}><path d="M9.94 15.62A2 2 0 0 1 8.4 14.1l-.4-1.5a.5.5 0 0 0-.97 0l-.4 1.5a2 2 0 0 1-1.54 1.53l-1.5.4a.5.5 0 0 0 0 .97l1.5.4a2 2 0 0 1 1.54 1.53l.4 1.5a.5.5 0 0 0 .97 0l.4-1.5a2 2 0 0 1 1.54-1.53l1.5-.4a.5.5 0 0 0 0-.97l-1.5-.4Z"/><path d="M20 3v4M22 5h-4M18 14v3M19.5 15.5h-3"/></svg>;
+    case 'wallet':         return <svg {...common}><path d="M21 12V7H5a2 2 0 0 1 0-4h14v4"/><path d="M3 5v14a2 2 0 0 0 2 2h16v-5"/><path d="M18 12a2 2 0 0 0 0 4h4v-4Z"/></svg>;
+    case 'download':       return <svg {...common}><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>;
+    default:               return <svg {...common}><circle cx="12" cy="12" r="10"/></svg>;
+  }
+};
+
+// ─────────────────────────────────────────────────────────────
+// Helpers
+// ─────────────────────────────────────────────────────────────
+const formatRelative = (dateString) => {
+  const date = new Date(dateString);
+  const diff = Date.now() - date.getTime();
+  const mins = Math.floor(diff / 60000);
+  const hours = Math.floor(diff / 3600000);
+  const days = Math.floor(diff / 86400000);
+  if (mins < 1) return 'Just now';
+  if (mins < 60) return `${mins}m ago`;
+  if (hours < 24) return `${hours}h ago`;
+  if (days < 7) return `${days}d ago`;
+  return date.toLocaleDateString();
+};
+
+const formatAbsolute = (dateString) => {
+  const date = new Date(dateString);
+  return date.toLocaleString('en-GB', {
+    weekday: 'short', day: 'numeric', month: 'short',
+    year: 'numeric', hour: '2-digit', minute: '2-digit',
+  });
+};
+
+const groupByDay = (list) => {
+  const today = new Date(); today.setHours(0, 0, 0, 0);
+  const yest = new Date(today); yest.setDate(yest.getDate() - 1);
+  const groups = { Today: [], Yesterday: [], Earlier: [] };
+  list.forEach(n => {
+    const d = new Date(n.created_at); d.setHours(0, 0, 0, 0);
+    if (d.getTime() === today.getTime()) groups.Today.push(n);
+    else if (d.getTime() === yest.getTime()) groups.Yesterday.push(n);
+    else groups.Earlier.push(n);
+  });
+  return groups;
+};
+
+const formatMoney = (amount, currency = 'ZAR') => {
+  if (amount == null || isNaN(Number(amount))) return null;
+  const num = Number(amount);
+  const locale = currency === 'ZAR' ? 'en-ZA' : 'en-US';
+  try {
+    return new Intl.NumberFormat(locale, {
+      style: 'currency',
+      currency,
+      maximumFractionDigits: 2,
+    }).format(num);
+  } catch {
+    return `${currency} ${num.toFixed(2)}`;
+  }
+};
+
+const isPaymentNotification = (n) => {
+  const t = n.type;
+  return t === 'payment_received' ||
+         t === 'subscription_renewed' ||
+         n.metadata?.category === 'salary' ||
+         n.metadata?.category === 'payout' ||
+         n.metadata?.category === 'bonus';
+};
+
+// ─────────────────────────────────────────────────────────────
+// Page component
+// ─────────────────────────────────────────────────────────────
+const Notifications = () => {
+  const navigate = useNavigate();
+  const [notifications, setNotifications] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const [filter, setFilter] = useState('all');
+  const [categoryFilter, setCategoryFilter] = useState('all');
+  const [query, setQuery] = useState('');
+
+  const initialIsAdmin = typeof window !== 'undefined' &&
+    window.location.pathname.startsWith('/admin');
+
+  const [role, setRole] = useState(initialIsAdmin ? 'admin' : null);
+  const [isAdmin, setIsAdmin] = useState(initialIsAdmin);
+  const [feedPath, setFeedPath] = useState(
+    initialIsAdmin ? '/admin/notifications/feed' : null
+  );
+  const [readPathBase, setReadPathBase] = useState(
+    initialIsAdmin ? '/admin/notifications' : null
+  );
+  const [readAllPath, setReadAllPath] = useState(
+    initialIsAdmin ? '/admin/notifications/read-all' : null
+  );
+
+  useEffect(() => {
+    const detect = async () => {
+      const token = localStorage.getItem('accessToken');
+      if (!token) { navigate('/login'); return; }
+
+      if (initialIsAdmin) return;
+
+      let user = null;
+      try { user = await authService.getCurrentUser(); } catch { /* ignore */ }
+      const u = user?.user || user;
+
+      const adminUser =
+        u?.is_admin === true ||
+        u?.is_super_admin === true ||
+        u?.role === 'admin' ||
+        u?.role === 'ADMIN';
+
+      const tutorUser = !adminUser && (
+        u?.is_tutor === true ||
+        u?.role === 'tutor' ||
+        u?.role === 'TUTOR'
+      );
+
+      if (adminUser) {
+        setRole('admin');
+        setIsAdmin(true);
+        setFeedPath('/admin/notifications/feed');
+        setReadPathBase('/admin/notifications');
+        setReadAllPath('/admin/notifications/read-all');
+      } else if (tutorUser) {
+        setRole('tutor');
+        setFeedPath('/notifications');
+        setReadPathBase('/notifications');
+        setReadAllPath('/notifications/read-all');
+      } else {
+        setRole('student');
+        setFeedPath('/notifications');
+        setReadPathBase('/notifications');
+        setReadAllPath('/notifications/read-all');
+      }
+    };
+    detect();
+  }, [navigate, initialIsAdmin]);
+
+  useEffect(() => {
+    if (feedPath) fetchNotifications();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [feedPath]);
+
+  const fetchNotifications = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      const token = localStorage.getItem('accessToken');
+      if (!token) { navigate('/login'); return; }
+
+      const res = await fetch(`${API_BASE_URL}${feedPath}`, {
+        headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+      });
+
+      if (res.ok) {
+        const data = await res.json();
+        setNotifications(data.notifications || []);
+      } else if (res.status === 404) {
+        setNotifications([]);
+      } else {
+        setError('Failed to load notifications');
+      }
+    } catch (e) {
+      console.error(e);
+      setError('Failed to load notifications');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const markAsRead = async (notification) => {
+    try {
+      const token = localStorage.getItem('accessToken');
+      const res = await fetch(`${API_BASE_URL}${readPathBase}/${notification.id}/read`, {
+        method: 'PUT',
+        headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+      });
+      if (res.ok) {
+        setNotifications(prev => prev.map(n => n.id === notification.id ? { ...n, is_read: true } : n));
+      }
+    } catch (e) { console.error(e); }
+  };
+
+  const markAllAsRead = async () => {
+    try {
+      const token = localStorage.getItem('accessToken');
+      const res = await fetch(`${API_BASE_URL}${readAllPath}`, {
+        method: 'PUT',
+        headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+      });
+      if (res.ok) setNotifications(prev => prev.map(n => ({ ...n, is_read: true })));
+    } catch (e) { console.error(e); }
+  };
+
+  const handleCardClick = (n) => {
+    if (!n.is_read) markAsRead(n);
+    if (n.link) navigate(n.link);
+    else if (n.metadata?.session_id) navigate(`/session/${n.metadata.session_id}`);
+  };
+
+  const filtered = useMemo(() => {
+    let list = [...notifications];
+    if (filter === 'unread') list = list.filter(n => !n.is_read);
+    if (filter === 'read')   list = list.filter(n => n.is_read);
+    if (categoryFilter !== 'all') {
+      list = list.filter(n => (TYPE_META[n.type]?.category || 'General') === categoryFilter);
+    }
+    if (query.trim()) {
+      const q = query.toLowerCase();
+      list = list.filter(n =>
+        (n.title || '').toLowerCase().includes(q) ||
+        (n.message || '').toLowerCase().includes(q) ||
+        (n.metadata?.warned_by_name || '').toLowerCase().includes(q)
+      );
+    }
+    return list;
+  }, [notifications, filter, categoryFilter, query]);
+
+  const groups = useMemo(() => groupByDay(filtered), [filtered]);
+  const unreadCount = notifications.filter(n => !n.is_read).length;
+
+  const categories = useMemo(() => {
+    const set = new Set(['all']);
+    notifications.forEach(n => set.add(TYPE_META[n.type]?.category || 'General'));
+    return Array.from(set);
+  }, [notifications]);
+
+  const heading = isAdmin
+    ? 'Admin notifications'
+    : (role === 'tutor' ? 'Tutor notifications' : 'Notifications');
+
+  return (
+    <div className="nx-page">
+      <div className="nx-shell">
+        <header className="nx-header">
+          <nav className="nx-breadcrumb" aria-label="Breadcrumb">
+            <Link to={isAdmin ? '/admin' : '/'}>{isAdmin ? 'Admin' : 'Home'}</Link>
+            <span className="nx-crumb-sep">/</span>
+            <span className="nx-crumb-current">{heading}</span>
+          </nav>
+
+          <div className="nx-header-row">
+            <div className="nx-title-block">
+              <h1 className="nx-title">{heading}</h1>
+              <p className="nx-subtitle">
+                {unreadCount > 0
+                  ? <>You have <strong>{unreadCount}</strong> unread notification{unreadCount > 1 ? 's' : ''}.</>
+                  : 'You’re all caught up.'}
+              </p>
+            </div>
+
+            <div className="nx-header-actions">
+              <div className="nx-search">
+                <Icon name="search" size={16} />
+                <input
+                  type="text"
+                  placeholder="Search notifications…"
+                  value={query}
+                  onChange={(e) => setQuery(e.target.value)}
+                />
+              </div>
+              {unreadCount > 0 && (
+                <button className="nx-btn nx-btn-ghost" onClick={markAllAsRead}>
+                  Mark all as read
+                </button>
+              )}
+            </div>
+          </div>
+
+          <div className="nx-tabs-row">
+            <div className="nx-tabs" role="tablist">
+              {[
+                { key: 'all',    label: 'All',    count: notifications.length },
+                { key: 'unread', label: 'Unread', count: unreadCount },
+                { key: 'read',   label: 'Read',   count: notifications.length - unreadCount },
+              ].map(t => (
+                <button
+                  key={t.key}
+                  role="tab"
+                  aria-selected={filter === t.key}
+                  className={`nx-tab ${filter === t.key ? 'is-active' : ''}`}
+                  onClick={() => setFilter(t.key)}
+                >
+                  {t.label}
+                  <span className="nx-tab-count">{t.count}</span>
+                </button>
+              ))}
+            </div>
+
+            <div className="nx-category-filter">
+              {categories.map(c => (
+                <button
+                  key={c}
+                  className={`nx-chip ${categoryFilter === c ? 'is-active' : ''}`}
+                  onClick={() => setCategoryFilter(c)}
+                >
+                  {c === 'all' ? 'All categories' : c}
+                </button>
+              ))}
+            </div>
+          </div>
+        </header>
+
+        {loading ? (
+          <div className="nx-skeleton-list">
+            {[0,1,2,3].map(i => <div key={i} className="nx-skeleton-card" />)}
+          </div>
+        ) : error ? (
+          <div className="nx-empty">
+            <div className="nx-empty-icon"><Icon name="alert-triangle" size={28} /></div>
+            <h3>Couldn’t load notifications</h3>
+            <p>{error}</p>
+            <button className="nx-btn nx-btn-primary" onClick={fetchNotifications}>Try again</button>
+          </div>
+        ) : filtered.length === 0 ? (
+          <div className="nx-empty">
+            <div className="nx-empty-icon"><Icon name="inbox" size={28} /></div>
+            <h3>No notifications</h3>
+            <p>{query ? 'No results match your search.' : 'When something happens on your account, you’ll see it here.'}</p>
+          </div>
+        ) : (
+          <div className="nx-groups">
+            {Object.entries(groups).map(([label, items]) =>
+              items.length === 0 ? null : (
+                <section key={label} className="nx-group">
+                  <div className="nx-group-head">
+                    <span className="nx-group-label">{label}</span>
+                    <span className="nx-group-count">{items.length}</span>
+                  </div>
+                  <div className="nx-list">
+                    {items.map(n => (
+                      isPaymentNotification(n) ? (
+                        <PaymentCard
+                          key={n.id}
+                          notification={n}
+                          onOpen={() => handleCardClick(n)}
+                          onMarkRead={() => markAsRead(n)}
+                        />
+                      ) : (
+                        <NotificationCard
+                          key={n.id}
+                          notification={n}
+                          isAdmin={isAdmin}
+                          onOpen={() => handleCardClick(n)}
+                          onMarkRead={() => markAsRead(n)}
+                        />
+                      )
+                    ))}
+                  </div>
+                </section>
+              )
+            )}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+};
+
+// ─────────────────────────────────────────────────────────────
+// Payment card (salary / payout / bonus / session payment)
+// ─────────────────────────────────────────────────────────────
+const PaymentCard = ({ notification, onOpen, onMarkRead }) => {
+  const m = notification.metadata || {};
+  const amount = m.amount ?? m.total ?? m.value ?? null;
+  const currency = m.currency || 'ZAR';
+  const category = (m.category || 'payment').toLowerCase();
+  const isSalary = category === 'salary';
+  const isBonus = category === 'bonus';
+  const isPayout = category === 'payout';
+
+  const title =
+    notification.title ||
+    (isSalary ? 'Salary credited' : isBonus ? 'Bonus awarded' : 'Payment received');
+
+  const eyebrow =
+    isSalary ? 'Salary' :
+    isBonus  ? 'Bonus' :
+    isPayout ? 'Payout' :
+    'Payment';
+
+  const iconName =
+    isSalary ? 'wallet' :
+    isBonus  ? 'sparkles' :
+    isPayout ? 'download' :
+    'credit-card';
+
+  const subline =
+    m.period ? `For ${m.period}` :
+    m.description ? m.description :
+    '';
+
+  return (
+    <article
+      className={`nx-pay-card ${!notification.is_read ? 'is-unread' : ''}`}
+      onClick={onOpen}
+      role="button"
+      tabIndex={0}
+      onKeyDown={(e) => { if (e.key === 'Enter') onOpen(); }}
+    >
+      {/* Glow accents */}
+      <span className="nx-pay-glow nx-pay-glow-a" aria-hidden="true" />
+      <span className="nx-pay-glow nx-pay-glow-b" aria-hidden="true" />
+
+      <header className="nx-pay-head">
+        <div className="nx-pay-badge">
+          <Icon name={iconName} size={18} />
+        </div>
+        <div className="nx-pay-head-text">
+          <span className="nx-pay-eyebrow">{eyebrow}</span>
+          <span className="nx-pay-time">{formatRelative(notification.created_at)}</span>
+        </div>
+        {!notification.is_read && <span className="nx-pay-new">New</span>}
+      </header>
+
+      <div className="nx-pay-amount-row">
+        <div className="nx-pay-amount">
+          {amount != null ? formatMoney(amount, currency) : title}
+        </div>
+        {amount == null && <div className="nx-pay-title-fallback">{notification.title}</div>}
+      </div>
+
+      <p className="nx-pay-message">{notification.message}</p>
+
+      {subline && (
+        <div className="nx-pay-subline">{subline}</div>
+      )}
+
+      {/* Optional media */}
+      {notification.media_url && notification.media_type === 'image' && (
+        <div className="nx-pay-media" onClick={(e) => e.stopPropagation()}>
+          <img
+            src={notification.media_url}
+            alt={notification.media_alt || title}
+            loading="lazy"
+            onError={(e) => {
+              const wrap = e.target.closest('.nx-pay-media');
+              if (wrap) wrap.style.display = 'none';
+            }}
+          />
+        </div>
+      )}
+      {notification.media_url && notification.media_type === 'video' && (
+        <div className="nx-pay-media" onClick={(e) => e.stopPropagation()}>
+          <video
+            src={notification.media_url}
+            controls
+            preload="metadata"
+            playsInline
+            onError={(e) => {
+              const wrap = e.target.closest('.nx-pay-media');
+              if (wrap) wrap.style.display = 'none';
+            }}
+          />
+        </div>
+      )}
+
+      <footer className="nx-pay-footer" onClick={(e) => e.stopPropagation()}>
+        <div className="nx-pay-meta">
+          <Icon name="clock" size={13} />
+          <span title={formatAbsolute(notification.created_at)}>
+            {formatAbsolute(notification.created_at)}
+          </span>
+        </div>
+        <div className="nx-pay-actions">
+          {notification.link && (
+            <button className="nx-pay-btn nx-pay-btn-primary" onClick={onOpen}>
+              {isSalary || isPayout ? 'View earnings' : 'View details'} <Icon name="arrow-right" size={14} />
+            </button>
+          )}
+          {!notification.is_read && (
+            <button className="nx-pay-btn nx-pay-btn-ghost" onClick={onMarkRead}>
+              Mark as read
+            </button>
+          )}
+        </div>
+      </footer>
+    </article>
+  );
+};
+
+// ─────────────────────────────────────────────────────────────
+// Standard card
+// ─────────────────────────────────────────────────────────────
+const NotificationCard = ({ notification, isAdmin, onOpen, onMarkRead }) => {
+  const isPlatform = notification.source === 'platform';
+  const meta = isPlatform
+    ? { icon: 'megaphone', label: 'Platform', accent: 'indigo', category: 'System' }
+    : (TYPE_META[notification.type] || TYPE_META.default);
+  const m = notification.metadata || {};
+  const isWarning = notification.type === 'warning' && !isPlatform;
+
+  const actorName =
+    m.warned_by_name ||
+    m.tutor_name ||
+    m.student_name ||
+    m.sender_name ||
+    null;
+
+  return (
+    <article
+      className={`nx-card accent-${meta.accent} ${!notification.is_read ? 'is-unread' : ''}`}
+      onClick={onOpen}
+      role="button"
+      tabIndex={0}
+      onKeyDown={(e) => { if (e.key === 'Enter') onOpen(); }}
+    >
+      <div className={`nx-card-avatar accent-${meta.accent}`}>
+        <img
+          src={faviconLogo}
+          alt="EduSpantech"
+          className="nx-card-avatar-img"
+          loading="lazy"
+        />
+        <span className="nx-card-avatar-ring" aria-hidden="true" />
+      </div>
+
+      <div className="nx-card-body">
+        <div className="nx-card-chips">
+          <span className={`nx-chip-tag accent-${meta.accent}`}>{meta.label}</span>
+          <span className="nx-chip-muted">{meta.category}</span>
+          {isWarning && m.severity && (
+            <span className={`nx-chip-sev sev-${m.severity}`}>{m.severity}</span>
+          )}
+          {isPlatform && notification.severity && (
+            <span className={`nx-chip-sev sev-${notification.severity}`}>{notification.severity}</span>
+          )}
+          {!notification.is_read && <span className="nx-unread-dot" aria-label="Unread" />}
+        </div>
+
+        <h3 className="nx-card-title">
+          {notification.title}
+          {isAdmin && isPlatform && <span className="nx-platform-tag"> · Platform</span>}
+        </h3>
+        <p className="nx-card-message">{notification.message}</p>
+
+        {notification.media_url && notification.media_type === 'image' && (
+          <div className="nx-card-media" onClick={(e) => e.stopPropagation()}>
+            <img
+              src={notification.media_url}
+              alt={notification.media_alt || notification.title}
+              loading="lazy"
+              onError={(e) => {
+                const wrap = e.target.closest('.nx-card-media');
+                if (wrap) wrap.style.display = 'none';
+              }}
+            />
+          </div>
+        )}
+        {notification.media_url && notification.media_type === 'video' && (
+          <div className="nx-card-media" onClick={(e) => e.stopPropagation()}>
+            <video
+              src={notification.media_url}
+              controls
+              preload="metadata"
+              playsInline
+              onError={(e) => {
+                const wrap = e.target.closest('.nx-card-media');
+                if (wrap) wrap.style.display = 'none';
+              }}
+            />
+          </div>
+        )}
+
+        {isWarning && (actorName || m.category) && (
+          <div className="nx-meta-block">
+            {actorName && (
+              <div className="nx-meta-row">
+                <span className="nx-meta-key">Issued by</span>
+                <span className="nx-meta-val">
+                  {actorName}
+                  {m.warned_by_id && <span className="nx-meta-sub"> · Administration</span>}
+                </span>
+              </div>
+            )}
+            {m.category && (
+              <div className="nx-meta-row">
+                <span className="nx-meta-key">Reason</span>
+                <span className="nx-meta-val">{m.category}</span>
+              </div>
+            )}
+            {m.warned_at && (
+              <div className="nx-meta-row">
+                <span className="nx-meta-key">Issued at</span>
+                <span className="nx-meta-val">{formatAbsolute(m.warned_at)}</span>
+              </div>
+            )}
+          </div>
+        )}
+
+        {!isWarning && !isPlatform && m.session_id && (
+          <div className="nx-meta-block">
+            {m.tutor_name && (
+              <div className="nx-meta-row">
+                <span className="nx-meta-key">Tutor</span>
+                <span className="nx-meta-val">{m.tutor_name}</span>
+              </div>
+            )}
+            {m.topic && (
+              <div className="nx-meta-row">
+                <span className="nx-meta-key">Topic</span>
+                <span className="nx-meta-val">{m.topic}</span>
+              </div>
+            )}
+            {m.date && (
+              <div className="nx-meta-row">
+                <span className="nx-meta-key">Session</span>
+                <span className="nx-meta-val">{formatAbsolute(m.date)}</span>
+              </div>
+            )}
+          </div>
+        )}
+
+        <div className="nx-card-footer">
+          <div className="nx-time" title={formatAbsolute(notification.created_at)}>
+            <Icon name="clock" size={13} />
+            <span>{formatRelative(notification.created_at)}</span>
+            <span className="nx-time-sep">·</span>
+            <span className="nx-time-abs">{formatAbsolute(notification.created_at)}</span>
+          </div>
+
+          <div className="nx-card-actions" onClick={(e) => e.stopPropagation()}>
+            {!isWarning && !isPlatform && m.session_id && (
+              <button className="nx-btn nx-btn-primary nx-btn-sm" onClick={onOpen}>
+                View session <Icon name="arrow-right" size={14} />
+              </button>
+            )}
+            {!notification.is_read && (
+              <button className="nx-btn nx-btn-ghost nx-btn-sm" onClick={onMarkRead}>
+                Mark as read
+              </button>
+            )}
+          </div>
+        </div>
+      </div>
+    </article>
+  );
+};
+
+export default Notifications;
+/* ============================================================
+   PAYMENT CARD — hero treatment for salary / payout / bonus
+   ============================================================ */
+.nx-pay-card {
+  position: relative;
+  overflow: hidden;
+  border-radius: 16px;
+  padding: 20px 22px 18px;
   background:
-    radial-gradient(1000px 500px at 50% -10%, rgba(99,102,241,0.10), transparent 65%),
-    var(--nx-bg);
-  color: var(--nx-text);
+    radial-gradient(120% 140% at 0% 0%, rgba(16, 185, 129, 0.18) 0%, transparent 55%),
+    radial-gradient(120% 140% at 100% 0%, rgba(59, 130, 246, 0.14) 0%, transparent 55%),
+    linear-gradient(180deg, #10261f 0%, #0c1a16 55%, #0a1310 100%);
+  border: 1px solid rgba(16, 185, 129, 0.30);
+  box-shadow:
+    0 1px 0 rgba(255, 255, 255, 0.04) inset,
+    0 20px 50px -28px rgba(16, 185, 129, 0.45),
+    0 8px 24px -14px rgba(0, 0, 0, 0.6);
+  cursor: pointer;
+  transition: transform 0.18s ease, box-shadow 0.18s ease, border-color 0.18s ease;
 }
-
-.nx-shell {
-  max-width: 960px;
-  margin: 0 auto;
-  padding: 40px 24px 96px;
+.nx-pay-card:hover {
+  transform: translateY(-1px);
+  border-color: rgba(16, 185, 129, 0.50);
+  box-shadow:
+    0 1px 0 rgba(255, 255, 255, 0.06) inset,
+    0 28px 60px -28px rgba(16, 185, 129, 0.55),
+    0 12px 30px -16px rgba(0, 0, 0, 0.7);
 }
-
-/* ───── Header ───── */
-.nx-header {
-  margin-bottom: 28px;
-  padding-bottom: 24px;
-  border-bottom: 1px solid var(--nx-border);
-}
-
-.nx-breadcrumb {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  font-size: 12.5px;
-  color: var(--nx-text-3);
-  margin-bottom: 16px;
-  letter-spacing: 0.02em;
-}
-.nx-breadcrumb a {
-  color: var(--nx-text-3);
-  text-decoration: none;
-  transition: color 0.15s;
-}
-.nx-breadcrumb a:hover { color: var(--nx-text); }
-.nx-crumb-sep { opacity: 0.5; }
-.nx-crumb-current { color: var(--nx-text-2); font-weight: 500; }
-
-.nx-header-row {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 24px;
-  margin-bottom: 22px;
-}
-
-.nx-title {
-  margin: 0 0 6px 0;
-  font-size: 30px;
-  font-weight: 700;
-  letter-spacing: -0.025em;
-  color: var(--nx-text);
-}
-.nx-subtitle {
-  margin: 0;
-  font-size: 14px;
-  color: var(--nx-text-2);
-}
-.nx-subtitle strong { color: var(--nx-text); font-weight: 700; }
-
-.nx-header-actions {
-  display: flex;
-  gap: 10px;
-  align-items: center;
-}
-
-.nx-search {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 9px 12px;
-  background: rgba(255,255,255,0.03);
-  border: 1px solid var(--nx-border);
-  border-radius: 10px;
-  color: var(--nx-text-3);
-  transition: border-color 0.15s, background 0.15s;
-}
-.nx-search:focus-within {
-  border-color: rgba(129,140,248,0.35);
-  background: rgba(255,255,255,0.04);
-}
-.nx-search input {
-  border: none;
-  background: transparent;
+.nx-pay-card:focus-visible {
   outline: none;
-  color: var(--nx-text);
-  font-size: 13.5px;
-  width: 200px;
+  box-shadow: 0 0 0 2px rgba(52, 211, 153, 0.55);
 }
-.nx-search input::placeholder { color: var(--nx-text-3); }
+.nx-pay-card.is-unread {
+  border-color: rgba(52, 211, 153, 0.55);
+}
 
-/* ───── Buttons ───── */
-.nx-btn {
+/* Ambient glows */
+.nx-pay-glow {
+  position: absolute;
+  border-radius: 50%;
+  filter: blur(60px);
+  pointer-events: none;
+  opacity: 0.55;
+}
+.nx-pay-glow-a {
+  width: 220px;
+  height: 220px;
+  background: rgba(16, 185, 129, 0.35);
+  top: -100px;
+  right: -60px;
+}
+.nx-pay-glow-b {
+  width: 200px;
+  height: 200px;
+  background: rgba(59, 130, 246, 0.25);
+  bottom: -120px;
+  left: -80px;
+}
+
+/* Head */
+.nx-pay-head {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 14px;
+}
+.nx-pay-badge {
+  flex-shrink: 0;
+  width: 40px;
+  height: 40px;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, rgba(16, 185, 129, 0.35), rgba(5, 150, 105, 0.25));
+  border: 1px solid rgba(16, 185, 129, 0.55);
+  color: #d1fae5;
+  box-shadow:
+    0 6px 16px -8px rgba(16, 185, 129, 0.6),
+    0 0 0 1px rgba(255, 255, 255, 0.03) inset;
+}
+.nx-pay-head-text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+.nx-pay-eyebrow {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: rgba(209, 250, 229, 0.85);
+}
+.nx-pay-time {
+  font-size: 12px;
+  color: rgba(209, 250, 229, 0.55);
+}
+.nx-pay-new {
+  margin-left: auto;
+  padding: 3px 10px;
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  border-radius: 999px;
+  background: rgba(52, 211, 153, 0.22);
+  color: #bbf7d0;
+  border: 1px solid rgba(52, 211, 153, 0.5);
+}
+
+/* Amount */
+.nx-pay-amount-row {
+  position: relative;
+  z-index: 1;
+  margin-bottom: 6px;
+}
+.nx-pay-amount {
+  font-size: 40px;
+  font-weight: 800;
+  letter-spacing: -0.025em;
+  line-height: 1.05;
+  color: #ffffff;
+  text-shadow: 0 2px 24px rgba(16, 185, 129, 0.35);
+  font-variant-numeric: tabular-nums;
+}
+.nx-pay-title-fallback {
+  font-size: 22px;
+  font-weight: 700;
+  color: #e5f6ee;
+  line-height: 1.2;
+}
+
+/* Message */
+.nx-pay-message {
+  position: relative;
+  z-index: 1;
+  margin: 6px 0 0;
+  font-size: 14.5px;
+  line-height: 1.55;
+  color: rgba(229, 246, 238, 0.82);
+}
+
+/* Subline / period chip */
+.nx-pay-subline {
+  position: relative;
+  z-index: 1;
+  display: inline-block;
+  margin-top: 10px;
+  padding: 5px 12px;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  color: #bbf7d0;
+  background: rgba(16, 185, 129, 0.12);
+  border: 1px solid rgba(16, 185, 129, 0.30);
+  border-radius: 999px;
+}
+
+/* Media */
+.nx-pay-media {
+  position: relative;
+  z-index: 1;
+  margin-top: 14px;
+  border-radius: 12px;
+  overflow: hidden;
+  border: 1px solid rgba(16, 185, 129, 0.25);
+  background: #041410;
+}
+.nx-pay-media img,
+.nx-pay-media video {
+  display: block;
+  width: 100%;
+  max-height: 340px;
+  object-fit: cover;
+}
+
+/* Footer */
+.nx-pay-footer {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-top: 16px;
+  padding-top: 14px;
+  border-top: 1px solid rgba(16, 185, 129, 0.18);
+  flex-wrap: wrap;
+}
+.nx-pay-meta {
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  padding: 9px 16px;
-  font-size: 13px;
+  font-size: 12px;
+  color: rgba(209, 250, 229, 0.55);
+}
+.nx-pay-actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.nx-pay-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 14px;
+  border-radius: 9px;
+  font-size: 12.5px;
   font-weight: 600;
-  border-radius: 10px;
+  letter-spacing: 0.01em;
   border: 1px solid transparent;
   cursor: pointer;
   transition: all 0.15s ease;
-  white-space: nowrap;
 }
-.nx-btn-sm { padding: 7px 12px; font-size: 12.5px; }
-
-.nx-btn-primary {
-  background: linear-gradient(180deg, #6366f1, #4f46e5);
-  color: #fff;
-  border-color: rgba(99,102,241,0.6);
-  box-shadow: 0 4px 12px -4px rgba(99,102,241,0.5);
+.nx-pay-btn-primary {
+  background: linear-gradient(180deg, #34d399, #059669);
+  color: #052e21;
+  box-shadow:
+    0 8px 20px -10px rgba(16, 185, 129, 0.7),
+    0 1px 0 rgba(255, 255, 255, 0.2) inset;
 }
-.nx-btn-primary:hover { filter: brightness(1.06); transform: translateY(-1px); }
-
-.nx-btn-ghost {
-  background: rgba(255,255,255,0.03);
-  color: var(--nx-text-2);
-  border-color: var(--nx-border);
-}
-.nx-btn-ghost:hover {
-  background: rgba(255,255,255,0.06);
-  color: var(--nx-text);
-  border-color: var(--nx-border-strong);
-}
-
-/* ───── Tabs row ───── */
-.nx-tabs-row {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 16px;
-  flex-wrap: wrap;
-}
-
-.nx-tabs {
-  display: inline-flex;
-  gap: 4px;
-  padding: 4px;
-  background: rgba(255,255,255,0.03);
-  border: 1px solid var(--nx-border);
-  border-radius: 12px;
-}
-
-.nx-tab {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  padding: 8px 16px;
-  background: transparent;
-  border: none;
-  font-size: 13px;
-  font-weight: 600;
-  color: var(--nx-text-3);
-  border-radius: 9px;
-  cursor: pointer;
-  transition: all 0.15s;
-}
-.nx-tab:hover:not(.is-active) { color: var(--nx-text); }
-.nx-tab.is-active {
-  background: linear-gradient(180deg, rgba(99,102,241,0.22), rgba(99,102,241,0.10));
-  color: #c7d2fe;
-  box-shadow: inset 0 1px 0 rgba(255,255,255,0.06), 0 1px 2px rgba(0,0,0,0.3);
-}
-.nx-tab-count {
-  min-width: 22px;
-  padding: 1px 7px;
-  font-size: 11px;
-  font-weight: 700;
-  border-radius: 999px;
-  background: rgba(255,255,255,0.07);
-  color: inherit;
-  text-align: center;
-}
-.nx-tab.is-active .nx-tab-count {
-  background: rgba(129,140,248,0.28);
-  color: #e0e7ff;
-}
-
-.nx-category-filter {
-  display: flex;
-  gap: 6px;
-  flex-wrap: wrap;
-}
-.nx-chip {
-  padding: 6px 12px;
-  font-size: 12px;
-  font-weight: 600;
-  border-radius: 999px;
-  background: transparent;
-  color: var(--nx-text-3);
-  border: 1px solid var(--nx-border);
-  cursor: pointer;
-  transition: all 0.15s;
-}
-.nx-chip:hover { color: var(--nx-text-2); border-color: var(--nx-border-strong); }
-.nx-chip.is-active {
-  background: rgba(129,140,248,0.14);
-  color: #c7d2fe;
-  border-color: rgba(129,140,248,0.32);
-}
-
-/* ───── Groups ───── */
-.nx-groups { display: flex; flex-direction: column; gap: 28px; margin-top: 24px; }
-
-.nx-group-head {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  margin-bottom: 12px;
-  padding-left: 4px;
-}
-.nx-group-label {
-  font-size: 12px;
-  font-weight: 700;
-  letter-spacing: 0.09em;
-  text-transform: uppercase;
-  color: var(--nx-text-3);
-}
-.nx-group-count {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  min-width: 22px;
-  height: 20px;
-  padding: 0 7px;
-  font-size: 11px;
-  font-weight: 700;
-  border-radius: 999px;
-  background: rgba(255,255,255,0.05);
-  color: var(--nx-text-3);
-}
-
-.nx-list { display: flex; flex-direction: column; gap: 10px; }
-
-/* ───── Card ───── */
-.nx-card {
-  position: relative;
-  display: flex;
-  align-items: flex-start;
-  gap: 16px;
-  padding: 18px 20px 16px;
-  background: linear-gradient(180deg, var(--nx-surface) 0%, var(--nx-bg-2) 100%);
-  border: 1px solid var(--nx-border);
-  border-radius: 14px;
-  cursor: pointer;
-  transition:
-    transform 0.18s ease,
-    border-color 0.18s ease,
-    box-shadow 0.18s ease,
-    background 0.18s ease;
-  overflow: hidden;
-  outline: none;
-}
-
-.nx-card::before {
-  content: '';
-  position: absolute;
-  inset: 0;
-  border-radius: inherit;
-  pointer-events: none;
-  background: linear-gradient(180deg, rgba(255,255,255,0.025), transparent 40%);
-}
-
-.nx-card::after {
-  content: '';
-  position: absolute;
-  left: 0;
-  top: 14px;
-  bottom: 14px;
-  width: 3px;
-  border-radius: 0 4px 4px 0;
-  background: transparent;
-  transition: background 0.18s ease;
-}
-
-.nx-card:hover {
+.nx-pay-btn-primary:hover {
+  filter: brightness(1.06);
   transform: translateY(-1px);
-  border-color: var(--nx-border-strong);
-  box-shadow:
-    0 10px 30px -12px rgba(0,0,0,0.65),
-    0 0 0 1px rgba(255,255,255,0.02);
 }
-.nx-card:focus-visible {
-  box-shadow: 0 0 0 2px rgba(129,140,248,0.45);
+.nx-pay-btn-ghost {
+  background: rgba(255, 255, 255, 0.06);
+  color: #d1fae5;
+  border-color: rgba(16, 185, 129, 0.25);
 }
-
-.nx-card.is-unread { border-color: rgba(129,140,248,0.16); }
-.nx-card.is-unread::after { background: linear-gradient(180deg, var(--nx-indigo), #6366f1); }
-.nx-card.is-unread.accent-amber::after { background: linear-gradient(180deg, #fcd34d, #f59e0b); }
-.nx-card.is-unread.accent-rose::after { background: linear-gradient(180deg, #fb7185, #e11d48); }
-.nx-card.is-unread.accent-emerald::after { background: linear-gradient(180deg, #34d399, #059669); }
-.nx-card.is-unread.accent-slate::after { background: linear-gradient(180deg, #94a3b8, #475569); }
-
-/* ───── Round favicon avatar ───── */
-.nx-card-avatar {
-  position: relative;
-  flex-shrink: 0;
-  width: 48px;
-  height: 48px;
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  overflow: hidden;
-  background: #0e1424;
-  border: 1px solid var(--nx-border);
-  box-shadow:
-    0 0 0 2px rgba(255,255,255,0.02),
-    0 4px 12px -6px rgba(0,0,0,0.6);
-  transition: transform 0.18s ease, box-shadow 0.18s ease;
+.nx-pay-btn-ghost:hover {
+  background: rgba(255, 255, 255, 0.10);
+  border-color: rgba(16, 185, 129, 0.45);
 }
 
-.nx-card:hover .nx-card-avatar {
-  transform: scale(1.04);
-  box-shadow:
-    0 0 0 2px rgba(255,255,255,0.04),
-    0 6px 16px -6px rgba(0,0,0,0.7);
-}
-
-.nx-card-avatar-img {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-  display: block;
-  border-radius: 50%;
-}
-
-.nx-card-avatar-ring {
-  position: absolute;
-  inset: 0;
-  border-radius: 50%;
-  pointer-events: none;
-  box-shadow: inset 0 0 0 2px rgba(255,255,255,0.06);
-  transition: box-shadow 0.18s ease;
-}
-
-.nx-card-avatar.accent-indigo  .nx-card-avatar-ring { box-shadow: inset 0 0 0 2px rgba(99,102,241,0.55); }
-.nx-card-avatar.accent-emerald .nx-card-avatar-ring { box-shadow: inset 0 0 0 2px rgba(16,185,129,0.55); }
-.nx-card-avatar.accent-amber   .nx-card-avatar-ring { box-shadow: inset 0 0 0 2px rgba(245,158,11,0.6); }
-.nx-card-avatar.accent-rose    .nx-card-avatar-ring { box-shadow: inset 0 0 0 2px rgba(244,63,94,0.55); }
-.nx-card-avatar.accent-slate   .nx-card-avatar-ring { box-shadow: inset 0 0 0 2px rgba(148,163,184,0.5); }
-
-.nx-card.is-unread .nx-card-avatar {
-  box-shadow:
-    0 0 0 3px rgba(129,140,248,0.12),
-    0 6px 18px -8px rgba(99,102,241,0.55);
-}
-
-/* ───── Card body ───── */
-.nx-card-body {
-  flex: 1;
-  min-width: 0;
-  padding-top: 2px;
-}
-
-.nx-card-chips {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  flex-wrap: wrap;
-  margin-bottom: 8px;
-}
-
-.nx-chip-tag {
-  display: inline-flex;
-  align-items: center;
-  padding: 3px 9px;
-  font-size: 11px;
-  font-weight: 700;
-  letter-spacing: 0.03em;
-  border-radius: 999px;
-  border: 1px solid transparent;
-}
-.nx-chip-tag.accent-indigo  { background: rgba(99,102,241,0.14); color: #c7d2fe; border-color: rgba(99,102,241,0.28); }
-.nx-chip-tag.accent-emerald { background: rgba(16,185,129,0.14); color: #a7f3d0; border-color: rgba(16,185,129,0.28); }
-.nx-chip-tag.accent-amber   { background: rgba(245,158,11,0.16); color: #fde68a; border-color: rgba(245,158,11,0.30); }
-.nx-chip-tag.accent-rose    { background: rgba(244,63,94,0.14);  color: #fecdd3; border-color: rgba(244,63,94,0.28); }
-.nx-chip-tag.accent-slate   { background: rgba(148,163,184,0.14);color: #cbd5e1; border-color: rgba(148,163,184,0.26); }
-
-.nx-chip-muted {
-  font-size: 11.5px;
-  color: var(--nx-text-3);
-  letter-spacing: 0.02em;
-}
-
-.nx-chip-sev {
-  font-size: 10.5px;
-  font-weight: 700;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-  padding: 2px 8px;
-  border-radius: 999px;
-}
-.nx-chip-sev.sev-low      { background: rgba(52,211,153,0.14); color: #a7f3d0; }
-.nx-chip-sev.sev-medium   { background: rgba(251,191,36,0.16); color: #fde68a; }
-.nx-chip-sev.sev-high     { background: rgba(251,113,133,0.16); color: #fecdd3; }
-.nx-chip-sev.sev-critical { background: rgba(244,63,94,0.22); color: #fecdd3; }
-
-.nx-unread-dot {
-  margin-left: auto;
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  background: var(--nx-indigo);
-  box-shadow: 0 0 0 3px rgba(129,140,248,0.18);
-}
-
-.nx-card-title {
-  margin: 0 0 4px 0;
-  font-size: 15px;
-  font-weight: 650;
-  letter-spacing: -0.005em;
-  color: var(--nx-text);
-  line-height: 1.35;
-}
-
-.nx-card-message {
-  margin: 0;
-  font-size: 14px;
-  color: var(--nx-text-2);
-  line-height: 1.55;
-  word-break: break-word;
-}
-
-/* ───── Metadata block ───── */
-.nx-meta-block {
-  margin-top: 12px;
-  padding: 12px 14px;
-  border-radius: 10px;
-  background: rgba(255,255,255,0.025);
-  border: 1px solid var(--nx-border);
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-}
-
-.nx-meta-row {
-  display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-  gap: 12px;
-  font-size: 13px;
-}
-.nx-meta-key {
-  color: var(--nx-text-3);
-  font-weight: 600;
-  letter-spacing: 0.02em;
-  flex-shrink: 0;
-}
-.nx-meta-val {
-  color: var(--nx-text);
-  font-weight: 600;
-  text-align: right;
-  word-break: break-word;
-}
-.nx-meta-sub {
-  color: var(--nx-text-3);
-  font-weight: 500;
-}
-
-/* ───── Footer ───── */
-.nx-card-footer {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  margin-top: 12px;
-  padding-top: 12px;
-  border-top: 1px solid rgba(255,255,255,0.05);
-  flex-wrap: wrap;
-}
-
-.nx-time {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  font-size: 12px;
-  color: var(--nx-text-3);
-  letter-spacing: 0.01em;
-}
-.nx-time-sep { opacity: 0.4; }
-.nx-time-abs { color: var(--nx-text-3); }
-
-.nx-card-actions {
-  display: flex;
-  gap: 8px;
-  flex-wrap: wrap;
-}
-
-/* ───── Empty / error ───── */
-.nx-empty {
-  text-align: center;
-  padding: 72px 20px;
-  border: 1px dashed var(--nx-border);
-  border-radius: 16px;
-  background: rgba(255,255,255,0.01);
-  margin-top: 24px;
-}
-.nx-empty-icon {
-  width: 56px;
-  height: 56px;
-  margin: 0 auto 16px;
-  border-radius: 14px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: rgba(129,140,248,0.10);
-  border: 1px solid rgba(129,140,248,0.20);
-  color: #c7d2fe;
-}
-.nx-empty h3 {
-  margin: 0 0 6px 0;
-  font-size: 18px;
-  font-weight: 650;
-  color: var(--nx-text);
-}
-.nx-empty p {
-  margin: 0 0 16px 0;
-  font-size: 14px;
-  color: var(--nx-text-3);
-}
-
-/* ───── Skeleton ───── */
-.nx-skeleton-list {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-  margin-top: 24px;
-}
-.nx-skeleton-card {
-  height: 96px;
-  border-radius: 14px;
-  background: linear-gradient(
-    90deg,
-    rgba(255,255,255,0.03) 0%,
-    rgba(255,255,255,0.06) 50%,
-    rgba(255,255,255,0.03) 100%
-  );
-  background-size: 200% 100%;
-  animation: nx-shimmer 1.4s ease-in-out infinite;
-  border: 1px solid var(--nx-border);
-}
-@keyframes nx-shimmer {
-  0% { background-position: 200% 0; }
-  100% { background-position: -200% 0; }
-}
-
-/* ───── Light theme ───── */
-[data-theme="light"] .nx-page {
+/* Light theme */
+[data-theme="light"] .nx-pay-card {
   background:
-    radial-gradient(1000px 500px at 50% -10%, rgba(99,102,241,0.06), transparent 65%),
-    #f8fafc;
-  color: #0f172a;
-}
-[data-theme="light"] .nx-title { color: #0f172a; }
-[data-theme="light"] .nx-subtitle { color: rgba(15,23,42,0.6); }
-[data-theme="light"] .nx-header { border-bottom-color: rgba(15,23,42,0.08); }
-[data-theme="light"] .nx-breadcrumb,
-[data-theme="light"] .nx-breadcrumb a { color: rgba(15,23,42,0.5); }
-[data-theme="light"] .nx-breadcrumb a:hover { color: #0f172a; }
-[data-theme="light"] .nx-crumb-current { color: rgba(15,23,42,0.75); }
-
-[data-theme="light"] .nx-search {
-  background: #ffffff;
-  border-color: rgba(15,23,42,0.08);
-  color: rgba(15,23,42,0.5);
-}
-[data-theme="light"] .nx-search input { color: #0f172a; }
-
-[data-theme="light"] .nx-btn-ghost {
-  background: #ffffff;
-  color: rgba(15,23,42,0.7);
-  border-color: rgba(15,23,42,0.1);
-}
-[data-theme="light"] .nx-btn-ghost:hover {
-  background: #ffffff;
-  color: #0f172a;
-  border-color: rgba(15,23,42,0.2);
-}
-
-[data-theme="light"] .nx-tabs,
-[data-theme="light"] .nx-chip { border-color: rgba(15,23,42,0.08); }
-[data-theme="light"] .nx-tab { color: rgba(15,23,42,0.55); }
-[data-theme="light"] .nx-tab:hover:not(.is-active) { color: #0f172a; }
-[data-theme="light"] .nx-tab.is-active {
-  background: linear-gradient(180deg, rgba(79,70,229,0.14), rgba(79,70,229,0.06));
-  color: #4f46e5;
-}
-[data-theme="light"] .nx-tab-count { background: rgba(15,23,42,0.06); }
-[data-theme="light"] .nx-tab.is-active .nx-tab-count {
-  background: rgba(79,70,229,0.20);
-  color: #3730a3;
-}
-
-[data-theme="light"] .nx-card {
-  background: #ffffff;
-  border-color: rgba(15,23,42,0.08);
-  box-shadow: 0 1px 2px rgba(15,23,42,0.04);
-}
-[data-theme="light"] .nx-card:hover {
-  border-color: rgba(15,23,42,0.14);
-  box-shadow: 0 14px 30px -16px rgba(15,23,42,0.20);
-}
-[data-theme="light"] .nx-card.is-unread {
-  background: linear-gradient(180deg, #f8faff 0%, #ffffff 100%);
-  border-color: rgba(79,70,229,0.20);
-}
-[data-theme="light"] .nx-card-title { color: #0f172a; }
-[data-theme="light"] .nx-card-message { color: rgba(15,23,42,0.7); }
-[data-theme="light"] .nx-time { color: rgba(15,23,42,0.45); }
-[data-theme="light"] .nx-card-footer { border-top-color: rgba(15,23,42,0.06); }
-[data-theme="light"] .nx-meta-block {
-  background: rgba(15,23,42,0.03);
-  border-color: rgba(15,23,42,0.06);
-}
-[data-theme="light"] .nx-meta-val { color: #0f172a; }
-[data-theme="light"] .nx-meta-key { color: rgba(15,23,42,0.55); }
-
-[data-theme="light"] .nx-card-avatar {
-  background: #ffffff;
-  border-color: rgba(15,23,42,0.08);
+    radial-gradient(120% 140% at 0% 0%, rgba(16, 185, 129, 0.14) 0%, transparent 55%),
+    radial-gradient(120% 140% at 100% 0%, rgba(59, 130, 246, 0.10) 0%, transparent 55%),
+    linear-gradient(180deg, #ecfdf5 0%, #f0fdf4 60%, #ffffff 100%);
+  border-color: rgba(16, 185, 129, 0.40);
   box-shadow:
-    0 0 0 2px rgba(15,23,42,0.02),
-    0 4px 12px -8px rgba(15,23,42,0.25);
+    0 1px 0 rgba(255, 255, 255, 0.6) inset,
+    0 20px 50px -28px rgba(16, 185, 129, 0.35);
+}
+[data-theme="light"] .nx-pay-amount {
+  color: #064e3b;
+  text-shadow: none;
+}
+[data-theme="light"] .nx-pay-message { color: rgba(6, 78, 59, 0.85); }
+[data-theme="light"] .nx-pay-eyebrow { color: #047857; }
+[data-theme="light"] .nx-pay-time { color: rgba(6, 78, 59, 0.55); }
+[data-theme="light"] .nx-pay-meta { color: rgba(6, 78, 59, 0.55); }
+[data-theme="light"] .nx-pay-badge {
+  color: #047857;
+  background: linear-gradient(135deg, rgba(16, 185, 129, 0.20), rgba(5, 150, 105, 0.12));
+  border-color: rgba(16, 185, 129, 0.45);
+}
+[data-theme="light"] .nx-pay-footer {
+  border-top-color: rgba(16, 185, 129, 0.22);
 }
 
-[data-theme="light"] .nx-empty {
-  background: rgba(15,23,42,0.01);
-  border-color: rgba(15,23,42,0.1);
-}
-[data-theme="light"] .nx-empty h3 { color: #0f172a; }
-[data-theme="light"] .nx-empty p { color: rgba(15,23,42,0.55); }
-
-[data-theme="light"] .nx-skeleton-card {
-  background: linear-gradient(
-    90deg,
-    rgba(15,23,42,0.04) 0%,
-    rgba(15,23,42,0.08) 50%,
-    rgba(15,23,42,0.04) 100%
-  );
-  background-size: 200% 100%;
-  border-color: rgba(15,23,42,0.06);
-}
-
-/* ───── Responsive ───── */
-@media (max-width: 720px) {
-  .nx-shell { padding: 32px 16px 72px; }
-
-  .nx-header-row {
-    flex-direction: column;
-    align-items: stretch;
-    gap: 14px;
-  }
-
-  .nx-header-actions { flex-direction: column; align-items: stretch; }
-  .nx-search { width: 100%; }
-  .nx-search input { width: 100%; }
-
-  .nx-title { font-size: 24px; }
-
-  .nx-tabs-row { flex-direction: column; align-items: stretch; gap: 12px; }
-  .nx-tabs { width: 100%; justify-content: space-between; }
-  .nx-tab { flex: 1; justify-content: center; padding: 8px 10px; font-size: 12.5px; }
-
-  .nx-category-filter { width: 100%; overflow-x: auto; padding-bottom: 2px; }
-
-  .nx-card { padding: 16px; gap: 12px; }
-  .nx-card-avatar { width: 42px; height: 42px; }
-  .nx-card-footer { flex-direction: column; align-items: flex-start; }
-  .nx-card-actions { width: 100%; }
-  .nx-card-actions .nx-btn { flex: 1; justify-content: center; }
-}
-
-@media (max-width: 400px) {
-  .nx-title { font-size: 22px; }
-  .nx-time-abs { display: none; }
-  .nx-chip-muted { display: none; }
-}
-/* Platform tag next to title */
-.nx-platform-tag {
-  font-size: 11px;
-  font-weight: 700;
-  letter-spacing: 0.05em;
-  text-transform: uppercase;
-  color: rgba(129, 140, 248, 0.75);
-  margin-left: 6px;
+/* Mobile */
+@media (max-width: 640px) {
+  .nx-pay-card { padding: 18px 16px 16px; }
+  .nx-pay-amount { font-size: 32px; }
+  .nx-pay-footer { flex-direction: column; align-items: stretch; }
+  .nx-pay-actions { width: 100%; }
+  .nx-pay-btn { flex: 1; justify-content: center; }
 }

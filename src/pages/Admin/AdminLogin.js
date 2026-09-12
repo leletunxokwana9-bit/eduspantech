@@ -164,7 +164,7 @@ const AdminLogin = () => {
         body.totp = totp.trim();
       }
 
-      const response = await fetch(`${API_URL}/auth/login`, {
+      const response = await fetch(`${API_URL}/auth/admin-login`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -208,7 +208,7 @@ const AdminLogin = () => {
         localStorage.setItem('user', JSON.stringify(data.user));
         localStorage.removeItem(STORAGE_KEY);
 
-        // Admin guard
+        // Admin guard (redundant now — the endpoint already enforces it)
         const isAdmin = data.user?.is_admin || data.user?.is_super_admin;
         if (isAdmin) {
           navigate('/admin/dashboard');
@@ -224,6 +224,13 @@ const AdminLogin = () => {
       // --------------------------------------------
       // Failure — map status to message + attempt info
       // --------------------------------------------
+
+      // Non-admin account attempted the admin login
+      if (data?.notAdmin) {
+        setError('This account does not have admin access. Please use the regular login.');
+        return;
+      }
+
       const serverMsg = data?.error || data?.message;
 
       if (response.status === 500) {
@@ -244,7 +251,12 @@ const AdminLogin = () => {
           setError(serverMsg || 'Invalid email or password.');
         }
       } else if (response.status === 403) {
-        setError(serverMsg || 'Account not verified. Please check your email.');
+        // 403 from admin-login means "not an admin" OR "banned/inactive/unverified admin"
+        if (data?.notAdmin) {
+          setError('This account does not have admin access. Please use the regular login.');
+        } else {
+          setError(serverMsg || 'Account not verified. Please check your email.');
+        }
       } else if (response.status === 423) {
         // Locked (backend explicit)
         let retryAfter = LOCKOUT_SECONDS;

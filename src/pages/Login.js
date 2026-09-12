@@ -18,25 +18,16 @@ const Login = () => {
   const [roleError, setRoleError] = useState('');
   const [isCheckingSession, setIsCheckingSession] = useState(true);
 
-  // ============================================
-  // NEW: BANNED / INACTIVE / LOCKED STATE
-  // ============================================
-  const [bannedInfo, setBannedInfo] = useState(null);      // { message, bannedUntil, banReason }
-  const [inactive, setInactive] = useState(false);         // true when account deactivated
-  const [lockedInfo, setLockedInfo] = useState(null);      // { retryAfter }
-  const [attemptsLeft, setAttemptsLeft] = useState(null);  // number of tries left
+  // BANNED / INACTIVE / LOCKED STATE
+  const [bannedInfo, setBannedInfo] = useState(null);
+  const [inactive, setInactive] = useState(false);
+  const [lockedInfo, setLockedInfo] = useState(null);
+  const [attemptsLeft, setAttemptsLeft] = useState(null);
 
-  // ============================================
-  // ROBUST TUTOR CHECK
-  // ============================================
   const checkIsTutor = (userData) => {
     if (!userData) return false;
-    
     let data = userData;
-    if (userData.user) {
-      data = userData.user;
-    }
-    
+    if (userData.user) data = userData.user;
     return (
       data.is_tutor === true ||
       data.is_tutor === 'true' ||
@@ -49,42 +40,38 @@ const Login = () => {
     );
   };
 
-  // ============================================
-  // CHECK EXISTING SESSION ON MOUNT
-  // ============================================
+  // ─────────────────────────────────────────────
+  // Helper: clean a banned message so "Reason:"
+  // is never duplicated between backend + UI.
+  // ─────────────────────────────────────────────
+  const cleanBanMessage = (raw) => {
+    if (!raw) return '';
+    // Remove leading "Reason:" (with any case/space) from the string
+    return raw.replace(/^\s*reason\s*:\s*/i, '').trim();
+  };
+
   useEffect(() => {
     const checkExistingSession = async () => {
       setIsCheckingSession(true);
-      
       const token = localStorage.getItem('accessToken');
       if (token) {
         try {
           const user = await authService.getCurrentUser();
           if (user && user.name) {
-            // User is already logged in
             const isTutor = checkIsTutor(user);
-            
             const confirmSwitch = window.confirm(
               `You are currently logged in as "${user.name}".\n\nDo you want to switch accounts?`
             );
-            
             if (confirmSwitch) {
-              // Log out and stay on login page
               localStorage.removeItem('accessToken');
               localStorage.removeItem('refreshToken');
               localStorage.removeItem('user');
               localStorage.removeItem('userRole');
               setIsCheckingSession(false);
             } else {
-              // Redirect to dashboard
-              if (isTutor) {
-                navigate('/tutor/dashboard');
-              } else {
-                navigate('/dashboard');
-              }
+              navigate(isTutor ? '/tutor/dashboard' : '/dashboard');
             }
           } else {
-            // Invalid user data - clear and let them login
             localStorage.removeItem('accessToken');
             localStorage.removeItem('refreshToken');
             localStorage.removeItem('user');
@@ -92,7 +79,6 @@ const Login = () => {
             setIsCheckingSession(false);
           }
         } catch (err) {
-          // Token invalid - clear and let them login
           localStorage.removeItem('accessToken');
           localStorage.removeItem('refreshToken');
           localStorage.removeItem('user');
@@ -103,21 +89,15 @@ const Login = () => {
         setIsCheckingSession(false);
       }
     };
-    
     checkExistingSession();
   }, [navigate]);
 
-  // ============================================
-  // HANDLE LOGIN
-  // ============================================
   const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
     setError('');
     setNeedsVerification(false);
     setRoleError('');
-
-    // NEW: reset banned/inactive/locked states on each attempt
     setBannedInfo(null);
     setInactive(false);
     setLockedInfo(null);
@@ -125,37 +105,37 @@ const Login = () => {
 
     try {
       const response = await authService.login(email, password);
-      
+
       if (!response || !response.success) {
-        // --- 1. Banned ---
+        // 1. Banned
         if (response?.banned) {
           setBannedInfo({
-            message: response.error || 'Your account has been suspended.',
+            message: cleanBanMessage(response.error || 'Your account has been suspended.'),
             bannedUntil: response.bannedUntil,
-            banReason: response.banReason
+            banReason: cleanBanMessage(response.banReason),
           });
           setLoading(false);
           return;
         }
 
-        // --- 2. Inactive / deleted ---
+        // 2. Inactive / deleted
         if (response?.inactive) {
           setInactive(true);
           setLoading(false);
           return;
         }
 
-        // --- 3. Too many attempts (locked) ---
+        // 3. Too many attempts
         if (response?.retryAfter) {
           setLockedInfo({
             retryAfter: response.retryAfter,
-            message: response.error || 'Too many failed attempts.'
+            message: response.error || 'Too many failed attempts.',
           });
           setLoading(false);
           return;
         }
 
-        // --- 4. Needs verification ---
+        // 4. Needs verification
         if (response?.needsVerification) {
           setNeedsVerification(true);
           setUnverifiedEmail(email);
@@ -164,18 +144,18 @@ const Login = () => {
           return;
         }
 
-        // --- 5. Wrong password, but attempts remain ---
+        // 5. Wrong password with attempts remaining
         if (typeof response?.attemptsLeft === 'number') {
           setAttemptsLeft(response.attemptsLeft);
           setError(
             response.error ||
-            `Invalid email or password. ${response.attemptsLeft} attempt${response.attemptsLeft === 1 ? '' : 's'} remaining.`
+              `Invalid email or password. ${response.attemptsLeft} attempt${response.attemptsLeft === 1 ? '' : 's'} remaining.`
           );
           setLoading(false);
           return;
         }
 
-        // --- 6. Fallback ---
+        // 6. Fallback
         setError(response?.error || 'Login failed. Please try again.');
         setLoading(false);
         return;
@@ -184,9 +164,8 @@ const Login = () => {
       const userData = response.user;
       const isTutor = checkIsTutor(userData);
 
-      // Role blocking
       if (loginRole === 'student' && isTutor) {
-        setRoleError('❌ This is a TUTOR account. Please select "Tutor" to login.');
+        setRoleError('This is a TUTOR account. Please select "Tutor" to login.');
         setLoading(false);
         localStorage.removeItem('accessToken');
         localStorage.removeItem('refreshToken');
@@ -194,9 +173,8 @@ const Login = () => {
         localStorage.removeItem('userRole');
         return;
       }
-      
       if (loginRole === 'tutor' && !isTutor) {
-        setRoleError('❌ This is a STUDENT account. Please select "Student" to login.');
+        setRoleError('This is a STUDENT account. Please select "Student" to login.');
         setLoading(false);
         localStorage.removeItem('accessToken');
         localStorage.removeItem('refreshToken');
@@ -205,28 +183,21 @@ const Login = () => {
         return;
       }
 
-      // ✅ SUCCESS
       localStorage.setItem('userRole', isTutor ? 'tutor' : 'student');
-      
-      if (isTutor) {
-        navigate('/tutor/dashboard');
-      } else {
-        navigate('/dashboard');
-      }
-      
+      navigate(isTutor ? '/tutor/dashboard' : '/dashboard');
     } catch (err) {
       console.error('Login error:', err);
-      // authService may throw for banned/inactive
-      if (err.message && err.message.toLowerCase().includes('suspend')) {
-        setBannedInfo({ message: err.message });
-      } else if (err.message && err.message.toLowerCase().includes('inactive')) {
+      const msg = err.message || '';
+      if (msg.toLowerCase().includes('suspend')) {
+        setBannedInfo({ message: cleanBanMessage(msg) });
+      } else if (msg.toLowerCase().includes('inactive')) {
         setInactive(true);
-      } else if (err.message && err.message.toLowerCase().includes('verify')) {
+      } else if (msg.toLowerCase().includes('verify')) {
         setNeedsVerification(true);
         setUnverifiedEmail(email);
         setError('Please verify your email before logging in.');
       } else {
-        setError(err.message || 'Invalid email or password. Please try again.');
+        setError(msg || 'Invalid email or password. Please try again.');
       }
     } finally {
       setLoading(false);
@@ -254,13 +225,11 @@ const Login = () => {
     setLoginRole(role);
     setRoleError('');
     setError('');
-    // NEW: clear blocked states when user switches role
     setBannedInfo(null);
     setInactive(false);
     setLockedInfo(null);
   };
 
-  // Show loading while checking session
   if (isCheckingSession) {
     return (
       <div className="login-wrapper">
@@ -282,21 +251,20 @@ const Login = () => {
         <div className="login-container">
           <div className="login-right" style={{ maxWidth: '500px', margin: '0 auto' }}>
             <div className="login-card" style={{ textAlign: 'center', padding: '60px 40px' }}>
-              <div className="loading-spinner" style={{ 
-                width: '40px', 
-                height: '40px', 
-                border: '3px solid rgba(79,70,229,0.1)', 
-                borderTopColor: '#4f46e5', 
-                borderRadius: '50%', 
-                animation: 'spin 0.8s linear infinite', 
-                margin: '0 auto 16px' 
-              }}></div>
+              <div
+                className="loading-spinner"
+                style={{
+                  width: '40px',
+                  height: '40px',
+                  border: '3px solid rgba(79,70,229,0.1)',
+                  borderTopColor: '#4f46e5',
+                  borderRadius: '50%',
+                  animation: 'spin 0.8s linear infinite',
+                  margin: '0 auto 16px',
+                }}
+              ></div>
               <p style={{ color: '#94a3b8' }}>Checking your session...</p>
-              <style>{`
-                @keyframes spin {
-                  to { transform: rotate(360deg); }
-                }
-              `}</style>
+              <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
             </div>
           </div>
         </div>
@@ -363,7 +331,6 @@ const Login = () => {
               <p>Sign in to continue your mathematics journey</p>
             </div>
 
-            {/* Role Selection Tabs */}
             <div className="role-tabs">
               <button
                 className={`role-tab ${loginRole === 'student' ? 'active' : ''}`}
@@ -381,7 +348,6 @@ const Login = () => {
               </button>
             </div>
 
-            {/* Role Error Message */}
             {roleError && (
               <div className="login-role-error">
                 <span className="error-icon">⚠️</span>
@@ -389,15 +355,13 @@ const Login = () => {
               </div>
             )}
 
-            {/* ============================================ */}
-            {/* NEW: BANNED NOTICE */}
-            {/* ============================================ */}
+            {/* BANNED NOTICE — no duplicated "Reason:" */}
             {bannedInfo && (
               <div className="login-banned-notice">
                 <div className="banned-icon">🚫</div>
                 <div className="banned-content">
                   <p><strong>Account suspended</strong></p>
-                  <p>{bannedInfo.message}</p>
+                  {bannedInfo.message && <p>{bannedInfo.message}</p>}
                   {bannedInfo.banReason && (
                     <p className="banned-reason">Reason: {bannedInfo.banReason}</p>
                   )}
@@ -409,9 +373,6 @@ const Login = () => {
               </div>
             )}
 
-            {/* ============================================ */}
-            {/* NEW: INACTIVE NOTICE */}
-            {/* ============================================ */}
             {inactive && (
               <div className="login-inactive-notice">
                 <div className="inactive-icon">⏸️</div>
@@ -425,9 +386,6 @@ const Login = () => {
               </div>
             )}
 
-            {/* ============================================ */}
-            {/* NEW: TOO MANY ATTEMPTS (LOCKED) NOTICE */}
-            {/* ============================================ */}
             {lockedInfo && (
               <div className="login-locked-notice">
                 <div className="locked-icon">🔒</div>
@@ -449,11 +407,7 @@ const Login = () => {
                   <p><strong>Verify your email address</strong></p>
                   <p>We sent a verification link to <strong>{unverifiedEmail}</strong></p>
                   <div className="verification-actions">
-                    <button 
-                      onClick={handleResendVerification}
-                      disabled={loading}
-                      className="resend-btn"
-                    >
+                    <button onClick={handleResendVerification} disabled={loading} className="resend-btn">
                       {loading ? 'Sending...' : 'Resend verification email'}
                     </button>
                     {resendSuccess && (

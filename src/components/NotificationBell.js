@@ -13,11 +13,12 @@ const NotificationBell = () => {
   const [loading, setLoading] = useState(false);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [isAdmin, setIsAdmin] = useState(false);
-  const [basePath, setBasePath] = useState(null); // always '/notifications'
+  const [feedPath, setFeedPath] = useState(null);      // list endpoint
+  const [countPath, setCountPath] = useState(null);    // unread-count endpoint
   const dropdownRef = useRef(null);
   const pollingRef = useRef(null);
 
-  // ✅ Determine auth + role, then set the endpoint prefix
+  // ── Determine auth + role, then set endpoints
   useEffect(() => {
     const checkUser = async () => {
       try {
@@ -25,7 +26,8 @@ const NotificationBell = () => {
         if (!token) {
           setIsAuthenticated(false);
           setIsAdmin(false);
-          setBasePath(null);
+          setFeedPath(null);
+          setCountPath(null);
           return;
         }
 
@@ -45,21 +47,30 @@ const NotificationBell = () => {
           user?.role === 'ADMIN';
 
         setIsAdmin(adminUser);
-        // Same endpoint for every role — the backend scopes by req.user.id
-        setBasePath('/notifications');
+
+        if (adminUser) {
+          // Admin: merged feed (platform broadcasts + personal)
+          setFeedPath('/admin/notifications/feed');
+          setCountPath('/admin/notifications/feed-unread-count');
+        } else {
+          // Student/tutor: their own notifications
+          setFeedPath('/notifications');
+          setCountPath('/notifications/unread-count');
+        }
       } catch (error) {
         console.error('Error checking user:', error);
         setIsAuthenticated(false);
         setIsAdmin(false);
-        setBasePath(null);
+        setFeedPath(null);
+        setCountPath(null);
       }
     };
     checkUser();
   }, []);
 
-  // ✅ Once basePath is known, fetch and start polling
+  // ── Fetch + poll once paths are known
   useEffect(() => {
-    if (!basePath) return;
+    if (!feedPath || !countPath) return;
 
     fetchUnreadCount();
     fetchNotifications();
@@ -72,7 +83,7 @@ const NotificationBell = () => {
       if (pollingRef.current) clearInterval(pollingRef.current);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [basePath]);
+  }, [feedPath, countPath]);
 
   useEffect(() => {
     const handleClickOutside = (event) => {
@@ -86,19 +97,16 @@ const NotificationBell = () => {
 
   const authHeaders = () => {
     const token = localStorage.getItem('accessToken');
-    return {
-      'Authorization': `Bearer ${token}`
-    };
+    return { 'Authorization': `Bearer ${token}` };
   };
 
   const fetchUnreadCount = async () => {
-    if (!basePath) return;
-
+    if (!countPath) return;
     try {
       const token = localStorage.getItem('accessToken');
       if (!token) return;
 
-      const response = await fetch(`${API_BASE_URL}${basePath}/unread-count`, {
+      const response = await fetch(`${API_BASE_URL}${countPath}`, {
         headers: authHeaders()
       });
 
@@ -114,14 +122,13 @@ const NotificationBell = () => {
   };
 
   const fetchNotifications = async () => {
-    if (!basePath) return;
-
+    if (!feedPath) return;
     try {
       setLoading(true);
       const token = localStorage.getItem('accessToken');
       if (!token) return;
 
-      const response = await fetch(`${API_BASE_URL}${basePath}`, {
+      const response = await fetch(`${API_BASE_URL}${feedPath}`, {
         headers: authHeaders()
       });
 
@@ -138,20 +145,25 @@ const NotificationBell = () => {
     }
   };
 
-  const markAsRead = async (notificationId) => {
-    if (!basePath) return;
-
+  const markAsRead = async (notification) => {
+    if (!feedPath) return;
     try {
-      const response = await fetch(`${API_BASE_URL}${basePath}/${notificationId}/read`, {
+      let url;
+      if (isAdmin && notification.source) {
+        // Admin feed: both platform + personal go through the same admin route
+        url = `${API_BASE_URL}/admin/notifications/${notification.id}/read`;
+      } else {
+        url = `${API_BASE_URL}/notifications/${notification.id}/read`;
+      }
+
+      const response = await fetch(url, {
         method: 'PUT',
         headers: authHeaders()
       });
 
       if (response.ok) {
         setNotifications(prev =>
-          prev.map(n =>
-            n.id === notificationId ? { ...n, is_read: true } : n
-          )
+          prev.map(n => n.id === notification.id ? { ...n, is_read: true } : n)
         );
         setUnreadCount(prev => Math.max(0, prev - 1));
       }
@@ -161,10 +173,13 @@ const NotificationBell = () => {
   };
 
   const markAllAsRead = async () => {
-    if (!basePath) return;
-
+    if (!feedPath) return;
     try {
-      const response = await fetch(`${API_BASE_URL}${basePath}/read-all`, {
+      const url = isAdmin
+        ? `${API_BASE_URL}/admin/notifications/read-all`
+        : `${API_BASE_URL}/notifications/read-all`;
+
+      const response = await fetch(url, {
         method: 'PUT',
         headers: authHeaders()
       });
@@ -178,7 +193,7 @@ const NotificationBell = () => {
     }
   };
 
-  // ===== RENDER STUDENT AVATAR OR INITIALS =====
+  // ── Student avatar for session_booked
   const renderStudentAvatar = (notification) => {
     const metadata = notification.metadata || {};
     const studentName = metadata.student_name || 'Student';
@@ -258,7 +273,7 @@ const NotificationBell = () => {
   };
 
   const handleNotificationClick = (notification) => {
-    markAsRead(notification.id);
+    if (!notification.is_read) markAsRead(notification);
     if (notification.link) {
       navigate(notification.link);
     } else if (notification.metadata?.session_id) {
@@ -267,7 +282,6 @@ const NotificationBell = () => {
     setIsOpen(false);
   };
 
-  // ✅ Don't render if not authenticated
   if (!isAuthenticated) {
     return null;
   }
@@ -288,7 +302,9 @@ const NotificationBell = () => {
       {isOpen && (
         <div className="notification-dropdown">
           <div className="dropdown-header">
-            <span className="dropdown-title">🔔 Notifications</span>
+            <span className="dropdown-title">
+              {isAdmin ? '🔔 Admin notifications' : '🔔 Notifications'}
+            </span>
             {unreadCount > 0 && (
               <button className="mark-all-read-btn" onClick={markAllAsRead}>
                 Mark all read
@@ -325,12 +341,18 @@ const NotificationBell = () => {
                            notification.type === 'session_ended' ? '📝' :
                            notification.type === 'session_cancelled' ? '❌' :
                            notification.type === 'new_tutor' ? '👨‍🏫' :
-                           notification.type === 'warning' ? '⚠️' : '🔔'}
+                           notification.type === 'warning' ? '⚠️' :
+                           notification.type === 'system' ? '📣' : '🔔'}
                         </span>
                       )}
                     </div>
                     <div className="dropdown-item-content">
-                      <div className="dropdown-item-title">{notification.title}</div>
+                      <div className="dropdown-item-title">
+                        {notification.title}
+                        {isAdmin && notification.source === 'platform' && (
+                          <span className="dropdown-item-source"> · Platform</span>
+                        )}
+                      </div>
                       <div className="dropdown-item-message">{notification.message}</div>
                       <div className="dropdown-item-time">
                         {new Date(notification.created_at).toLocaleDateString()}
@@ -349,7 +371,7 @@ const NotificationBell = () => {
                 className="view-all-btn"
                 onClick={() => {
                   setIsOpen(false);
-                  navigate('/notifications');
+                  navigate(isAdmin ? '/admin/notifications' : '/notifications');
                 }}
               >
                 View All Notifications →

@@ -106,30 +106,36 @@ const Notifications = () => {
   const [categoryFilter, setCategoryFilter] = useState('all');
   const [query, setQuery] = useState('');
 
-  // Role-driven endpoints
-  const [role, setRole] = useState(null);
-  const [isAdmin, setIsAdmin] = useState(false);
-  const [feedPath, setFeedPath] = useState(null);
-  const [readPathBase, setReadPathBase] = useState(null);
-  const [readAllPath, setReadAllPath] = useState(null);
+  // ── Role seeded SYNCHRONOUSLY from the URL so the first render is correct
+  const initialIsAdmin = typeof window !== 'undefined' &&
+    window.location.pathname.startsWith('/admin');
 
-  // ── Determine role on mount
+  const [role, setRole] = useState(initialIsAdmin ? 'admin' : null);
+  const [isAdmin, setIsAdmin] = useState(initialIsAdmin);
+  const [feedPath, setFeedPath] = useState(
+    initialIsAdmin ? '/admin/notifications/feed' : null
+  );
+  const [readPathBase, setReadPathBase] = useState(
+    initialIsAdmin ? '/admin/notifications' : null
+  );
+  const [readAllPath, setReadAllPath] = useState(
+    initialIsAdmin ? '/admin/notifications/read-all' : null
+  );
+
+  // ── Refine role from the API (only upgrades student/tutor; never clobbers admin)
   useEffect(() => {
     const detect = async () => {
       const token = localStorage.getItem('accessToken');
       if (!token) { navigate('/login'); return; }
 
-      // ✅ PRIMARY SIGNAL: the URL we're rendered on
-      const onAdminRoute = window.location.pathname.startsWith('/admin');
+      // If URL already tells us we're admin, keep it and skip the API call
+      if (initialIsAdmin) return;
 
       let user = null;
       try { user = await authService.getCurrentUser(); } catch { /* ignore */ }
-
-      // Support both flat user object and { user: {...} } shape
       const u = user?.user || user;
 
       const adminUser =
-        onAdminRoute ||
         u?.is_admin === true ||
         u?.is_super_admin === true ||
         u?.role === 'admin' ||
@@ -160,7 +166,7 @@ const Notifications = () => {
       }
     };
     detect();
-  }, [navigate]);
+  }, [navigate, initialIsAdmin]);
 
   // ── Fetch once feed path is known
   useEffect(() => {
@@ -252,7 +258,9 @@ const Notifications = () => {
     return Array.from(set);
   }, [notifications]);
 
-  const heading = isAdmin ? 'Admin notifications' : (role === 'tutor' ? 'Tutor notifications' : 'Notifications');
+  const heading = isAdmin
+    ? 'Admin notifications'
+    : (role === 'tutor' ? 'Tutor notifications' : 'Notifications');
 
   return (
     <div className="nx-page">

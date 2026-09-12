@@ -40,16 +40,6 @@ const Login = () => {
     );
   };
 
-  // ─────────────────────────────────────────────
-  // Helper: clean a banned message so "Reason:"
-  // is never duplicated between backend + UI.
-  // ─────────────────────────────────────────────
-  const cleanBanMessage = (raw) => {
-    if (!raw) return '';
-    // Remove leading "Reason:" (with any case/space) from the string
-    return raw.replace(/^\s*reason\s*:\s*/i, '').trim();
-  };
-
   useEffect(() => {
     const checkExistingSession = async () => {
       setIsCheckingSession(true);
@@ -110,9 +100,8 @@ const Login = () => {
         // 1. Banned
         if (response?.banned) {
           setBannedInfo({
-            message: cleanBanMessage(response.error || 'Your account has been suspended.'),
+            message: response.error || 'Your account has been suspended.',
             bannedUntil: response.bannedUntil,
-            banReason: cleanBanMessage(response.banReason),
           });
           setLoading(false);
           return;
@@ -144,7 +133,7 @@ const Login = () => {
           return;
         }
 
-        // 5. Wrong password with attempts remaining
+        // 5. Wrong password, attempts remaining
         if (typeof response?.attemptsLeft === 'number') {
           setAttemptsLeft(response.attemptsLeft);
           setError(
@@ -189,7 +178,7 @@ const Login = () => {
       console.error('Login error:', err);
       const msg = err.message || '';
       if (msg.toLowerCase().includes('suspend')) {
-        setBannedInfo({ message: cleanBanMessage(msg) });
+        setBannedInfo({ message: msg });
       } else if (msg.toLowerCase().includes('inactive')) {
         setInactive(true);
       } else if (msg.toLowerCase().includes('verify')) {
@@ -355,16 +344,13 @@ const Login = () => {
               </div>
             )}
 
-            {/* BANNED NOTICE — no duplicated "Reason:" */}
+            {/* BANNED NOTICE — single message line, no duplicated "Reason:" */}
             {bannedInfo && (
               <div className="login-banned-notice">
                 <div className="banned-icon">🚫</div>
                 <div className="banned-content">
                   <p><strong>Account suspended</strong></p>
                   {bannedInfo.message && <p>{bannedInfo.message}</p>}
-                  {bannedInfo.banReason && (
-                    <p className="banned-reason">Reason: {bannedInfo.banReason}</p>
-                  )}
                   <p className="banned-help">
                     If you believe this is a mistake, contact{' '}
                     <a href="mailto:support@eduspantech.com">support@eduspantech.com</a>

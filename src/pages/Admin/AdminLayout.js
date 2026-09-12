@@ -16,7 +16,6 @@ const AdminLayout = () => {
     const [bellOpen, setBellOpen] = useState(false);
     const bellRef = useRef(null);
 
-    // ── Boot
     useEffect(() => {
         checkAdminStatus();
         fetchNotifications();
@@ -29,7 +28,6 @@ const AdminLayout = () => {
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
 
-    // ── Close bell on outside click
     useEffect(() => {
         const onDoc = (e) => {
             if (bellRef.current && !bellRef.current.contains(e.target)) {
@@ -39,6 +37,11 @@ const AdminLayout = () => {
         document.addEventListener('mousedown', onDoc);
         return () => document.removeEventListener('mousedown', onDoc);
     }, []);
+
+    // Close bell on route change
+    useEffect(() => {
+        setBellOpen(false);
+    }, [location.pathname]);
 
     const checkAdminStatus = async () => {
         try {
@@ -173,6 +176,7 @@ const AdminLayout = () => {
         { path: '/admin/analytics', icon: '📈', label: 'Analytics' },
         { path: '/admin/settings', icon: '⚙️', label: 'Settings' },
         { path: '/admin/activity', icon: '📋', label: 'Activity Log' },
+        { path: '/admin/notifications', icon: '🔔', label: 'Notifications' },
         { path: '/admin/profile', icon: '👤', label: 'My Profile' }
     ];
 
@@ -239,6 +243,9 @@ const AdminLayout = () => {
                         >
                             <span className="nav-icon">{item.icon}</span>
                             <span className="nav-label">{item.label}</span>
+                            {item.path === '/admin/notifications' && unreadCount > 0 && (
+                                <span className="notification-badge">{unreadCount}</span>
+                            )}
                         </NavLink>
                     ))}
                 </nav>
@@ -311,7 +318,6 @@ const AdminLayout = () => {
                         </span>
                     </div>
                     <div className="header-actions">
-                        {/* ===== NOTIFICATIONS BELL ===== */}
                         <div className="admin-bell-wrapper" ref={bellRef}>
                             <button
                                 className={`header-btn admin-bell-btn ${bellOpen ? 'is-open' : ''}`}
@@ -382,7 +388,7 @@ const AdminLayout = () => {
                                             className="admin-bell-view-all"
                                             onClick={() => {
                                                 setBellOpen(false);
-                                                navigate('/notifications');
+                                                navigate('/admin/notifications');
                                             }}
                                         >
                                             View all notifications →

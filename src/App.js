@@ -47,7 +47,7 @@ import Timetable from './pages/Timetable';
 import BecomeATutor from './pages/BecomeATutor';
 
 // ============================================
-// ✅ TRACK APPLICATION (Public) — NEW
+// ✅ TRACK APPLICATION (Public)
 // ============================================
 import TrackApplication from './pages/TrackApplication';
 
@@ -293,6 +293,8 @@ const AppContent = () => {
               <Route path="settings" element={<AdminSettings />} />
               <Route path="activity" element={<AdminActivity />} />
               <Route path="profile" element={<AdminProfile />} />
+              {/* ✅ Admin notifications — lives inside the admin shell */}
+              <Route path="notifications" element={<Notifications />} />
             </Route>
 
             {/* ============================================
@@ -337,7 +339,7 @@ const AppContent = () => {
             <Route path="/become-a-tutor" element={<BecomeATutor />} />
 
             {/* ============================================
-                ✅ TRACK APPLICATION - Public status check — NEW
+                ✅ TRACK APPLICATION - Public status check
                 ============================================ */}
             <Route path="/track-application" element={<TrackApplication />} />
 

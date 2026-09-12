@@ -2,6 +2,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { API_BASE_URL } from '../services/api';
+import { authService } from '../services/authService';
 import faviconLogo from '../assets/favicon-96x96.png';
 import './Notifications.css';
 
@@ -9,20 +10,20 @@ import './Notifications.css';
 // Icon + accent per notification type
 // ─────────────────────────────────────────────────────────────
 const TYPE_META = {
-  warning:               { icon: 'alert-triangle', label: 'Warning',          accent: 'amber',   category: 'Account' },
-  session_booked:        { icon: 'book',           label: 'Session Booked',   accent: 'indigo',  category: 'Sessions' },
-  session_accepted:      { icon: 'check',          label: 'Session Accepted', accent: 'emerald', category: 'Sessions' },
-  session_started:       { icon: 'play',           label: 'Session Started',  accent: 'emerald', category: 'Sessions' },
-  session_ended:         { icon: 'check-circle',   label: 'Session Ended',    accent: 'slate',   category: 'Sessions' },
-  session_cancelled:     { icon: 'x',              label: 'Session Cancelled',accent: 'rose',    category: 'Sessions' },
-  payment_received:      { icon: 'credit-card',    label: 'Payment',          accent: 'emerald', category: 'Payments' },
-  subscription_renewed:  { icon: 'refresh',        label: 'Subscription',     accent: 'indigo',  category: 'Billing' },
-  subscription_expired:  { icon: 'alert-triangle', label: 'Subscription',     accent: 'amber',   category: 'Billing' },
-  student_joined:        { icon: 'user-plus',      label: 'New Student',      accent: 'indigo',  category: 'Students' },
-  tutor_assigned:        { icon: 'graduation-cap', label: 'Tutor Assigned',   accent: 'indigo',  category: 'Tutors' },
-  new_tutor:             { icon: 'graduation-cap', label: 'New Tutor',        accent: 'indigo',  category: 'Tutors' },
-  system:                { icon: 'info',           label: 'System',           accent: 'indigo',  category: 'System' },
-  default:               { icon: 'bell',           label: 'Notification',     accent: 'indigo',  category: 'General' },
+  warning:               { icon: 'alert-triangle', label: 'Warning',           accent: 'amber',   category: 'Account' },
+  session_booked:        { icon: 'book',           label: 'Session Booked',    accent: 'indigo',  category: 'Sessions' },
+  session_accepted:      { icon: 'check',          label: 'Session Accepted',  accent: 'emerald', category: 'Sessions' },
+  session_started:       { icon: 'play',           label: 'Session Started',   accent: 'emerald', category: 'Sessions' },
+  session_ended:         { icon: 'check-circle',   label: 'Session Ended',     accent: 'slate',   category: 'Sessions' },
+  session_cancelled:     { icon: 'x',              label: 'Session Cancelled', accent: 'rose',    category: 'Sessions' },
+  payment_received:      { icon: 'credit-card',    label: 'Payment',           accent: 'emerald', category: 'Payments' },
+  subscription_renewed:  { icon: 'refresh',        label: 'Subscription',      accent: 'indigo',  category: 'Billing' },
+  subscription_expired:  { icon: 'alert-triangle', label: 'Subscription',      accent: 'amber',   category: 'Billing' },
+  student_joined:        { icon: 'user-plus',      label: 'New Student',       accent: 'indigo',  category: 'Students' },
+  tutor_assigned:        { icon: 'graduation-cap', label: 'Tutor Assigned',    accent: 'indigo',  category: 'Tutors' },
+  new_tutor:             { icon: 'graduation-cap', label: 'New Tutor',         accent: 'indigo',  category: 'Tutors' },
+  system:                { icon: 'info',           label: 'Platform',          accent: 'indigo',  category: 'System' },
+  default:               { icon: 'bell',           label: 'Notification',      accent: 'indigo',  category: 'General' },
 };
 
 // ─────────────────────────────────────────────────────────────
@@ -51,6 +52,7 @@ const Icon = ({ name, size = 20 }) => {
     case 'arrow-right':    return <svg {...common}><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>;
     case 'clock':          return <svg {...common}><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>;
     case 'inbox':          return <svg {...common}><polyline points="22 12 16 12 14 15 10 15 8 12 2 12"/><path d="M5.45 5.11 2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11z"/></svg>;
+    case 'megaphone':      return <svg {...common}><path d="m3 11 18-5v12L3 14v-3z"/><path d="M11.6 16.8a3 3 0 1 1-5.8-1.6"/></svg>;
     default:               return <svg {...common}><circle cx="12" cy="12" r="10"/></svg>;
   }
 };
@@ -104,7 +106,67 @@ const Notifications = () => {
   const [categoryFilter, setCategoryFilter] = useState('all');
   const [query, setQuery] = useState('');
 
-  useEffect(() => { fetchNotifications(); }, []);
+  // Role-driven endpoints
+  const [role, setRole] = useState(null);
+  const [isAdmin, setIsAdmin] = useState(false);
+  const [feedPath, setFeedPath] = useState(null);
+  const [readPathBase, setReadPathBase] = useState(null);
+  const [readAllPath, setReadAllPath] = useState(null);
+
+  // ── Determine role on mount
+  useEffect(() => {
+    const detect = async () => {
+      const token = localStorage.getItem('accessToken');
+      if (!token) { navigate('/login'); return; }
+
+      // ✅ PRIMARY SIGNAL: the URL we're rendered on
+      const onAdminRoute = window.location.pathname.startsWith('/admin');
+
+      let user = null;
+      try { user = await authService.getCurrentUser(); } catch { /* ignore */ }
+
+      // Support both flat user object and { user: {...} } shape
+      const u = user?.user || user;
+
+      const adminUser =
+        onAdminRoute ||
+        u?.is_admin === true ||
+        u?.is_super_admin === true ||
+        u?.role === 'admin' ||
+        u?.role === 'ADMIN';
+
+      const tutorUser = !adminUser && (
+        u?.is_tutor === true ||
+        u?.role === 'tutor' ||
+        u?.role === 'TUTOR'
+      );
+
+      if (adminUser) {
+        setRole('admin');
+        setIsAdmin(true);
+        setFeedPath('/admin/notifications/feed');
+        setReadPathBase('/admin/notifications');
+        setReadAllPath('/admin/notifications/read-all');
+      } else if (tutorUser) {
+        setRole('tutor');
+        setFeedPath('/notifications');
+        setReadPathBase('/notifications');
+        setReadAllPath('/notifications/read-all');
+      } else {
+        setRole('student');
+        setFeedPath('/notifications');
+        setReadPathBase('/notifications');
+        setReadAllPath('/notifications/read-all');
+      }
+    };
+    detect();
+  }, [navigate]);
+
+  // ── Fetch once feed path is known
+  useEffect(() => {
+    if (feedPath) fetchNotifications();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [feedPath]);
 
   const fetchNotifications = async () => {
     try {
@@ -113,7 +175,7 @@ const Notifications = () => {
       const token = localStorage.getItem('accessToken');
       if (!token) { navigate('/login'); return; }
 
-      const res = await fetch(`${API_BASE_URL}/notifications`, {
+      const res = await fetch(`${API_BASE_URL}${feedPath}`, {
         headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
       });
 
@@ -133,15 +195,15 @@ const Notifications = () => {
     }
   };
 
-  const markAsRead = async (id) => {
+  const markAsRead = async (notification) => {
     try {
       const token = localStorage.getItem('accessToken');
-      const res = await fetch(`${API_BASE_URL}/notifications/${id}/read`, {
+      const res = await fetch(`${API_BASE_URL}${readPathBase}/${notification.id}/read`, {
         method: 'PUT',
         headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
       });
       if (res.ok) {
-        setNotifications(prev => prev.map(n => n.id === id ? { ...n, is_read: true } : n));
+        setNotifications(prev => prev.map(n => n.id === notification.id ? { ...n, is_read: true } : n));
       }
     } catch (e) { console.error(e); }
   };
@@ -149,7 +211,7 @@ const Notifications = () => {
   const markAllAsRead = async () => {
     try {
       const token = localStorage.getItem('accessToken');
-      const res = await fetch(`${API_BASE_URL}/notifications/read-all`, {
+      const res = await fetch(`${API_BASE_URL}${readAllPath}`, {
         method: 'PUT',
         headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
       });
@@ -158,7 +220,7 @@ const Notifications = () => {
   };
 
   const handleCardClick = (n) => {
-    if (!n.is_read) markAsRead(n.id);
+    if (!n.is_read) markAsRead(n);
     if (n.link) navigate(n.link);
     else if (n.metadata?.session_id) navigate(`/session/${n.metadata.session_id}`);
   };
@@ -190,19 +252,21 @@ const Notifications = () => {
     return Array.from(set);
   }, [notifications]);
 
+  const heading = isAdmin ? 'Admin notifications' : (role === 'tutor' ? 'Tutor notifications' : 'Notifications');
+
   return (
     <div className="nx-page">
       <div className="nx-shell">
         <header className="nx-header">
           <nav className="nx-breadcrumb" aria-label="Breadcrumb">
-            <Link to="/">Home</Link>
+            <Link to={isAdmin ? '/admin' : '/'}>{isAdmin ? 'Admin' : 'Home'}</Link>
             <span className="nx-crumb-sep">/</span>
-            <span className="nx-crumb-current">Notifications</span>
+            <span className="nx-crumb-current">{heading}</span>
           </nav>
 
           <div className="nx-header-row">
             <div className="nx-title-block">
-              <h1 className="nx-title">Notifications</h1>
+              <h1 className="nx-title">{heading}</h1>
               <p className="nx-subtitle">
                 {unreadCount > 0
                   ? <>You have <strong>{unreadCount}</strong> unread notification{unreadCount > 1 ? 's' : ''}.</>
@@ -293,8 +357,9 @@ const Notifications = () => {
                       <NotificationCard
                         key={n.id}
                         notification={n}
+                        isAdmin={isAdmin}
                         onOpen={() => handleCardClick(n)}
-                        onMarkRead={() => markAsRead(n.id)}
+                        onMarkRead={() => markAsRead(n)}
                       />
                     ))}
                   </div>
@@ -311,10 +376,13 @@ const Notifications = () => {
 // ─────────────────────────────────────────────────────────────
 // Card
 // ─────────────────────────────────────────────────────────────
-const NotificationCard = ({ notification, onOpen, onMarkRead }) => {
-  const meta = TYPE_META[notification.type] || TYPE_META.default;
+const NotificationCard = ({ notification, isAdmin, onOpen, onMarkRead }) => {
+  const isPlatform = notification.source === 'platform';
+  const meta = isPlatform
+    ? { icon: 'megaphone', label: 'Platform', accent: 'indigo', category: 'System' }
+    : (TYPE_META[notification.type] || TYPE_META.default);
   const m = notification.metadata || {};
-  const isWarning = notification.type === 'warning';
+  const isWarning = notification.type === 'warning' && !isPlatform;
 
   const actorName =
     m.warned_by_name ||
@@ -348,10 +416,16 @@ const NotificationCard = ({ notification, onOpen, onMarkRead }) => {
           {isWarning && m.severity && (
             <span className={`nx-chip-sev sev-${m.severity}`}>{m.severity}</span>
           )}
+          {isPlatform && notification.severity && (
+            <span className={`nx-chip-sev sev-${notification.severity}`}>{notification.severity}</span>
+          )}
           {!notification.is_read && <span className="nx-unread-dot" aria-label="Unread" />}
         </div>
 
-        <h3 className="nx-card-title">{notification.title}</h3>
+        <h3 className="nx-card-title">
+          {notification.title}
+          {isAdmin && isPlatform && <span className="nx-platform-tag"> · Platform</span>}
+        </h3>
         <p className="nx-card-message">{notification.message}</p>
 
         {isWarning && (actorName || m.category) && (
@@ -380,7 +454,7 @@ const NotificationCard = ({ notification, onOpen, onMarkRead }) => {
           </div>
         )}
 
-        {!isWarning && m.session_id && (
+        {!isWarning && !isPlatform && m.session_id && (
           <div className="nx-meta-block">
             {m.tutor_name && (
               <div className="nx-meta-row">
@@ -412,7 +486,12 @@ const NotificationCard = ({ notification, onOpen, onMarkRead }) => {
           </div>
 
           <div className="nx-card-actions" onClick={(e) => e.stopPropagation()}>
-            {m.session_id && (
+            {notification.link && (
+              <button className="nx-btn nx-btn-primary nx-btn-sm" onClick={onOpen}>
+                Open <Icon name="arrow-right" size={14} />
+              </button>
+            )}
+            {!isWarning && !isPlatform && m.session_id && (
               <button className="nx-btn nx-btn-primary nx-btn-sm" onClick={onOpen}>
                 View session <Icon name="arrow-right" size={14} />
               </button>

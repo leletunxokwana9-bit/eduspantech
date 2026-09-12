@@ -53,6 +53,9 @@ const Icon = ({ name, size = 20 }) => {
     case 'clock':          return <svg {...common}><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>;
     case 'inbox':          return <svg {...common}><polyline points="22 12 16 12 14 15 10 15 8 12 2 12"/><path d="M5.45 5.11 2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11z"/></svg>;
     case 'megaphone':      return <svg {...common}><path d="m3 11 18-5v12L3 14v-3z"/><path d="M11.6 16.8a3 3 0 1 1-5.8-1.6"/></svg>;
+    case 'sparkles':       return <svg {...common}><path d="M9.94 15.62A2 2 0 0 1 8.4 14.1l-.4-1.5a.5.5 0 0 0-.97 0l-.4 1.5a2 2 0 0 1-1.54 1.53l-1.5.4a.5.5 0 0 0 0 .97l1.5.4a2 2 0 0 1 1.54 1.53l.4 1.5a.5.5 0 0 0 .97 0l.4-1.5a2 2 0 0 1 1.54-1.53l1.5-.4a.5.5 0 0 0 0-.97l-1.5-.4Z"/><path d="M20 3v4M22 5h-4M18 14v3M19.5 15.5h-3"/></svg>;
+    case 'wallet':         return <svg {...common}><path d="M21 12V7H5a2 2 0 0 1 0-4h14v4"/><path d="M3 5v14a2 2 0 0 0 2 2h16v-5"/><path d="M18 12a2 2 0 0 0 0 4h4v-4Z"/></svg>;
+    case 'download':       return <svg {...common}><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>;
     default:               return <svg {...common}><circle cx="12" cy="12" r="10"/></svg>;
   }
 };
@@ -92,6 +95,30 @@ const groupByDay = (list) => {
     else groups.Earlier.push(n);
   });
   return groups;
+};
+
+const formatMoney = (amount, currency = 'ZAR') => {
+  if (amount == null || isNaN(Number(amount))) return null;
+  const num = Number(amount);
+  const locale = currency === 'ZAR' ? 'en-ZA' : 'en-US';
+  try {
+    return new Intl.NumberFormat(locale, {
+      style: 'currency',
+      currency,
+      maximumFractionDigits: 2,
+    }).format(num);
+  } catch {
+    return `${currency} ${num.toFixed(2)}`;
+  }
+};
+
+const isPaymentNotification = (n) => {
+  const t = n.type;
+  return t === 'payment_received' ||
+         t === 'subscription_renewed' ||
+         n.metadata?.category === 'salary' ||
+         n.metadata?.category === 'payout' ||
+         n.metadata?.category === 'bonus';
 };
 
 // ─────────────────────────────────────────────────────────────
@@ -358,13 +385,22 @@ const Notifications = () => {
                   </div>
                   <div className="nx-list">
                     {items.map(n => (
-                      <NotificationCard
-                        key={n.id}
-                        notification={n}
-                        isAdmin={isAdmin}
-                        onOpen={() => handleCardClick(n)}
-                        onMarkRead={() => markAsRead(n)}
-                      />
+                      isPaymentNotification(n) ? (
+                        <PaymentCard
+                          key={n.id}
+                          notification={n}
+                          onOpen={() => handleCardClick(n)}
+                          onMarkRead={() => markAsRead(n)}
+                        />
+                      ) : (
+                        <NotificationCard
+                          key={n.id}
+                          notification={n}
+                          isAdmin={isAdmin}
+                          onOpen={() => handleCardClick(n)}
+                          onMarkRead={() => markAsRead(n)}
+                        />
+                      )
                     ))}
                   </div>
                 </section>
@@ -378,7 +414,129 @@ const Notifications = () => {
 };
 
 // ─────────────────────────────────────────────────────────────
-// Card
+// Payment card (salary / payout / bonus / session payment)
+// ─────────────────────────────────────────────────────────────
+const PaymentCard = ({ notification, onOpen, onMarkRead }) => {
+  const m = notification.metadata || {};
+  const amount = m.amount ?? m.total ?? m.value ?? null;
+  const currency = m.currency || 'ZAR';
+  const category = (m.category || 'payment').toLowerCase();
+  const isSalary = category === 'salary';
+  const isBonus = category === 'bonus';
+  const isPayout = category === 'payout';
+
+  const title =
+    notification.title ||
+    (isSalary ? 'Salary credited' : isBonus ? 'Bonus awarded' : 'Payment received');
+
+  const eyebrow =
+    isSalary ? 'Salary' :
+    isBonus  ? 'Bonus' :
+    isPayout ? 'Payout' :
+    'Payment';
+
+  const iconName =
+    isSalary ? 'wallet' :
+    isBonus  ? 'sparkles' :
+    isPayout ? 'download' :
+    'credit-card';
+
+  const subline =
+    m.period ? `For ${m.period}` :
+    m.description ? m.description :
+    '';
+
+  return (
+    <article
+      className={`nx-pay-card ${!notification.is_read ? 'is-unread' : ''}`}
+      onClick={onOpen}
+      role="button"
+      tabIndex={0}
+      onKeyDown={(e) => { if (e.key === 'Enter') onOpen(); }}
+    >
+      {/* Glow accents */}
+      <span className="nx-pay-glow nx-pay-glow-a" aria-hidden="true" />
+      <span className="nx-pay-glow nx-pay-glow-b" aria-hidden="true" />
+
+      <header className="nx-pay-head">
+        <div className="nx-pay-badge">
+          <Icon name={iconName} size={18} />
+        </div>
+        <div className="nx-pay-head-text">
+          <span className="nx-pay-eyebrow">{eyebrow}</span>
+          <span className="nx-pay-time">{formatRelative(notification.created_at)}</span>
+        </div>
+        {!notification.is_read && <span className="nx-pay-new">New</span>}
+      </header>
+
+      <div className="nx-pay-amount-row">
+        <div className="nx-pay-amount">
+          {amount != null ? formatMoney(amount, currency) : title}
+        </div>
+        {amount == null && <div className="nx-pay-title-fallback">{notification.title}</div>}
+      </div>
+
+      <p className="nx-pay-message">{notification.message}</p>
+
+      {subline && (
+        <div className="nx-pay-subline">{subline}</div>
+      )}
+
+      {/* Optional media */}
+      {notification.media_url && notification.media_type === 'image' && (
+        <div className="nx-pay-media" onClick={(e) => e.stopPropagation()}>
+          <img
+            src={notification.media_url}
+            alt={notification.media_alt || title}
+            loading="lazy"
+            onError={(e) => {
+              const wrap = e.target.closest('.nx-pay-media');
+              if (wrap) wrap.style.display = 'none';
+            }}
+          />
+        </div>
+      )}
+      {notification.media_url && notification.media_type === 'video' && (
+        <div className="nx-pay-media" onClick={(e) => e.stopPropagation()}>
+          <video
+            src={notification.media_url}
+            controls
+            preload="metadata"
+            playsInline
+            onError={(e) => {
+              const wrap = e.target.closest('.nx-pay-media');
+              if (wrap) wrap.style.display = 'none';
+            }}
+          />
+        </div>
+      )}
+
+      <footer className="nx-pay-footer" onClick={(e) => e.stopPropagation()}>
+        <div className="nx-pay-meta">
+          <Icon name="clock" size={13} />
+          <span title={formatAbsolute(notification.created_at)}>
+            {formatAbsolute(notification.created_at)}
+          </span>
+        </div>
+        <div className="nx-pay-actions">
+          {notification.link && (
+            <button className="nx-pay-btn nx-pay-btn-primary" onClick={onOpen}>
+              {isSalary || isPayout ? 'View earnings' : 'View details'} <Icon name="arrow-right" size={14} />
+            </button>
+          )}
+          {!notification.is_read && (
+            <button className="nx-pay-btn nx-pay-btn-ghost" onClick={onMarkRead}>
+              Mark as read
+            </button>
+          )}
+        </div>
+      </footer>
+    </article>
+  );
+};
+
+// ─────────────────────────────────────────────────────────────
+// Standard card
 // ─────────────────────────────────────────────────────────────
 const NotificationCard = ({ notification, isAdmin, onOpen, onMarkRead }) => {
   const isPlatform = notification.source === 'platform';
@@ -432,7 +590,6 @@ const NotificationCard = ({ notification, isAdmin, onOpen, onMarkRead }) => {
         </h3>
         <p className="nx-card-message">{notification.message}</p>
 
-        {/* ── Optional media (image) ── */}
         {notification.media_url && notification.media_type === 'image' && (
           <div className="nx-card-media" onClick={(e) => e.stopPropagation()}>
             <img
@@ -446,8 +603,6 @@ const NotificationCard = ({ notification, isAdmin, onOpen, onMarkRead }) => {
             />
           </div>
         )}
-
-        {/* ── Optional media (video) ── */}
         {notification.media_url && notification.media_type === 'video' && (
           <div className="nx-card-media" onClick={(e) => e.stopPropagation()}>
             <video
@@ -539,3 +694,277 @@ const NotificationCard = ({ notification, isAdmin, onOpen, onMarkRead }) => {
 };
 
 export default Notifications;
+/* ============================================================
+   PAYMENT CARD — hero treatment for salary / payout / bonus
+   ============================================================ */
+.nx-pay-card {
+  position: relative;
+  overflow: hidden;
+  border-radius: 16px;
+  padding: 20px 22px 18px;
+  background:
+    radial-gradient(120% 140% at 0% 0%, rgba(16, 185, 129, 0.18) 0%, transparent 55%),
+    radial-gradient(120% 140% at 100% 0%, rgba(59, 130, 246, 0.14) 0%, transparent 55%),
+    linear-gradient(180deg, #10261f 0%, #0c1a16 55%, #0a1310 100%);
+  border: 1px solid rgba(16, 185, 129, 0.30);
+  box-shadow:
+    0 1px 0 rgba(255, 255, 255, 0.04) inset,
+    0 20px 50px -28px rgba(16, 185, 129, 0.45),
+    0 8px 24px -14px rgba(0, 0, 0, 0.6);
+  cursor: pointer;
+  transition: transform 0.18s ease, box-shadow 0.18s ease, border-color 0.18s ease;
+}
+.nx-pay-card:hover {
+  transform: translateY(-1px);
+  border-color: rgba(16, 185, 129, 0.50);
+  box-shadow:
+    0 1px 0 rgba(255, 255, 255, 0.06) inset,
+    0 28px 60px -28px rgba(16, 185, 129, 0.55),
+    0 12px 30px -16px rgba(0, 0, 0, 0.7);
+}
+.nx-pay-card:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 2px rgba(52, 211, 153, 0.55);
+}
+.nx-pay-card.is-unread {
+  border-color: rgba(52, 211, 153, 0.55);
+}
+
+/* Ambient glows */
+.nx-pay-glow {
+  position: absolute;
+  border-radius: 50%;
+  filter: blur(60px);
+  pointer-events: none;
+  opacity: 0.55;
+}
+.nx-pay-glow-a {
+  width: 220px;
+  height: 220px;
+  background: rgba(16, 185, 129, 0.35);
+  top: -100px;
+  right: -60px;
+}
+.nx-pay-glow-b {
+  width: 200px;
+  height: 200px;
+  background: rgba(59, 130, 246, 0.25);
+  bottom: -120px;
+  left: -80px;
+}
+
+/* Head */
+.nx-pay-head {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 14px;
+}
+.nx-pay-badge {
+  flex-shrink: 0;
+  width: 40px;
+  height: 40px;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, rgba(16, 185, 129, 0.35), rgba(5, 150, 105, 0.25));
+  border: 1px solid rgba(16, 185, 129, 0.55);
+  color: #d1fae5;
+  box-shadow:
+    0 6px 16px -8px rgba(16, 185, 129, 0.6),
+    0 0 0 1px rgba(255, 255, 255, 0.03) inset;
+}
+.nx-pay-head-text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+.nx-pay-eyebrow {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: rgba(209, 250, 229, 0.85);
+}
+.nx-pay-time {
+  font-size: 12px;
+  color: rgba(209, 250, 229, 0.55);
+}
+.nx-pay-new {
+  margin-left: auto;
+  padding: 3px 10px;
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  border-radius: 999px;
+  background: rgba(52, 211, 153, 0.22);
+  color: #bbf7d0;
+  border: 1px solid rgba(52, 211, 153, 0.5);
+}
+
+/* Amount */
+.nx-pay-amount-row {
+  position: relative;
+  z-index: 1;
+  margin-bottom: 6px;
+}
+.nx-pay-amount {
+  font-size: 40px;
+  font-weight: 800;
+  letter-spacing: -0.025em;
+  line-height: 1.05;
+  color: #ffffff;
+  text-shadow: 0 2px 24px rgba(16, 185, 129, 0.35);
+  font-variant-numeric: tabular-nums;
+}
+.nx-pay-title-fallback {
+  font-size: 22px;
+  font-weight: 700;
+  color: #e5f6ee;
+  line-height: 1.2;
+}
+
+/* Message */
+.nx-pay-message {
+  position: relative;
+  z-index: 1;
+  margin: 6px 0 0;
+  font-size: 14.5px;
+  line-height: 1.55;
+  color: rgba(229, 246, 238, 0.82);
+}
+
+/* Subline / period chip */
+.nx-pay-subline {
+  position: relative;
+  z-index: 1;
+  display: inline-block;
+  margin-top: 10px;
+  padding: 5px 12px;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  color: #bbf7d0;
+  background: rgba(16, 185, 129, 0.12);
+  border: 1px solid rgba(16, 185, 129, 0.30);
+  border-radius: 999px;
+}
+
+/* Media */
+.nx-pay-media {
+  position: relative;
+  z-index: 1;
+  margin-top: 14px;
+  border-radius: 12px;
+  overflow: hidden;
+  border: 1px solid rgba(16, 185, 129, 0.25);
+  background: #041410;
+}
+.nx-pay-media img,
+.nx-pay-media video {
+  display: block;
+  width: 100%;
+  max-height: 340px;
+  object-fit: cover;
+}
+
+/* Footer */
+.nx-pay-footer {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-top: 16px;
+  padding-top: 14px;
+  border-top: 1px solid rgba(16, 185, 129, 0.18);
+  flex-wrap: wrap;
+}
+.nx-pay-meta {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  color: rgba(209, 250, 229, 0.55);
+}
+.nx-pay-actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.nx-pay-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 14px;
+  border-radius: 9px;
+  font-size: 12.5px;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  border: 1px solid transparent;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+.nx-pay-btn-primary {
+  background: linear-gradient(180deg, #34d399, #059669);
+  color: #052e21;
+  box-shadow:
+    0 8px 20px -10px rgba(16, 185, 129, 0.7),
+    0 1px 0 rgba(255, 255, 255, 0.2) inset;
+}
+.nx-pay-btn-primary:hover {
+  filter: brightness(1.06);
+  transform: translateY(-1px);
+}
+.nx-pay-btn-ghost {
+  background: rgba(255, 255, 255, 0.06);
+  color: #d1fae5;
+  border-color: rgba(16, 185, 129, 0.25);
+}
+.nx-pay-btn-ghost:hover {
+  background: rgba(255, 255, 255, 0.10);
+  border-color: rgba(16, 185, 129, 0.45);
+}
+
+/* Light theme */
+[data-theme="light"] .nx-pay-card {
+  background:
+    radial-gradient(120% 140% at 0% 0%, rgba(16, 185, 129, 0.14) 0%, transparent 55%),
+    radial-gradient(120% 140% at 100% 0%, rgba(59, 130, 246, 0.10) 0%, transparent 55%),
+    linear-gradient(180deg, #ecfdf5 0%, #f0fdf4 60%, #ffffff 100%);
+  border-color: rgba(16, 185, 129, 0.40);
+  box-shadow:
+    0 1px 0 rgba(255, 255, 255, 0.6) inset,
+    0 20px 50px -28px rgba(16, 185, 129, 0.35);
+}
+[data-theme="light"] .nx-pay-amount {
+  color: #064e3b;
+  text-shadow: none;
+}
+[data-theme="light"] .nx-pay-message { color: rgba(6, 78, 59, 0.85); }
+[data-theme="light"] .nx-pay-eyebrow { color: #047857; }
+[data-theme="light"] .nx-pay-time { color: rgba(6, 78, 59, 0.55); }
+[data-theme="light"] .nx-pay-meta { color: rgba(6, 78, 59, 0.55); }
+[data-theme="light"] .nx-pay-badge {
+  color: #047857;
+  background: linear-gradient(135deg, rgba(16, 185, 129, 0.20), rgba(5, 150, 105, 0.12));
+  border-color: rgba(16, 185, 129, 0.45);
+}
+[data-theme="light"] .nx-pay-footer {
+  border-top-color: rgba(16, 185, 129, 0.22);
+}
+
+/* Mobile */
+@media (max-width: 640px) {
+  .nx-pay-card { padding: 18px 16px 16px; }
+  .nx-pay-amount { font-size: 32px; }
+  .nx-pay-footer { flex-direction: column; align-items: stretch; }
+  .nx-pay-actions { width: 100%; }
+  .nx-pay-btn { flex: 1; justify-content: center; }
+}

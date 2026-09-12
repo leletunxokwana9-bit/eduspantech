@@ -2,6 +2,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { API_BASE_URL } from '../services/api';
+import faviconLogo from '../assets/favicon-96x96.png';
 import './Notifications.css';
 
 // ─────────────────────────────────────────────────────────────
@@ -99,7 +100,7 @@ const Notifications = () => {
   const [notifications, setNotifications] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [filter, setFilter] = useState('all');       // all | unread | read
+  const [filter, setFilter] = useState('all');
   const [categoryFilter, setCategoryFilter] = useState('all');
   const [query, setQuery] = useState('');
 
@@ -330,8 +331,14 @@ const NotificationCard = ({ notification, onOpen, onMarkRead }) => {
       tabIndex={0}
       onKeyDown={(e) => { if (e.key === 'Enter') onOpen(); }}
     >
-      <div className={`nx-card-icon accent-${meta.accent}`}>
-        <Icon name={meta.icon} size={20} />
+      <div className={`nx-card-avatar accent-${meta.accent}`}>
+        <img
+          src={faviconLogo}
+          alt="EduSpantech"
+          className="nx-card-avatar-img"
+          loading="lazy"
+        />
+        <span className="nx-card-avatar-ring" aria-hidden="true" />
       </div>
 
       <div className="nx-card-body">

@@ -312,46 +312,59 @@
 .nx-card.is-unread.accent-emerald::after { background: linear-gradient(180deg, #34d399, #059669); }
 .nx-card.is-unread.accent-slate::after { background: linear-gradient(180deg, #94a3b8, #475569); }
 
-/* ───── Icon badge ───── */
-.nx-card-icon {
+/* ───── Round favicon avatar ───── */
+.nx-card-avatar {
+  position: relative;
   flex-shrink: 0;
-  width: 44px;
-  height: 44px;
-  border-radius: 12px;
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
   display: flex;
   align-items: center;
   justify-content: center;
+  overflow: hidden;
+  background: #0e1424;
   border: 1px solid var(--nx-border);
-  background: rgba(255,255,255,0.03);
-  color: var(--nx-text-2);
-  transition: transform 0.18s ease;
+  box-shadow:
+    0 0 0 2px rgba(255,255,255,0.02),
+    0 4px 12px -6px rgba(0,0,0,0.6);
+  transition: transform 0.18s ease, box-shadow 0.18s ease;
 }
-.nx-card:hover .nx-card-icon { transform: scale(1.04); }
 
-.nx-card-icon.accent-indigo {
-  background: linear-gradient(135deg, rgba(99,102,241,0.24), rgba(79,70,229,0.10));
-  border-color: rgba(99,102,241,0.30);
-  color: #c7d2fe;
+.nx-card:hover .nx-card-avatar {
+  transform: scale(1.04);
+  box-shadow:
+    0 0 0 2px rgba(255,255,255,0.04),
+    0 6px 16px -6px rgba(0,0,0,0.7);
 }
-.nx-card-icon.accent-emerald {
-  background: linear-gradient(135deg, rgba(16,185,129,0.24), rgba(5,150,105,0.10));
-  border-color: rgba(16,185,129,0.30);
-  color: #a7f3d0;
+
+.nx-card-avatar-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+  border-radius: 50%;
 }
-.nx-card-icon.accent-amber {
-  background: linear-gradient(135deg, rgba(245,158,11,0.24), rgba(217,119,6,0.10));
-  border-color: rgba(245,158,11,0.32);
-  color: #fde68a;
+
+.nx-card-avatar-ring {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  pointer-events: none;
+  box-shadow: inset 0 0 0 2px rgba(255,255,255,0.06);
+  transition: box-shadow 0.18s ease;
 }
-.nx-card-icon.accent-rose {
-  background: linear-gradient(135deg, rgba(244,63,94,0.24), rgba(225,29,72,0.10));
-  border-color: rgba(244,63,94,0.30);
-  color: #fecdd3;
-}
-.nx-card-icon.accent-slate {
-  background: linear-gradient(135deg, rgba(148,163,184,0.22), rgba(71,85,105,0.10));
-  border-color: rgba(148,163,184,0.26);
-  color: #cbd5e1;
+
+.nx-card-avatar.accent-indigo  .nx-card-avatar-ring { box-shadow: inset 0 0 0 2px rgba(99,102,241,0.55); }
+.nx-card-avatar.accent-emerald .nx-card-avatar-ring { box-shadow: inset 0 0 0 2px rgba(16,185,129,0.55); }
+.nx-card-avatar.accent-amber   .nx-card-avatar-ring { box-shadow: inset 0 0 0 2px rgba(245,158,11,0.6); }
+.nx-card-avatar.accent-rose    .nx-card-avatar-ring { box-shadow: inset 0 0 0 2px rgba(244,63,94,0.55); }
+.nx-card-avatar.accent-slate   .nx-card-avatar-ring { box-shadow: inset 0 0 0 2px rgba(148,163,184,0.5); }
+
+.nx-card.is-unread .nx-card-avatar {
+  box-shadow:
+    0 0 0 3px rgba(129,140,248,0.12),
+    0 6px 18px -8px rgba(99,102,241,0.55);
 }
 
 /* ───── Card body ───── */
@@ -430,7 +443,7 @@
   word-break: break-word;
 }
 
-/* ───── Metadata block (warning / session facts) ───── */
+/* ───── Metadata block ───── */
 .nx-meta-block {
   margin-top: 12px;
   padding: 12px 14px;
@@ -624,6 +637,14 @@
 [data-theme="light"] .nx-meta-val { color: #0f172a; }
 [data-theme="light"] .nx-meta-key { color: rgba(15,23,42,0.55); }
 
+[data-theme="light"] .nx-card-avatar {
+  background: #ffffff;
+  border-color: rgba(15,23,42,0.08);
+  box-shadow:
+    0 0 0 2px rgba(15,23,42,0.02),
+    0 4px 12px -8px rgba(15,23,42,0.25);
+}
+
 [data-theme="light"] .nx-empty {
   background: rgba(15,23,42,0.01);
   border-color: rgba(15,23,42,0.1);
@@ -665,7 +686,7 @@
   .nx-category-filter { width: 100%; overflow-x: auto; padding-bottom: 2px; }
 
   .nx-card { padding: 16px; gap: 12px; }
-  .nx-card-icon { width: 40px; height: 40px; }
+  .nx-card-avatar { width: 42px; height: 42px; }
   .nx-card-footer { flex-direction: column; align-items: flex-start; }
   .nx-card-actions { width: 100%; }
   .nx-card-actions .nx-btn { flex: 1; justify-content: center; }

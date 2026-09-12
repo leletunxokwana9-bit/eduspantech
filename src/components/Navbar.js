@@ -600,7 +600,7 @@ function Navbar() {
           </div>
 
           {/* ✅ ONLY SHOW NOTIFICATION BELL FOR ADMIN USERS */}
-          {isAuthenticated && isAdmin && <NotificationBell />}
+          {isAuthenticated && <NotificationBell />}
 
           {isAuthenticated ? (
             <div className="user-menu" ref={userDropdownRef}>

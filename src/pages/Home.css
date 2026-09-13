@@ -201,6 +201,7 @@
 
 /* ============================================================
    MATHEMATICAL ORBIT — 3D blueprint style
+   Tilt reduced so node symbols remain readable face-on
    ============================================================ */
 
 .mathematical-orbit {
@@ -210,7 +211,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  perspective: 1200px;
+  perspective: 1400px;
 }
 
 .orbit-stage {
@@ -226,7 +227,7 @@
 
 @keyframes stageFloat {
   0%, 100% { transform: translateY(0) rotateX(0deg); }
-  50% { transform: translateY(-8px) rotateX(2deg); }
+  50% { transform: translateY(-8px) rotateX(1deg); }
 }
 
 /* Depth layers — atmospheric bloom behind everything */
@@ -350,7 +351,7 @@
   50% { opacity: 1; transform: scale(1.15); }
 }
 
-/* Concentric rings around the core — creates depth */
+/* Concentric rings around the core — gentle tilt so they read as 3D depth, not edge-on */
 .core-rings {
   position: absolute;
   inset: 0;
@@ -363,7 +364,7 @@
   left: 50%;
   border-radius: 50%;
   border: 1.5px solid rgba(165, 180, 252, 0.4);
-  transform: translate(-50%, -50%) rotateX(72deg);
+  transform: translate(-50%, -50%) rotateX(58deg);
   animation: ringSpin 6s linear infinite;
 }
 
@@ -383,11 +384,11 @@
 }
 
 @keyframes ringSpin {
-  from { transform: translate(-50%, -50%) rotateX(72deg) rotateZ(0deg); }
-  to   { transform: translate(-50%, -50%) rotateX(72deg) rotateZ(360deg); }
+  from { transform: translate(-50%, -50%) rotateX(58deg) rotateZ(0deg); }
+  to   { transform: translate(-50%, -50%) rotateX(58deg) rotateZ(360deg); }
 }
 
-/* ===== ORBIT RINGS ===== */
+/* ===== ORBIT RINGS — tilted less so nodes stay readable ===== */
 .orbit-ring {
   position: absolute;
   top: 50%;
@@ -405,7 +406,7 @@
   box-shadow:
     inset 0 0 30px rgba(99, 102, 241, 0.15),
     0 0 40px rgba(99, 102, 241, 0.1);
-  transform: translate(-50%, -50%) rotateX(72deg);
+  transform: translate(-50%, -50%) rotateX(58deg);
   animation: orbitSpin1 22s linear infinite;
 }
 
@@ -416,7 +417,7 @@
   box-shadow:
     inset 0 0 24px rgba(124, 58, 237, 0.12),
     0 0 30px rgba(124, 58, 237, 0.08);
-  transform: translate(-50%, -50%) rotateX(66deg);
+  transform: translate(-50%, -50%) rotateX(52deg);
   animation: orbitSpin2 16s linear infinite reverse;
 }
 
@@ -424,24 +425,24 @@
   width: 165px;
   height: 165px;
   border: 1.5px dotted rgba(165, 180, 252, 0.4);
-  transform: translate(-50%, -50%) rotateX(78deg);
+  transform: translate(-50%, -50%) rotateX(62deg);
   animation: orbitSpin3 11s linear infinite;
 }
 
 @keyframes orbitSpin1 {
-  from { transform: translate(-50%, -50%) rotateX(72deg) rotateZ(0deg); }
-  to   { transform: translate(-50%, -50%) rotateX(72deg) rotateZ(360deg); }
+  from { transform: translate(-50%, -50%) rotateX(58deg) rotateZ(0deg); }
+  to   { transform: translate(-50%, -50%) rotateX(58deg) rotateZ(360deg); }
 }
 @keyframes orbitSpin2 {
-  from { transform: translate(-50%, -50%) rotateX(66deg) rotateZ(0deg); }
-  to   { transform: translate(-50%, -50%) rotateX(66deg) rotateZ(-360deg); }
+  from { transform: translate(-50%, -50%) rotateX(52deg) rotateZ(0deg); }
+  to   { transform: translate(-50%, -50%) rotateX(52deg) rotateZ(-360deg); }
 }
 @keyframes orbitSpin3 {
-  from { transform: translate(-50%, -50%) rotateX(78deg) rotateZ(0deg); }
-  to   { transform: translate(-50%, -50%) rotateX(78deg) rotateZ(360deg); }
+  from { transform: translate(-50%, -50%) rotateX(62deg) rotateZ(0deg); }
+  to   { transform: translate(-50%, -50%) rotateX(62deg) rotateZ(360deg); }
 }
 
-/* ===== NODES — glassmorphic 3D orbs ===== */
+/* ===== NODES — counter-rotated to face the viewer, so symbols stay upright ===== */
 .orbit-node {
   position: absolute;
   width: 46px;
@@ -471,6 +472,8 @@
   pointer-events: auto;
   animation: nodeFloat 3s ease-in-out infinite;
   transform-style: preserve-3d;
+  /* Counter-rotate the node so its symbol faces the camera despite ring tilt */
+  transform: rotateX(-58deg);
 }
 
 .orbit-node::after {
@@ -487,7 +490,6 @@
 }
 
 .orbit-node:hover {
-  transform: scale(1.28) translateZ(20px);
   background:
     radial-gradient(circle at 30% 25%, rgba(255, 255, 255, 0.55) 0%, transparent 45%),
     radial-gradient(circle at 70% 75%, rgba(139, 92, 246, 0.75) 0%, transparent 60%),
@@ -501,25 +503,26 @@
     inset 0 -3px 8px rgba(0, 0, 0, 0.3);
 }
 
-.node-1 { top: -10px; left: 50%; transform: translateX(-50%); animation-delay: 0s; }
-.node-2 { bottom: -10px; left: 50%; transform: translateX(-50%); animation-delay: 0.5s; }
-.node-3 { top: 50%; left: -10px; transform: translateY(-50%); animation-delay: 1s; }
-.node-4 { top: 50%; right: -10px; transform: translateY(-50%); animation-delay: 1.5s; }
-.node-5 { top: 12%; left: 12%; animation-delay: 0.3s; }
-.node-6 { top: 12%; right: 12%; animation-delay: 0.8s; }
-.node-7 { bottom: 12%; left: 12%; animation-delay: 1.3s; }
-.node-8 { bottom: 12%; right: 12%; animation-delay: 1.8s; }
-.node-9 { top: 20%; left: 50%; transform: translateX(-50%); animation-delay: 0.2s; }
-.node-10 { bottom: 20%; left: 50%; transform: translateX(-50%); animation-delay: 0.7s; }
-.node-11 { top: 50%; left: 20%; transform: translateY(-50%); animation-delay: 1.2s; }
-.node-12 { top: 50%; right: 20%; transform: translateY(-50%); animation-delay: 1.7s; }
+/* Positions — transform on each keeps the -58deg counter-rotation intact */
+.node-1  { top: -10px; left: 50%;  transform: translateX(-50%) rotateX(-58deg); animation-delay: 0s; }
+.node-2  { bottom: -10px; left: 50%; transform: translateX(-50%) rotateX(-58deg); animation-delay: 0.5s; }
+.node-3  { top: 50%; left: -10px; transform: translateY(-50%) rotateX(-58deg); animation-delay: 1s; }
+.node-4  { top: 50%; right: -10px; transform: translateY(-50%) rotateX(-58deg); animation-delay: 1.5s; }
+.node-5  { top: 12%; left: 12%; transform: rotateX(-58deg); animation-delay: 0.3s; }
+.node-6  { top: 12%; right: 12%; transform: rotateX(-58deg); animation-delay: 0.8s; }
+.node-7  { bottom: 12%; left: 12%; transform: rotateX(-58deg); animation-delay: 1.3s; }
+.node-8  { bottom: 12%; right: 12%; transform: rotateX(-58deg); animation-delay: 1.8s; }
+.node-9  { top: 20%; left: 50%; transform: translateX(-50%) rotateX(-58deg); animation-delay: 0.2s; }
+.node-10 { bottom: 20%; left: 50%; transform: translateX(-50%) rotateX(-58deg); animation-delay: 0.7s; }
+.node-11 { top: 50%; left: 20%; transform: translateY(-50%) rotateX(-58deg); animation-delay: 1.2s; }
+.node-12 { top: 50%; right: 20%; transform: translateY(-50%) rotateX(-58deg); animation-delay: 1.7s; }
 
 @keyframes nodeFloat {
   0%, 100% { translate: 0 0; }
   50% { translate: 0 -5px; }
 }
 
-/* ===== PARTICLE TRAILS — 3D orbital bands ===== */
+/* ===== PARTICLE TRAILS — gentler tilt to match the rings ===== */
 .particle-trail,
 .particle-trail-2,
 .particle-trail-3 {
@@ -529,7 +532,7 @@
   border-radius: 50%;
   border: 1px solid rgba(129, 140, 248, 0.12);
   pointer-events: none;
-  transform: translate(-50%, -50%) rotateX(72deg);
+  transform: translate(-50%, -50%) rotateX(58deg);
   animation: trailSpin 18s linear infinite;
 }
 
@@ -556,8 +559,8 @@
 }
 
 @keyframes trailSpin {
-  from { transform: translate(-50%, -50%) rotateX(72deg) rotateZ(0deg); }
-  to   { transform: translate(-50%, -50%) rotateX(72deg) rotateZ(360deg); }
+  from { transform: translate(-50%, -50%) rotateX(58deg) rotateZ(0deg); }
+  to   { transform: translate(-50%, -50%) rotateX(58deg) rotateZ(360deg); }
 }
 
 /* ===== HOVER GLOW ===== */

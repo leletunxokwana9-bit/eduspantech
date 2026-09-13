@@ -4,6 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import { authService } from '../services/authService';
 import { supabase } from '../services/supabaseClient';
 import Pricing from '../components/home/Pricing/Pricing';
+import RegionsMap from '../components/RegionsMap';
 import './Home.css';
 
 // ============================================
@@ -917,6 +918,13 @@ function Home() {
           </div>
         </section>
 
+        {/* ===== NEW: GLOBAL REGIONS MAP ===== */}
+        <section className="regions-map-section">
+          <div className="container">
+            <RegionsMap />
+          </div>
+        </section>
+
         {teamMembers && teamMembers.length > 0 && (
           <section className="team-carousel-section">
             <div className="container">
@@ -1224,6 +1232,13 @@ function Home() {
               </div>
             </div>
           </div>
+        </div>
+      </section>
+
+      {/* ===== NEW: GLOBAL REGIONS MAP ===== */}
+      <section className="regions-map-section">
+        <div className="container">
+          <RegionsMap />
         </div>
       </section>
 

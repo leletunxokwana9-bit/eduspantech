@@ -1,0 +1,428 @@
+/* src/components/RegionsMap.css */
+
+.regions-map-wrap {
+  position: relative;
+  width: 100%;
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: 48px 24px 32px;
+}
+
+/* ---------- Header ---------- */
+.regions-map-header {
+  text-align: center;
+  margin-bottom: 32px;
+}
+
+.regions-map-badge {
+  display: inline-block;
+  padding: 6px 14px;
+  border-radius: 999px;
+  background: rgba(99, 102, 241, 0.12);
+  border: 1px solid rgba(99, 102, 241, 0.3);
+  color: #a5b4fc;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  margin-bottom: 14px;
+}
+
+.regions-map-header h3 {
+  font-size: 32px;
+  font-weight: 700;
+  letter-spacing: -0.5px;
+  color: #ffffff;
+  margin: 0 0 10px;
+}
+
+.regions-map-header p {
+  font-size: 15px;
+  color: rgba(255, 255, 255, 0.6);
+  max-width: 520px;
+  margin: 0 auto;
+  line-height: 1.6;
+}
+
+/* ---------- Canvas ---------- */
+.regions-map-canvas {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 2 / 1;
+  background:
+    radial-gradient(60% 60% at 50% 40%, rgba(79, 70, 229, 0.08) 0%, transparent 70%),
+    linear-gradient(180deg, #0b1220 0%, #070b14 100%);
+  border: 1px solid rgba(99, 102, 241, 0.15);
+  border-radius: 24px;
+  overflow: hidden;
+  box-shadow:
+    0 30px 80px rgba(0, 0, 0, 0.5),
+    inset 0 0 60px rgba(79, 70, 229, 0.05);
+}
+
+.regions-map-svg {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+/* ---------- Landmasses ---------- */
+.regions-landmasses path {
+  fill: rgba(99, 102, 241, 0.06);
+  stroke: rgba(99, 102, 241, 0.28);
+  stroke-width: 0.8;
+  stroke-linejoin: round;
+  transition: fill 0.3s ease;
+}
+
+.regions-map-canvas:hover .regions-landmasses path {
+  fill: rgba(99, 102, 241, 0.09);
+}
+
+/* ---------- Arcs ---------- */
+.regions-arc {
+  fill: none;
+  stroke: rgba(99, 102, 241, 0.22);
+  stroke-width: 1.2;
+  stroke-dasharray: 4 6;
+  transition: stroke 0.25s ease, stroke-width 0.25s ease, stroke-dasharray 0.25s ease;
+}
+
+.regions-arc.active {
+  stroke: rgba(129, 140, 248, 0.9);
+  stroke-width: 1.8;
+  stroke-dasharray: none;
+  filter: drop-shadow(0 0 6px rgba(129, 140, 248, 0.6));
+}
+
+/* ---------- Region markers ---------- */
+.region-marker {
+  transition: transform 0.2s ease;
+}
+
+.region-marker.primary .region-dot {
+  fill: #c7d2fe;
+  stroke: #818cf8;
+  stroke-width: 1.5;
+  filter: drop-shadow(0 0 8px rgba(129, 140, 248, 0.9));
+}
+
+.region-marker.edge .region-dot {
+  fill: #818cf8;
+  stroke: rgba(99, 102, 241, 0.4);
+  stroke-width: 1;
+}
+
+.region-marker:hover .region-dot,
+.region-marker.focused .region-dot {
+  fill: #e0e7ff;
+  filter: drop-shadow(0 0 10px rgba(165, 180, 252, 1));
+}
+
+.region-marker .region-glow {
+  opacity: 0.5;
+  transition: opacity 0.25s ease;
+}
+
+.region-marker:hover .region-glow,
+.region-marker.focused .region-glow {
+  opacity: 0.9;
+}
+
+/* Pulse ring for primary */
+.region-pulse {
+  fill: none;
+  stroke: #818cf8;
+  stroke-width: 1.5;
+  opacity: 0.8;
+  transform-origin: center;
+  animation: regionPulse 2.4s ease-out infinite;
+}
+
+@keyframes regionPulse {
+  0% {
+    r: 5;
+    opacity: 0.9;
+  }
+  70% {
+    r: 26;
+    opacity: 0;
+  }
+  100% {
+    r: 26;
+    opacity: 0;
+  }
+}
+
+/* Labels */
+.region-label {
+  font-size: 11px;
+  font-weight: 600;
+  fill: rgba(255, 255, 255, 0.55);
+  pointer-events: none;
+  transition: fill 0.2s ease;
+  font-family: inherit;
+}
+
+.region-marker.primary .region-label {
+  fill: rgba(199, 210, 254, 0.95);
+  font-size: 12px;
+}
+
+.region-marker:hover .region-label,
+.region-marker.focused .region-label {
+  fill: #ffffff;
+}
+
+/* ---------- Info card ---------- */
+.region-info-card {
+  position: absolute;
+  top: 20px;
+  right: 20px;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 14px 18px;
+  background:
+    radial-gradient(120% 120% at 0% 0%, rgba(99, 102, 241, 0.12) 0%, transparent 55%),
+    linear-gradient(180deg, rgba(19, 26, 44, 0.95) 0%, rgba(15, 21, 36, 0.95) 0%),
+    linear-gradient(180deg, #131a2c 0%, #0f1524 100%);
+  border: 1px solid rgba(99, 102, 241, 0.28);
+  border-radius: 16px;
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.5);
+  animation: regionCardIn 0.24s cubic-bezier(0.22, 1, 0.36, 1);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  pointer-events: none;
+  z-index: 3;
+}
+
+.region-info-card.primary {
+  border-color: rgba(165, 180, 252, 0.55);
+  box-shadow:
+    0 20px 50px rgba(0, 0, 0, 0.5),
+    0 0 30px rgba(129, 140, 248, 0.25);
+}
+
+@keyframes regionCardIn {
+  from {
+    opacity: 0;
+    transform: translateY(-6px) scale(0.96);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.region-info-flag {
+  font-size: 28px;
+  line-height: 1;
+}
+
+.region-info-body {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.region-info-name {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 15px;
+  font-weight: 700;
+  color: #ffffff;
+  letter-spacing: -0.2px;
+}
+
+.region-info-primary-badge {
+  padding: 2px 7px;
+  border-radius: 999px;
+  background: linear-gradient(135deg, #4f46e5, #7c3aed);
+  color: #ffffff;
+  font-size: 9.5px;
+  font-weight: 700;
+  letter-spacing: 0.8px;
+}
+
+.region-info-country {
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.55);
+}
+
+.region-info-code {
+  font-size: 11.5px;
+  color: #a5b4fc;
+  font-family: 'SF Mono', 'Fira Code', 'Consolas', monospace;
+  letter-spacing: 0.3px;
+}
+
+/* ---------- Legend ---------- */
+.regions-map-legend {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 28px;
+  flex-wrap: wrap;
+  margin-top: 22px;
+}
+
+.regions-legend-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12.5px;
+  color: rgba(255, 255, 255, 0.55);
+}
+
+.legend-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.legend-dot.primary {
+  background: #c7d2fe;
+  box-shadow: 0 0 12px rgba(199, 210, 254, 0.9);
+}
+
+.legend-dot.edge {
+  background: #818cf8;
+  box-shadow: 0 0 8px rgba(129, 140, 248, 0.6);
+}
+
+.legend-hint {
+  color: rgba(255, 255, 255, 0.35);
+  font-style: italic;
+}
+
+/* ---------- Responsive ---------- */
+@media (max-width: 768px) {
+  .regions-map-wrap {
+    padding: 32px 12px 20px;
+  }
+
+  .regions-map-header h3 {
+    font-size: 24px;
+  }
+
+  .regions-map-header p {
+    font-size: 14px;
+  }
+
+  .regions-map-canvas {
+    border-radius: 18px;
+    aspect-ratio: 3 / 2;
+  }
+
+  .region-label {
+    font-size: 9px;
+  }
+
+  .region-marker.primary .region-label {
+    font-size: 10px;
+  }
+
+  .region-info-card {
+    top: 12px;
+    right: 12px;
+    padding: 10px 14px;
+    gap: 10px;
+  }
+
+  .region-info-flag {
+    font-size: 22px;
+  }
+
+  .region-info-name {
+    font-size: 13px;
+  }
+
+  .region-info-country {
+    font-size: 11px;
+  }
+
+  .region-info-code {
+    font-size: 10px;
+  }
+
+  .regions-map-legend {
+    gap: 16px;
+    margin-top: 16px;
+  }
+
+  .regions-legend-item {
+    font-size: 11px;
+  }
+}
+
+/* ---------- Light theme ---------- */
+[data-theme="light"] .regions-map-canvas {
+  background:
+    radial-gradient(60% 60% at 50% 40%, rgba(79, 70, 229, 0.06) 0%, transparent 70%),
+    linear-gradient(180deg, #f8fafc 0%, #eef2ff 100%);
+  border-color: rgba(79, 70, 229, 0.2);
+  box-shadow:
+    0 30px 80px rgba(79, 70, 229, 0.12),
+    inset 0 0 60px rgba(79, 70, 229, 0.04);
+}
+
+[data-theme="light"] .regions-landmasses path {
+  fill: rgba(79, 70, 229, 0.08);
+  stroke: rgba(79, 70, 229, 0.35);
+}
+
+[data-theme="light"] .regions-map-canvas:hover .regions-landmasses path {
+  fill: rgba(79, 70, 229, 0.11);
+}
+
+[data-theme="light"] .region-label {
+  fill: rgba(15, 23, 42, 0.65);
+}
+
+[data-theme="light"] .region-marker.primary .region-label {
+  fill: rgba(49, 46, 129, 0.95);
+}
+
+[data-theme="light"] .region-marker:hover .region-label,
+[data-theme="light"] .region-marker.focused .region-label {
+  fill: #0f172a;
+}
+
+[data-theme="light"] .region-info-card {
+  background:
+    radial-gradient(120% 120% at 0% 0%, rgba(79, 70, 229, 0.06) 0%, transparent 55%),
+    linear-gradient(180deg, #ffffff 0%, #f8fafc 100%);
+  border-color: rgba(79, 70, 229, 0.2);
+  box-shadow: 0 20px 50px rgba(79, 70, 229, 0.15);
+}
+
+[data-theme="light"] .region-info-name {
+  color: #0f172a;
+}
+
+[data-theme="light"] .region-info-country {
+  color: rgba(15, 23, 42, 0.55);
+}
+
+[data-theme="light"] .region-info-code {
+  color: #4f46e5;
+}
+
+[data-theme="light"] .regions-map-header h3 {
+  color: #0f172a;
+}
+
+[data-theme="light"] .regions-map-header p {
+  color: rgba(15, 23, 42, 0.6);
+}
+
+[data-theme="light"] .regions-legend-item {
+  color: rgba(15, 23, 42, 0.55);
+}
+
+[data-theme="light"] .legend-hint {
+  color: rgba(15, 23, 42, 0.4);
+}

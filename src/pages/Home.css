@@ -47,7 +47,12 @@
   justify-content: space-between;
   min-height: 90vh;
   padding: 80px 24px;
-  background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%) !important;
+  background:
+    url("data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20viewBox='0%200%20900%20520'%3E%3Cg%20stroke='rgba(255,255,255,0.13)'%20fill='none'%20stroke-width='1'%3E%3Cpath%20d='M%20-50%2040%20Q%20450%205%20950%2040'/%3E%3Cpath%20d='M%20-50%20110%20Q%20450%2065%20950%20110'/%3E%3Cpath%20d='M%20-50%20190%20Q%20450%20150%20950%20190'/%3E%3Cpath%20d='M%20-50%20260%20Q%20450%20235%20950%20260'/%3E%3Cpath%20d='M%20-50%20330%20Q%20450%20315%20950%20330'/%3E%3Cpath%20d='M%20-50%20400%20Q%20450%20435%20950%20400'/%3E%3Cpath%20d='M%20-50%20470%20Q%20450%20505%20950%20470'/%3E%3Cpath%20d='M%2040%20-50%20Q%205%20260%2040%20570'/%3E%3Cpath%20d='M%20150%20-50%20Q%20100%20260%20150%20570'/%3E%3Cpath%20d='M%20260%20-50%20Q%20220%20260%20260%20570'/%3E%3Cpath%20d='M%20370%20-50%20Q%20345%20260%20370%20570'/%3E%3Cpath%20d='M%20480%20-50%20Q%20480%20260%20480%20570'/%3E%3Cpath%20d='M%20590%20-50%20Q%20615%20260%20590%20570'/%3E%3Cpath%20d='M%20700%20-50%20Q%20740%20260%20700%20570'/%3E%3Cpath%20d='M%20810%20-50%20Q%20860%20260%20810%20570'/%3E%3C/g%3E%3C/svg%3E")
+      no-repeat center center / cover,
+    radial-gradient(circle at 30% 50%, rgba(79, 70, 229, 0.08) 0%, transparent 50%),
+    radial-gradient(circle at 80% 20%, rgba(124, 58, 237, 0.06) 0%, transparent 45%),
+    linear-gradient(135deg, #0f172a 0%, #1e293b 100%) !important;
   position: relative;
   overflow: hidden;
 }
@@ -61,6 +66,21 @@
   height: 600px;
   background: radial-gradient(circle, rgba(79, 70, 229, 0.15), transparent 70%);
   border-radius: 50%;
+  pointer-events: none;
+}
+
+/* Overlay grid — subtle mathematical graph-paper feel on top of the waves */
+.hero-section::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background-image:
+    linear-gradient(rgba(255, 255, 255, 0.035) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.035) 1px, transparent 1px);
+  background-size: 60px 60px;
+  pointer-events: none;
+  mask-image: radial-gradient(ellipse at center, black 0%, transparent 75%);
+  -webkit-mask-image: radial-gradient(ellipse at center, black 0%, transparent 75%);
 }
 
 .hero-content {

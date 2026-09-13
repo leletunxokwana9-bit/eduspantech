@@ -20,36 +20,52 @@ const MathematicalOrbit = () => {
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
     >
-      <div className="core-math">
-        <span>∫</span>
+      <div className="orbit-stage">
+        {/* Volumetric depth layers */}
+        <div className="orbit-depth-layer orbit-depth-back"></div>
+        <div className="orbit-depth-layer orbit-depth-mid"></div>
+
+        {/* Central core with layered 3D depth */}
+        <div className="core-math">
+          <div className="core-inner">
+            <span>∫</span>
+          </div>
+          <div className="core-halo"></div>
+          <div className="core-rings">
+            <span className="core-ring core-ring-1"></span>
+            <span className="core-ring core-ring-2"></span>
+          </div>
+        </div>
+
+        {/* Orbit rings */}
+        <div className="orbit-ring orbit-ring-1">
+          <div className="orbit-node node-1">{mathSymbols[0]}</div>
+          <div className="orbit-node node-2">{mathSymbols[1]}</div>
+          <div className="orbit-node node-3">{mathSymbols[2]}</div>
+          <div className="orbit-node node-4">{mathSymbols[3]}</div>
+        </div>
+
+        <div className="orbit-ring orbit-ring-2">
+          <div className="orbit-node node-5">{mathSymbols[4]}</div>
+          <div className="orbit-node node-6">{mathSymbols[5]}</div>
+          <div className="orbit-node node-7">{mathSymbols[6]}</div>
+          <div className="orbit-node node-8">{mathSymbols[7]}</div>
+        </div>
+
+        <div className="orbit-ring orbit-ring-3">
+          <div className="orbit-node node-9">∞</div>
+          <div className="orbit-node node-10">∇</div>
+          <div className="orbit-node node-11">α</div>
+          <div className="orbit-node node-12">β</div>
+        </div>
+
+        {/* Particle trails — now with 3D ring feel */}
+        <div className="particle-trail"></div>
+        <div className="particle-trail-2"></div>
+        <div className="particle-trail-3"></div>
+
+        {isHovered && <div className="orbit-glow"></div>}
       </div>
-
-      <div className="orbit-ring orbit-ring-1">
-        <div className="orbit-node node-1">{mathSymbols[0]}</div>
-        <div className="orbit-node node-2">{mathSymbols[1]}</div>
-        <div className="orbit-node node-3">{mathSymbols[2]}</div>
-        <div className="orbit-node node-4">{mathSymbols[3]}</div>
-      </div>
-
-      <div className="orbit-ring orbit-ring-2">
-        <div className="orbit-node node-5">{mathSymbols[4]}</div>
-        <div className="orbit-node node-6">{mathSymbols[5]}</div>
-        <div className="orbit-node node-7">{mathSymbols[6]}</div>
-        <div className="orbit-node node-8">{mathSymbols[7]}</div>
-      </div>
-
-      <div className="orbit-ring orbit-ring-3">
-        <div className="orbit-node node-9">∞</div>
-        <div className="orbit-node node-10">∇</div>
-        <div className="orbit-node node-11">α</div>
-        <div className="orbit-node node-12">β</div>
-      </div>
-
-      <div className="particle-trail"></div>
-      <div className="particle-trail-2"></div>
-      <div className="particle-trail-3"></div>
-
-      {isHovered && <div className="orbit-glow"></div>}
     </div>
   );
 };
@@ -429,7 +445,6 @@ const TeamCarousel = ({ members, onViewAll }) => {
     }
   };
 
-  // ✅ HOOKS MUST COME BEFORE ANY EARLY RETURN
   useEffect(() => {
     const current = scrollRef.current;
     if (!current) return;
@@ -439,7 +454,6 @@ const TeamCarousel = ({ members, onViewAll }) => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Early return now SAFE — after all hooks
   if (!members || !Array.isArray(members) || members.length === 0) {
     return null;
   }
@@ -918,7 +932,6 @@ function Home() {
           </div>
         </section>
 
-        {/* ===== NEW: GLOBAL REGIONS MAP ===== */}
         <section className="regions-map-section">
           <div className="container">
             <RegionsMap />
@@ -1235,7 +1248,6 @@ function Home() {
         </div>
       </section>
 
-      {/* ===== NEW: GLOBAL REGIONS MAP ===== */}
       <section className="regions-map-section">
         <div className="container">
           <RegionsMap />

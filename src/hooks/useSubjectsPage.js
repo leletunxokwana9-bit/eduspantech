@@ -1,12 +1,7 @@
 // src/hooks/useSubjectsPage.js
-// Loads everything the Subjects page needs in ONE call and normalises the
-// payload so the UI can never show junk strings or phantom filters.
 import { useCallback, useEffect, useState } from 'react';
 import { supabase } from '../services/supabaseClient';
 
-// ---------------------------------------------------------------------------
-// Grade metadata — the ONLY grades the app understands.
-// ---------------------------------------------------------------------------
 const GRADE_LABEL_MAP = {
   'grade8-9':   'Grade 8 – 9',
   'grade10-11': 'Grade 10 – 11',
@@ -23,10 +18,58 @@ const GRADE_TIER_MAP = {
 
 const GRADE_ORDER = ['grade8-9', 'grade10-11', 'grade12', 'tertiary'];
 
-// ---------------------------------------------------------------------------
-// Settings whitelist — anything not in here is dropped.
-// This is what kills the stray "You are viewing" / "Viewing below" strings.
-// ---------------------------------------------------------------------------
+const PLAN_TIER_MAP = {
+  TIER_1: '8-9',
+  TIER_2: '10-11',
+  TIER_3: '12',
+  TERTIARY: 'tertiary',
+};
+
+// Turn ANY of {8, '8', 'grade-8-9', 'grade8-9', 'TIER_1'} into '8-9'
+const tierFromValue = (v) => {
+  if (v == null || v === '') return null;
+
+  const clean = String(v).trim().toLowerCase();
+
+  // grade key like 'grade8-9' / 'grade-8-9' / 'grade12'
+  const normalised = clean.replace(/-/g, '');
+  if (GRADE_TIER_MAP[normalised]) return GRADE_TIER_MAP[normalised];
+  if (GRADE_TIER_MAP[clean]) return GRADE_TIER_MAP[clean];
+
+  // numeric grade
+  const n = parseInt(v, 10);
+  if (!isNaN(n)) {
+    if (n === 8 || n === 9) return '8-9';
+    if (n === 10 || n === 11) return '10-11';
+    if (n === 12) return '12';
+  }
+
+  // plan tier
+  const upper = String(v).trim().toUpperCase();
+  if (PLAN_TIER_MAP[upper]) return PLAN_TIER_MAP[upper];
+
+  return null;
+};
+
+const resolveTierFromUser = (user) => {
+  if (!user) return null;
+  return (
+    tierFromValue(user.grade) ||
+    tierFromValue(user.grade_key) ||
+    tierFromValue(user.gradeKey) ||
+    tierFromValue(user.tier) ||
+    null
+  );
+};
+
+const getStoredUser = () => {
+  try {
+    return JSON.parse(localStorage.getItem('user') || 'null');
+  } catch {
+    return null;
+  }
+};
+
 const KNOWN_SETTING_KEYS = new Set([
   'hero_eyebrow', 'hero_title', 'hero_title_accent', 'hero_subtext',
   'viewing_prefix',
@@ -64,14 +107,9 @@ function sanitizeSettings(raw) {
   return out;
 }
 
-// ---------------------------------------------------------------------------
-// Categories: normalise + DROP any category with zero subjects.
-// Handles both category_key and category_id shapes from the RPC.
-// ---------------------------------------------------------------------------
 function normaliseCategories(rawCategories, rawSubjects) {
   const subjects = rawSubjects || [];
 
-  // Which categories actually have subjects?
   const usedKeys = new Set();
   const usedIds = new Set();
   subjects.forEach((s) => {
@@ -95,10 +133,6 @@ function normaliseCategories(rawCategories, rawSubjects) {
     });
 }
 
-// ---------------------------------------------------------------------------
-// Grades: derived ONLY from grade_key values present in the subjects payload.
-// This is what kills the phantom "Grade 12" / "Tertiary" pills.
-// ---------------------------------------------------------------------------
 function deriveGrades(rawSubjects) {
   const present = new Set(
     (rawSubjects || []).map((s) => s.grade_key).filter(Boolean)
@@ -116,14 +150,22 @@ function deriveGrades(rawSubjects) {
   return [{ key: 'all', label: 'All', is_all: true }, ...real];
 }
 
-// ---------------------------------------------------------------------------
-// HOOK
-// ---------------------------------------------------------------------------
 export function useSubjectsPage() {
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [attempt, setAttempt] = useState(0);
+
+  // Re-run when auth state changes (login writes user-updated)
+  useEffect(() => {
+    const onAuth = () => setAttempt((n) => n + 1);
+    window.addEventListener('user-updated', onAuth);
+    window.addEventListener('auth-updated', onAuth);
+    return () => {
+      window.removeEventListener('user-updated', onAuth);
+      window.removeEventListener('auth-updated', onAuth);
+    };
+  }, []);
 
   useEffect(() => {
     let cancelled = false;
@@ -145,6 +187,14 @@ export function useSubjectsPage() {
         const rawSubjects   = Array.isArray(payload?.subjects)   ? payload.subjects   : [];
         const rawCategories = Array.isArray(payload?.categories) ? payload.categories : [];
 
+        // ---- memberTier: RPC first, then localStorage.user ----
+        const storedUser = getStoredUser();
+        const memberTier =
+          tierFromValue(payload?.memberTier) ||
+          resolveTierFromUser(payload?.user) ||
+          resolveTierFromUser(storedUser) ||
+          null;
+
         setData({
           settings:      sanitizeSettings(payload?.settings),
           categories:    normaliseCategories(rawCategories, rawSubjects),
@@ -153,7 +203,7 @@ export function useSubjectsPage() {
           papers:        Array.isArray(payload?.papers)      ? payload.papers      : [],
           jumpBackIn:    Array.isArray(payload?.jumpBackIn)  ? payload.jumpBackIn  : [],
           access:        payload?.access || {},
-          memberTier:    payload?.memberTier || null,
+          memberTier,
           otherTier:     payload?.otherTier || null,
           otherTierLabel: payload?.otherTierLabel || null,
           otherLevels:   Array.isArray(payload?.otherLevels) ? payload.otherLevels : [],

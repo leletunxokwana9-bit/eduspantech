@@ -127,7 +127,6 @@ const fetchMe = async () => {
 
 // ---- Resolve member tier from /auth/me OR localStorage.user ----
 const resolveMemberTier = (me, homeResult) => {
-  // 1. /auth/me response
   const candidates = [
     me?.user?.grade_key,
     me?.user?.tier,
@@ -143,7 +142,6 @@ const resolveMemberTier = (me, homeResult) => {
     if (numeric) return numeric;
   }
 
-  // 2. localStorage.user — Profile.js saves grade here after edits
   try {
     const stored = JSON.parse(localStorage.getItem('user') || 'null');
     if (stored) {

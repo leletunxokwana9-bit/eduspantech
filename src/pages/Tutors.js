@@ -1,21 +1,144 @@
-// src/pages/Tutors.js - COMPLETE WITH FULL PAGE BACKGROUND + BECOME A TUTOR + TRACK APPLICATION BANNER
+// src/pages/Tutors.js - REDESIGNED: shift sections, coverage timeline, standout tutor cards
 import React, { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { tutorService } from '../services/tutorService';
 import sessionService from '../services/sessionService';
 import './Tutors.css';
 
+// ============================================
+// HELPERS (outside component so they are stable)
+// ============================================
+const SHIFT_COLORS = {
+  APAC: '#38bdf8',
+  SOUTH_ASIA: '#fb923c',
+  AFRICA_EUROPE: '#34d399',
+  AMERICAS: '#f472b6'
+};
+const FALLBACK_COLORS = ['#38bdf8', '#fb923c', '#34d399', '#f472b6', '#a78bfa'];
+const NEUTRAL_COLOR = '#b4bce0';
+
+const SHIFT_LABELS = {
+  APAC: 'APAC',
+  SOUTH_ASIA: 'South Asia',
+  AFRICA_EUROPE: 'Africa & Europe',
+  AMERICAS: 'Americas'
+};
+
+const getShiftKey = (shift) => String(shift?.name || '').toUpperCase().replace(/\s+/g, '_');
+
+const isFlexibleShift = (shift) => {
+  const key = getShiftKey(shift);
+  return key === 'UNASSIGNED' || !shift?.time || /24\s*\/\s*7/.test(shift.time);
+};
+
+const getShiftColor = (shift, index) => {
+  if (isFlexibleShift(shift)) return NEUTRAL_COLOR;
+  return SHIFT_COLORS[getShiftKey(shift)] || FALLBACK_COLORS[index % FALLBACK_COLORS.length];
+};
+
+const getShiftLabel = (shift) => {
+  const key = getShiftKey(shift);
+  if (key === 'UNASSIGNED') return 'Flexible · 24/7';
+  if (SHIFT_LABELS[key]) return SHIFT_LABELS[key];
+  return String(shift?.name || '')
+    .replace(/_/g, ' ')
+    .toLowerCase()
+    .replace(/\b\w/g, (c) => c.toUpperCase());
+};
+
+// "08:00:00 - 15:00:00" -> "08:00 – 15:00"
+const formatShiftTime = (time) => {
+  if (!time) return 'Any time';
+  const parts = String(time).match(/\d{1,2}:\d{2}/g);
+  if (parts && parts.length >= 2) return `${parts[0]} – ${parts[1]}`;
+  return time;
+};
+
+// "21:00:00 - 04:00:00" -> [{start:21,end:24},{start:0,end:4}] (hours, 0-24)
+const getShiftSegments = (time) => {
+  const parts = String(time || '').match(/(\d{1,2}):(\d{2})/g);
+  if (!parts || parts.length < 2) return [];
+  const toHours = (p) => {
+    const [h, m] = p.split(':').map(Number);
+    return h + m / 60;
+  };
+  const start = toHours(parts[0]);
+  const end = toHours(parts[1]);
+  if (end > start) return [{ start, end }];
+  if (end === start) return [{ start: 0, end: 24 }];
+  return [{ start, end: 24 }, { start: 0, end }];
+};
+
+const getTierNumber = (tier) => {
+  const m = String(tier || '').match(/\d/);
+  return m ? m[0] : null;
+};
+
+const getTierLabel = (tier) => {
+  if (!tier) return '';
+  const n = getTierNumber(tier);
+  return n ? `Tier ${n}` : String(tier).replace(/_/g, ' ');
+};
+
+const getInitials = (name) => {
+  if (!name) return 'T';
+  const words = name
+    .replace(/\./g, '')
+    .split(' ')
+    .filter((w) => w && !['Mr', 'Ms', 'Mrs', 'Dr', 'Prof'].includes(w));
+  const list = words.length ? words : name.split(' ');
+  return ((list[0]?.[0] || '') + (list.length > 1 ? list[list.length - 1][0] : '')).toUpperCase() || 'T';
+};
+
+const formatDuration = (seconds) => {
+  const total = Math.max(0, Math.floor(seconds || 0));
+  const mins = Math.floor(total / 60);
+  const secs = total % 60;
+  return `${mins}:${secs.toString().padStart(2, '0')}`;
+};
+
+const formatViews = (count) => {
+  if (count >= 1000000) return `${(count / 1000000).toFixed(1)}M`;
+  if (count >= 1000) return `${(count / 1000).toFixed(1)}K`;
+  return count;
+};
+
+const hasVideo = (tutor) => !!(tutor.intro_video_url && tutor.intro_video_thumbnail);
+
+const isImageSrc = (src) =>
+  !!src && (src.startsWith('data:image') || src.startsWith('http://') || src.startsWith('https://'));
+
+// Avatar: real photo if available, otherwise initials
+const TutorAvatar = ({ tutor }) => {
+  const [failed, setFailed] = useState(false);
+  if (isImageSrc(tutor.avatar) && !failed) {
+    return (
+      <img
+        src={tutor.avatar}
+        alt={tutor.name}
+        className="tutor-avatar-img"
+        loading="lazy"
+        onError={() => setFailed(true)}
+      />
+    );
+  }
+  return <span className="tutor-avatar-initials">{getInitials(tutor.name)}</span>;
+};
+
+// ============================================
+// COMPONENT
+// ============================================
 const Tutors = () => {
   const navigate = useNavigate();
   const [tutors, setTutors] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const [booking, setBooking] = useState({ 
-    tutorId: null, 
-    date: '', 
-    duration: 60, 
-    topic: 'Mathematics' 
+  const [booking, setBooking] = useState({
+    tutorId: null,
+    date: '',
+    duration: 60,
+    topic: 'Mathematics'
   });
   const [bookingLoading, setBookingLoading] = useState(false);
   const [showBookingModal, setShowBookingModal] = useState(false);
@@ -28,7 +151,7 @@ const Tutors = () => {
   const [showSuccessModal, setShowSuccessModal] = useState(false);
   const [successMessage, setSuccessMessage] = useState('');
   const [bookingResult, setBookingResult] = useState(null);
-  
+
   // ===== VIDEO MODAL STATE =====
   const [showVideoModal, setShowVideoModal] = useState(false);
   const [videoTutor, setVideoTutor] = useState(null);
@@ -47,11 +170,11 @@ const Tutors = () => {
     try {
       setLoading(true);
       setError('');
-      
+
       console.log('📚 Fetching tutors from API...');
       const result = await tutorService.getTutors();
       console.log('📚 API Response:', result);
-      
+
       if (result.success && result.tutors) {
         setTutors(result.tutors);
         setTotalTutors(result.totalTutors || 0);
@@ -76,129 +199,52 @@ const Tutors = () => {
     setShowVideoModal(true);
   };
 
-  const hasVideo = (tutor) => {
-    return tutor.intro_video_url && tutor.intro_video_thumbnail;
-  };
-
   // ============================================
-  // RENDER AVATAR - SHOW REAL OR DEFAULT
-  // ============================================
-  const renderAvatar = (tutor) => {
-    if (!tutor.avatar) {
-      return '🧑‍🏫';
-    }
-
-    const isImage = tutor.avatar.startsWith('data:image') || 
-                    tutor.avatar.startsWith('http://') || 
-                    tutor.avatar.startsWith('https://');
-
-    if (isImage) {
-      let imageUrl = tutor.avatar;
-      if (imageUrl.startsWith('http')) {
-        const separator = imageUrl.includes('?') ? '&' : '?';
-        imageUrl = `${imageUrl}${separator}t=${Date.now()}`;
-      }
-
-      return (
-        <img 
-          src={imageUrl} 
-          alt={tutor.name} 
-          className="tutor-avatar-img"
-          loading="lazy"
-          onError={(e) => {
-            e.target.style.display = 'none';
-            const parent = e.target.parentElement;
-            if (parent) {
-              parent.textContent = '🧑‍🏫';
-              parent.style.fontSize = '28px';
-              parent.style.display = 'flex';
-              parent.style.alignItems = 'center';
-              parent.style.justifyContent = 'center';
-            }
-          }}
-        />
-      );
-    }
-
-    return '🧑‍🏫';
-  };
-
-  // ============================================
-  // GET AVATAR COLOR FOR FALLBACK
-  // ============================================
-  const getAvatarColor = (name) => {
-    const colors = ['#4f46e5', '#7c3aed', '#059669', '#10b981', '#dc2626', '#f59e0b', '#8b5cf6', '#ec4899'];
-    if (!name) return colors[0];
-    const index = name.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
-    return colors[index % colors.length];
-  };
-
-  const getInitials = (name) => {
-    if (!name) return 'T';
-    return name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
-  };
-
-  // ============================================
-  // RENDER VIDEO THUMBNAIL - WITH IMPROVED NO-VIDEO PLACEHOLDER
+  // VIDEO THUMBNAIL (always visible at top of card)
   // ============================================
   const renderVideoThumbnail = (tutor) => {
-    const hasVideoFile = hasVideo(tutor);
-    const duration = tutor.intro_video_duration || 0;
-    const views = tutor.intro_video_views || 0;
-
-    if (!hasVideoFile) {
-      const avatarColor = getAvatarColor(tutor.name);
-      const initials = getInitials(tutor.name);
-      
+    if (!hasVideo(tutor)) {
       return (
         <div className="video-placeholder-no-video">
-          <div className="no-video-avatar-wrapper">
-            {tutor.avatar ? (
-              <img 
-                src={tutor.avatar} 
-                alt={tutor.name}
-                className="no-video-blurred-avatar"
-                loading="lazy"
-              />
+          <div className="no-video-bg">
+            {isImageSrc(tutor.avatar) ? (
+              <img src={tutor.avatar} alt="" className="no-video-blurred-avatar" loading="lazy" />
             ) : (
-              <div 
-                className="no-video-blurred-initial"
-                style={{ background: avatarColor }}
-              >
-                {initials}
-              </div>
+              <span className="no-video-blurred-initial">{getInitials(tutor.name)}</span>
             )}
-            <div className="no-video-overlay">
-              <span className="no-video-icon">📹</span>
-              <span className="no-video-text">Get to know me</span>
-              <span className="no-video-subtext">Click to learn more</span>
-            </div>
+          </div>
+          <div className="no-video-overlay">
+            <span className="no-video-text">Get to know me</span>
+            <span className="no-video-subtext">Click to view profile</span>
           </div>
         </div>
       );
     }
 
-    const formatDuration = (seconds) => {
-      const mins = Math.floor(seconds / 60);
-      const secs = seconds % 60;
-      return `${mins}:${secs.toString().padStart(2, '0')}`;
-    };
-
-    const formatViews = (count) => {
-      if (count >= 1000000) return `${(count / 1000000).toFixed(1)}M`;
-      if (count >= 1000) return `${(count / 1000).toFixed(1)}K`;
-      return count;
-    };
+    const duration = tutor.intro_video_duration || 0;
+    const views = tutor.intro_video_views || 0;
 
     return (
-      <div className="video-thumbnail-container" onClick={(e) => handleWatchIntro(tutor, e)}>
-        <img 
-          src={tutor.intro_video_thumbnail || '/images/video-placeholder.jpg'} 
+      <div
+        className="video-thumbnail-container"
+        role="button"
+        tabIndex={0}
+        aria-label={`Play intro video from ${tutor.name}`}
+        onClick={(e) => handleWatchIntro(tutor, e)}
+        onKeyDown={(e) => {
+          if (e.key === 'Enter' || e.key === ' ') {
+            e.preventDefault();
+            handleWatchIntro(tutor, e);
+          }
+        }}
+      >
+        <img
+          src={tutor.intro_video_thumbnail || '/images/video-placeholder.jpg'}
           alt={`${tutor.name} intro video`}
           className="video-thumbnail"
           loading="lazy"
           onError={(e) => {
-            e.target.src = 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="300" height="169" viewBox="0 0 300 169"%3E%3Crect width="300" height="169" fill="%23141b2d"/%3E%3Ctext x="150" y="85" text-anchor="middle" fill="%234f46e5" font-size="48"%3E🎬%3C/text%3E%3Ctext x="150" y="115" text-anchor="middle" fill="%2394a3b8" font-size="14"%3ENo thumbnail%3C/text%3E%3C/svg%3E';
+            e.target.style.visibility = 'hidden';
           }}
         />
         <div className="video-play-overlay">
@@ -206,14 +252,8 @@ const Tutors = () => {
             <span className="play-icon">▶</span>
           </div>
         </div>
-        <div className="video-duration-badge">
-          ⏱️ {formatDuration(duration)}
-        </div>
-        {views > 0 && (
-          <div className="video-views-badge">
-            👁️ {formatViews(views)} views
-          </div>
-        )}
+        <div className="video-duration-badge">{formatDuration(duration)}</div>
+        {views > 0 && <div className="video-views-badge">{formatViews(views)} views</div>}
       </div>
     );
   };
@@ -290,14 +330,14 @@ const Tutors = () => {
 
     try {
       setBookingLoading(true);
-      
+
       console.log('📤 Booking data:', {
         tutorId: booking.tutorId,
         date: booking.date,
         duration: booking.duration,
         topic: booking.topic
       });
-      
+
       const result = await sessionService.bookSession(
         booking.tutorId,
         booking.date,
@@ -337,16 +377,10 @@ const Tutors = () => {
   const VideoModal = () => {
     if (!showVideoModal || !videoTutor) return null;
 
-    const formatDuration = (seconds) => {
-      const mins = Math.floor(seconds / 60);
-      const secs = seconds % 60;
-      return `${mins}:${secs.toString().padStart(2, '0')}`;
-    };
-
     return (
       <div className="video-modal-overlay" onClick={() => setShowVideoModal(false)}>
         <div className="video-modal-content" onClick={(e) => e.stopPropagation()}>
-          <button className="video-modal-close" onClick={() => setShowVideoModal(false)}>×</button>
+          <button className="video-modal-close" onClick={() => setShowVideoModal(false)} aria-label="Close video">×</button>
           <div className="video-wrapper">
             {videoTutor.intro_video_url ? (
               <video
@@ -437,16 +471,16 @@ const Tutors = () => {
     return (
       <div className="tutor-modal-overlay" onClick={() => setShowTutorModal(false)}>
         <div className="tutor-modal" onClick={(e) => e.stopPropagation()}>
-          <button className="tutor-modal-close" onClick={() => setShowTutorModal(false)}>×</button>
-          
+          <button className="tutor-modal-close" onClick={() => setShowTutorModal(false)} aria-label="Close">×</button>
+
           {!showFullProfile ? (
             <div className="tutor-modal-content">
               <div className="tutor-modal-avatar">
-                {renderAvatar(viewingTutor)}
+                <TutorAvatar tutor={viewingTutor} />
               </div>
               <h2 className="tutor-modal-name">{viewingTutor.name}</h2>
               {viewingTutor.tier && (
-                <span className="tutor-modal-tier">{viewingTutor.tier}</span>
+                <span className="tutor-modal-tier">{getTierLabel(viewingTutor.tier)}</span>
               )}
               {viewingTutor.subjects && viewingTutor.subjects.length > 0 && (
                 <div className="tutor-modal-subjects">
@@ -460,7 +494,7 @@ const Tutors = () => {
               )}
               {shiftName && (
                 <div className="tutor-modal-shift">
-                  <span className="shift-label">⏰ {shiftName}</span>
+                  <span className="shift-label">⏰ {SHIFT_LABELS[shiftName] || shiftName}</span>
                 </div>
               )}
               <div className="tutor-modal-actions">
@@ -482,12 +516,12 @@ const Tutors = () => {
               </button>
               <div className="full-profile-header">
                 <div className="full-profile-avatar">
-                  {renderAvatar(viewingTutor)}
+                  <TutorAvatar tutor={viewingTutor} />
                 </div>
                 <div className="full-profile-info">
                   <h2>{viewingTutor.name}</h2>
                   {viewingTutor.tier && (
-                    <span className="full-profile-tier">{viewingTutor.tier}</span>
+                    <span className="full-profile-tier">{getTierLabel(viewingTutor.tier)}</span>
                   )}
                   {viewingTutor.email && (
                     <p className="full-profile-email">{viewingTutor.email}</p>
@@ -514,7 +548,7 @@ const Tutors = () => {
                 {shiftName && (
                   <div className="profile-section">
                     <h3>⏰ Availability</h3>
-                    <p>{shiftName}</p>
+                    <p>{SHIFT_LABELS[shiftName] || shiftName}</p>
                     {viewingTutor.shiftTime && (
                       <p className="shift-time">{viewingTutor.shiftTime}</p>
                     )}
@@ -549,7 +583,7 @@ const Tutors = () => {
   const LoginPrompt = () => (
     <div className="login-prompt-overlay" onClick={() => setShowLoginPrompt(false)}>
       <div className="login-prompt-modal" onClick={(e) => e.stopPropagation()}>
-        <button className="login-prompt-close" onClick={() => setShowLoginPrompt(false)}>×</button>
+        <button className="login-prompt-close" onClick={() => setShowLoginPrompt(false)} aria-label="Close">×</button>
         <div className="login-prompt-icon">🔒</div>
         <h3>Login Required</h3>
         <p>Please log in to book a session with <strong>{selectedTutor?.name}</strong>.</p>
@@ -574,7 +608,7 @@ const Tutors = () => {
   const BookingModal = () => (
     <div className="booking-modal-overlay" onClick={() => setShowBookingModal(false)}>
       <div className="booking-modal" onClick={(e) => e.stopPropagation()}>
-        <button className="booking-modal-close" onClick={() => setShowBookingModal(false)}>×</button>
+        <button className="booking-modal-close" onClick={() => setShowBookingModal(false)} aria-label="Close">×</button>
         <h3>📚 Book Session with {selectedTutor?.name}</h3>
         <form onSubmit={handleBookingSubmit}>
           <div className="form-group">
@@ -631,9 +665,9 @@ const Tutors = () => {
               />
             )}
           </div>
-          <button 
-            type="submit" 
-            className="btn-primary" 
+          <button
+            type="submit"
+            className="btn-primary"
             disabled={bookingLoading}
           >
             {bookingLoading ? '⏳ Booking...' : '✅ Confirm Booking'}
@@ -642,6 +676,74 @@ const Tutors = () => {
       </div>
     </div>
   );
+
+  // ============================================
+  // TUTOR CARD
+  // ============================================
+  const renderTutorCard = (tutor) => {
+    const tierNum = getTierNumber(tutor.tier);
+    const videoAvailable = hasVideo(tutor);
+
+    return (
+      <article
+        key={tutor.id}
+        className="tutor-card"
+        onClick={() => handleTutorCardClick(tutor)}
+      >
+        <div className="tutor-card-video-section">{renderVideoThumbnail(tutor)}</div>
+
+        <div className="tutor-card-body">
+          <div className="tutor-card-head">
+            <div className="tutor-card-avatar">
+              <TutorAvatar tutor={tutor} />
+            </div>
+            <div className="tutor-card-id">
+              <h4>{tutor.name}</h4>
+              {tutor.tier && (
+                <span className={`tier-badge tier-${tierNum || 'x'}`}>{getTierLabel(tutor.tier)}</span>
+              )}
+            </div>
+          </div>
+
+          {tutor.subjects && tutor.subjects.length > 0 && (
+            <div className="tutor-card-subjects">
+              {tutor.subjects.slice(0, 3).map((subject, idx) => (
+                <span key={idx}>{subject}</span>
+              ))}
+              {tutor.subjects.length > 3 && <span>+{tutor.subjects.length - 3}</span>}
+            </div>
+          )}
+
+          <div className="tutor-card-actions">
+            <button
+              className="book-session-btn"
+              onClick={(e) => {
+                e.stopPropagation();
+                handleBookSession(tutor);
+              }}
+            >
+              Book Session
+            </button>
+            {videoAvailable ? (
+              <button className="watch-intro-btn" onClick={(e) => handleWatchIntro(tutor, e)}>
+                ▶ Watch Intro
+              </button>
+            ) : (
+              <button
+                className="watch-intro-btn"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleTutorCardClick(tutor);
+                }}
+              >
+                View Profile
+              </button>
+            )}
+          </div>
+        </div>
+      </article>
+    );
+  };
 
   if (loading) {
     return (
@@ -656,22 +758,23 @@ const Tutors = () => {
     return <div className="page-error">Error: {error}</div>;
   }
 
+  const timelineShifts = (tutors || []).filter((s) => !isFlexibleShift(s));
+  const tutorCountTotal = (tutors || []).reduce((acc, s) => acc + (s.tutors?.length || 0), 0);
+
   // ============================================
-  // MAIN RENDER WITH WRAPPER FOR FULL BACKGROUND
+  // MAIN RENDER
   // ============================================
   return (
     <div className="tutors-page-wrapper">
-      {showLoginPrompt && <LoginPrompt />}
-      {showBookingModal && <BookingModal />}
-      {showTutorModal && <TutorModal />}
-      {showVideoModal && <VideoModal />}
-      <SuccessModal />
+      {showLoginPrompt && LoginPrompt()}
+      {showBookingModal && BookingModal()}
+      {showTutorModal && TutorModal()}
+      {showVideoModal && VideoModal()}
+      {SuccessModal()}
 
       <div className="tutors-page">
 
-        {/* ============================================
-            BECOME A TUTOR + TRACK APPLICATION CTA BANNER
-           ============================================ */}
+        {/* ===== BECOME A TUTOR + TRACK APPLICATION BANNER ===== */}
         <section className="become-tutor-banner">
           <div className="btb-inner">
             <div className="btb-left">
@@ -699,8 +802,9 @@ const Tutors = () => {
           </div>
         </section>
 
+        {/* ===== HEADER ===== */}
         <div className="tutors-page-header">
-          <h1>👨‍🏫 Our Expert Tutors</h1>
+          <h1>Our Expert Tutors</h1>
           <p>{totalTutors} Centralised Tutors • 24/7 Global Coverage</p>
           {!isAuthenticated && (
             <div className="tutors-auth-banner">
@@ -709,82 +813,74 @@ const Tutors = () => {
           )}
         </div>
 
-        <div className="tutors-page-grid">
-          {tutors && tutors.length > 0 ? (
-            tutors.map((shift) => (
-              <div key={shift.id || shift.name} className="tutors-page-shift">
-                <div className="tutors-page-shift-header">
-                  <h3>{shift.name}</h3>
-                  <span className="tutors-page-shift-time">{shift.time}</span>
+        {/* ===== 24H COVERAGE TIMELINE ===== */}
+        {timelineShifts.length > 0 && (
+          <section className="coverage-timeline" aria-label="Shift coverage over 24 hours">
+            <h2>Who is online, hour by hour</h2>
+            <p>Pick the shift that matches your local time (UTC, 24h)</p>
+            {timelineShifts.map((shift, idx) => {
+              const color = getShiftColor(shift, idx);
+              return (
+                <div className="coverage-row" key={shift.id || shift.name}>
+                  <span className="coverage-label">{getShiftLabel(shift)}</span>
+                  <div className="coverage-track">
+                    {getShiftSegments(shift.time).map((seg, i) => (
+                      <i
+                        key={i}
+                        style={{
+                          left: `${(seg.start / 24) * 100}%`,
+                          width: `${((seg.end - seg.start) / 24) * 100}%`,
+                          background: color
+                        }}
+                      />
+                    ))}
+                  </div>
                 </div>
-                <div className="tutors-page-hubs">
-                  {shift.hubs?.map((hub, idx) => (
-                    <span key={idx}>{hub}</span>
-                  ))}
-                </div>
-                <div className="tutors-page-tutor-list">
-                  {shift.tutors && shift.tutors.length > 0 ? (
-                    shift.tutors.map((tutor) => (
-                      <div 
-                        key={tutor.id} 
-                        className="tutors-page-tutor-card"
-                        onClick={() => handleTutorCardClick(tutor)}
-                      >
-                        <div className="tutor-card-video-section">
-                          {renderVideoThumbnail(tutor)}
-                        </div>
+              );
+            })}
+            <div className="coverage-ticks">
+              {[0, 3, 6, 9, 12, 15, 18, 21].map((h) => (
+                <span key={h}>{String(h).padStart(2, '0')}</span>
+              ))}
+            </div>
+          </section>
+        )}
 
-                        <div className="tutors-page-tutor-avatar">
-                          {renderAvatar(tutor)}
-                        </div>
-                        <div className="tutors-page-tutor-info">
-                          <div className="tutors-page-tutor-name-row">
-                            <h4>{tutor.name}</h4>
-                            {tutor.tier && (
-                              <span className="tutors-page-tutor-tier">{tutor.tier}</span>
-                            )}
-                          </div>
-                          {tutor.subjects && tutor.subjects.length > 0 && (
-                            <div className="tutors-page-tutor-subjects">
-                              {tutor.subjects.slice(0, 3).map((subject, idx) => (
-                                <span key={idx}>{subject}</span>
-                              ))}
-                              {tutor.subjects.length > 3 && (
-                                <span>+{tutor.subjects.length - 3}</span>
-                              )}
-                            </div>
-                          )}
-                        </div>
-                        <div className="tutor-card-actions">
-                          <button 
-                            className="book-session-btn"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleBookSession(tutor);
-                            }}
-                          >
-                            📚 Book Session
-                          </button>
-                          {hasVideo(tutor) && (
-                            <button 
-                              className="watch-intro-btn"
-                              onClick={(e) => handleWatchIntro(tutor, e)}
-                            >
-                              ▶ Watch Intro
-                            </button>
-                          )}
-                        </div>
-                      </div>
-                    ))
+        {/* ===== SHIFT SECTIONS ===== */}
+        <div className="tutors-page-sections">
+          {tutors && tutors.length > 0 ? (
+            tutors.map((shift, idx) => {
+              const color = getShiftColor(shift, idx);
+              const list = shift.tutors || [];
+              return (
+                <section
+                  key={shift.id || shift.name}
+                  className="shift-section"
+                  style={{ '--accent': color }}
+                >
+                  <div className="shift-header">
+                    <span className="shift-dot" />
+                    <h2>{getShiftLabel(shift)}</h2>
+                    <span className="shift-time-pill">{formatShiftTime(shift.time)}</span>
+                    {shift.hubs && shift.hubs.length > 0 && (
+                      <span className="shift-hubs">{shift.hubs.join(' · ')}</span>
+                    )}
+                    <span className="shift-count">
+                      {list.length} {list.length === 1 ? 'tutor' : 'tutors'}
+                    </span>
+                  </div>
+
+                  {list.length > 0 ? (
+                    <div className="tutor-grid">{list.map(renderTutorCard)}</div>
                   ) : (
                     <div className="tutors-page-empty">
                       <p>No tutors available for this shift.</p>
                       <p className="empty-sub">Check back during shift hours.</p>
                     </div>
                   )}
-                </div>
-              </div>
-            ))
+                </section>
+              );
+            })
           ) : (
             <div className="tutors-page-empty-state">
               <p>No tutors available at the moment.</p>
@@ -794,7 +890,7 @@ const Tutors = () => {
         </div>
 
         <div className="tutors-page-total">
-          {tutors.length} Shifts × {tutors.reduce((acc, s) => acc + (s.tutors?.length || 0), 0)} Tutors = {totalTutors} Centralised Tutors Total
+          {tutors.length} shifts · {totalTutors || tutorCountTotal} centralised tutors in total
         </div>
       </div>
     </div>

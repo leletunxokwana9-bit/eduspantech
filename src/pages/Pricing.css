@@ -106,6 +106,165 @@
   background: rgba(239, 68, 68, 0.25);
 }
 
+/* ===== AUDIENCE TOGGLE (Grade 8-12 Learners / Tertiary Students) ===== */
+.audience-toggle-wrap {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  margin-top: 24px;
+}
+
+.audience-toggle-label {
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.45) !important;
+}
+
+.audience-toggle {
+  display: inline-flex;
+  gap: 6px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 16px;
+  padding: 5px;
+}
+
+.audience-btn {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-height: 56px;
+  padding: 8px 22px 8px 16px;
+  border: none;
+  border-radius: 12px;
+  background: transparent;
+  color: rgba(255, 255, 255, 0.55) !important;
+  text-align: left;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.audience-btn:hover:not(.active) {
+  background: rgba(255, 255, 255, 0.06);
+  color: rgba(255, 255, 255, 0.85) !important;
+}
+
+.audience-btn:focus-visible {
+  outline: 2px solid #818cf8;
+  outline-offset: 2px;
+}
+
+.audience-btn.active {
+  background: linear-gradient(135deg, #4f46e5, #7c3aed) !important;
+  color: #ffffff !important;
+  box-shadow: 0 4px 16px rgba(79, 70, 229, 0.25);
+}
+
+.audience-btn svg {
+  flex-shrink: 0;
+}
+
+.audience-btn-text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.audience-btn-title {
+  font-size: 15px;
+  font-weight: 700;
+  line-height: 1.2;
+}
+
+.audience-btn-sub {
+  font-size: 12px;
+  font-weight: 500;
+  opacity: 0.75;
+  line-height: 1.2;
+}
+
+/* grid fades in each time the audience changes */
+.pricing-page-grid.audience-fade {
+  animation: fadeInUp 0.35s ease-out;
+}
+
+/* shown when the selected audience has no plans yet */
+.audience-empty {
+  max-width: 520px;
+  margin: 0 auto;
+  padding: 40px 24px;
+  text-align: center;
+  background: #141b2d;
+  border: 1.5px solid rgba(255, 255, 255, 0.06);
+  border-radius: 20px;
+}
+
+.audience-empty h3 {
+  margin: 0 0 8px 0;
+  font-size: 22px;
+  font-weight: 700;
+  color: #ffffff;
+}
+
+.audience-empty p {
+  margin: 0;
+  font-size: 15px;
+  color: rgba(255, 255, 255, 0.6);
+  line-height: 1.5;
+}
+
+@media (max-width: 768px) {
+  .audience-toggle {
+    flex-direction: column;
+    width: 100%;
+    max-width: 400px;
+    box-sizing: border-box;
+  }
+
+  .audience-btn {
+    width: 100%;
+    box-sizing: border-box;
+  }
+}
+
+[data-theme="light"] .audience-toggle-label {
+  color: rgba(0, 0, 0, 0.45) !important;
+}
+
+[data-theme="light"] .audience-toggle {
+  background: rgba(0, 0, 0, 0.04);
+  border-color: rgba(0, 0, 0, 0.06);
+}
+
+[data-theme="light"] .audience-btn {
+  color: rgba(0, 0, 0, 0.55) !important;
+}
+
+[data-theme="light"] .audience-btn:hover:not(.active) {
+  background: rgba(0, 0, 0, 0.05);
+  color: #0f172a !important;
+}
+
+[data-theme="light"] .audience-btn.active {
+  color: #ffffff !important;
+}
+
+[data-theme="light"] .audience-empty {
+  background: #ffffff;
+  border-color: rgba(0, 0, 0, 0.06);
+}
+
+[data-theme="light"] .audience-empty h3 {
+  color: #0f172a;
+}
+
+[data-theme="light"] .audience-empty p {
+  color: rgba(0, 0, 0, 0.6);
+}
+
 /* ===== BILLING TOGGLE ===== */
 .billing-toggle {
   display: inline-flex;
@@ -804,4 +963,15 @@
 
 [data-theme="light"] .pricing-page-card.current-plan {
   border-color: #059669 !important;
+}
+
+.audience-hint {
+  margin-top: 12px;
+  font-size: 0.85rem;
+  color: #64748b;
+  text-align: center;
+}
+
+.audience-hint strong {
+  color: #334155;
 }

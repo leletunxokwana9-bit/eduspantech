@@ -19,35 +19,16 @@
   color: rgba(255, 255, 255, 0.7) !important;
 }
 
-/* ===== TWO COLUMN LAYOUT ===== */
-.profile-grid-two {
-  display: grid;
-  grid-template-columns: 520px 1fr;
-  gap: 32px;
-  align-items: start;
-  margin-bottom: 28px;
-}
-
-.profile-left-col {
-  position: sticky;
-  top: 20px;
-}
-
-.profile-right-col {
-  display: flex;
-  flex-direction: column;
-  gap: 20px;
-}
-
 /* ===== HEADER ===== */
 .profile-header {
   display: flex;
   align-items: center;
   gap: 24px;
-  padding: 24px 28px;
+  padding: 28px 32px;
   background: #141b2d !important;
   border-radius: 12px;
   border: 1px solid rgba(255, 255, 255, 0.06) !important;
+  margin-bottom: 36px; /* ✅ CHANGED: 28px → 36px for breathing room before stats */
 }
 
 .profile-avatar {
@@ -107,14 +88,14 @@
 }
 
 .profile-header-info h1 {
-  font-size: 24px;
-  font-weight: 700;
+  font-size: 28px;
+  font-weight: 600;
   color: #ffffff !important;
   margin: 0 0 4px 0;
 }
 
 .profile-header-subtitle {
-  font-size: 14px;
+  font-size: 15px;
   color: rgba(255, 255, 255, 0.6) !important;
   margin: 0 0 8px 0;
 }
@@ -144,12 +125,12 @@
 }
 
 .profile-edit-btn {
-  padding: 8px 20px;
-  border-radius: 8px;
+  padding: 10px 24px;
+  border-radius: 10px;
   border: 1px solid rgba(255, 255, 255, 0.06) !important;
-  background: rgba(255, 255, 255, 0.04) !important;
+  background: #141b2d !important;
   color: #ffffff !important;
-  font-size: 13px;
+  font-size: 14px;
   font-weight: 600;
   cursor: pointer;
   transition: all 0.2s ease;
@@ -158,7 +139,8 @@
 
 .profile-edit-btn:hover {
   border-color: #ffffff !important;
-  background: rgba(255, 255, 255, 0.08) !important;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+  transform: translateY(-2px);
 }
 
 /* ===== MESSAGES ===== */
@@ -184,13 +166,14 @@
 .profile-stats {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
-  gap: 12px;
+  gap: 16px;
+  margin-bottom: 28px;
 }
 
 .profile-stat-card {
   background: #141b2d !important;
-  border-radius: 10px;
-  padding: 16px 20px;
+  border-radius: 12px;
+  padding: 20px 24px;
   border: 1px solid rgba(255, 255, 255, 0.06) !important;
   text-align: center;
   transition: all 0.2s ease;
@@ -198,11 +181,12 @@
 
 .profile-stat-card:hover {
   border-color: rgba(255, 255, 255, 0.12) !important;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
 }
 
 .stat-number {
   display: block;
-  font-size: 28px;
+  font-size: 32px;
   font-weight: 700;
   color: #ffffff !important;
   line-height: 1.2;
@@ -210,7 +194,7 @@
 
 .stat-label {
   display: block;
-  font-size: 13px;
+  font-size: 14px;
   color: rgba(255, 255, 255, 0.6) !important;
   font-weight: 500;
   margin-top: 4px;
@@ -253,7 +237,6 @@
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 24px;
-  margin-top: 28px;
 }
 
 .profile-card {
@@ -274,6 +257,164 @@
   margin: 0 0 20px 0;
   padding-bottom: 12px;
   border-bottom: 1px solid rgba(255, 255, 255, 0.06) !important;
+}
+
+/* ============================================
+   ✅ NEW: TUTOR PROFILE — CLEAN GRID LAYOUT
+   Each field is a labeled block (label above value)
+   with proper spacing, dividers, and structure.
+   ============================================ */
+.tutor-profile-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 20px 28px;
+}
+
+.tutor-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+}
+
+.tutor-field-full {
+  grid-column: 1 / -1;
+}
+
+.tutor-field-label {
+  font-size: 12px;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.5) !important;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 2px;
+}
+
+.tutor-field-value {
+  font-size: 15px;
+  color: #ffffff !important;
+  font-weight: 500;
+  line-height: 1.5;
+  word-break: break-word;
+}
+
+.tutor-field-bio {
+  font-size: 14px;
+  color: rgba(255, 255, 255, 0.75) !important;
+  font-weight: 400;
+  line-height: 1.7;
+  margin: 0;
+  padding: 10px 14px;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 8px;
+}
+
+.tutor-field-empty {
+  font-size: 14px;
+  color: rgba(255, 255, 255, 0.4) !important;
+  font-style: italic;
+}
+
+.tutor-field-link {
+  color: #818cf8 !important;
+  text-decoration: none;
+  word-break: break-all;
+  transition: color 0.2s ease;
+}
+
+.tutor-field-link:hover {
+  color: #a5b4fc !important;
+  text-decoration: underline;
+}
+
+.tutor-input,
+.tutor-select {
+  width: 100% !important;
+  padding: 10px 14px;
+  font-size: 14px;
+}
+
+.tutor-textarea {
+  width: 100% !important;
+  font-family: inherit;
+  resize: vertical;
+  min-height: 100px;
+  padding: 12px 14px;
+  line-height: 1.6;
+}
+
+/* Subjects — display mode */
+.tutor-subjects-display {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding-top: 2px;
+}
+
+.tutor-subject-tag {
+  font-size: 13px;
+  padding: 5px 14px;
+  border-radius: 20px;
+  background: rgba(79, 70, 229, 0.15);
+  color: #a5b4fc !important;
+  border: 1px solid rgba(79, 70, 229, 0.25);
+  font-weight: 500;
+  transition: all 0.2s ease;
+}
+
+.tutor-subject-tag:hover {
+  background: rgba(79, 70, 229, 0.25);
+  border-color: rgba(79, 70, 229, 0.4);
+}
+
+/* Subjects — edit mode */
+.tutor-subjects-edit {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px 18px;
+  padding: 12px 14px;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 8px;
+}
+
+.tutor-subject-checkbox-label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+  color: #e2e8f0 !important;
+  cursor: pointer;
+  padding: 4px 0;
+  transition: color 0.2s ease;
+}
+
+.tutor-subject-checkbox-label:hover {
+  color: #ffffff !important;
+}
+
+/* Video field */
+.tutor-video-field {
+  margin-top: 8px;
+  padding-top: 20px;
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.tutor-video-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 10px;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.tutor-video-hint {
+  font-size: 13px;
+  color: rgba(255, 255, 255, 0.5) !important;
+  margin: 0 0 14px 0;
+  line-height: 1.5;
 }
 
 /* ===== PERSONAL INFO ===== */
@@ -536,7 +677,7 @@
 }
 
 /* ============================================
-   MODALS
+   MODALS - MATCHING TUTORS PAGE STYLE
    ============================================ */
 .profile-modal-overlay {
   position: fixed;
@@ -733,7 +874,7 @@
 }
 
 /* ============================================
-   VIDEO MANAGER MODAL
+   VIDEO MANAGER MODAL - MATCHES TUTORS PAGE
    ============================================ */
 .video-manager-modal {
   max-width: 500px;
@@ -1047,21 +1188,16 @@
    RESPONSIVE
    ============================================ */
 @media (max-width: 1024px) {
-  .profile-grid-two {
-    grid-template-columns: 1fr;
-    gap: 24px;
-  }
-
-  .profile-left-col {
-    position: static;
-  }
-
   .profile-grid {
     grid-template-columns: 1fr;
   }
 
   .profile-stats {
     grid-template-columns: repeat(2, 1fr);
+  }
+
+  .tutor-profile-grid {
+    grid-template-columns: 1fr;
   }
 }
 
@@ -1074,6 +1210,7 @@
     flex-direction: column;
     text-align: center;
     padding: 20px;
+    margin-bottom: 28px;
   }
 
   .profile-header-info h1 {
@@ -1164,6 +1301,10 @@
   .video-action-btn {
     width: 100%;
   }
+
+  .tutor-profile-grid {
+    gap: 16px;
+  }
 }
 
 @media (max-width: 480px) {
@@ -1231,6 +1372,14 @@
   .video-info-badge {
     font-size: 12px;
     gap: 10px;
+  }
+
+  .tutor-field-label {
+    font-size: 11px;
+  }
+
+  .tutor-field-value {
+    font-size: 14px;
   }
 }
 
@@ -1399,6 +1548,56 @@
 
 [data-theme="light"] .subscription-end {
   color: rgba(0, 0, 0, 0.4) !important;
+}
+
+/* ===== LIGHT THEME - TUTOR PROFILE ===== */
+[data-theme="light"] .tutor-field-label {
+  color: rgba(0, 0, 0, 0.55) !important;
+}
+
+[data-theme="light"] .tutor-field-value {
+  color: #0f172a !important;
+}
+
+[data-theme="light"] .tutor-field-bio {
+  color: rgba(0, 0, 0, 0.7) !important;
+  background: rgba(0, 0, 0, 0.02);
+  border-color: rgba(0, 0, 0, 0.06);
+}
+
+[data-theme="light"] .tutor-field-empty {
+  color: rgba(0, 0, 0, 0.4) !important;
+}
+
+[data-theme="light"] .tutor-field-link {
+  color: #4f46e5 !important;
+}
+
+[data-theme="light"] .tutor-field-link:hover {
+  color: #7c3aed !important;
+}
+
+[data-theme="light"] .tutor-subject-tag {
+  background: rgba(79, 70, 229, 0.08);
+  color: #4f46e5 !important;
+  border-color: rgba(79, 70, 229, 0.2);
+}
+
+[data-theme="light"] .tutor-subject-checkbox-label {
+  color: #0f172a !important;
+}
+
+[data-theme="light"] .tutor-subjects-edit {
+  background: rgba(0, 0, 0, 0.02);
+  border-color: rgba(0, 0, 0, 0.06);
+}
+
+[data-theme="light"] .tutor-video-field {
+  border-top-color: rgba(0, 0, 0, 0.06);
+}
+
+[data-theme="light"] .tutor-video-hint {
+  color: rgba(0, 0, 0, 0.5) !important;
 }
 
 /* ===== LIGHT THEME - VIDEO ===== */

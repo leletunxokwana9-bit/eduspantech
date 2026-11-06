@@ -272,10 +272,20 @@ const NotificationBell = () => {
     }
   };
 
+  // ✅ ADDED: handle links that are external (http/https) vs internal (router paths)
   const handleNotificationClick = (notification) => {
     if (!notification.is_read) markAsRead(notification);
-    if (notification.link) {
-      navigate(notification.link);
+
+    const link = notification.link;
+
+    if (link) {
+      if (/^https?:\/\//i.test(link)) {
+        // External meeting link (Zoom, Meet, Teams, etc.)
+        window.open(link, '_blank', 'noopener,noreferrer');
+      } else {
+        // Internal app route
+        navigate(link);
+      }
     } else if (notification.metadata?.session_id) {
       navigate(`/session/${notification.metadata.session_id}`);
     }
@@ -323,6 +333,11 @@ const NotificationBell = () => {
             ) : (
               notifications.slice(0, 10).map((notification) => {
                 const isSessionBooked = notification.type === 'session_booked';
+                // ✅ ADDED: pick up image_url under either key the backend might use
+                const thumbnail =
+                  notification.image_url ||
+                  notification.imageUrl ||
+                  null;
 
                 return (
                   <div
@@ -330,6 +345,17 @@ const NotificationBell = () => {
                     className={`dropdown-item ${!notification.is_read ? 'unread' : ''}`}
                     onClick={() => handleNotificationClick(notification)}
                   >
+                    {/* ✅ ADDED: thumbnail banner when the notification has one */}
+                    {thumbnail && (
+                      <img
+                        src={thumbnail}
+                        alt=""
+                        className="dropdown-item-thumb"
+                        loading="lazy"
+                        onError={(e) => { e.currentTarget.style.display = 'none'; }}
+                      />
+                    )}
+
                     <div className="dropdown-item-avatar">
                       {isSessionBooked && notification.metadata?.student_name ? (
                         renderStudentAvatar(notification)

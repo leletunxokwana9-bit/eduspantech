@@ -1,1413 +1,1007 @@
 // src/pages/Admin/AdminContent.js
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { supabase } from '../../services/supabaseClient';
 import './AdminContent.css';
 
+const API_URL = process.env.REACT_APP_API_URL || 'https://eduspantech-backend.onrender.com/api';
+const STORAGE_BUCKET = 'content';
+
+const SECTIONS = [
+  { id: 'basics',  label: 'Basic info' },
+  { id: 'topics',  label: 'Topics' },
+  { id: 'papers',  label: 'Past papers' },
+  { id: 'mocks',   label: 'Mock exams' },
+  { id: 'access',  label: 'Access & visibility' },
+  { id: 'review',  label: 'Review and publish' },
+];
+
+const DEFAULT_COLORS = ['#4f46e5','#7c3aed','#06b6d4','#10b981','#f59e0b','#ef4444','#ec4899','#8b5cf6','#14b8a6','#f97316'];
+
+const getDefaultIcon = (name) => {
+  if (!name) return '📚';
+  const icons = { Mathematics: '🔢', Physics: '⚛️', Chemistry: '🧪', Biology: '🧬', Accounting: '📊', Economics: '📈', Business: '💼', Statistics: '📉', Engineering: '⚙️', Computer: '💻', Finance: '💰' };
+  for (const [k, v] of Object.entries(icons)) if (name.toLowerCase().includes(k.toLowerCase())) return v;
+  return '📚';
+};
+const getDefaultColor = (name) => {
+  if (!name) return '#4f46e5';
+  const m = { Mathematics:'#4f46e5', Physics:'#06b6d4', Chemistry:'#10b981', Biology:'#22c55e', Accounting:'#f59e0b', Economics:'#8b5cf6', Business:'#ec4899', Statistics:'#14b8a6', Engineering:'#f97316', Computer:'#3b82f6', Finance:'#10b981' };
+  for (const [k, v] of Object.entries(m)) if (name.toLowerCase().includes(k.toLowerCase())) return v;
+  return '#4f46e5';
+};
+
+const initialForm = () => ({
+  name: '', slug: '', description: '', long_description: '',
+  icon: '📚', color: '#4f46e5', grade_key: '', category_id: '',
+  is_active: true, code: '', track: '', semester: '', institution: '',
+  allowed_plans: [], soon: false, region: 'Global', year_level: '1ST_YEAR',
+});
+
 const AdminContent = () => {
-    const navigate = useNavigate();
-    const [subjects, setSubjects] = useState([]);
-    const [filteredSubjects, setFilteredSubjects] = useState([]);
-    const [searchTerm, setSearchTerm] = useState('');
-    const [loading, setLoading] = useState(true);
-    const [showModal, setShowModal] = useState(false);
-    const [editingSubject, setEditingSubject] = useState(null);
-    const [formData, setFormData] = useState({
-        name: '',
-        description: '',
-        long_description: '',
-        icon: '📚',
-        color: '#4f46e5',
-        tier: 'TIER_1',
-        region: 'Global',
-        is_active: true,
-        code: '',
-        track: '',
-        year_level: '1ST_YEAR',
-        semester: '',
-        institution: ''
-    });
-    const [actionLoading, setActionLoading] = useState(false);
+  const navigate = useNavigate();
 
-    // ============================================
-    // DEDICATED POPUP STATES
-    // ============================================
-    const [showSuccessPopup, setShowSuccessPopup] = useState(false);
-    const [successMessage, setSuccessMessage] = useState('');
-    const [createdSubjectId, setCreatedSubjectId] = useState(null);
+  const [viewMode, setViewMode] = useState('list');
+  const [subjects, setSubjects] = useState([]);
+  const [filteredSubjects, setFilteredSubjects] = useState([]);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [loading, setLoading] = useState(true);
+  const [actionLoading, setActionLoading] = useState(false);
 
-    const [showErrorPopup, setShowErrorPopup] = useState(false);
-    const [errorMessage, setErrorMessage] = useState('');
+  const [grades, setGrades] = useState([]);
+  const [categories, setCategories] = useState([]);
+  const [plans, setPlans] = useState([]);
 
-    const [showDeletePopup, setShowDeletePopup] = useState(false);
-    const [deleteTarget, setDeleteTarget] = useState(null);
-    const [deleteLoading, setDeleteLoading] = useState(false);
+  const [activeSection, setActiveSection] = useState('basics');
+  const [formData, setFormData] = useState(initialForm());
+  const [builderTopics, setBuilderTopics] = useState([]);
+  const [builderResources, setBuilderResources] = useState([]);
+  const [builderPapers, setBuilderPapers] = useState([]);
+  const [builderMocks, setBuilderMocks] = useState([]);
 
-    const [showTogglePopup, setShowTogglePopup] = useState(false);
-    const [toggleTarget, setToggleTarget] = useState(null);
-    const [toggleLoading, setToggleLoading] = useState(false);
+  const [uploading, setUploading] = useState(false);
+  const [previewMode, setPreviewMode] = useState('open');
+  const [editingSubject, setEditingSubject] = useState(null);
 
-    // ============================================
-    // NEW: CONTENT BUILDER STATES
-    // ============================================
-    const [builderTopics, setBuilderTopics] = useState([]);
-    const [builderResources, setBuilderResources] = useState([]);
-    const [newTopicName, setNewTopicName] = useState('');
-    const [newTopicDesc, setNewTopicDesc] = useState('');
-    const [showResourceDraftPopup, setShowResourceDraftPopup] = useState(false);
-    const [resourceDraft, setResourceDraft] = useState({
-        name: '',
-        type: 'pdf',
-        url: '',
-        description: '',
-        topicIndex: '',
-        youtube_id: '',
-        thumbnail_url: '',
-        duration: '',
-        difficulty: 'beginner',
-        is_free: false
-    });
+  const [showSuccessPopup, setShowSuccessPopup] = useState(false);
+  const [successMessage, setSuccessMessage] = useState('');
+  const [showErrorPopup, setShowErrorPopup] = useState(false);
+  const [errorMessage, setErrorMessage] = useState('');
+  const [showDeletePopup, setShowDeletePopup] = useState(false);
+  const [deleteTarget, setDeleteTarget] = useState(null);
+  const [deleteLoading, setDeleteLoading] = useState(false);
+  const [showTogglePopup, setShowTogglePopup] = useState(false);
+  const [toggleTarget, setToggleTarget] = useState(null);
+  const [toggleLoading, setToggleLoading] = useState(false);
+  const [showResourceDraftPopup, setShowResourceDraftPopup] = useState(false);
+  const [resourceDraft, setResourceDraft] = useState({
+    name: '', type: 'pdf', url: '', description: '', topicIndex: '',
+    youtube_id: '', thumbnail_url: '', duration: '', difficulty: 'beginner', is_free: false,
+  });
+  const [newTopicName, setNewTopicName] = useState('');
+  const [newTopicDesc, setNewTopicDesc] = useState('');
 
-    const colors = ['#4f46e5', '#7c3aed', '#06b6d4', '#10b981', '#f59e0b', '#ef4444', '#ec4899', '#8b5cf6', '#14b8a6', '#f97316'];
-    const regions = ['Global', 'Africa', 'Americas', 'Asia-Pacific', 'Europe', 'Middle East'];
-    const tracks = ['BCom', 'BSc', 'ECP_Commerce', 'ECP_Science', 'Engineering', 'Arts'];
+  const token = () => localStorage.getItem('accessToken');
 
-    const API_URL = process.env.REACT_APP_API_URL || 'https://eduspantech-backend.onrender.com/api';
+  const authHeaders = useCallback(() => ({
+    Authorization: `Bearer ${token()}`,
+    'Content-Type': 'application/json',
+  }), []);
 
-    // Helper functions
-    const getDefaultIcon = (name) => {
-        if (!name) return '📚';
-        const icons = {
-            'Mathematics': '🔢', 'Physics': '⚛️', 'Chemistry': '🧪', 'Biology': '🧬',
-            'Accounting': '📊', 'Economics': '📈', 'Business': '💼', 'Statistics': '📉',
-            'Engineering': '⚙️', 'Computer': '💻', 'Finance': '💰'
-        };
-        for (const [key, icon] of Object.entries(icons)) {
-            if (name.toLowerCase().includes(key.toLowerCase())) return icon;
+  // -------- Toast helpers --------
+  const showSuccess = (msg) => { setSuccessMessage(msg); setShowSuccessPopup(true); };
+  const showError = (msg) => { setErrorMessage(msg); setShowErrorPopup(true); };
+
+  // -------- Fetch everything --------
+  const fetchInitialData = async (retryCount = 0) => {
+    try {
+      setLoading(true);
+
+      if (!token()) {
+        showError('No authentication token. Please log in again.');
+        setTimeout(() => { window.location.href = '/admin/login'; }, 1500);
+        setLoading(false);
+        return;
+      }
+
+      // Subjects
+      const subRes = await fetch(`${API_URL}/admin/content/subjects`, { headers: authHeaders() });
+      if (subRes.status === 401 && retryCount === 0) {
+        // Try refresh
+        const rt = localStorage.getItem('refreshToken');
+        if (rt) {
+          const r = await fetch(`${API_URL}/auth/refresh`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ refreshToken: rt }),
+          });
+          if (r.ok) {
+            const d = await r.json();
+            localStorage.setItem('accessToken', d.accessToken);
+            if (d.refreshToken) localStorage.setItem('refreshToken', d.refreshToken);
+            return fetchInitialData(retryCount + 1);
+          }
         }
-        return '📚';
-    };
+      }
+      const subData = await subRes.json();
+      const mapped = (subData.subjects || []).map((s) => ({
+        ...s,
+        icon: s.icon || getDefaultIcon(s.name),
+        color: s.color || getDefaultColor(s.name),
+        grade_key: s.grade_key || '',
+        category_id: s.category_id || '',
+        allowed_plans: s.allowed_plans || [],
+      }));
+      setSubjects(mapped);
+      setFilteredSubjects(mapped);
 
-    const getDefaultColor = (name) => {
-        if (!name) return '#4f46e5';
-        const colorMap = {
-            'Mathematics': '#4f46e5', 'Physics': '#06b6d4', 'Chemistry': '#10b981',
-            'Biology': '#22c55e', 'Accounting': '#f59e0b', 'Economics': '#8b5cf6',
-            'Business': '#ec4899', 'Statistics': '#14b8a6', 'Engineering': '#f97316',
-            'Computer': '#3b82f6', 'Finance': '#10b981'
-        };
-        for (const [key, color] of Object.entries(colorMap)) {
-            if (name.toLowerCase().includes(key.toLowerCase())) return color;
-        }
-        return '#4f46e5';
-    };
-
-    useEffect(() => {
-        fetchSubjects();
-    }, []);
-
-    useEffect(() => {
-        if (searchTerm.trim() === '') {
-            setFilteredSubjects(subjects);
+      // Grades
+      try {
+        const gRes = await fetch(`${API_URL}/admin/grades`, { headers: authHeaders() });
+        if (gRes.ok) {
+          const gData = await gRes.json();
+          const fromApi = gData.grades || gData.data || [];
+          if (Array.isArray(fromApi) && fromApi.length) setGrades(fromApi);
+          else throw new Error('empty');
+        } else throw new Error('not ok');
+      } catch {
+        // Fallback: pull directly from Supabase
+        const { data: gRows } = await supabase.from('subject_grades').select('*').order('sort_order');
+        if (Array.isArray(gRows) && gRows.length) {
+          setGrades(gRows.map((g) => ({ key: g.key, label: g.label, tier: g.tier })));
         } else {
-            const term = searchTerm.toLowerCase().trim();
-            const filtered = subjects.filter(subject =>
-                subject.name.toLowerCase().includes(term) ||
-                (subject.code && subject.code.toLowerCase().includes(term)) ||
-                (subject.description && subject.description.toLowerCase().includes(term)) ||
-                (subject.track && subject.track.toLowerCase().includes(term)) ||
-                (subject.institution && subject.institution.toLowerCase().includes(term))
-            );
-            setFilteredSubjects(filtered);
+          setGrades([
+            { key: 'grade-8-9',   label: 'Grade 8 – 9',   tier: '8-9' },
+            { key: 'grade-10-11', label: 'Grade 10 – 11', tier: '10-11' },
+            { key: 'grade-12',    label: 'Grade 12',      tier: '12' },
+          ]);
         }
-    }, [searchTerm, subjects]);
+      }
 
-    // ============================================
-    // TOKEN REFRESH
-    // ============================================
-    const refreshToken = async () => {
-        try {
-            const refreshToken = localStorage.getItem('refreshToken');
-            if (!refreshToken) return false;
-            const response = await fetch(`${API_URL}/auth/refresh`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ refreshToken })
-            });
-            if (response.ok) {
-                const data = await response.json();
-                localStorage.setItem('accessToken', data.accessToken);
-                if (data.refreshToken) localStorage.setItem('refreshToken', data.refreshToken);
-                return true;
-            }
-            return false;
-        } catch (error) {
-            console.error('Refresh token error:', error);
-            return false;
+      // Categories
+      try {
+        const cRes = await fetch(`${API_URL}/admin/categories`, { headers: authHeaders() });
+        if (cRes.ok) {
+          const cData = await cRes.json();
+          const fromApi = cData.categories || cData.data || [];
+          if (Array.isArray(fromApi) && fromApi.length) {
+            setCategories(fromApi.map((c) => ({ id: c.id, name: c.name, key: c.key || c.slug || c.id, icon: c.icon, color: c.color })));
+          } else throw new Error('empty');
+        } else throw new Error('not ok');
+      } catch {
+        const { data: cRows } = await supabase.from('subject_categories').select('*').order('name');
+        if (Array.isArray(cRows) && cRows.length) {
+          setCategories(cRows.map((c) => ({ id: c.id, name: c.name, key: c.key || c.slug || c.id, icon: c.icon, color: c.color })));
         }
-    };
+      }
 
-    // ============================================
-    // FETCH SUBJECTS
-    // ============================================
-    const fetchSubjects = async (retryCount = 0) => {
-        try {
-            setLoading(true);
-            const token = localStorage.getItem('accessToken');
-            if (!token) {
-                setErrorMessage('No authentication token found. Please login again.');
-                setShowErrorPopup(true);
-                setTimeout(() => { window.location.href = '/admin/login'; }, 2000);
-                setLoading(false);
-                return;
-            }
-
-            const response = await fetch(`${API_URL}/admin/content/subjects`, {
-                headers: {
-                    'Authorization': `Bearer ${token}`,
-                    'Content-Type': 'application/json'
-                }
-            });
-
-            if (response.status === 401 && retryCount === 0) {
-                const refreshed = await refreshToken();
-                if (refreshed) return fetchSubjects(retryCount + 1);
-                setErrorMessage('Session expired. Please login again.');
-                setShowErrorPopup(true);
-                localStorage.removeItem('accessToken');
-                localStorage.removeItem('refreshToken');
-                setTimeout(() => { window.location.href = '/admin/login'; }, 2000);
-                setLoading(false);
-                return;
-            }
-
-            if (response.status === 401) {
-                setErrorMessage('Session expired. Please login again.');
-                setShowErrorPopup(true);
-                localStorage.removeItem('accessToken');
-                localStorage.removeItem('refreshToken');
-                setTimeout(() => { window.location.href = '/admin/login'; }, 2000);
-                setLoading(false);
-                return;
-            }
-
-            const data = await response.json();
-            if (data.success) {
-                const mappedSubjects = (data.subjects || []).map(subject => ({
-                    id: subject.id,
-                    name: subject.name || 'Untitled',
-                    description: subject.description || subject.code || 'No description',
-                    long_description: subject.long_description || subject.description || '',
-                    icon: subject.icon || getDefaultIcon(subject.name),
-                    color: subject.color || getDefaultColor(subject.name),
-                    tier: subject.tier || subject.year_level || 'TIER_1',
-                    region: subject.region || 'Global',
-                    is_active: subject.is_active !== undefined ? subject.is_active : true,
-                    code: subject.code || '',
-                    track: subject.track || '',
-                    year_level: subject.year_level || '1ST_YEAR',
-                    semester: subject.semester || '',
-                    institution: subject.institution || ''
-                }));
-                setSubjects(mappedSubjects);
-                setFilteredSubjects(mappedSubjects);
-            } else {
-                setErrorMessage(data.error || 'Failed to load subjects');
-                setShowErrorPopup(true);
-            }
-        } catch (error) {
-            setErrorMessage('Network error. Please try again.');
-            setShowErrorPopup(true);
-        } finally {
-            setLoading(false);
+      // Plans
+      try {
+        const pRes = await fetch(`${API_URL}/admin/pricing/plans`, { headers: authHeaders() });
+        if (pRes.ok) {
+          const pData = await pRes.json();
+          const fromApi = pData.plans || pData.data || [];
+          if (Array.isArray(fromApi)) setPlans(fromApi);
         }
-    };
+      } catch { /* plans are optional */ }
 
-    // ============================================
-    // NEW: CONTENT BUILDER HELPERS
-    // ============================================
-    const parseYouTubeId = (url) => {
-        if (!url) return null;
-        const patterns = [
-            /(?:youtube\.com\/watch\?v=)([a-zA-Z0-9_-]+)/,
-            /(?:youtu\.be\/)([a-zA-Z0-9_-]+)/,
-            /(?:youtube\.com\/embed\/)([a-zA-Z0-9_-]+)/,
-            /(?:youtube\.com\/shorts\/)([a-zA-Z0-9_-]+)/
-        ];
-        for (const p of patterns) {
-            const m = url.match(p);
-            if (m) return m[1];
-        }
-        return null;
-    };
+    } catch (err) {
+      console.error(err);
+      showError('Network error while loading admin data.');
+    } finally {
+      setLoading(false);
+    }
+  };
 
-    const handleResourceUrlChange = (url) => {
-        setResourceDraft(prev => {
-            const next = { ...prev, url };
-            if (url && (url.includes('youtube.com') || url.includes('youtu.be'))) {
-                const yt = parseYouTubeId(url);
-                if (yt) {
-                    next.youtube_id = yt;
-                    next.thumbnail_url = `https://img.youtube.com/vi/${yt}/maxresdefault.jpg`;
-                }
-            }
-            return next;
-        });
-    };
+  useEffect(() => { fetchInitialData(); /* eslint-disable-next-line */ }, []);
 
-    const addTopicToBuilder = () => {
-        if (!newTopicName.trim()) return;
-        setBuilderTopics(prev => [
-            ...prev,
-            {
-                id: `local-topic-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
-                name: newTopicName.trim(),
-                description: newTopicDesc.trim(),
-                display_order: prev.length,
-                is_active: true
-            }
-        ]);
-        setNewTopicName('');
-        setNewTopicDesc('');
-    };
+  // -------- Slug auto --------
+  useEffect(() => {
+    if (viewMode === 'builder' && formData.name && !editingSubject) {
+      const base = formData.name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
+      const gs = formData.grade_key ? `-${formData.grade_key}` : '';
+      setFormData((p) => ({ ...p, slug: `${base}${gs}` }));
+    }
+    // eslint-disable-next-line
+  }, [formData.name, formData.grade_key, viewMode, editingSubject]);
 
-    const removeTopicFromBuilder = (id) => {
-        setBuilderTopics(prev => prev.filter(t => t.id !== id));
-        setBuilderResources(prev => prev.map(r =>
-            r.topicLocalId === id ? { ...r, topicLocalId: null } : r
-        ));
-    };
+  // -------- Search filter --------
+  useEffect(() => {
+    if (!searchTerm.trim()) { setFilteredSubjects(subjects); return; }
+    const q = searchTerm.toLowerCase();
+    setFilteredSubjects(subjects.filter((s) =>
+      (s.name || '').toLowerCase().includes(q) ||
+      (s.code || '').toLowerCase().includes(q) ||
+      (s.description || '').toLowerCase().includes(q) ||
+      (s.track || '').toLowerCase().includes(q) ||
+      (s.institution || '').toLowerCase().includes(q)
+    ));
+  }, [searchTerm, subjects]);
 
-    const openAddResourceDraft = () => {
-        setResourceDraft({
-            name: '',
-            type: 'pdf',
-            url: '',
-            description: '',
-            topicIndex: '',
-            youtube_id: '',
-            thumbnail_url: '',
-            duration: '',
-            difficulty: 'beginner',
-            is_free: false
-        });
-        setShowResourceDraftPopup(true);
-    };
+  // -------- Validation --------
+  const validationIssues = useMemo(() => {
+    const issues = [];
+    if (!formData.name.trim()) issues.push({ sec: 'basics', level: 'error', msg: 'Subject name is required.' });
+    if (!formData.grade_key) issues.push({ sec: 'basics', level: 'error', msg: 'Grade is required.' });
+    if (!formData.category_id) issues.push({ sec: 'basics', level: 'error', msg: 'Category is required.' });
 
-    const confirmAddResourceDraft = () => {
-        if (!resourceDraft.name.trim()) {
-            setErrorMessage('Resource name is required');
-            setShowErrorPopup(true);
-            return;
-        }
-        if (resourceDraft.type !== 'practice' && !resourceDraft.url.trim()) {
-            setErrorMessage('URL is required for this resource type');
-            setShowErrorPopup(true);
-            return;
-        }
+    const blankTopics = builderTopics.filter((t) => !t.name?.trim()).length;
+    if (blankTopics) issues.push({ sec: 'topics', level: 'error', msg: `${blankTopics} topic(s) have no title.` });
 
-        const topicLocalId = resourceDraft.topicIndex !== ''
-            ? builderTopics[Number(resourceDraft.topicIndex)]?.id || null
-            : null;
+    const papersMissing = builderPapers.filter((p) => !p.paper_url).length;
+    if (builderPapers.length === 0) issues.push({ sec: 'papers', level: 'warn', msg: 'No past papers added yet.' });
+    else if (papersMissing) issues.push({ sec: 'papers', level: 'error', msg: `${papersMissing} paper(s) have no PDF uploaded.` });
 
-        setBuilderResources(prev => [
-            ...prev,
-            {
-                id: `local-res-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
-                name: resourceDraft.name.trim(),
-                type: resourceDraft.type,
-                url: resourceDraft.url.trim(),
-                description: resourceDraft.description.trim(),
-                topicLocalId,
-                youtube_id: resourceDraft.youtube_id,
-                thumbnail_url: resourceDraft.thumbnail_url,
-                duration: resourceDraft.duration,
-                difficulty: resourceDraft.difficulty,
-                is_free: resourceDraft.is_free,
-                display_order: prev.length,
-                is_active: true
-            }
-        ]);
-        setShowResourceDraftPopup(false);
-    };
+    const noMemos = builderPapers.filter((p) => p.paper_url && !p.memo_url).length;
+    if (noMemos) issues.push({ sec: 'papers', level: 'warn', msg: `${noMemos} paper(s) have no memo yet.` });
 
-    const removeResourceDraft = (id) => {
-        setBuilderResources(prev => prev.filter(r => r.id !== id));
-    };
+    if (formData.is_active && formData.allowed_plans.length === 0)
+      issues.push({ sec: 'access', level: 'error', msg: 'Choose at least one plan that can open this subject.' });
 
-    const getResourceIcon = (type) => ({
-        video: '🎬',
-        pdf: '📄',
-        practice: '✏️',
-        guide: '📖',
-        quiz: '📝',
-        link: '🔗'
-    }[type] || '📎');
+    return issues;
+  }, [formData, builderTopics, builderPapers]);
 
-    // NEW: Persist topics + resources after subject creation
-    const persistBuilderContent = async (subjectId, token) => {
-        const topicIdMap = {};
+  const errorCount = validationIssues.filter((i) => i.level === 'error').length;
+  const completeness = Math.max(0, 5 - errorCount) * 20;
 
-        // 1. Create topics first
-        for (const t of builderTopics) {
-            try {
-                const r = await fetch(`${API_URL}/admin/content/topics`, {
-                    method: 'POST',
-                    headers: {
-                        'Authorization': `Bearer ${token}`,
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify({
-                        subject_id: subjectId,
-                        name: t.name,
-                        description: t.description || '',
-                        display_order: t.display_order || 0,
-                        is_active: true
-                    })
-                });
-                const d = await r.json();
-                const realId = d.topic?.id || d.data?.id || d.id;
-                if (realId) topicIdMap[t.id] = realId;
-            } catch (e) {
-                console.error('Failed to create topic:', t.name, e);
-            }
-        }
+  // -------- Upload --------
+  const uploadFile = async (file, folder = 'subjects') => {
+    const ext = file.name.split('.').pop();
+    const fileName = `${folder}/${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${ext}`;
+    const { error } = await supabase.storage.from(STORAGE_BUCKET).upload(fileName, file, { cacheControl: '3600', upsert: false });
+    if (error) {
+      if (String(error.message).toLowerCase().includes('bucket')) {
+        throw new Error(`Storage bucket "${STORAGE_BUCKET}" doesn't exist. Create it in Supabase → Storage.`);
+      }
+      throw error;
+    }
+    const { data } = supabase.storage.from(STORAGE_BUCKET).getPublicUrl(fileName);
+    return data.publicUrl;
+  };
 
-        // 2. Create resources with mapped topic ids
-        for (const res of builderResources) {
-            try {
-                const payload = {
-                    subject_id: subjectId,
-                    topic_id: res.topicLocalId ? (topicIdMap[res.topicLocalId] || null) : null,
-                    subtopic_id: null,
-                    name: res.name,
-                    description: res.description,
-                    type: res.type,
-                    url: res.url,
-                    youtube_id: res.youtube_id || '',
-                    thumbnail_url: res.thumbnail_url || '',
-                    duration: res.duration || '',
-                    difficulty: res.difficulty || 'beginner',
-                    content: { problems: [] },
-                    is_free: res.is_free || false,
-                    is_featured: false,
-                    display_order: res.display_order || 0,
-                    is_active: true
-                };
-                await fetch(`${API_URL}/admin/content/resources`, {
-                    method: 'POST',
-                    headers: {
-                        'Authorization': `Bearer ${token}`,
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify(payload)
-                });
-            } catch (e) {
-                console.error('Failed to create resource:', res.name, e);
-            }
-        }
-    };
+  const handleFileUpload = async (e, type, index) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (file.type !== 'application/pdf') { showError('Only PDF files are allowed.'); return; }
+    try {
+      setUploading(true);
+      const publicUrl = await uploadFile(file);
+      const update = (setter) => setter((prev) => {
+        const copy = [...prev];
+        if (!copy[index]) return copy;
+        const field = type.endsWith('_memo') ? 'memo_url' : 'paper_url';
+        const nameField = type.endsWith('_memo') ? 'memo_name' : 'paper_name';
+        copy[index] = { ...copy[index], [field]: publicUrl, [nameField]: file.name };
+        return copy;
+      });
+      if (type === 'paper_qp') update(setBuilderPapers);
+      if (type === 'paper_memo') update(setBuilderPapers);
+      if (type === 'mock_qp') update(setBuilderMocks);
+      if (type === 'mock_memo') update(setBuilderMocks);
+    } catch (err) {
+      showError('Upload failed: ' + err.message);
+    } finally {
+      setUploading(false);
+      e.target.value = '';
+    }
+  };
 
-    // ============================================
-    // SAVE SUBJECT
-    // ============================================
-    const handleSaveSubject = async () => {
-        if (!formData.name.trim()) {
-            setErrorMessage('Subject name is required');
-            setShowErrorPopup(true);
-            return;
-        }
+  const updateArrayItem = (setter, index, field, value) =>
+    setter((prev) => {
+      const copy = [...prev];
+      copy[index] = { ...copy[index], [field]: value };
+      return copy;
+    });
 
-        try {
-            setActionLoading(true);
-            let token = localStorage.getItem('accessToken');
-            if (!token) {
-                setErrorMessage('No authentication token found.');
-                setShowErrorPopup(true);
-                setActionLoading(false);
-                return;
-            }
+  // -------- Topics --------
+  const addTopicToBuilder = () => {
+    if (!newTopicName.trim()) return;
+    setBuilderTopics((prev) => [
+      ...prev,
+      { id: `local-${Date.now()}`, name: newTopicName.trim(), description: newTopicDesc.trim(), display_order: prev.length, is_active: true },
+    ]);
+    setNewTopicName(''); setNewTopicDesc('');
+  };
+  const removeTopicFromBuilder = (id) => {
+    setBuilderTopics((prev) => prev.filter((t) => t.id !== id));
+    setBuilderResources((prev) => prev.map((r) => (r.topicLocalId === id ? { ...r, topicLocalId: null } : r)));
+  };
 
-            const url = editingSubject
-                ? `${API_URL}/admin/content/subjects/${editingSubject.id}`
-                : `${API_URL}/admin/content/subjects`;
-            const method = editingSubject ? 'PUT' : 'POST';
+  // -------- Resource --------
+  const parseYouTubeId = (url) => {
+    if (!url) return null;
+    const pats = [/(?:youtube\.com\/watch\?v=)([\w-]+)/, /(?:youtu\.be\/)([\w-]+)/, /(?:youtube\.com\/embed\/)([\w-]+)/, /(?:youtube\.com\/shorts\/)([\w-]+)/];
+    for (const p of pats) { const m = url.match(p); if (m) return m[1]; }
+    return null;
+  };
+  const handleResourceUrlChange = (url) => {
+    setResourceDraft((prev) => {
+      const next = { ...prev, url };
+      if (url && (url.includes('youtube.com') || url.includes('youtu.be'))) {
+        const yt = parseYouTubeId(url);
+        if (yt) { next.youtube_id = yt; next.thumbnail_url = `https://img.youtube.com/vi/${yt}/maxresdefault.jpg`; }
+      }
+      return next;
+    });
+  };
+  const confirmAddResourceDraft = () => {
+    if (!resourceDraft.name.trim()) { showError('Resource name required'); return; }
+    if (resourceDraft.type !== 'practice' && !resourceDraft.url.trim()) { showError('URL required'); return; }
+    const topicLocalId = resourceDraft.topicIndex !== '' ? builderTopics[Number(resourceDraft.topicIndex)]?.id || null : null;
+    setBuilderResources((prev) => [...prev, {
+      id: `local-res-${Date.now()}`, name: resourceDraft.name.trim(), type: resourceDraft.type,
+      url: resourceDraft.url.trim(), description: resourceDraft.description.trim(), topicLocalId,
+      youtube_id: resourceDraft.youtube_id, thumbnail_url: resourceDraft.thumbnail_url,
+      duration: resourceDraft.duration, difficulty: resourceDraft.difficulty,
+      is_free: resourceDraft.is_free, display_order: prev.length, is_active: true,
+    }]);
+    setShowResourceDraftPopup(false);
+  };
+  const getResourceIcon = (t) => ({ video: '🎬', pdf: '📄', practice: '✏️', guide: '📖', quiz: '📝', link: '🔗' }[t] || '📎');
 
-            const payload = {
-                name: formData.name.trim(),
-                description: formData.description || '',
-                long_description: formData.long_description || '',
-                icon: formData.icon || getDefaultIcon(formData.name),
-                color: formData.color || getDefaultColor(formData.name),
-                tier: formData.tier || 'TIER_1',
-                region: formData.region || 'Global',
-                is_active: formData.is_active,
-                code: formData.code || '',
-                track: formData.track || '',
-                year_level: formData.year_level || '1ST_YEAR',
-                semester: formData.semester || '',
-                institution: formData.institution || ''
-            };
+  // -------- Load existing content for edit --------
+  const loadExistingContent = async (subjectId) => {
+    try {
+      const [tRes, rRes, pRes] = await Promise.all([
+        fetch(`${API_URL}/admin/content/subjects/${subjectId}/topics`, { headers: authHeaders() }),
+        fetch(`${API_URL}/admin/content/subjects/${subjectId}/resources`, { headers: authHeaders() }),
+        fetch(`${API_URL}/admin/content/subjects/${subjectId}/papers`, { headers: authHeaders() }),
+      ]);
+      if (tRes.ok) {
+        const d = await tRes.json();
+        const topics = d.topics || d.data || [];
+        setBuilderTopics(topics.map((t) => ({ id: t.id, name: t.name, description: t.description || '', display_order: t.display_order || 0, is_active: t.is_active !== false })));
+      }
+      if (rRes.ok) {
+        const d = await rRes.json();
+        const resources = d.resources || d.data || [];
+        setBuilderResources(resources.map((r) => ({
+          id: r.id, name: r.name, type: r.type || 'pdf', url: r.url || '',
+          description: r.description || '', topicLocalId: r.topic_id || null,
+          youtube_id: r.youtube_id || '', thumbnail_url: r.thumbnail_url || '',
+          duration: r.duration || '', difficulty: r.difficulty || 'beginner',
+          is_free: r.is_free || false, display_order: r.display_order || 0, is_active: r.is_active !== false,
+        })));
+      }
+      if (pRes.ok) {
+        const d = await pRes.json();
+        const papers = d.papers || d.data || [];
+        const regular = papers.filter((p) => !p.is_mock);
+        const mocks = papers.filter((p) => p.is_mock);
+        setBuilderPapers(regular.map((p) => ({
+          id: p.id, year: p.year || '2024', session: p.session || 'Nov', paper: p.paper_number || 'P1',
+          paper_url: p.paper_url || '', memo_url: p.memo_url || '',
+          paper_name: p.paper_url ? 'Uploaded' : '', memo_name: p.memo_url ? 'Uploaded' : '',
+        })));
+        setBuilderMocks(mocks.map((m) => ({
+          id: m.id, title: m.title || '', duration: m.duration_minutes || 150, marks: m.total_marks || 150,
+          paper_url: m.paper_url || '', memo_url: m.memo_url || '',
+          paper_name: m.paper_url ? 'Uploaded' : '', memo_name: m.memo_url ? 'Uploaded' : '',
+        })));
+      }
+    } catch (err) {
+      console.warn('Could not load existing content', err);
+    }
+  };
 
-            const response = await fetch(url, {
-                method,
-                headers: {
-                    'Authorization': `Bearer ${token}`,
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify(payload)
-            });
+  // -------- Save --------
+  const handleSaveSubject = async (opts = {}) => {
+    const isDraft = opts.draft === true;
 
-            if (response.status === 401) {
-                const refreshed = await refreshToken();
-                if (refreshed) {
-                    token = localStorage.getItem('accessToken');
-                    const retryResponse = await fetch(url, {
-                        method,
-                        headers: {
-                            'Authorization': `Bearer ${token}`,
-                            'Content-Type': 'application/json'
-                        },
-                        body: JSON.stringify(payload)
-                    });
-                    const retryData = await retryResponse.json();
-                    if (retryData.success) {
-                        const newId = retryData.subject?.id || retryData.data?.id || retryData.id;
-                        // NEW: persist builder content before resetting
-                        if (!editingSubject && newId) {
-                            await persistBuilderContent(newId, token);
-                        }
-                        setShowModal(false);
-                        setEditingSubject(null);
-                        resetForm();
-                        fetchSubjects();
-                        setSuccessMessage(editingSubject ? 'Subject updated successfully!' : 'Subject created successfully!');
-                        setCreatedSubjectId(!editingSubject ? newId : null);
-                        setShowSuccessPopup(true);
-                        setActionLoading(false);
-                        return;
-                    }
-                }
-                setErrorMessage('Session expired. Please login again.');
-                setShowErrorPopup(true);
-                localStorage.removeItem('accessToken');
-                localStorage.removeItem('refreshToken');
-                setTimeout(() => { window.location.href = '/admin/login'; }, 2000);
-                setActionLoading(false);
-                return;
-            }
-
-            const data = await response.json();
-            if (data.success) {
-                const newId = data.subject?.id || data.data?.id || data.id;
-                // NEW: persist builder content before resetting
-                if (!editingSubject && newId) {
-                    await persistBuilderContent(newId, token);
-                }
-                setShowModal(false);
-                setEditingSubject(null);
-                resetForm();
-                fetchSubjects();
-                setSuccessMessage(editingSubject ? 'Subject updated successfully!' : 'Subject created successfully!');
-                setCreatedSubjectId(!editingSubject ? newId : null);
-                setShowSuccessPopup(true);
-            } else {
-                setErrorMessage(data.error || 'Failed to save subject');
-                setShowErrorPopup(true);
-            }
-        } catch (error) {
-            setErrorMessage('Network error. Please try again.');
-            setShowErrorPopup(true);
-        } finally {
-            setActionLoading(false);
-        }
-    };
-
-    // ============================================
-    // DELETE SUBJECT
-    // ============================================
-    const handleDeleteClick = (subject) => {
-        setDeleteTarget(subject);
-        setShowDeletePopup(true);
-    };
-
-    const confirmDelete = async () => {
-        if (!deleteTarget) return;
-
-        try {
-            setDeleteLoading(true);
-            const token = localStorage.getItem('accessToken');
-            if (!token) {
-                setErrorMessage('No authentication token found.');
-                setShowErrorPopup(true);
-                setShowDeletePopup(false);
-                setDeleteLoading(false);
-                return;
-            }
-
-            const response = await fetch(`${API_URL}/admin/content/subjects/${deleteTarget.id}`, {
-                method: 'DELETE',
-                headers: { 'Authorization': `Bearer ${token}` }
-            });
-
-            if (response.status === 401) {
-                const refreshed = await refreshToken();
-                if (refreshed) {
-                    const newToken = localStorage.getItem('accessToken');
-                    const retryResponse = await fetch(`${API_URL}/admin/content/subjects/${deleteTarget.id}`, {
-                        method: 'DELETE',
-                        headers: { 'Authorization': `Bearer ${newToken}` }
-                    });
-                    if (retryResponse.ok) {
-                        const data = await retryResponse.json();
-                        if (data.success) {
-                            setShowDeletePopup(false);
-                            setDeleteTarget(null);
-                            fetchSubjects();
-                            setSuccessMessage('Subject deleted successfully!');
-                            setCreatedSubjectId(null);
-                            setShowSuccessPopup(true);
-                            setDeleteLoading(false);
-                            return;
-                        }
-                    }
-                }
-                setErrorMessage('Session expired. Please login again.');
-                setShowErrorPopup(true);
-                setShowDeletePopup(false);
-                localStorage.removeItem('accessToken');
-                localStorage.removeItem('refreshToken');
-                setTimeout(() => { window.location.href = '/admin/login'; }, 2000);
-                setDeleteLoading(false);
-                return;
-            }
-
-            const data = await response.json();
-            if (data.success) {
-                setShowDeletePopup(false);
-                setDeleteTarget(null);
-                fetchSubjects();
-                setSuccessMessage('Subject deleted successfully!');
-                setCreatedSubjectId(null);
-                setShowSuccessPopup(true);
-            } else {
-                setShowDeletePopup(false);
-                setErrorMessage(data.error || 'Failed to delete subject');
-                setShowErrorPopup(true);
-            }
-        } catch (error) {
-            setShowDeletePopup(false);
-            setErrorMessage('Network error. Please try again.');
-            setShowErrorPopup(true);
-        } finally {
-            setDeleteLoading(false);
-        }
-    };
-
-    // ============================================
-    // TOGGLE STATUS
-    // ============================================
-    const handleToggleClick = (subject) => {
-        setToggleTarget(subject);
-        setShowTogglePopup(true);
-    };
-
-    const confirmToggle = async () => {
-        if (!toggleTarget) return;
-
-        try {
-            setToggleLoading(true);
-            const token = localStorage.getItem('accessToken');
-            if (!token) {
-                setErrorMessage('No authentication token found.');
-                setShowErrorPopup(true);
-                setShowTogglePopup(false);
-                setToggleLoading(false);
-                return;
-            }
-
-            const response = await fetch(`${API_URL}/admin/content/subjects/${toggleTarget.id}`, {
-                method: 'PUT',
-                headers: {
-                    'Authorization': `Bearer ${token}`,
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify({ is_active: !toggleTarget.is_active })
-            });
-
-            if (response.status === 401) {
-                const refreshed = await refreshToken();
-                if (refreshed) {
-                    const newToken = localStorage.getItem('accessToken');
-                    const retryResponse = await fetch(`${API_URL}/admin/content/subjects/${toggleTarget.id}`, {
-                        method: 'PUT',
-                        headers: {
-                            'Authorization': `Bearer ${newToken}`,
-                            'Content-Type': 'application/json'
-                        },
-                        body: JSON.stringify({ is_active: !toggleTarget.is_active })
-                    });
-                    if (retryResponse.ok) {
-                        const data = await retryResponse.json();
-                        if (data.success) {
-                            setShowTogglePopup(false);
-                            setToggleTarget(null);
-                            fetchSubjects();
-                            setSuccessMessage(`Subject ${toggleTarget.is_active ? 'deactivated' : 'activated'} successfully!`);
-                            setCreatedSubjectId(null);
-                            setShowSuccessPopup(true);
-                            setToggleLoading(false);
-                            return;
-                        }
-                    }
-                }
-                setErrorMessage('Session expired. Please login again.');
-                setShowErrorPopup(true);
-                setShowTogglePopup(false);
-                localStorage.removeItem('accessToken');
-                localStorage.removeItem('refreshToken');
-                setTimeout(() => { window.location.href = '/admin/login'; }, 2000);
-                setToggleLoading(false);
-                return;
-            }
-
-            const data = await response.json();
-            if (data.success) {
-                setShowTogglePopup(false);
-                setToggleTarget(null);
-                fetchSubjects();
-                setSuccessMessage(`Subject ${toggleTarget.is_active ? 'deactivated' : 'activated'} successfully!`);
-                setCreatedSubjectId(null);
-                setShowSuccessPopup(true);
-            } else {
-                setShowTogglePopup(false);
-                setErrorMessage(data.error || 'Failed to update subject');
-                setShowErrorPopup(true);
-            }
-        } catch (error) {
-            setShowTogglePopup(false);
-            setErrorMessage('Network error. Please try again.');
-            setShowErrorPopup(true);
-        } finally {
-            setToggleLoading(false);
-        }
-    };
-
-    // ============================================
-    // MODAL HELPERS
-    // ============================================
-    const openEditModal = (subject) => {
-        setEditingSubject(subject);
-        setFormData({
-            name: subject.name || '',
-            description: subject.description || '',
-            long_description: subject.long_description || '',
-            icon: subject.icon || getDefaultIcon(subject.name),
-            color: subject.color || getDefaultColor(subject.name),
-            tier: subject.tier || 'TIER_1',
-            region: subject.region || 'Global',
-            is_active: subject.is_active !== undefined ? subject.is_active : true,
-            code: subject.code || '',
-            track: subject.track || '',
-            year_level: subject.year_level || '1ST_YEAR',
-            semester: subject.semester || '',
-            institution: subject.institution || ''
-        });
-        setShowModal(true);
-    };
-
-    const openAddModal = () => {
-        setEditingSubject(null);
-        resetForm();
-        setShowModal(true);
-    };
-
-    const resetForm = () => {
-        setFormData({
-            name: '',
-            description: '',
-            long_description: '',
-            icon: '📚',
-            color: '#4f46e5',
-            tier: 'TIER_1',
-            region: 'Global',
-            is_active: true,
-            code: '',
-            track: '',
-            year_level: '1ST_YEAR',
-            semester: '',
-            institution: ''
-        });
-        // NEW: reset builder state
-        setBuilderTopics([]);
-        setBuilderResources([]);
-        setNewTopicName('');
-        setNewTopicDesc('');
-        setResourceDraft({
-            name: '',
-            type: 'pdf',
-            url: '',
-            description: '',
-            topicIndex: '',
-            youtube_id: '',
-            thumbnail_url: '',
-            duration: '',
-            difficulty: 'beginner',
-            is_free: false
-        });
-    };
-
-    const getTierBadge = (tier) => {
-        const tierMap = {
-            'TIER_1': { label: 'Grade 8-9', color: '#10b981' },
-            'TIER_2': { label: 'Grade 10-11', color: '#f59e0b' },
-            'TIER_3': { label: 'Grade 12+', color: '#ef4444' },
-            '1ST_YEAR': { label: '1st Year', color: '#4f46e5' },
-            '2ND_YEAR': { label: '2nd Year', color: '#7c3aed' },
-            '3RD_YEAR': { label: '3rd Year', color: '#ec4899' },
-            '4TH_YEAR': { label: '4th Year', color: '#14b8a6' }
-        };
-        const info = tierMap[tier] || { label: tier || 'Tier 1', color: '#6b7280' };
-        return <span className="tier-badge" style={{ background: info.color }}>{info.label}</span>;
-    };
-
-    if (loading) {
-        return (
-            <div className="admin-content-loading">
-                <div className="loading-spinner"></div>
-                <p>Loading content...</p>
-            </div>
-        );
+    if (!isDraft && errorCount > 0) {
+      showError(`Cannot publish. Fix ${errorCount} error(s) first.`);
+      return;
+    }
+    if (!formData.name.trim() || !formData.grade_key || !formData.category_id) {
+      showError('Name, grade and category are required.');
+      return;
     }
 
+    try {
+      setActionLoading(true);
+      const url = editingSubject ? `${API_URL}/admin/content/subjects/${editingSubject.id}` : `${API_URL}/admin/content/subjects`;
+      const method = editingSubject ? 'PUT' : 'POST';
+
+      const payload = {
+        name: formData.name.trim(), slug: formData.slug,
+        description: formData.description || '', long_description: formData.long_description || '',
+        icon: formData.icon || getDefaultIcon(formData.name),
+        color: formData.color || getDefaultColor(formData.name),
+        grade_key: formData.grade_key, category_id: formData.category_id,
+        is_active: isDraft ? false : formData.is_active,
+        code: formData.code || '', track: formData.track || '',
+        semester: formData.semester || '', institution: formData.institution || '',
+        allowed_plans: formData.allowed_plans,
+      };
+
+      const res = await fetch(url, { method, headers: authHeaders(), body: JSON.stringify(payload) });
+      const data = await res.json();
+      if (!data.success) { showError(data.error || 'Save failed'); return; }
+
+      const newId = data.subject?.id || data.data?.id || data.id || editingSubject?.id;
+      if (!newId) { showError('Save returned no subject id'); return; }
+
+      // Sync topics (simplified: delete & recreate — safest for both create & edit)
+      // 1. fetch existing topic ids to delete
+      if (editingSubject) {
+        const { data: oldTopics } = await supabase.from('topics').select('id').eq('subject_id', newId);
+        if (Array.isArray(oldTopics) && oldTopics.length) {
+          await supabase.from('topics').delete().in('id', oldTopics.map((t) => t.id));
+        }
+      }
+      const topicIdMap = {};
+      for (const t of builderTopics) {
+        if (!t.name?.trim()) continue;
+        const r = await fetch(`${API_URL}/admin/content/topics`, {
+          method: 'POST', headers: authHeaders(),
+          body: JSON.stringify({ subject_id: newId, name: t.name, description: t.description || '', display_order: t.display_order || 0, is_active: true }),
+        });
+        const d = await r.json();
+        const tid = d.topic?.id || d.data?.id || d.id;
+        if (tid) topicIdMap[t.id] = tid;
+      }
+
+      for (const res of builderResources) {
+        await fetch(`${API_URL}/admin/content/resources`, {
+          method: 'POST', headers: authHeaders(),
+          body: JSON.stringify({
+            subject_id: newId, topic_id: res.topicLocalId ? (topicIdMap[res.topicLocalId] || null) : null,
+            subtopic_id: null, name: res.name, description: res.description || '',
+            type: res.type, url: res.url || '',
+            youtube_id: res.youtube_id || '', thumbnail_url: res.thumbnail_url || '',
+            duration: res.duration || '', difficulty: res.difficulty || 'beginner',
+            content: { problems: [] }, is_free: !!res.is_free, is_featured: false,
+            display_order: res.display_order || 0, is_active: true,
+          }),
+        });
+      }
+
+      for (const p of builderPapers) {
+        if (!p.paper_url && !isDraft) continue;
+        await fetch(`${API_URL}/admin/content/papers`, {
+          method: 'POST', headers: authHeaders(),
+          body: JSON.stringify({
+            subject_id: newId, year: p.year, session: p.session, paper_number: p.paper,
+            is_mock: false, paper_url: p.paper_url || null, memo_url: p.memo_url || null,
+          }),
+        });
+      }
+      for (const m of builderMocks) {
+        if (!m.paper_url && !isDraft) continue;
+        await fetch(`${API_URL}/admin/content/papers`, {
+          method: 'POST', headers: authHeaders(),
+          body: JSON.stringify({
+            subject_id: newId, is_mock: true, title: m.title,
+            duration_minutes: m.duration, total_marks: m.marks,
+            paper_url: m.paper_url || null, memo_url: m.memo_url || null,
+          }),
+        });
+      }
+
+      showSuccess(isDraft ? 'Draft saved.' : editingSubject ? 'Subject updated.' : 'Subject published.');
+      setViewMode('list');
+      resetForm();
+      fetchInitialData();
+    } catch (err) {
+      showError('Network error: ' + err.message);
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  // -------- CRUD --------
+  const openAddModal = () => {
+    setEditingSubject(null);
+    resetForm();
+    setViewMode('builder');
+    setActiveSection('basics');
+  };
+  const openEditModal = async (subject) => {
+    setEditingSubject(subject);
+    setFormData({
+      name: subject.name || '', slug: subject.slug || '',
+      description: subject.description || '', long_description: subject.long_description || '',
+      icon: subject.icon || getDefaultIcon(subject.name),
+      color: subject.color || getDefaultColor(subject.name),
+      grade_key: subject.grade_key || '', category_id: subject.category_id || '',
+      is_active: subject.is_active !== undefined ? subject.is_active : true,
+      code: subject.code || '', track: subject.track || '',
+      semester: subject.semester || '', institution: subject.institution || '',
+      allowed_plans: subject.allowed_plans || [],
+      soon: false, region: 'Global', year_level: '1ST_YEAR',
+    });
+    setViewMode('builder');
+    setActiveSection('basics');
+    await loadExistingContent(subject.id);
+  };
+  const resetForm = () => {
+    setFormData(initialForm());
+    setBuilderTopics([]); setBuilderResources([]); setBuilderPapers([]); setBuilderMocks([]);
+  };
+
+  const handleDeleteClick = (subject) => { setDeleteTarget(subject); setShowDeletePopup(true); };
+  const confirmDelete = async () => {
+    if (!deleteTarget) return;
+    try {
+      setDeleteLoading(true);
+      const res = await fetch(`${API_URL}/admin/content/subjects/${deleteTarget.id}`, { method: 'DELETE', headers: authHeaders() });
+      const data = await res.json();
+      if (data.success) { setShowDeletePopup(false); fetchInitialData(); showSuccess('Subject deleted.'); }
+      else { setShowDeletePopup(false); showError(data.error || 'Delete failed'); }
+    } catch { showError('Network error'); } finally { setDeleteLoading(false); }
+  };
+  const handleToggleClick = (subject) => { setToggleTarget(subject); setShowTogglePopup(true); };
+  const confirmToggle = async () => {
+    if (!toggleTarget) return;
+    try {
+      setToggleLoading(true);
+      const res = await fetch(`${API_URL}/admin/content/subjects/${toggleTarget.id}`, {
+        method: 'PUT', headers: authHeaders(),
+        body: JSON.stringify({ is_active: !toggleTarget.is_active }),
+      });
+      const data = await res.json();
+      if (data.success) { setShowTogglePopup(false); fetchInitialData(); showSuccess('Status updated.'); }
+      else { setShowTogglePopup(false); showError(data.error || 'Toggle failed'); }
+    } catch { showError('Network error'); } finally { setToggleLoading(false); }
+  };
+
+  const getGradeBadge = (grade_key) => {
+    const g = grades.find((x) => x.key === grade_key);
+    if (!g) return <span className="tier-badge" style={{ background: '#6b7280' }}>No Grade</span>;
+    let color = '#10b981';
+    if (g.tier === '10-11') color = '#f59e0b';
+    if (g.tier === '12') color = '#ef4444';
+    if (g.tier === 'tertiary') color = '#4f46e5';
+    return <span className="tier-badge" style={{ background: color }}>{g.label}</span>;
+  };
+
+  // -------- Render: list --------
+  if (loading) return <div className="admin-content-loading"><div className="loading-spinner" /><p>Loading content...</p></div>;
+
+  if (viewMode === 'list') {
     return (
-        <div className="admin-content">
-            {/* PAGE HEADER */}
-            <div className="content-header">
-                <div className="header-left">
-                    <h2>📚 Content Management</h2>
-                    <p className="header-subtitle">Manage subjects, resources, and learning materials</p>
-                </div>
-                <div className="header-actions">
-                    <button className="refresh-btn" onClick={fetchSubjects} title="Refresh subjects">🔄</button>
-                    <button className="add-btn" onClick={openAddModal}>➕ Add Subject</button>
-                </div>
-            </div>
-
-            {/* STATS CARDS */}
-            <div className="content-stats">
-                <div className="stat-item">
-                    <span className="stat-number">{subjects.length}</span>
-                    <span className="stat-label">Total Subjects</span>
-                </div>
-                <div className="stat-item">
-                    <span className="stat-number">{subjects.filter(s => s.is_active).length}</span>
-                    <span className="stat-label">Active</span>
-                </div>
-                <div className="stat-item">
-                    <span className="stat-number">{subjects.filter(s => !s.is_active).length}</span>
-                    <span className="stat-label">Inactive</span>
-                </div>
-            </div>
-
-            {/* SEARCH BAR */}
-            <div className="content-search">
-                <div className="search-wrapper">
-                    <span className="search-icon">🔍</span>
-                    <input
-                        type="text"
-                        className="search-input"
-                        placeholder="Search by name, code, track, institution..."
-                        value={searchTerm}
-                        onChange={(e) => setSearchTerm(e.target.value)}
-                    />
-                    {searchTerm && (
-                        <button className="clear-search" onClick={() => setSearchTerm('')}>✕</button>
-                    )}
-                </div>
-                <div className="search-results-info">
-                    {searchTerm ? (
-                        <span>Showing {filteredSubjects.length} of {subjects.length} subjects</span>
-                    ) : (
-                        <span>{subjects.length} subjects total</span>
-                    )}
-                </div>
-            </div>
-
-            {/* SUBJECTS GRID */}
-            <div className="subjects-grid">
-                {filteredSubjects.length === 0 ? (
-                    <div className="empty-state">
-                        <span className="empty-icon">📚</span>
-                        <h3>{searchTerm ? 'No matching subjects found' : 'No subjects yet'}</h3>
-                        <p>
-                            {searchTerm
-                                ? `No subjects match "${searchTerm}". Try a different search term.`
-                                : 'Click "Add Subject" to create your first subject'}
-                        </p>
-                    </div>
-                ) : (
-                    filteredSubjects.map((subject) => (
-                        <div key={subject.id} className="subject-card" style={{ borderColor: subject.color || '#4f46e5' }}>
-                            <div className="subject-card-header">
-                                <div className="subject-icon" style={{ background: subject.color || '#4f46e5' }}>
-                                    {subject.icon || '📚'}
-                                </div>
-                                <div className="subject-info">
-                                    <h4>{subject.name}</h4>
-                                    <p>{subject.description || 'No description'}</p>
-                                    <div className="subject-meta">
-                                        {getTierBadge(subject.tier)}
-                                        {subject.code && <span className="code-badge">📋 {subject.code}</span>}
-                                        {subject.track && <span className="track-badge">🎯 {subject.track}</span>}
-                                        {subject.semester && <span className="semester-badge">📅 {subject.semester}</span>}
-                                        <span className={`status-badge ${subject.is_active ? 'active' : 'inactive'}`}>
-                                            {subject.is_active ? '✅ Active' : '❌ Inactive'}
-                                        </span>
-                                    </div>
-                                    {subject.institution && (
-                                        <div className="subject-institution">🏛️ {subject.institution}</div>
-                                    )}
-                                </div>
-                            </div>
-                            {subject.long_description && (
-                                <div className="subject-long-desc">{subject.long_description}</div>
-                            )}
-                            <div className="subject-actions">
-                                <button
-                                    className="action-btn content"
-                                    onClick={() => navigate(`/admin/content/${subject.id}`)}
-                                >
-                                    📖 Manage Content
-                                </button>
-                                <button className="action-btn toggle" onClick={() => handleToggleClick(subject)}>
-                                    {subject.is_active ? '🔴 Deactivate' : '🟢 Activate'}
-                                </button>
-                                <button className="action-btn edit" onClick={() => openEditModal(subject)}>
-                                    ✏️ Edit
-                                </button>
-                                <button className="action-btn delete" onClick={() => handleDeleteClick(subject)}>
-                                    🗑️ Delete
-                                </button>
-                            </div>
-                        </div>
-                    ))
-                )}
-            </div>
-
-            {/* EDIT/ADD SUBJECT MODAL */}
-            {showModal && (
-                <div className="ac-popup-overlay" onClick={() => setShowModal(false)}>
-                    <div className="ac-popup ac-popup-large" onClick={e => e.stopPropagation()}>
-                        <button className="ac-popup-close" onClick={() => setShowModal(false)}>✕</button>
-                        <div className="ac-popup-header">
-                            <div className="ac-popup-icon">📚</div>
-                            <h3>{editingSubject ? 'Edit Subject' : 'Add New Subject'}</h3>
-                            <p>{editingSubject ? 'Update the subject details below' : 'Fill in the details to create a new subject'}</p>
-                        </div>
-
-                        <div className="ac-popup-body">
-                            <div className="ac-form-group">
-                                <label>Subject Name *</label>
-                                <input
-                                    type="text"
-                                    value={formData.name}
-                                    onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                                    placeholder="e.g., Algebra, Geometry, Calculus"
-                                />
-                            </div>
-
-                            <div className="ac-form-group">
-                                <label>Short Description</label>
-                                <input
-                                    type="text"
-                                    value={formData.description}
-                                    onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                                    placeholder="Brief description shown on cards"
-                                />
-                            </div>
-
-                            <div className="ac-form-group">
-                                <label>Full Description</label>
-                                <textarea
-                                    value={formData.long_description}
-                                    onChange={(e) => setFormData({ ...formData, long_description: e.target.value })}
-                                    placeholder="Detailed description for the subject page"
-                                    rows="3"
-                                />
-                            </div>
-
-                            <div className="ac-form-row">
-                                <div className="ac-form-group ac-half">
-                                    <label>Icon</label>
-                                    <input
-                                        type="text"
-                                        value={formData.icon}
-                                        onChange={(e) => setFormData({ ...formData, icon: e.target.value })}
-                                        placeholder="📚"
-                                    />
-                                </div>
-                                <div className="ac-form-group ac-half">
-                                    <label>Tier / Year Level</label>
-                                    <select
-                                        value={formData.tier}
-                                        onChange={(e) => setFormData({ ...formData, tier: e.target.value })}
-                                    >
-                                        <option value="TIER_1">TIER_1 - Grade 8-9</option>
-                                        <option value="TIER_2">TIER_2 - Grade 10-11</option>
-                                        <option value="TIER_3">TIER_3 - Grade 12+</option>
-                                        <option value="1ST_YEAR">1ST_YEAR - University</option>
-                                        <option value="2ND_YEAR">2ND_YEAR - University</option>
-                                        <option value="3RD_YEAR">3RD_YEAR - University</option>
-                                        <option value="4TH_YEAR">4TH_YEAR - University</option>
-                                    </select>
-                                </div>
-                            </div>
-
-                            <div className="ac-form-row">
-                                <div className="ac-form-group ac-half">
-                                    <label>Region</label>
-                                    <select
-                                        value={formData.region}
-                                        onChange={(e) => setFormData({ ...formData, region: e.target.value })}
-                                    >
-                                        {regions.map(region => (
-                                            <option key={region} value={region}>{region}</option>
-                                        ))}
-                                    </select>
-                                </div>
-                                <div className="ac-form-group ac-half">
-                                    <label>Track / Program</label>
-                                    <select
-                                        value={formData.track}
-                                        onChange={(e) => setFormData({ ...formData, track: e.target.value })}
-                                    >
-                                        <option value="">Select Track</option>
-                                        {tracks.map(track => (
-                                            <option key={track} value={track}>{track}</option>
-                                        ))}
-                                    </select>
-                                </div>
-                            </div>
-
-                            <div className="ac-form-row">
-                                <div className="ac-form-group ac-half">
-                                    <label>Course Code</label>
-                                    <input                                        type="text"
-                                        value={formData.code}
-                                        onChange={(e) => setFormData({ ...formData, code: e.target.value })}
-                                        placeholder="e.g., MATH101"
-                                    />
-                                </div>
-                                <div className="ac-form-group ac-half">
-                                    <label>Semester</label>
-                                    <input
-                                        type="text"
-                                        value={formData.semester}
-                                        onChange={(e) => setFormData({ ...formData, semester: e.target.value })}
-                                        placeholder="e.g., S1, S2"
-                                    />
-                                </div>
-                            </div>
-
-                            <div className="ac-form-group">
-                                <label>Institution</label>
-                                <input
-                                    type="text"
-                                    value={formData.institution}
-                                    onChange={(e) => setFormData({ ...formData, institution: e.target.value })}
-                                    placeholder="e.g., Wits, UP, UCT"
-                                />
-                            </div>
-
-                            <div className="ac-form-group">
-                                <label>Color</label>
-                                <div className="ac-color-grid">
-                                    {colors.map((color) => (
-                                        <div
-                                            key={color}
-                                            className={`ac-color-option ${formData.color === color ? 'selected' : ''}`}
-                                            style={{ background: color }}
-                                            onClick={() => setFormData({ ...formData, color })}
-                                        />
-                                    ))}
-                                    <input
-                                        type="color"
-                                        value={formData.color}
-                                        onChange={(e) => setFormData({ ...formData, color: e.target.value })}
-                                        className="ac-color-input"
-                                    />
-                                </div>
-                            </div>
-
-                            <div className="ac-form-group ac-checkbox">
-                                <label>
-                                    <input
-                                        type="checkbox"
-                                        checked={formData.is_active}
-                                        onChange={(e) => setFormData({ ...formData, is_active: e.target.checked })}
-                                    />
-                                    <span>Active (visible to users)</span>
-                                </label>
-                            </div>
-
-                            {/* ============================================
-                                CONTENT BUILDER SECTION
-                                Only shown for new subjects (not editing)
-                               ============================================ */}
-                            {!editingSubject && (
-                                <div className="ac-builder-section">
-                                    <div className="ac-builder-header">
-                                        <h4>📚 Add Topics & Resources</h4>
-                                        <p>Optionally build the subject content now. You can also add more later from the subject's page.</p>
-                                    </div>
-
-                                    {/* TOPICS */}
-                                    <div className="ac-form-group">
-                                        <label>Topics</label>
-                                        <div className="ac-inline-add">
-                                            <input
-                                                type="text"
-                                                value={newTopicName}
-                                                onChange={e => setNewTopicName(e.target.value)}
-                                                placeholder="Topic name e.g. Linear Equations"
-                                                onKeyDown={e => e.key === 'Enter' && (e.preventDefault(), addTopicToBuilder())}
-                                            />
-                                            <input
-                                                type="text"
-                                                value={newTopicDesc}
-                                                onChange={e => setNewTopicDesc(e.target.value)}
-                                                placeholder="Description (optional)"
-                                            />
-                                            <button
-                                                type="button"
-                                                className="ac-btn ac-btn-primary ac-btn-small"
-                                                onClick={addTopicToBuilder}
-                                            >
-                                                ➕ Add Topic
-                                            </button>
-                                        </div>
-
-                                        {builderTopics.length > 0 && (
-                                            <ul className="ac-builder-list">
-                                                {builderTopics.map((t, i) => (
-                                                    <li key={t.id}>
-                                                        <span className="ac-builder-index">{i + 1}</span>
-                                                        <span className="ac-builder-name">📖 {t.name}</span>
-                                                        {t.description && <span className="ac-builder-desc">— {t.description}</span>}
-                                                        <button
-                                                            type="button"
-                                                            className="ac-builder-remove"
-                                                            onClick={() => removeTopicFromBuilder(t.id)}
-                                                        >✕</button>
-                                                    </li>
-                                                ))}
-                                            </ul>
-                                        )}
-                                    </div>
-
-                                    {/* RESOURCES */}
-                                    <div className="ac-form-group">
-                                        <label>Resources (PDFs, Videos, Links, Practice…)</label>
-                                        <button
-                                            type="button"
-                                            className="ac-btn ac-btn-secondary ac-btn-small"
-                                            onClick={openAddResourceDraft}
-                                        >
-                                            ➕ Add Resource
-                                        </button>
-
-                                        {builderResources.length > 0 && (
-                                            <ul className="ac-builder-list">
-                                                {builderResources.map(r => {
-                                                    const topicName = r.topicLocalId
-                                                        ? builderTopics.find(t => t.id === r.topicLocalId)?.name
-                                                        : null;
-                                                    return (
-                                                        <li key={r.id}>
-                                                            <span className="ac-builder-icon">{getResourceIcon(r.type)}</span>
-                                                            <span className="ac-builder-name">{r.name}</span>
-                                                            <span className="ac-builder-tag">{r.type}</span>
-                                                            {topicName && <span className="ac-builder-tag">in: {topicName}</span>}
-                                                            <button
-                                                                type="button"
-                                                                className="ac-builder-remove"
-                                                                onClick={() => removeResourceDraft(r.id)}
-                                                            >✕</button>
-                                                        </li>
-                                                    );
-                                                })}
-                                            </ul>
-                                        )}
-                                    </div>
-                                </div>
-                            )}
-                        </div>
-
-                        <div className="ac-popup-footer">
-                            <button className="ac-btn ac-btn-secondary" onClick={() => setShowModal(false)}>
-                                Cancel
-                            </button>
-                            <button className="ac-btn ac-btn-primary" onClick={handleSaveSubject} disabled={actionLoading}>
-                                {actionLoading ? '⏳ Saving...' : (editingSubject ? '💾 Update Subject' : '➕ Create Subject')}
-                            </button>
-                        </div>
-                    </div>
-
-                    {/* ============================================
-                        NESTED RESOURCE DRAFT POPUP
-                        Renders above the subject modal
-                       ============================================ */}
-                    {showResourceDraftPopup && (
-                        <div
-                            className="ac-popup-overlay ac-nested"
-                            onClick={e => { e.stopPropagation(); setShowResourceDraftPopup(false); }}
-                        >
-                            <div className="ac-popup" onClick={e => e.stopPropagation()}>
-                                <button className="ac-popup-close" onClick={() => setShowResourceDraftPopup(false)}>✕</button>
-                                <div className="ac-popup-header">
-                                    <div className="ac-popup-icon">{getResourceIcon(resourceDraft.type)}</div>
-                                    <h3>Add Resource</h3>
-                                    <p>This will be saved when you create the subject.</p>
-                                </div>
-
-                                <div className="ac-popup-body">
-                                    <div className="ac-form-group">
-                                        <label>Resource Type *</label>
-                                        <select
-                                            value={resourceDraft.type}
-                                            onChange={e => setResourceDraft({ ...resourceDraft, type: e.target.value, youtube_id: '', thumbnail_url: '' })}
-                                        >
-                                            <option value="pdf">📄 PDF Document</option>
-                                            <option value="video">🎬 Video (YouTube)</option>
-                                            <option value="practice">✏️ Practice Problems</option>
-                                            <option value="guide">📖 Study Guide</option>
-                                            <option value="quiz">📝 Quiz</option>
-                                            <option value="link">🔗 External Link</option>
-                                        </select>
-                                    </div>
-
-                                    <div className="ac-form-group">
-                                        <label>Resource Name *</label>
-                                        <input
-                                            value={resourceDraft.name}
-                                            onChange={e => setResourceDraft({ ...resourceDraft, name: e.target.value })}
-                                            placeholder="e.g. Intro to Algebra"
-                                        />
-                                    </div>
-
-                                    <div className="ac-form-group">
-                                        <label>Attach to Topic (optional)</label>
-                                        <select
-                                            value={resourceDraft.topicIndex}
-                                            onChange={e => setResourceDraft({ ...resourceDraft, topicIndex: e.target.value })}
-                                        >
-                                            <option value="">— General (subject-level) —</option>
-                                            {builderTopics.map((t, i) => (
-                                                <option key={t.id} value={i}>{t.name}</option>
-                                            ))}
-                                        </select>
-                                    </div>
-
-                                    {resourceDraft.type !== 'practice' && (
-                                        <div className="ac-form-group">
-                                            <label>
-                                                {resourceDraft.type === 'video' ? 'YouTube URL *' : 'URL *'}
-                                            </label>
-                                            <input
-                                                value={resourceDraft.url}
-                                                onChange={e => handleResourceUrlChange(e.target.value)}
-                                                placeholder="https://..."
-                                            />
-                                        </div>
-                                    )}
-
-                                    {resourceDraft.youtube_id && (
-                                        <div className="ac-youtube-preview">
-                                            <img src={`https://img.youtube.com/vi/${resourceDraft.youtube_id}/mqdefault.jpg`} alt="preview" />
-                                            <span>✅ YouTube detected: {resourceDraft.youtube_id}</span>
-                                        </div>
-                                    )}
-
-                                    <div className="ac-form-group">
-                                        <label>Description</label>
-                                        <textarea
-                                            rows="2"
-                                            value={resourceDraft.description}
-                                            onChange={e => setResourceDraft({ ...resourceDraft, description: e.target.value })}
-                                        />
-                                    </div>
-
-                                    {resourceDraft.type === 'video' && (
-                                        <div className="ac-form-row">
-                                            <div className="ac-form-group ac-half">
-                                                <label>Duration</label>
-                                                <input
-                                                    value={resourceDraft.duration}
-                                                    onChange={e => setResourceDraft({ ...resourceDraft, duration: e.target.value })}
-                                                    placeholder="e.g. 12:34"
-                                                />
-                                            </div>
-                                            <div className="ac-form-group ac-half">
-                                                <label>Difficulty</label>
-                                                <select
-                                                    value={resourceDraft.difficulty}
-                                                    onChange={e => setResourceDraft({ ...resourceDraft, difficulty: e.target.value })}
-                                                >
-                                                    <option value="beginner">Beginner</option>
-                                                    <option value="intermediate">Intermediate</option>
-                                                    <option value="advanced">Advanced</option>
-                                                </select>
-                                            </div>
-                                        </div>
-                                    )}
-
-                                    <div className="ac-form-group ac-checkbox">
-                                        <label>
-                                            <input
-                                                type="checkbox"
-                                                checked={resourceDraft.is_free}
-                                                onChange={e => setResourceDraft({ ...resourceDraft, is_free: e.target.checked })}
-                                            />
-                                            <span>Free preview</span>
-                                        </label>
-                                    </div>
-                                </div>
-
-                                <div className="ac-popup-footer">
-                                    <button
-                                        className="ac-btn ac-btn-secondary"
-                                        onClick={() => setShowResourceDraftPopup(false)}
-                                    >
-                                        Cancel
-                                    </button>
-                                    <button
-                                        className="ac-btn ac-btn-primary"
-                                        onClick={confirmAddResourceDraft}
-                                    >
-                                        ➕ Add to List
-                                    </button>
-                                </div>
-                            </div>
-                        </div>
-                    )}
-                </div>
-            )}
-
-            {/* DELETE CONFIRMATION POPUP */}
-            {showDeletePopup && deleteTarget && (
-                <div className="ac-popup-overlay" onClick={() => !deleteLoading && setShowDeletePopup(false)}>
-                    <div className="ac-popup ac-popup-small" onClick={e => e.stopPropagation()}>
-                        <div className="ac-popup-icon-wrapper danger">
-                            <span className="ac-popup-big-icon">🗑️</span>
-                        </div>
-                        <div className="ac-popup-header centered">
-                            <h3>Delete Subject?</h3>
-                            <p>You're about to delete <strong>{deleteTarget.name}</strong>. This action cannot be undone.</p>
-                        </div>
-                        <div className="ac-popup-footer centered">
-                            <button
-                                className="ac-btn ac-btn-secondary"
-                                onClick={() => setShowDeletePopup(false)}
-                                disabled={deleteLoading}
-                            >
-                                Cancel
-                            </button>
-                            <button
-                                className="ac-btn ac-btn-danger"
-                                onClick={confirmDelete}
-                                disabled={deleteLoading}
-                            >
-                                {deleteLoading ? '⏳ Deleting...' : '🗑️ Delete'}
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            )}
-
-            {/* TOGGLE STATUS CONFIRMATION POPUP */}
-            {showTogglePopup && toggleTarget && (
-                <div className="ac-popup-overlay" onClick={() => !toggleLoading && setShowTogglePopup(false)}>
-                    <div className="ac-popup ac-popup-small" onClick={e => e.stopPropagation()}>
-                        <div className={`ac-popup-icon-wrapper ${toggleTarget.is_active ? 'warning' : 'success'}`}>
-                            <span className="ac-popup-big-icon">{toggleTarget.is_active ? '⚠️' : '✅'}</span>
-                        </div>
-                        <div className="ac-popup-header centered">
-                            <h3>{toggleTarget.is_active ? 'Deactivate Subject?' : 'Activate Subject?'}</h3>
-                            <p>
-                                {toggleTarget.is_active
-                                    ? `"${toggleTarget.name}" will be hidden from students.`
-                                    : `"${toggleTarget.name}" will be visible to students.`}
-                            </p>
-                        </div>
-                        <div className="ac-popup-footer centered">
-                            <button
-                                className="ac-btn ac-btn-secondary"
-                                onClick={() => setShowTogglePopup(false)}
-                                disabled={toggleLoading}
-                            >
-                                Cancel
-                            </button>
-                            <button
-                                className={`ac-btn ${toggleTarget.is_active ? 'ac-btn-warning' : 'ac-btn-primary'}`}
-                                onClick={confirmToggle}
-                                disabled={toggleLoading}
-                            >
-                                {toggleLoading ? '⏳ Processing...' : (toggleTarget.is_active ? '🔴 Deactivate' : '🟢 Activate')}
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            )}
-
-            {/* ============================================
-                SUCCESS POPUP
-                Simplified: since content is added inside the
-                Add Subject modal now, we no longer prompt the
-                user to navigate to a separate content page.
-               ============================================ */}
-            {showSuccessPopup && (
-                <div className="ac-popup-overlay" onClick={() => { setShowSuccessPopup(false); setCreatedSubjectId(null); }}>
-                    <div className="ac-popup ac-popup-small" onClick={e => e.stopPropagation()}>
-                        <div className="ac-popup-icon-wrapper success">
-                            <span className="ac-popup-big-icon">✅</span>
-                        </div>
-                        <div className="ac-popup-header centered">
-                            <h3>Success!</h3>
-                            <p>{successMessage}</p>
-                        </div>
-                        <div className="ac-popup-footer centered">
-                            <button
-                                className="ac-btn ac-btn-primary"
-                                onClick={() => { setShowSuccessPopup(false); setCreatedSubjectId(null); }}
-                            >
-                                Continue
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            )}
-
-            {/* ERROR POPUP */}
-            {showErrorPopup && (
-                <div className="ac-popup-overlay" onClick={() => setShowErrorPopup(false)}>
-                    <div className="ac-popup ac-popup-small" onClick={e => e.stopPropagation()}>
-                        <div className="ac-popup-icon-wrapper danger">
-                            <span className="ac-popup-big-icon">⚠️</span>
-                        </div>
-                        <div className="ac-popup-header centered">
-                            <h3>Something went wrong</h3>
-                            <p>{errorMessage}</p>
-                        </div>
-                        <div className="ac-popup-footer centered">
-                            <button className="ac-btn ac-btn-secondary" onClick={() => setShowErrorPopup(false)}>
-                                Close
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            )}
+      <div className="admin-content">
+        <div className="content-header">
+          <div className="header-left"><h2>📚 Content Management</h2><p className="header-subtitle">Manage subjects, resources, and learning materials</p></div>
+          <div className="header-actions">
+            <button className="refresh-btn" onClick={fetchInitialData}>🔄</button>
+            <button className="add-btn" onClick={openAddModal}>➕ Add Subject</button>
+          </div>
         </div>
+        <div className="content-stats">
+          <div className="stat-item"><span className="stat-number">{subjects.length}</span><span className="stat-label">Total Subjects</span></div>
+          <div className="stat-item"><span className="stat-number">{subjects.filter((s) => s.is_active).length}</span><span className="stat-label">Active</span></div>
+          <div className="stat-item"><span className="stat-number">{subjects.filter((s) => !s.is_active).length}</span><span className="stat-label">Inactive</span></div>
+        </div>
+        <div className="content-search">
+          <div className="search-wrapper">
+            <span className="search-icon">🔍</span>
+            <input type="text" className="search-input" placeholder="Search..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} />
+          </div>
+        </div>
+        <div className="subjects-grid">
+          {filteredSubjects.map((subject) => (
+            <div key={subject.id} className="subject-card" style={{ borderColor: subject.color }}>
+              <div className="subject-card-header">
+                <div className="subject-icon" style={{ background: subject.color }}>{subject.icon}</div>
+                <div className="subject-info">
+                  <h4>{subject.name}</h4>
+                  <p>{subject.description}</p>
+                  <div className="subject-meta">
+                    {getGradeBadge(subject.grade_key)}
+                    <span className={`status-badge ${subject.is_active ? 'active' : 'inactive'}`}>{subject.is_active ? '✅ Active' : '❌ Inactive'}</span>
+                  </div>
+                </div>
+              </div>
+              <div className="subject-actions">
+                <button className="action-btn content" onClick={() => navigate(`/admin/content/${subject.id}`)}>📖 Manage</button>
+                <button className="action-btn toggle" onClick={() => handleToggleClick(subject)}>{subject.is_active ? '🔴 Deactivate' : '🟢 Activate'}</button>
+                <button className="action-btn edit" onClick={() => openEditModal(subject)}>✏️ Edit</button>
+                <button className="action-btn delete" onClick={() => handleDeleteClick(subject)}>🗑️ Delete</button>
+              </div>
+            </div>
+          ))}
+        </div>
+
+        {showDeletePopup && deleteTarget && (
+          <div className="ac-popup-overlay" onClick={() => !deleteLoading && setShowDeletePopup(false)}>
+            <div className="ac-popup ac-popup-small" onClick={(e) => e.stopPropagation()}>
+              <div className="ac-popup-icon-wrapper danger"><span className="ac-popup-big-icon">🗑️</span></div>
+              <div className="ac-popup-header centered"><h3>Delete Subject?</h3><p>Delete <strong>{deleteTarget.name}</strong>.</p></div>
+              <div className="ac-popup-footer centered">
+                <button className="ac-btn ac-btn-secondary" onClick={() => setShowDeletePopup(false)} disabled={deleteLoading}>Cancel</button>
+                <button className="ac-btn ac-btn-danger" onClick={confirmDelete} disabled={deleteLoading}>{deleteLoading ? '⏳ Deleting…' : '🗑️ Delete'}</button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {showTogglePopup && toggleTarget && (
+          <div className="ac-popup-overlay" onClick={() => !toggleLoading && setShowTogglePopup(false)}>
+            <div className="ac-popup ac-popup-small" onClick={(e) => e.stopPropagation()}>
+              <div className={`ac-popup-icon-wrapper ${toggleTarget.is_active ? 'warning' : 'success'}`}><span className="ac-popup-big-icon">{toggleTarget.is_active ? '⚠️' : '✅'}</span></div>
+              <div className="ac-popup-header centered"><h3>{toggleTarget.is_active ? 'Deactivate?' : 'Activate?'}</h3></div>
+              <div className="ac-popup-footer centered">
+                <button className="ac-btn ac-btn-secondary" onClick={() => setShowTogglePopup(false)} disabled={toggleLoading}>Cancel</button>
+                <button className={`ac-btn ${toggleTarget.is_active ? 'ac-btn-warning' : 'ac-btn-primary'}`} onClick={confirmToggle} disabled={toggleLoading}>
+                  {toggleLoading ? '⏳…' : toggleTarget.is_active ? 'Deactivate' : 'Activate'}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {showSuccessPopup && (
+          <div className="ac-popup-overlay" onClick={() => setShowSuccessPopup(false)}>
+            <div className="ac-popup ac-popup-small" onClick={(e) => e.stopPropagation()}>
+              <div className="ac-popup-icon-wrapper success"><span className="ac-popup-big-icon">✅</span></div>
+              <div className="ac-popup-header centered"><h3>Success</h3><p>{successMessage}</p></div>
+              <div className="ac-popup-footer centered"><button className="ac-btn ac-btn-primary" onClick={() => setShowSuccessPopup(false)}>Continue</button></div>
+            </div>
+          </div>
+        )}
+
+        {showErrorPopup && (
+          <div className="ac-popup-overlay" onClick={() => setShowErrorPopup(false)}>
+            <div className="ac-popup ac-popup-small" onClick={(e) => e.stopPropagation()}>
+              <div className="ac-popup-icon-wrapper danger"><span className="ac-popup-big-icon">⚠️</span></div>
+              <div className="ac-popup-header centered"><h3>Error</h3><p>{errorMessage}</p></div>
+              <div className="ac-popup-footer centered"><button className="ac-btn ac-btn-secondary" onClick={() => setShowErrorPopup(false)}>Close</button></div>
+            </div>
+          </div>
+        )}
+      </div>
     );
+  }
+
+  // -------- Render: builder --------
+  return (
+    <div className="ac-builder-page">
+      <header className="ac-builder-header">
+        <div>
+          <div className="ac-breadcrumb">Admin / Subjects / <span>{editingSubject ? 'Edit subject' : 'Add subject'}</span></div>
+          <h1>{editingSubject ? 'Edit subject' : 'Add subject content'} {editingSubject && <span className="ac-status-badge published">Published</span>}</h1>
+          <p>Everything here feeds the student Subjects page.</p>
+        </div>
+        <div className="ac-header-actions">
+          <button className="ac-btn-secondary" onClick={() => setViewMode('list')}>Cancel</button>
+          <button className="ac-btn-secondary" onClick={() => handleSaveSubject({ draft: true })} disabled={actionLoading || uploading}>Save draft</button>
+          <button className="ac-btn-primary" onClick={() => handleSaveSubject()} disabled={actionLoading || uploading}>
+            {actionLoading ? 'Saving…' : editingSubject ? 'Update live subject' : 'Publish subject'}
+          </button>
+        </div>
+      </header>
+
+      <div className="ac-layout">
+        <nav className="ac-nav">
+          {SECTIONS.map((sec, idx) => {
+            const issues = validationIssues.filter((i) => i.sec === sec.id);
+            const hasErr = issues.some((i) => i.level === 'error');
+            const hasWarn = issues.some((i) => i.level === 'warn');
+            let badgeCls = 'ok'; let badgeText = 'Done';
+            if (hasErr) { badgeCls = 'error'; badgeText = `${issues.filter((i) => i.level === 'error').length} issue`; }
+            else if (hasWarn) { badgeCls = 'warn'; badgeText = `${issues.filter((i) => i.level === 'warn').length} note`; }
+            else if (sec.id === 'topics') badgeText = builderTopics.length;
+            else if (sec.id === 'papers') badgeText = builderPapers.length;
+            else if (sec.id === 'mocks') badgeText = builderMocks.length;
+            else if (sec.id === 'review') { badgeCls = errorCount ? 'error' : 'ok'; badgeText = errorCount ? `${errorCount} to fix` : 'Ready'; }
+
+            return (
+              <button key={sec.id} className={`ac-nav-btn ${activeSection === sec.id ? 'active' : ''}`} onClick={() => setActiveSection(sec.id)}>
+                <span className="ac-nav-num">{idx + 1}</span>
+                <span style={{ flex: 1 }}>{sec.label}</span>
+                <span className={`ac-nav-badge ${badgeCls}`}>{badgeText}</span>
+              </button>
+            );
+          })}
+          <div className="ac-progress-card">
+            <h4>Completeness</h4>
+            <div className="ac-progress-track"><div className="ac-progress-fill" style={{ width: `${completeness}%` }} /></div>
+            <div className="ac-progress-text">{Math.floor(completeness / 20)} of 5 sections complete, {errorCount} to fix.</div>
+          </div>
+        </nav>
+
+        <main className="ac-form-area">
+          {activeSection === 'basics' && (
+            <div className="ac-section-panel">
+              <h2>Basic info</h2>
+              <p className="ac-subtitle">What students see on the subject card.</p>
+              <div className="ac-form-grid">
+                <div className="ac-field"><label>Subject name *</label><input value={formData.name} onChange={(e) => setFormData({ ...formData, name: e.target.value })} placeholder="e.g. Physical Sciences" /></div>
+                <div className="ac-field"><label>URL slug *</label><input value={formData.slug} readOnly className="ac-readonly" /></div>
+              </div>
+              <div className="ac-field"><label>Short description *</label><textarea value={formData.description} onChange={(e) => setFormData({ ...formData, description: e.target.value })} placeholder="Shown on the card." rows={3} /></div>
+              <div className="ac-form-grid">
+                <div className="ac-field">
+                  <label>Grade *</label>
+                  <select value={formData.grade_key} onChange={(e) => setFormData({ ...formData, grade_key: e.target.value })}>
+                    <option value="" disabled>Select a grade…</option>
+                    {grades.map((g) => <option key={g.key} value={g.key}>{g.label}</option>)}
+                  </select>
+                </div>
+                <div className="ac-field">
+                  <label>Category *</label>
+                  <select value={formData.category_id} onChange={(e) => setFormData({ ...formData, category_id: e.target.value })}>
+                    <option value="" disabled>Select a category…</option>
+                    {categories.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
+                  </select>
+                </div>
+              </div>
+              <div className="ac-form-grid">
+                <div className="ac-field"><label>Icon (emoji)</label><input value={formData.icon} onChange={(e) => setFormData({ ...formData, icon: e.target.value })} placeholder="e.g. ⚗️" maxLength={2} /></div>
+                <div className="ac-field">
+                  <label>Accent colour</label>
+                  <div className="ac-colors">
+                    {DEFAULT_COLORS.map((c) => (
+                      <button key={c} className={`ac-color-swatch ${formData.color === c ? 'active' : ''}`} style={{ background: c }} onClick={() => setFormData({ ...formData, color: c })} />
+                    ))}
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {activeSection === 'topics' && (
+            <div className="ac-section-panel">
+              <h2>Topics</h2>
+              <p className="ac-subtitle">Students open these from View topics.</p>
+              <div className="ac-inline-add">
+                <input value={newTopicName} onChange={(e) => setNewTopicName(e.target.value)} placeholder="Topic name" />
+                <input value={newTopicDesc} onChange={(e) => setNewTopicDesc(e.target.value)} placeholder="Description (optional)" />
+                <button className="ac-btn-primary" onClick={addTopicToBuilder} style={{ padding: '0 16px' }}>➕ Add</button>
+              </div>
+              <div className="ac-list">
+                {builderTopics.map((t, i) => (
+                  <div key={t.id} className="ac-list-row">
+                    <span className="ac-row-num">{i + 1}</span>
+                    <span>{t.name} {t.description && <small style={{ color: '#9a9ab8' }}>— {t.description}</small>}</span>
+                    <button className="ac-btn-icon" onClick={() => removeTopicFromBuilder(t.id)}>✕</button>
+                  </div>
+                ))}
+                {builderTopics.length === 0 && <p className="ac-muted-text">No topics yet.</p>}
+              </div>
+              <button className="ac-btn-dashed" onClick={() => setShowResourceDraftPopup(true)}>➕ Add resource (PDF / Video)</button>
+              <div className="ac-list" style={{ marginTop: 12 }}>
+                {builderResources.map((r) => (
+                  <div key={r.id} className="ac-list-row">
+                    <span>{getResourceIcon(r.type)}</span>
+                    <span>{r.name}</span>
+                    <span className="ac-builder-tag">{r.type}</span>
+                    <button className="ac-btn-icon" onClick={() => setBuilderResources((prev) => prev.filter((x) => x.id !== r.id))}>✕</button>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {activeSection === 'papers' && (
+            <div className="ac-section-panel">
+              <h2>Past papers</h2>
+              <p className="ac-subtitle">Official question papers and memos.</p>
+              <div className="ac-list">
+                {builderPapers.map((p, i) => (
+                  <div key={i} className="ac-list-row ac-paper-row">
+                    <div className="ac-paper-meta">
+                      <input type="number" value={p.year} onChange={(e) => updateArrayItem(setBuilderPapers, i, 'year', e.target.value)} placeholder="Year" />
+                      <select value={p.session} onChange={(e) => updateArrayItem(setBuilderPapers, i, 'session', e.target.value)}><option value="Nov">Nov</option><option value="Jun">June</option></select>
+                      <select value={p.paper} onChange={(e) => updateArrayItem(setBuilderPapers, i, 'paper', e.target.value)}><option value="P1">P1</option><option value="P2">P2</option></select>
+                    </div>
+                    <div className="ac-upload-group">
+                      <label className={`ac-upload-btn ${p.paper_url ? 'uploaded' : ''}`}>
+                        {p.paper_url ? `✅ ${p.paper_name || 'QP uploaded'}` : (uploading ? '⏳ Uploading…' : '📤 Upload QP')}
+                        <input type="file" accept="application/pdf" onChange={(e) => handleFileUpload(e, 'paper_qp', i)} hidden />
+                      </label>
+                      <label className={`ac-upload-btn ${p.memo_url ? 'uploaded' : ''}`}>
+                        {p.memo_url ? `✅ ${p.memo_name || 'Memo uploaded'}` : (uploading ? '⏳ Uploading…' : '📤 Upload Memo')}
+                        <input type="file" accept="application/pdf" onChange={(e) => handleFileUpload(e, 'paper_memo', i)} hidden />
+                      </label>
+                      {(p.paper_url || p.memo_url) && (
+                        <button className="ac-btn-icon" title="Clear files" onClick={() => {
+                          updateArrayItem(setBuilderPapers, i, 'paper_url', '');
+                          updateArrayItem(setBuilderPapers, i, 'memo_url', '');
+                          updateArrayItem(setBuilderPapers, i, 'paper_name', '');
+                          updateArrayItem(setBuilderPapers, i, 'memo_name', '');
+                        }}>🗑️</button>
+                      )}
+                    </div>
+                    <button className="ac-btn-icon danger" onClick={() => setBuilderPapers(builderPapers.filter((_, idx) => idx !== i))}>✕</button>
+                  </div>
+                ))}
+              </div>
+              <button className="ac-btn-dashed" onClick={() => setBuilderPapers([...builderPapers, { year: '2024', session: 'Nov', paper: 'P1', paper_url: '', memo_url: '', paper_name: '', memo_name: '' }])}>➕ Add past paper</button>
+            </div>
+          )}
+
+          {activeSection === 'mocks' && (
+            <div className="ac-section-panel">
+              <h2>Mock exams</h2>
+              <p className="ac-subtitle">EduSpantech generated practice exams.</p>
+              <div className="ac-list">
+                {builderMocks.map((m, i) => (
+                  <div key={i} className="ac-list-row ac-mock-row">
+                    <div className="ac-mock-top">
+                      <input value={m.title} onChange={(e) => updateArrayItem(setBuilderMocks, i, 'title', e.target.value)} placeholder="Mock Title" style={{ flex: 1 }} />
+                      <input type="number" value={m.duration} onChange={(e) => updateArrayItem(setBuilderMocks, i, 'duration', e.target.value)} placeholder="Mins" style={{ maxWidth: '80px' }} />
+                      <input type="number" value={m.marks} onChange={(e) => updateArrayItem(setBuilderMocks, i, 'marks', e.target.value)} placeholder="Marks" style={{ maxWidth: '80px' }} />
+                      <button className="ac-btn-icon danger" onClick={() => setBuilderMocks(builderMocks.filter((_, idx) => idx !== i))}>✕</button>
+                    </div>
+                    <div className="ac-upload-group" style={{ marginTop: '10px' }}>
+                      <label className={`ac-upload-btn ${m.paper_url ? 'uploaded' : ''}`}>
+                        {m.paper_url ? `✅ ${m.paper_name || 'Paper uploaded'}` : (uploading ? '⏳ Uploading…' : '📤 Upload Paper')}
+                        <input type="file" accept="application/pdf" onChange={(e) => handleFileUpload(e, 'mock_qp', i)} hidden />
+                      </label>
+                      <label className={`ac-upload-btn ${m.memo_url ? 'uploaded' : ''}`}>
+                        {m.memo_url ? `✅ ${m.memo_name || 'Memo uploaded'}` : (uploading ? '⏳ Uploading…' : '📤 Upload Memo')}
+                        <input type="file" accept="application/pdf" onChange={(e) => handleFileUpload(e, 'mock_memo', i)} hidden />
+                      </label>
+                      {(m.paper_url || m.memo_url) && (
+                        <button className="ac-btn-icon" title="Clear files" onClick={() => {
+                          updateArrayItem(setBuilderMocks, i, 'paper_url', '');
+                          updateArrayItem(setBuilderMocks, i, 'memo_url', '');
+                          updateArrayItem(setBuilderMocks, i, 'paper_name', '');
+                          updateArrayItem(setBuilderMocks, i, 'memo_name', '');
+                        }}>🗑️</button>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+              <button className="ac-btn-dashed" onClick={() => setBuilderMocks([...builderMocks, { title: '', duration: 150, marks: 150, paper_url: '', memo_url: '', paper_name: '', memo_name: '' }])}>➕ Add mock exam</button>
+            </div>
+          )}
+
+          {activeSection === 'access' && (
+            <div className="ac-section-panel">
+              <h2>Access and visibility</h2>
+              <p className="ac-subtitle">Who can open this subject, and when it goes live.</p>
+              <span className="ac-field-label">Plans that can open it</span>
+              <div className="ac-plan-list">
+                {plans.length === 0 ? (
+                  <p className="ac-muted-text">No plans configured yet.</p>
+                ) : plans.map((plan) => {
+                  const key = plan.tier || plan.key || plan.id;
+                  const checked = formData.allowed_plans.includes(key);
+                  return (
+                    <label key={plan.id} className="ac-checkbox-card">
+                      <input type="checkbox" checked={checked} onChange={(e) => {
+                        const next = e.target.checked
+                          ? [...formData.allowed_plans, key]
+                          : formData.allowed_plans.filter((t) => t !== key);
+                        setFormData({ ...formData, allowed_plans: next });
+                      }} />
+                      <div><b>{plan.name}</b>{plan.price != null && <small> R{plan.price}/month</small>}</div>
+                    </label>
+                  );
+                })}
+              </div>
+              <div style={{ marginTop: 24, display: 'flex', flexDirection: 'column', gap: 12 }}>
+                <label className="ac-checkbox"><input type="checkbox" checked={formData.is_active} onChange={(e) => setFormData({ ...formData, is_active: e.target.checked })} /> <span>Active, visible to students</span></label>
+                <label className="ac-checkbox"><input type="checkbox" checked={formData.soon} onChange={(e) => setFormData({ ...formData, soon: e.target.checked })} /> <span>Past papers coming soon</span></label>
+              </div>
+            </div>
+          )}
+
+          {activeSection === 'review' && (
+            <div className="ac-section-panel">
+              <h2>Review and publish</h2>
+              <p className="ac-subtitle">A last look at what will go live.</p>
+              <div className="ac-review-grid">
+                <div className="ac-review-item"><dt>Subject</dt><dd>{formData.name || 'Untitled'} {grades.find((g) => g.key === formData.grade_key)?.label ? `— ${grades.find((g) => g.key === formData.grade_key).label}` : ''}</dd></div>
+                <div className="ac-review-item"><dt>Category</dt><dd>{categories.find((c) => c.id === formData.category_id)?.name || '—'}</dd></div>
+                <div className="ac-review-item"><dt>Topics</dt><dd>{builderTopics.length}</dd></div>
+                <div className="ac-review-item"><dt>Past papers</dt><dd>{builderPapers.length}</dd></div>
+                <div className="ac-review-item"><dt>Mock exams</dt><dd>{builderMocks.length}</dd></div>
+                <div className="ac-review-item"><dt>Available on</dt><dd>{formData.allowed_plans.length} plans</dd></div>
+                <div className="ac-review-item"><dt>Visibility</dt><dd>{formData.is_active ? 'Active' : 'Draft'}</dd></div>
+                <div className="ac-review-item"><dt>URL</dt><dd>/subjects/{formData.slug}</dd></div>
+              </div>
+              <h3 style={{ fontSize: 14, color: '#fff', marginBottom: 12 }}>Things to fix or check</h3>
+              <div className="ac-issue-list">
+                {validationIssues.length === 0 && <p style={{ color: '#22c55e', fontWeight: 600 }}>All checks passed. Ready to publish.</p>}
+                {validationIssues.map((iss, i) => (
+                  <div key={i} className="ac-issue-item" onClick={() => setActiveSection(iss.sec)}>
+                    <span className={`ac-tag ${iss.level}`}>{iss.level === 'error' ? 'Fix' : 'Check'}</span>
+                    <span className="ac-issue-msg">{iss.msg}</span>
+                    <span className="ac-issue-where">{SECTIONS.find((s) => s.id === iss.sec)?.label}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          <div className="ac-pager">
+            <button className="ac-btn-secondary" disabled={activeSection === 'basics'} onClick={() => setActiveSection(SECTIONS[SECTIONS.findIndex((s) => s.id === activeSection) - 1].id)}>Back</button>
+            <button className="ac-btn-secondary" disabled={activeSection === 'review'} onClick={() => setActiveSection(SECTIONS[SECTIONS.findIndex((s) => s.id === activeSection) + 1].id)}>Next</button>
+          </div>
+        </main>
+
+        <aside className="ac-preview">
+          <div className="ac-preview-header">
+            <h3>Live preview</h3>
+            <div className="ac-toggle-group">
+              <button className={`ac-toggle-btn ${previewMode === 'open' ? 'active' : ''}`} onClick={() => setPreviewMode('open')}>Plan includes it</button>
+              <button className={`ac-toggle-btn ${previewMode === 'locked' ? 'active' : ''}`} onClick={() => setPreviewMode('locked')}>Locked view</button>
+            </div>
+          </div>
+
+          <div className="ac-pv-card" style={{ '--c': formData.color || '#a78bfa', opacity: previewMode === 'locked' ? 0.7 : 1 }}>
+            <div className="ac-pv-top">
+              <span className="ac-pv-icon">{formData.icon || '📚'}</span>
+              <span className="ac-pv-grade">{grades.find((g) => g.key === formData.grade_key)?.label || 'Grade ?'}</span>
+            </div>
+            <h4>{formData.name || 'Subject name'}</h4>
+            <p>{formData.description || 'Description…'}</p>
+            <dl className="ac-pv-stats">
+              <div><dt>Past papers</dt><dd>{builderPapers.length}</dd></div>
+              <div><dt>Topics</dt><dd>{builderTopics.length}</dd></div>
+              <div><dt>Memos</dt><dd>{builderPapers.filter((p) => p.memo_url).length}</dd></div>
+            </dl>
+            <div className="ac-pv-footer">
+              {previewMode === 'locked' ? <span style={{ color: '#fbbf24' }}>🔒 Upgrade to open</span> : <span>View topics →</span>}
+            </div>
+          </div>
+
+          <div className="ac-panel" style={{ padding: 16, marginTop: 16 }}>
+            <h3 style={{ fontSize: 13, color: '#fff', marginBottom: 8 }}>Past papers hub</h3>
+            <p style={{ fontSize: 11, color: '#9a9ab8', marginBottom: 12 }}>Newest papers. Greyed links are missing.</p>
+            <div className="ac-hub-list">
+              {builderPapers.slice(0, 4).map((p, i) => (
+                <div key={i} className="ac-hub-item">
+                  <span><span className="ac-hub-year">{p.year}</span> <span className="ac-hub-paper">{p.paper}</span> <span className="ac-tag sm">{p.session}</span></span>
+                  <span className="ac-hub-links">
+                    <span className={p.paper_url ? '' : 'grey'}>Question paper</span> | <span className={p.memo_url ? '' : 'grey'}>Memo</span>
+                  </span>
+                </div>
+              ))}
+              {builderPapers.length === 0 && <p style={{ fontSize: 11, color: '#5b5b8f' }}>Nothing to show yet.</p>}
+            </div>
+          </div>
+
+          <div className="ac-panel" style={{ padding: 16, marginTop: 16 }}>
+            <h3 style={{ fontSize: 13, color: '#fff', marginBottom: 12 }}>Readiness</h3>
+            {validationIssues.length === 0 ? (
+              <p style={{ color: '#22c55e', fontWeight: 600, fontSize: 12 }}>No blocking issues.</p>
+            ) : (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                {validationIssues.map((iss, i) => (
+                  <div key={i} style={{ display: 'flex', gap: 8, fontSize: 12 }}>
+                    <span className={`ac-tag ${iss.level}`} style={{ height: 'fit-content' }}>{iss.level === 'error' ? 'Fix' : 'Check'}</span>
+                    <span style={{ color: '#e5e7eb' }}>{iss.msg}</span>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </aside>
+      </div>
+
+      {showResourceDraftPopup && (
+        <div className="ac-popup-overlay ac-nested" onClick={() => setShowResourceDraftPopup(false)}>
+          <div className="ac-popup" onClick={(e) => e.stopPropagation()}>
+            <button className="ac-popup-close" onClick={() => setShowResourceDraftPopup(false)}>✕</button>
+            <div className="ac-popup-header"><h3>Add resource</h3><p>Attach a PDF or video link.</p></div>
+            <div className="ac-popup-body">
+              <div className="ac-form-group">
+                <label>Resource type *</label>
+                <select value={resourceDraft.type} onChange={(e) => setResourceDraft({ ...resourceDraft, type: e.target.value })}>
+                  <option value="pdf">📄 PDF document</option>
+                  <option value="video">🎬 Video (YouTube)</option>
+                </select>
+              </div>
+              <div className="ac-form-group"><label>Name *</label><input value={resourceDraft.name} onChange={(e) => setResourceDraft({ ...resourceDraft, name: e.target.value })} placeholder="e.g. Intro to Algebra" /></div>
+              {resourceDraft.type !== 'practice' && (
+                <div className="ac-form-group"><label>URL *</label><input value={resourceDraft.url} onChange={(e) => handleResourceUrlChange(e.target.value)} placeholder="https://…" /></div>
+              )}
+            </div>
+            <div className="ac-popup-footer">
+              <button className="ac-btn ac-btn-secondary" onClick={() => setShowResourceDraftPopup(false)}>Cancel</button>
+              <button className="ac-btn ac-btn-primary" onClick={confirmAddResourceDraft}>➕ Add to list</button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
 };
 
 export default AdminContent;

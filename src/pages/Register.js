@@ -56,12 +56,13 @@ const Register = () => {
     checkAuth();
   }, [navigate]);
 
+  // ✅ CHANGED: Tutor alert text + redirect target now points to /tutors
   // Show message that only students can register
   useEffect(() => {
     const urlParams = new URLSearchParams(window.location.search);
     if (urlParams.get('type') === 'tutor') {
-      alert('📚 Tutor accounts are created by the admin team. Please contact support if you are a tutor.');
-      navigate('/register');
+      alert('📚 Tutor accounts are created by the Eduspantech team. Please visit the Tutors page to apply.');
+      navigate('/tutors');
     }
   }, [navigate]);
 
@@ -417,14 +418,15 @@ const Register = () => {
             </div>
 
             {/* Tutor Registration Note */}
+            {/* ✅ CHANGED: "admin team" → "Eduspantech team", and link now points to /tutors */}
             <div className="tutor-note">
               <div className="tutor-note-icon">👨‍🏫</div>
               <div className="tutor-note-content">
                 <h4>Are you a Tutor?</h4>
                 <p>
-                  Tutor accounts are created by our admin team. 
+                  Tutor accounts are created by the Eduspantech team. 
                   If you're interested in joining as a tutor, please 
-                  <Link to="/contact"> contact us</Link> with your qualifications.
+                  <Link to="/tutors"> apply on our Tutors page</Link> with your qualifications.
                 </p>
               </div>
             </div>

@@ -15,10 +15,10 @@ const Profile = () => {
   const [success, setSuccess] = useState('');
   const [isEditing, setIsEditing] = useState(false);
   const [isTutor, setIsTutor] = useState(false);
-  
+
   const [subjectOptions, setSubjectOptions] = useState([]);
   const [shiftOptions, setShiftOptions] = useState([]);
-  
+
   const [editForm, setEditForm] = useState({
     name: '',
     email: '',
@@ -43,7 +43,7 @@ const Profile = () => {
   });
   const [showPasswordModal, setShowPasswordModal] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
-  
+
   const [enrollments, setEnrollments] = useState([]);
   const [studentStats, setStudentStats] = useState({
     coursesEnrolled: 0,
@@ -51,7 +51,7 @@ const Profile = () => {
     badgesEarned: 0,
     completionRate: 0
   });
-  
+
   const [tutorStats, setTutorStats] = useState({
     totalSessions: 0,
     studentsTaught: 0,
@@ -63,7 +63,7 @@ const Profile = () => {
   const [showAvatarSelector, setShowAvatarSelector] = useState(false);
   const [avatarData, setAvatarData] = useState(null);
   const [avatarImage, setAvatarImage] = useState(null);
-  
+
   const [profilePhoto, setProfilePhoto] = useState(null);
   const [photoUploading, setPhotoUploading] = useState(false);
   const [photoError, setPhotoError] = useState('');
@@ -127,13 +127,13 @@ const Profile = () => {
       }
 
       const userData = await authService.getCurrentUserWithSubscription();
-      
+
       if (userData) {
         setUser(userData);
-        
+
         const isTutorAccount = userData.is_tutor === true || userData.role === 'tutor';
         setIsTutor(isTutorAccount);
-        
+
         if (userData.avatar) {
           if (isTutorAccount) {
             setProfilePhoto(userData.avatar);
@@ -147,7 +147,6 @@ const Profile = () => {
           }
         }
 
-        // Set video data from user data
         if (userData.intro_video_url) {
           setVideoUrl(userData.intro_video_url);
           setVideoThumbnail(userData.intro_video_thumbnail || null);
@@ -167,7 +166,7 @@ const Profile = () => {
             endDate: userData.subscriptionEnd || userData.subscription?.end_date
           });
         }
-        
+
         setEditForm({
           name: userData.name || '',
           email: userData.email || '',
@@ -184,7 +183,7 @@ const Profile = () => {
           linkedin: userData.linkedin || '',
           website: userData.website || ''
         });
-        
+
         if (isTutorAccount) {
           await fetchTutorStats(userData);
         } else {
@@ -213,7 +212,7 @@ const Profile = () => {
           'Content-Type': 'application/json'
         }
       });
-      
+
       if (enrollResponse.ok) {
         const data = await enrollResponse.json();
         if (data.success) {
@@ -328,9 +327,6 @@ const Profile = () => {
     fetchUserData();
   }, []);
 
-  // ============================================
-  // REFRESH USER DATA
-  // ============================================
   const refreshUserData = async () => {
     try {
       const token = localStorage.getItem('accessToken');
@@ -348,7 +344,7 @@ const Profile = () => {
         if (data.success && data.user) {
           const userData = data.user;
           setUser(userData);
-          
+
           if (userData.intro_video_url) {
             setVideoUrl(userData.intro_video_url);
             setVideoThumbnail(userData.intro_video_thumbnail || null);
@@ -360,7 +356,7 @@ const Profile = () => {
             setVideoDuration(0);
             setVideoViews(0);
           }
-          
+
           localStorage.setItem('user', JSON.stringify(userData));
         }
       }
@@ -439,7 +435,7 @@ const Profile = () => {
 
       const reader = new FileReader();
       reader.readAsDataURL(videoFile);
-      
+
       reader.onload = async () => {
         try {
           const base64Video = reader.result;
@@ -454,16 +450,16 @@ const Profile = () => {
           if (result.success) {
             setSuccess('✅ Video uploaded successfully!');
             await refreshUserData();
-            
+
             if (videoFileInputRef.current) {
               videoFileInputRef.current.value = '';
             }
-            
+
             setVideoPreview(null);
             setVideoFile(null);
             setVideoProgress(100);
             setShowVideoManager(false);
-            
+
             setTimeout(() => setSuccess(''), 5000);
           } else {
             setError(result.error || 'Failed to upload video');
@@ -493,9 +489,9 @@ const Profile = () => {
 
     try {
       setVideoUploading(true);
-      
+
       const result = await tutorService.removeIntroVideo();
-      
+
       if (result.success) {
         setSuccess('✅ Video removed successfully');
         await refreshUserData();
@@ -615,7 +611,7 @@ const Profile = () => {
       reader.readAsDataURL(file);
       reader.onload = async () => {
         const base64Image = reader.result;
-        
+
         const token = localStorage.getItem('accessToken');
         const response = await fetch(`${API_BASE_URL}/auth/profile`, {
           method: 'PUT',
@@ -675,7 +671,6 @@ const Profile = () => {
         return;
       }
 
-      // ===== FIX: Convert empty string to null for UUID fields =====
       const payload = {
         name: editForm.name,
         email: editForm.email,
@@ -690,7 +685,6 @@ const Profile = () => {
         website: editForm.website || '',
         tier: editForm.tier || '',
         subjects: editForm.subjects || [],
-        // Convert empty string to null for UUID
         shiftId: editForm.shiftId && editForm.shiftId.trim() !== '' ? editForm.shiftId : null
       };
 
@@ -711,14 +705,14 @@ const Profile = () => {
         const updatedUser = { ...user, ...data.user };
         setUser(updatedUser);
         localStorage.setItem('user', JSON.stringify(updatedUser));
-        
+
         if (updatedUser.intro_video_url) {
           setVideoUrl(updatedUser.intro_video_url);
           setVideoThumbnail(updatedUser.intro_video_thumbnail || null);
           setVideoDuration(updatedUser.intro_video_duration || 0);
           setVideoViews(updatedUser.intro_video_views || 0);
         }
-        
+
         setEditForm({
           name: data.user.name || '',
           email: data.user.email || '',
@@ -797,7 +791,7 @@ const Profile = () => {
 
   const handleDeleteAccount = async () => {
     if (!window.confirm('Are you sure you want to delete your account? This action is permanent!')) return;
-    
+
     setLoading(true);
     try {
       const token = localStorage.getItem('accessToken');
@@ -851,8 +845,8 @@ const Profile = () => {
         <div className="profile-modal video-manager-modal" onClick={(e) => e.stopPropagation()}>
           <div className="profile-modal-header">
             <h3>🎬 Video Manager</h3>
-            <button 
-              className="modal-close" 
+            <button
+              className="modal-close"
               onClick={() => {
                 if (!videoUploading) {
                   setShowVideoManager(false);
@@ -873,7 +867,6 @@ const Profile = () => {
           </div>
 
           <div className="profile-modal-body video-manager-body">
-            {/* Current Video Display */}
             {videoUrl && !videoPreview && (
               <div className="video-current-display">
                 <div className="video-preview-container" style={{ cursor: 'pointer' }} onClick={() => {
@@ -899,7 +892,6 @@ const Profile = () => {
               </div>
             )}
 
-            {/* Video Preview (new upload) */}
             {videoPreview && (
               <div className="video-preview-section">
                 <div className="video-preview-container">
@@ -926,7 +918,6 @@ const Profile = () => {
               </div>
             )}
 
-            {/* Upload Drop Zone (no video) */}
             {!videoUrl && !videoPreview && (
               <div className="video-upload-zone" onClick={() => videoFileInputRef.current?.click()}>
                 <input
@@ -943,7 +934,6 @@ const Profile = () => {
               </div>
             )}
 
-            {/* Action Buttons */}
             <div className="video-actions">
               {!videoPreview && !videoUrl && (
                 <button className="video-action-btn primary" onClick={() => videoFileInputRef.current?.click()} disabled={videoUploading}>
@@ -1090,13 +1080,13 @@ const Profile = () => {
           <h1>
             {user?.name || 'User'}
             {isTutor && (
-              <span style={{ 
-                fontSize: '14px', 
-                fontWeight: 600, 
-                color: '#34d399', 
-                background: 'rgba(52,211,153,0.15)', 
-                padding: '2px 12px', 
-                borderRadius: '12px', 
+              <span style={{
+                fontSize: '14px',
+                fontWeight: 600,
+                color: '#34d399',
+                background: 'rgba(52,211,153,0.15)',
+                padding: '2px 12px',
+                borderRadius: '12px',
                 marginLeft: '12px',
                 border: '1px solid rgba(52,211,153,0.2)'
               }}>
@@ -1105,7 +1095,7 @@ const Profile = () => {
             )}
           </h1>
           <p className="profile-header-subtitle">
-            {isTutor ? 'Professional Mathematics Tutor' : (user?.cohort === 'HighSchool' ? 'High School Student' : 'University Student')} 
+            {isTutor ? 'Professional Mathematics Tutor' : (user?.cohort === 'HighSchool' ? 'High School Student' : 'University Student')}
             {' • '}{user?.country || 'South Africa'}
           </p>
           <div className="profile-status">
@@ -1136,7 +1126,7 @@ const Profile = () => {
 
       {/* ===== PROFILE GRID ===== */}
       <div className="profile-grid">
-        {/* Personal Information - FOR BOTH STUDENT AND TUTOR */}
+        {/* Personal Information */}
         <div className="profile-card">
           <h3>{isTutor ? '📋 Tutor Information' : '📋 Personal Information'}</h3>
           <div className="profile-info-group">
@@ -1163,8 +1153,7 @@ const Profile = () => {
               </div>
             ))}
           </div>
-          
-          {/* ===== SAVE BUTTON FOR STUDENTS ===== */}
+
           {isEditing && !isTutor && (
             <div className="profile-actions">
               <button className="profile-save-btn" onClick={handleSaveProfile} disabled={loading}>
@@ -1206,16 +1195,16 @@ const Profile = () => {
         </div>
 
         {/* ============================================
-            TUTOR PROFILE - WITH VIDEO
+            TUTOR PROFILE - WITH VIDEO (REDESIGNED)
             ============================================ */}
         {isTutor && (
           <div className="profile-card full-width">
             <h3>👨‍🏫 Tutor Profile</h3>
-            
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
-              {/* Bio */}
-              <div style={{ gridColumn: '1 / -1' }}>
-                <label className="info-label">📝 About Me</label>
+
+            <div className="tutor-profile-grid">
+              {/* Bio - full width */}
+              <div className="tutor-field tutor-field-full">
+                <label className="tutor-field-label">📝 About Me</label>
                 {isEditing ? (
                   <textarea
                     name="bio"
@@ -1223,36 +1212,35 @@ const Profile = () => {
                     onChange={handleInputChange}
                     placeholder="Tell students about yourself..."
                     rows="4"
-                    className="profile-input"
-                    style={{ width: '100%', fontFamily: 'inherit', resize: 'vertical' }}
+                    className="profile-input tutor-textarea"
                   />
                 ) : (
-                  <p style={{ fontSize: '15px', color: '#e2e8f0', lineHeight: '1.6' }}>
+                  <p className="tutor-field-value tutor-field-bio">
                     {editForm.bio || 'No bio provided yet.'}
                   </p>
                 )}
               </div>
 
               {/* Tier */}
-              <div>
-                <label className="info-label">🏅 Tier / Level</label>
+              <div className="tutor-field">
+                <label className="tutor-field-label">🏅 Tier / Level</label>
                 {isEditing ? (
-                  <select name="tier" value={editForm.tier || ''} onChange={handleInputChange} className="profile-select">
+                  <select name="tier" value={editForm.tier || ''} onChange={handleInputChange} className="profile-select tutor-select">
                     <option value="">Select Tier</option>
                     <option value="TIER_1">TIER_1 - Grades 8-9</option>
                     <option value="TIER_2">TIER_2 - Grades 10-11</option>
-                    <option value="TIER_3">TIER_3 - Grade 12 & Tertiary</option>
+                    <option value="TIER_3">TIER_3 - Grade 12 &amp; Tertiary</option>
                   </select>
                 ) : (
-                  <span className="info-value">{editForm.tier || 'Not set'}</span>
+                  <span className="tutor-field-value">{editForm.tier || 'Not set'}</span>
                 )}
               </div>
 
               {/* Shift */}
-              <div>
-                <label className="info-label">⏰ Shift</label>
+              <div className="tutor-field">
+                <label className="tutor-field-label">⏰ Shift</label>
                 {isEditing ? (
-                  <select name="shiftId" value={editForm.shiftId || ''} onChange={handleInputChange} className="profile-select">
+                  <select name="shiftId" value={editForm.shiftId || ''} onChange={handleInputChange} className="profile-select tutor-select">
                     <option value="">Select Shift</option>
                     {shiftOptions.map(shift => (
                       <option key={shift.id} value={shift.id}>
@@ -1261,19 +1249,81 @@ const Profile = () => {
                     ))}
                   </select>
                 ) : (
-                  <span className="info-value">
+                  <span className="tutor-field-value">
                     {shiftOptions.find(s => s.id === editForm.shiftId)?.name || 'Not set'}
                   </span>
                 )}
               </div>
 
-              {/* Subjects */}
-              <div style={{ gridColumn: '1 / -1' }}>
-                <label className="info-label">📖 Subjects Taught</label>
+              {/* Years Experience */}
+              <div className="tutor-field">
+                <label className="tutor-field-label">📅 Years of Experience</label>
                 {isEditing ? (
-                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', padding: '8px 0' }}>
+                  <input type="number" name="yearsExperience" value={editForm.yearsExperience || 0} onChange={handleInputChange} min="0" max="50" className="profile-input tutor-input" />
+                ) : (
+                  <span className="tutor-field-value">{editForm.yearsExperience || 0} {editForm.yearsExperience === 1 ? 'year' : 'years'}</span>
+                )}
+              </div>
+
+              {/* Education */}
+              <div className="tutor-field">
+                <label className="tutor-field-label">🎓 Education</label>
+                {isEditing ? (
+                  <input type="text" name="education" value={editForm.education || ''} onChange={handleInputChange} placeholder="e.g., BSc Mathematics, University of Cape Town" className="profile-input tutor-input" />
+                ) : (
+                  <span className="tutor-field-value">{editForm.education || 'Not specified'}</span>
+                )}
+              </div>
+
+              {/* Phone */}
+              <div className="tutor-field">
+                <label className="tutor-field-label">📞 Phone Number</label>
+                {isEditing ? (
+                  <input type="tel" name="phone" value={editForm.phone || ''} onChange={handleInputChange} placeholder="+27 82 123 4567" className="profile-input tutor-input" />
+                ) : (
+                  <span className="tutor-field-value">{editForm.phone || 'Not set'}</span>
+                )}
+              </div>
+
+              {/* LinkedIn */}
+              <div className="tutor-field">
+                <label className="tutor-field-label">🔗 LinkedIn</label>
+                {isEditing ? (
+                  <input type="url" name="linkedin" value={editForm.linkedin || ''} onChange={handleInputChange} placeholder="https://linkedin.com/in/your-profile" className="profile-input tutor-input" />
+                ) : (
+                  <span className="tutor-field-value">
+                    {editForm.linkedin ? (
+                      <a href={editForm.linkedin} target="_blank" rel="noopener noreferrer" className="tutor-field-link">
+                        {editForm.linkedin}
+                      </a>
+                    ) : 'Not set'}
+                  </span>
+                )}
+              </div>
+
+              {/* Website */}
+              <div className="tutor-field">
+                <label className="tutor-field-label">🌐 Website</label>
+                {isEditing ? (
+                  <input type="url" name="website" value={editForm.website || ''} onChange={handleInputChange} placeholder="https://yourwebsite.com" className="profile-input tutor-input" />
+                ) : (
+                  <span className="tutor-field-value">
+                    {editForm.website ? (
+                      <a href={editForm.website} target="_blank" rel="noopener noreferrer" className="tutor-field-link">
+                        {editForm.website}
+                      </a>
+                    ) : 'Not set'}
+                  </span>
+                )}
+              </div>
+
+              {/* Subjects - full width */}
+              <div className="tutor-field tutor-field-full">
+                <label className="tutor-field-label">📖 Subjects Taught</label>
+                {isEditing ? (
+                  <div className="tutor-subjects-edit">
                     {subjectOptions.map(subject => (
-                      <label key={subject} style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '13px', color: '#e2e8f0', cursor: 'pointer' }}>
+                      <label key={subject} className="tutor-subject-checkbox-label">
                         <input
                           type="checkbox"
                           checked={(editForm.subjects || []).includes(subject)}
@@ -1285,85 +1335,28 @@ const Profile = () => {
                     ))}
                   </div>
                 ) : (
-                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
+                  <div className="tutor-subjects-display">
                     {(editForm.subjects || []).length > 0 ? (
                       (editForm.subjects || []).map(subject => (
-                        <span key={subject} style={{ 
-                          fontSize: '12px', 
-                          padding: '4px 14px', 
-                          borderRadius: '12px', 
-                          background: 'rgba(79,70,229,0.15)', 
-                          color: '#a5b4fc',
-                          border: '1px solid rgba(79,70,229,0.15)'
-                        }}>
+                        <span key={subject} className="tutor-subject-tag">
                           {subject}
                         </span>
                       ))
                     ) : (
-                      <span style={{ color: '#94a3b8' }}>No subjects added yet</span>
+                      <span className="tutor-field-empty">No subjects added yet</span>
                     )}
                   </div>
                 )}
               </div>
 
-              {/* Years Experience */}
-              <div>
-                <label className="info-label">📅 Years of Experience</label>
-                {isEditing ? (
-                  <input type="number" name="yearsExperience" value={editForm.yearsExperience || 0} onChange={handleInputChange} min="0" max="50" className="profile-input" />
-                ) : (
-                  <span className="info-value">{editForm.yearsExperience || 0} years</span>
-                )}
-              </div>
-
-              {/* Education */}
-              <div>
-                <label className="info-label">🎓 Education</label>
-                {isEditing ? (
-                  <input type="text" name="education" value={editForm.education || ''} onChange={handleInputChange} placeholder="e.g., BSc Mathematics, University of Cape Town" className="profile-input" />
-                ) : (
-                  <span className="info-value">{editForm.education || 'Not specified'}</span>
-                )}
-              </div>
-
-              {/* Phone */}
-              <div>
-                <label className="info-label">📞 Phone Number</label>
-                {isEditing ? (
-                  <input type="tel" name="phone" value={editForm.phone || ''} onChange={handleInputChange} placeholder="+27 82 123 4567" className="profile-input" />
-                ) : (
-                  <span className="info-value">{editForm.phone || 'Not set'}</span>
-                )}
-              </div>
-
-              {/* LinkedIn */}
-              <div>
-                <label className="info-label">🔗 LinkedIn</label>
-                {isEditing ? (
-                  <input type="url" name="linkedin" value={editForm.linkedin || ''} onChange={handleInputChange} placeholder="https://linkedin.com/in/your-profile" className="profile-input" />
-                ) : (
-                  <span className="info-value">{editForm.linkedin || 'Not set'}</span>
-                )}
-              </div>
-
-              {/* Website */}
-              <div>
-                <label className="info-label">🌐 Website</label>
-                {isEditing ? (
-                  <input type="url" name="website" value={editForm.website || ''} onChange={handleInputChange} placeholder="https://yourwebsite.com" className="profile-input" />
-                ) : (
-                  <span className="info-value">{editForm.website || 'Not set'}</span>
-                )}
-              </div>
-
               {/* ===== VIDEO SECTION ===== */}
-              <div style={{ gridColumn: '1 / -1', marginTop: '8px', paddingTop: '16px', borderTop: '1px solid rgba(255,255,255,0.06)' }}>
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '12px' }}>
-                  <label className="info-label" style={{ fontSize: '15px', fontWeight: 600 }}>🎬 Intro Video</label>
-                  <button 
+              <div className="tutor-field tutor-field-full tutor-video-field">
+                <div className="tutor-video-header">
+                  <label className="tutor-field-label" style={{ marginBottom: 0 }}>🎬 Intro Video</label>
+                  <button
                     className="setting-action-btn"
                     onClick={() => setShowVideoManager(true)}
-                    style={{ 
+                    style={{
                       background: videoUrl ? 'rgba(255,255,255,0.04)' : 'rgba(79,70,229,0.15)',
                       borderColor: videoUrl ? 'rgba(255,255,255,0.06)' : 'rgba(79,70,229,0.2)',
                       color: videoUrl ? '#ffffff' : '#818cf8',
@@ -1373,14 +1366,13 @@ const Profile = () => {
                     {videoUrl ? '⚙️ Manage Video' : '📤 Upload Video'}
                   </button>
                 </div>
-                
-                <p style={{ fontSize: '13px', color: '#94a3b8', marginBottom: '12px' }}>
+
+                <p className="tutor-video-hint">
                   {videoUrl ? '✅ Video uploaded and visible to students' : 'No video uploaded yet. Upload a short introduction video (max 100MB)'}
                 </p>
-                
-                {/* Video Display */}
+
                 {videoUrl ? (
-                  <div 
+                  <div
                     className="video-preview-container"
                     style={{ maxWidth: '400px', cursor: 'pointer' }}
                     onClick={() => setShowVideoModal(true)}
@@ -1401,7 +1393,7 @@ const Profile = () => {
                     </div>
                   </div>
                 ) : (
-                  <div 
+                  <div
                     className="video-upload-zone"
                     style={{ maxWidth: '400px', cursor: 'pointer' }}
                     onClick={() => setShowVideoManager(true)}
@@ -1414,7 +1406,6 @@ const Profile = () => {
               </div>
             </div>
 
-            {/* Save Button for Tutor */}
             {isEditing && (
               <div className="profile-actions">
                 <button className="profile-save-btn" onClick={handleSaveProfile} disabled={loading}>
@@ -1432,8 +1423,8 @@ const Profile = () => {
             {enrollments.length > 0 ? (
               <div className="profile-courses-grid">
                 {enrollments.map((course) => (
-                  <div 
-                    key={course.id} 
+                  <div
+                    key={course.id}
                     className="profile-course-card"
                     onClick={() => navigate(`/subjects/${course.name.toLowerCase()}`)}
                   >
@@ -1466,7 +1457,7 @@ const Profile = () => {
       {/* ============================================
           MODALS
           ============================================ */}
-      
+
       {/* Password Modal */}
       {showPasswordModal && (
         <div className="profile-modal-overlay" onClick={() => setShowPasswordModal(false)}>

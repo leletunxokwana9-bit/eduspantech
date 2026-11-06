@@ -11,7 +11,7 @@ const pricingService = {
       }
 
       console.log('📊 Fetching pricing plans from Supabase...');
-      
+
       const { data: plans, error: plansError } = await supabase
         .from('pricing_plans')
         .select('*')
@@ -30,41 +30,51 @@ const pricingService = {
         return [];
       }
 
-      const planIds = plans.map(plan => plan.id);
-      const { data: features, error: featuresError } = await supabase
-        .from('pricing_features')
-        .select('*')
-        .in('plan_id', planIds)
-        .eq('is_included', true)
-        .order('display_order', { ascending: true });
-
-      if (featuresError) {
-        console.error('❌ Error fetching features:', featuresError);
-      }
-
-      const featuresByPlan = {};
-      if (features) {
-        features.forEach(feature => {
-          if (!featuresByPlan[feature.plan_id]) {
-            featuresByPlan[feature.plan_id] = [];
+      // ============================================================
+      // Features are stored on pricing_plans.features (JSON array),
+      // not in a separate pricing_features table.
+      // ============================================================
+      return plans.map(plan => {
+        // Normalize features — could be an array, JSON string, or null
+        let features = [];
+        if (Array.isArray(plan.features)) {
+          features = plan.features;
+        } else if (typeof plan.features === 'string') {
+          try {
+            const parsed = JSON.parse(plan.features);
+            if (Array.isArray(parsed)) features = parsed;
+          } catch (e) {
+            console.warn('Could not parse features for plan', plan.tier, e.message);
           }
-          featuresByPlan[feature.plan_id].push(feature.feature);
-        });
-      }
+        }
 
-      return plans.map(plan => ({
-        id: plan.id,
-        name: plan.name,
-        tier: plan.tier,
-        description: plan.description,
-        price: plan.price_monthly,
-        annualPrice: plan.price_annual,
-        currency: plan.currency || 'ZAR',
-        period: plan.period || '/month',
-        popular: plan.popular || false,
-        note: plan.note,
-        features: featuresByPlan[plan.id] || []
-      }));
+        // ✅ FIXED: read `price` first (matches admin CRUD), fall back to legacy column
+        const monthlyPrice = Number(
+          plan.price ?? plan.price_monthly ?? 0
+        );
+        // ✅ FIXED: read `annual_price` first, fall back to legacy column
+        const annualPrice = Number(
+          plan.annual_price ?? plan.price_annual ?? 0
+        );
+
+        return {
+          id: plan.id,
+          name: plan.name || plan.tier,
+          tier: plan.tier,
+          description: plan.description,
+          price: monthlyPrice,
+          annualPrice: annualPrice || null,
+          currency: plan.currency || 'ZAR',
+          period: plan.period || '/month',
+          popular: plan.popular || false,
+          note: plan.note,
+          badge: plan.badge || null,
+          features,
+          // ✅ FIXED: pass the DB audience through so Pricing.js can split
+          // school vs tertiary. Plans with no audience default to 'school'.
+          audience: plan.audience || 'school'
+        };
+      });
     } catch (error) {
       console.error('❌ Error in getPricingPlans:', error);
       return [];

@@ -1,4 +1,4 @@
-// src/pages/Admin/AdminLayout.js
+// src/pages/Admin/AdminLayout.js - COMPLETE WITH PRICING (SUPER-ADMIN ONLY)
 import React, { useState, useEffect, useRef } from 'react';
 import { Outlet, NavLink, useNavigate, useLocation } from 'react-router-dom';
 import './AdminLayout.css';
@@ -167,17 +167,35 @@ const AdminLayout = () => {
         setBellOpen(false);
     };
 
-    const menuItems = [
-        { path: '/admin', icon: '📊', label: 'Dashboard', end: true },
+    // ============================================================
+    // SIDEBAR MENU
+    // Dashboard now points to /admin/dashboard with end:true
+    // Pricing item is only rendered for super-admins
+    // ============================================================
+    const baseMenuItems = [
+        { path: '/admin/dashboard', icon: '📊', label: 'Dashboard', end: true },
         { path: '/admin/users', icon: '👥', label: 'Members' },
         { path: '/admin/tutors', icon: '📝', label: 'Tutor Applications' },
         { path: '/admin/content', icon: '📚', label: 'Content' },
-        { path: '/admin/payments', icon: '💰', label: 'Payments' },
+        { path: '/admin/payments', icon: '💰', label: 'Payments' }
+    ];
+
+    const superAdminItems = [
+        { path: '/admin/pricing', icon: '💎', label: 'Pricing Plans' }
+    ];
+
+    const tailMenuItems = [
         { path: '/admin/analytics', icon: '📈', label: 'Analytics' },
         { path: '/admin/settings', icon: '⚙️', label: 'Settings' },
         { path: '/admin/activity', icon: '📋', label: 'Activity Log' },
         { path: '/admin/notifications', icon: '🔔', label: 'Notifications' },
         { path: '/admin/profile', icon: '👤', label: 'My Profile' }
+    ];
+
+    const menuItems = [
+        ...baseMenuItems,
+        ...(admin?.is_super_admin ? superAdminItems : []),
+        ...tailMenuItems
     ];
 
     const handleLogout = () => {

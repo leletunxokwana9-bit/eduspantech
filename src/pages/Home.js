@@ -1,11 +1,18 @@
 // src/pages/Home.js
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { authService } from '../services/authService';
 import { supabase } from '../services/supabaseClient';
 import Pricing from '../components/home/Pricing/Pricing';
 import RegionsMap from '../components/RegionsMap';
 import './Home.css';
+
+// ===== Social brand icons (real PNGs, not emojis) =====
+import facebookIcon  from '../assets/social/facebook-round-color-icon.png';
+import xIcon         from '../assets/social/x-social-media-black-icon.png';
+import linkedinIcon  from '../assets/social/linkedin-app-icon.png';
+import instagramIcon from '../assets/social/ig-instagram-icon.png';
+import tiktokIcon    from '../assets/social/tiktok-rounded-square-white-icon.png';
 
 // ============================================
 // MATHEMATICAL ORBIT COMPONENT
@@ -15,17 +22,15 @@ const MathematicalOrbit = () => {
   const mathSymbols = ['∫', 'π', '∑', 'θ', 'Δ', '∞', '√', '∂'];
 
   return (
-    <div 
+    <div
       className="mathematical-orbit"
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
     >
       <div className="orbit-stage">
-        {/* Volumetric depth layers */}
         <div className="orbit-depth-layer orbit-depth-back"></div>
         <div className="orbit-depth-layer orbit-depth-mid"></div>
 
-        {/* Central core with layered 3D depth */}
         <div className="core-math">
           <div className="core-inner">
             <span>∫</span>
@@ -37,7 +42,6 @@ const MathematicalOrbit = () => {
           </div>
         </div>
 
-        {/* Orbit rings */}
         <div className="orbit-ring orbit-ring-1">
           <div className="orbit-node node-1">{mathSymbols[0]}</div>
           <div className="orbit-node node-2">{mathSymbols[1]}</div>
@@ -59,7 +63,6 @@ const MathematicalOrbit = () => {
           <div className="orbit-node node-12">β</div>
         </div>
 
-        {/* Particle trails — now with 3D ring feel */}
         <div className="particle-trail"></div>
         <div className="particle-trail-2"></div>
         <div className="particle-trail-3"></div>
@@ -68,34 +71,6 @@ const MathematicalOrbit = () => {
       </div>
     </div>
   );
-};
-
-// ============================================
-// FALLBACK TEAM MEMBERS DATA
-// ============================================
-const getFallbackTeamMembers = () => {
-  return [
-    {
-      id: 1,
-      name: 'Leletu Nxokwana',
-      role: 'Full Stack Developer',
-      bio: 'Lead developer and architect of the EduSpantech platform. Passionate about creating scalable educational technology solutions that make mathematics accessible to students worldwide.',
-      photo_url: null,
-      specialties: ['React', 'Node.js', 'AWS', 'PostgreSQL', 'TypeScript'],
-      years_experience: 5,
-      fun_fact: '🎮 Can solve a Rubik\'s cube in under 30 seconds'
-    },
-    {
-      id: 2,
-      name: 'Dr. Garth Van Schalkwyk',
-      role: 'Director & Mathematics Researcher',
-      bio: 'Dr. Garth J. van Schalkwyk serves as an Extended Curriculum Programme (ECP) lecturer in the Department of Mathematics and Applied Mathematics at the University of the Western Cape (UWC). He completed his PhD at UWC in 2019, specializing in financial mathematics, epidemiological forecasting, risk management, and optimal control.',
-      photo_url: null,
-      specialties: ['Financial Mathematics', 'Epidemiological Forecasting', 'Risk Management', 'Optimal Control'],
-      years_experience: 15,
-      fun_fact: '📚 Published numerous research papers on mathematical biology and disease modeling'
-    }
-  ];
 };
 
 // ============================================
@@ -111,19 +86,6 @@ const EnhancedFooter = ({ siteConfig, footerLinks }) => {
     acc[link.category].push(link);
     return acc;
   }, {});
-
-  const getSocialIcon = (label) => {
-    const icons = {
-      'Twitter': '🐦',
-      'LinkedIn': '💼',
-      'YouTube': '▶️',
-      'Instagram': '📸',
-      'Facebook': '📘',
-      'TikTok': '🎵',
-      'WhatsApp': '💬'
-    };
-    return icons[label] || '🔗';
-  };
 
   const handleSubscribe = (e) => {
     e.preventDefault();
@@ -154,11 +116,11 @@ const EnhancedFooter = ({ siteConfig, footerLinks }) => {
             <div className="top-bar-left">
               <span className="live-dot"></span>
               <span className="top-bar-text">
-                🎓 <strong>12 Expert Tutors</strong> online now — Ready to help you master math!
+                🎓 <strong>12 Expert Tutors</strong> online now — Ready to help you learn!
               </span>
             </div>
             <div className="top-bar-right">
-              <select 
+              <select
                 className="region-select"
                 value={selectedRegion}
                 onChange={(e) => setSelectedRegion(e.target.value)}
@@ -182,8 +144,7 @@ const EnhancedFooter = ({ siteConfig, footerLinks }) => {
       <div className="footer-main">
         <div className="container">
           <div className="footer-grid">
-            
-            {/* ===== LEFT COLUMN - Brand + Newsletter ===== */}
+
             <div className="footer-col footer-brand-col">
               <div className="footer-brand">
                 <div className="brand-logo">
@@ -191,7 +152,7 @@ const EnhancedFooter = ({ siteConfig, footerLinks }) => {
                   <span className="brand-name">{siteConfig.site_name || 'EduSpantech'}</span>
                 </div>
                 <p className="brand-tagline">
-                  {siteConfig.site_tagline || 'Education for the love of your life ❤️'}
+                  {siteConfig.site_tagline || 'Education for the love of my life ❤️'}
                 </p>
                 <p className="brand-subtagline">
                   {siteConfig.site_subtagline || 'From Grade 8 to 2nd-Year Tertiary Success'}
@@ -213,9 +174,8 @@ const EnhancedFooter = ({ siteConfig, footerLinks }) => {
                 )}
               </div>
 
-              {/* Newsletter */}
               <div className="footer-newsletter">
-                <h4>📚 Get Weekly Math Tips</h4>
+                <h4>📚 Get Weekly Learning Tips</h4>
                 <p>Join 2,500+ students getting exam hacks and tutor updates</p>
                 <form className="newsletter-form" onSubmit={handleSubscribe}>
                   <div className="form-group">
@@ -235,7 +195,6 @@ const EnhancedFooter = ({ siteConfig, footerLinks }) => {
               </div>
             </div>
 
-            {/* ===== MY SPECIFICS ===== */}
             <div className="footer-col footer-specs">
               <h4>🎯 Tutor Specialties</h4>
               <div className="specs-grid">
@@ -254,7 +213,6 @@ const EnhancedFooter = ({ siteConfig, footerLinks }) => {
               </div>
             </div>
 
-            {/* ===== I DO IN MY SESSIONS ===== */}
             <div className="footer-col footer-sessions">
               <h4>📖 What We Teach</h4>
               <div className="sessions-grid">
@@ -285,7 +243,6 @@ const EnhancedFooter = ({ siteConfig, footerLinks }) => {
               </div>
             </div>
 
-            {/* ===== RELATED SUBJECTS ===== */}
             <div className="footer-col footer-related">
               <h4>🔗 Related Subjects</h4>
               <div className="related-grid">
@@ -298,48 +255,43 @@ const EnhancedFooter = ({ siteConfig, footerLinks }) => {
             </div>
           </div>
 
-          {/* ===== SOCIAL CONNECT ===== */}
+          {/* ===== SOCIAL CONNECT — real brand icons ===== */}
           <div className="footer-social-section">
             <div className="social-grid">
-              {groupedLinks.connect?.map((link) => (
-                <a 
-                  key={link.id}
-                  href={link.url}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="social-link"
-                  title={link.label}
-                >
-                  <span className="social-icon">{getSocialIcon(link.label)}</span>
-                  <span className="social-label">{link.label}</span>
-                </a>
-              ))}
-              {(!groupedLinks.connect || groupedLinks.connect.length === 0) && (
-                <>
-                  <a href={siteConfig.social_facebook} target="_blank" rel="noopener noreferrer" className="social-link">
-                    <span className="social-icon">📘</span>
-                    <span className="social-label">Facebook</span>
-                  </a>
-                  <a href={siteConfig.social_instagram} target="_blank" rel="noopener noreferrer" className="social-link">
-                    <span className="social-icon">📸</span>
-                    <span className="social-label">Instagram</span>
-                  </a>
-                  <a href={siteConfig.social_twitter} target="_blank" rel="noopener noreferrer" className="social-link">
-                    <span className="social-icon">🐦</span>
-                    <span className="social-label">Twitter</span>
-                  </a>
-                  <a href={siteConfig.social_linkedin} target="_blank" rel="noopener noreferrer" className="social-link">
-                    <span className="social-icon">💼</span>
-                    <span className="social-label">LinkedIn</span>
-                  </a>
-                  <a href={siteConfig.social_youtube} target="_blank" rel="noopener noreferrer" className="social-link">
-                    <span className="social-icon">▶️</span>
-                    <span className="social-label">YouTube</span>
-                  </a>
-                </>
-              )}
+              <a href={siteConfig.social_facebook} target="_blank" rel="noopener noreferrer" className="social-link" title="Facebook">
+                <img src={facebookIcon} alt="Facebook" className="social-img" />
+                <span className="social-label">Facebook</span>
+              </a>
+              <a href={siteConfig.social_twitter} target="_blank" rel="noopener noreferrer" className="social-link" title="X (Twitter)">
+                <img src={xIcon} alt="X" className="social-img" />
+                <span className="social-label">X</span>
+              </a>
+              <a href={siteConfig.social_linkedin} target="_blank" rel="noopener noreferrer" className="social-link" title="LinkedIn">
+                <img src={linkedinIcon} alt="LinkedIn" className="social-img" />
+                <span className="social-label">LinkedIn</span>
+              </a>
+              <a href={siteConfig.social_instagram} target="_blank" rel="noopener noreferrer" className="social-link" title="Instagram">
+                <img src={instagramIcon} alt="Instagram" className="social-img" />
+                <span className="social-label">Instagram</span>
+              </a>
+              <a href={siteConfig.social_tiktok || 'https://tiktok.com/@eduspantech'} target="_blank" rel="noopener noreferrer" className="social-link" title="TikTok">
+                <img src={tiktokIcon} alt="TikTok" className="social-img" />
+                <span className="social-label">TikTok</span>
+              </a>
             </div>
           </div>
+
+          {groupedLinks.connect && groupedLinks.connect.length > 0 && (
+            <div className="footer-social-section" style={{ borderTop: 'none', marginTop: -8 }}>
+              <div className="social-grid">
+                {groupedLinks.connect.map((link) => (
+                  <a key={link.id} href={link.url} target="_blank" rel="noopener noreferrer" className="social-link" title={link.label}>
+                    <span className="social-label">{link.label}</span>
+                  </a>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
       </div>
 
@@ -350,7 +302,7 @@ const EnhancedFooter = ({ siteConfig, footerLinks }) => {
             <div className="cta-banner-text">
               <span className="cta-banner-icon">🎯</span>
               <div>
-                <h4>Ready to Excel in Mathematics?</h4>
+                <h4>Ready to Excel?</h4>
                 <p>Get matched with the perfect tutor for your learning style.</p>
               </div>
             </div>
@@ -375,10 +327,10 @@ const EnhancedFooter = ({ siteConfig, footerLinks }) => {
                 © {currentYear} {siteConfig.site_name || 'EduSpantech'}
               </p>
               <p className="copyright-tagline">
-                {siteConfig.site_tagline || 'Education for the love of your life ❤️'}
+                {siteConfig.site_tagline || 'Education for the love of my life ❤️'}
               </p>
             </div>
-            
+
             <div className="bottom-bar-center">
               <div className="compliance-badges">
                 {siteConfig.compliance_text && (
@@ -388,7 +340,7 @@ const EnhancedFooter = ({ siteConfig, footerLinks }) => {
                 <span className="compliance-badge">✅ Verified Tutors</span>
               </div>
             </div>
-            
+
             <div className="bottom-bar-right">
               <div className="footer-legal-links">
                 <a href="/privacy">Privacy</a>
@@ -404,10 +356,9 @@ const EnhancedFooter = ({ siteConfig, footerLinks }) => {
             </div>
           </div>
 
-          {/* ===== LEGAL STATEMENT ===== */}
           <div className="footer-legal-statement">
             <p>
-              All tutors appearing on this site have contractually confirmed to us that they are qualified educators 
+              All tutors appearing on this site have contractually confirmed to us that they are qualified educators
               with verified credentials and appropriate teaching certifications.
             </p>
             <p className="legal-statement-small">
@@ -415,7 +366,6 @@ const EnhancedFooter = ({ siteConfig, footerLinks }) => {
             </p>
           </div>
 
-          {/* ===== TRUST BADGES ===== */}
           <div className="footer-trust-badges">
             <span className="trust-badge">📚 Quality Education</span>
             <span className="trust-badge">🎓 Expert Tutors</span>
@@ -430,114 +380,6 @@ const EnhancedFooter = ({ siteConfig, footerLinks }) => {
 };
 
 // ============================================
-// TEAM CAROUSEL COMPONENT - FIXED
-// ============================================
-const TeamCarousel = ({ members, onViewAll }) => {
-  const scrollRef = useRef(null);
-  const [showLeftArrow, setShowLeftArrow] = useState(false);
-  const [showRightArrow, setShowRightArrow] = useState(true);
-
-  const handleScroll = () => {
-    if (scrollRef.current) {
-      const { scrollLeft, scrollWidth, clientWidth } = scrollRef.current;
-      setShowLeftArrow(scrollLeft > 20);
-      setShowRightArrow(scrollLeft < scrollWidth - clientWidth - 20);
-    }
-  };
-
-  useEffect(() => {
-    const current = scrollRef.current;
-    if (!current) return;
-    current.addEventListener('scroll', handleScroll);
-    handleScroll();
-    return () => current.removeEventListener('scroll', handleScroll);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
-  if (!members || !Array.isArray(members) || members.length === 0) {
-    return null;
-  }
-
-  const scroll = (direction) => {
-    if (scrollRef.current) {
-      const scrollAmount = 320;
-      const newScrollLeft = scrollRef.current.scrollLeft + (direction === 'left' ? -scrollAmount : scrollAmount);
-      
-      scrollRef.current.scrollTo({
-        left: newScrollLeft,
-        behavior: 'smooth'
-      });
-    }
-  };
-
-  return (
-    <div className="team-carousel-wrapper">
-      <div className="team-carousel-header">
-        <div className="team-carousel-title">
-          <span className="section-tag">👥 Our Team</span>
-          <h2>Meet the People Behind EduSpantech</h2>
-          <p>Passionate educators, developers, and designers working together to make mathematics accessible worldwide.</p>
-        </div>
-        <button className="team-view-all-btn" onClick={onViewAll}>
-          View All Team →
-        </button>
-      </div>
-
-      <div className="team-carousel-container">
-        {showLeftArrow && (
-          <button className="team-arrow team-arrow-left" onClick={() => scroll('left')}>
-            ‹
-          </button>
-        )}
-
-        <div className="team-carousel" ref={scrollRef}>
-          {members.map((member) => (
-            <div key={member.id || member.name || Math.random()} className="team-carousel-card">
-              <div className="team-card-image-wrapper">
-                {member.photo_url ? (
-                  <img src={member.photo_url} alt={member.name || 'Team Member'} className="team-card-photo" />
-                ) : (
-                  <div className="team-card-avatar-large">
-                    <span>{member.name?.charAt(0) || '?'}</span>
-                  </div>
-                )}
-                <div className="team-card-experience-badge">
-                  🎯 {member.years_experience || 0} yrs
-                </div>
-              </div>
-              <div className="team-card-details">
-                <h3>{member.name || 'Team Member'}</h3>
-                <p className="team-card-role">{member.role || 'Team Member'}</p>
-                <p className="team-card-bio">{member.bio?.slice(0, 100) || '...'}</p>
-                <div className="team-card-specialties">
-                  {member.specialties?.slice(0, 3).map((spec, idx) => (
-                    <span key={idx} className="team-card-spec-tag">{spec}</span>
-                  ))}
-                  {member.specialties?.length > 3 && (
-                    <span className="team-card-spec-tag more">+{member.specialties.length - 3}</span>
-                  )}
-                </div>
-                {member.fun_fact && (
-                  <div className="team-card-fun-fact">
-                    <span>{member.fun_fact}</span>
-                  </div>
-                )}
-              </div>
-            </div>
-          ))}
-        </div>
-
-        {showRightArrow && (
-          <button className="team-arrow team-arrow-right" onClick={() => scroll('right')}>
-            ›
-          </button>
-        )}
-      </div>
-    </div>
-  );
-};
-
-// ============================================
 // MAIN HOME COMPONENT
 // ============================================
 function Home() {
@@ -547,23 +389,24 @@ function Home() {
   const [loading, setLoading] = useState(true);
   const [failedFlags, setFailedFlags] = useState({});
   const [isTutor, setIsTutor] = useState(false);
+  const [isAdmin, setIsAdmin] = useState(false);
   const [tutorStats, setTutorStats] = useState({
     totalSessions: 0,
     studentsTaught: 0,
     totalEarnings: 0,
     avgRating: 0
   });
-  const [teamMembers, setTeamMembers] = useState([]);
 
   const [siteConfig, setSiteConfig] = useState({
     site_name: 'EduSpantech',
-    site_tagline: 'Education for the love of your life ❤️',
+    site_tagline: 'Education for the love of my life ❤️',
     site_subtagline: 'From Grade 8 to 2nd-Year Tertiary Success',
     social_facebook: 'https://web.facebook.com/profile.php?id=61593114256334',
     social_instagram: 'https://instagram.com/eduspantech',
     social_twitter: 'https://twitter.com/eduspantech',
     social_linkedin: 'https://linkedin.com/company/eduspantech',
     social_youtube: 'https://youtube.com/@eduspantech',
+    social_tiktok: 'https://tiktok.com/@eduspantech',
     contact_email: 'info@eduspantech.com',
     contact_phone: '+27 79 376 4985',
     contact_address: '19 Dock Road, Cape Town, 8001',
@@ -572,37 +415,24 @@ function Home() {
 
   const [footerLinks, setFooterLinks] = useState([]);
 
-  // ============================================
-  // FETCH TEAM MEMBERS FROM SUPABASE - WITH FALLBACK
-  // ============================================
-  const fetchTeamMembers = async () => {
-    try {
-      console.log('🔍 Fetching team members from Supabase...');
-      const { data, error } = await supabase
-        .from('team_members')
-        .select('*')
-        .eq('is_active', true)
-        .order('sort_order', { ascending: true });
+  const checkIsAdmin = (userData) => {
+    if (!userData) return false;
+    return (
+      userData.is_admin === true ||
+      userData.is_super_admin === true ||
+      userData.role === 'admin' ||
+      userData.role === 'ADMIN'
+    );
+  };
 
-      if (error) {
-        console.error('❌ Supabase error:', error);
-        console.log('📌 Using fallback team members');
-        setTeamMembers(getFallbackTeamMembers());
-        return;
-      }
-
-      if (data && data.length > 0) {
-        console.log('✅ Team members loaded:', data.length);
-        setTeamMembers(data);
-      } else {
-        console.warn('⚠️ No team members found in database, using fallback');
-        setTeamMembers(getFallbackTeamMembers());
-      }
-    } catch (error) {
-      console.error('❌ Failed to fetch team members:', error);
-      console.log('📌 Using fallback team members');
-      setTeamMembers(getFallbackTeamMembers());
-    }
+  const checkIsTutor = (userData) => {
+    if (!userData) return false;
+    if (checkIsAdmin(userData)) return false;
+    return (
+      userData.is_tutor === true ||
+      userData.role === 'tutor' ||
+      userData.role === 'TUTOR'
+    );
   };
 
   useEffect(() => {
@@ -629,14 +459,12 @@ function Home() {
         if (!linksError && linksData) {
           setFooterLinks(linksData);
         }
-
       } catch (error) {
         console.error('Failed to fetch site data:', error);
       }
     };
 
     fetchSiteData();
-    fetchTeamMembers();
   }, []);
 
   useEffect(() => {
@@ -645,24 +473,23 @@ function Home() {
       if (accessToken) {
         setIsAuthenticated(true);
         try {
-          const userData = await authService.getCurrentUserWithSubscription();
-          if (userData) {
-            setUser(userData);
-            const isTutorAccount = userData.is_tutor === true || userData.role === 'tutor' || userData.role === 'TUTOR';
-            setIsTutor(isTutorAccount);
-            if (isTutorAccount) {
+          let resolvedUser = await authService.getCurrentUserWithSubscription();
+          if (!resolvedUser) {
+            resolvedUser = await authService.getCurrentUser();
+          }
+
+          if (resolvedUser) {
+            setUser(resolvedUser);
+            const adminAccount = checkIsAdmin(resolvedUser);
+            const tutorAccount = checkIsTutor(resolvedUser);
+            setIsAdmin(adminAccount);
+            setIsTutor(tutorAccount);
+            if (tutorAccount) {
               await fetchTutorStats();
             }
           } else {
-            const fallbackUser = await authService.getCurrentUser();
-            if (fallbackUser) {
-              setUser(fallbackUser);
-              const isTutorAccount = fallbackUser.is_tutor === true || fallbackUser.role === 'tutor' || fallbackUser.role === 'TUTOR';
-              setIsTutor(isTutorAccount);
-              if (isTutorAccount) {
-                await fetchTutorStats();
-              }
-            }
+            setIsAdmin(false);
+            setIsTutor(false);
           }
         } catch (error) {
           console.error('Failed to get user:', error);
@@ -672,11 +499,13 @@ function Home() {
           setIsAuthenticated(false);
           setUser(null);
           setIsTutor(false);
+          setIsAdmin(false);
         }
       } else {
         setIsAuthenticated(false);
         setUser(null);
         setIsTutor(false);
+        setIsAdmin(false);
       }
       setLoading(false);
     };
@@ -701,7 +530,7 @@ function Home() {
             totalSessions: data.earnings.sessionsCount || 0,
             studentsTaught: data.earnings.studentCount || 0,
             totalEarnings: data.earnings.total || 0,
-            avgRating: 4.8
+            avgRating: data.earnings.avgRating || 0
           });
         }
       }
@@ -716,53 +545,53 @@ function Home() {
   };
 
   const getUserTier = () => {
-    if (!user) return 'Silver';
+    if (!user) return 'Free';
     if (user.tier) return user.tier;
     if (user.subscriptionTier) return user.subscriptionTier;
     if (user.subscription?.tier) return user.subscription.tier;
-    return 'Silver';
+    return 'Free';
   };
 
   const countries = [
-    { 
+    {
       id: 'za',
-      code: 'ZA', 
-      name: 'South Africa', 
+      code: 'ZA',
+      name: 'South Africa',
       description: 'CAPS & IEB (Grades 8–12)',
       levels: ['Grade 8-12', 'Matric', 'University Prep']
     },
-    { 
+    {
       id: 'us',
-      code: 'US', 
-      name: 'United States', 
+      code: 'US',
+      name: 'United States',
       description: 'Algebra 1/2, Geometry, Pre-Calculus, AP Calculus',
       levels: ['Middle School', 'High School', 'AP']
     },
-    { 
+    {
       id: 'gb',
-      code: 'GB', 
-      name: 'United Kingdom', 
+      code: 'GB',
+      name: 'United Kingdom',
       description: 'GCSE & A-Level Mathematics',
       levels: ['Key Stage 4', 'Key Stage 5', 'University Prep']
     },
-    { 
+    {
       id: 'au',
-      code: 'AU', 
-      name: 'Australia', 
+      code: 'AU',
+      name: 'Australia',
       description: 'Mathematical Methods & Specialist',
       levels: ['Years 7-10', 'Years 11-12', 'Tertiary Prep']
     },
-    { 
+    {
       id: 'sg',
-      code: 'SG', 
-      name: 'Singapore', 
+      code: 'SG',
+      name: 'Singapore',
       description: 'GCE O-Level & Junior College H2',
       levels: ['Secondary 1-4', 'Junior College', 'University Prep']
     },
-    { 
+    {
       id: 'jp',
-      code: 'JP', 
-      name: 'Japan', 
+      code: 'JP',
+      name: 'Japan',
       description: 'Senior High Mathematics & Vectors',
       levels: ['Junior High', 'Senior High', 'University Prep']
     }
@@ -780,6 +609,15 @@ function Home() {
     );
   }
 
+  if (isAuthenticated && isAdmin) {
+    navigate('/admin/dashboard', { replace: true });
+    return (
+      <div className="home-loading">
+        <div className="loader">Redirecting to admin panel…</div>
+      </div>
+    );
+  }
+
   // ============================================
   // TUTOR HOME VIEW
   // ============================================
@@ -793,33 +631,92 @@ function Home() {
               <span className="highlight">{getUserName()}! 👨‍🏫</span>
             </h1>
             <p className="hero-subtitle">
-              Your tutoring dashboard is ready. Help students master mathematics today.
+              Your tutoring dashboard is ready. Help students master their subjects today.
             </p>
-            
-            <div className="hero-actions">
-              <button 
-                className="btn-primary"
+
+            <div className="action-actions">
+              <button
+                className="action-cta"
                 onClick={() => navigate('/tutor/dashboard')}
               >
-                📊 Go to Dashboard
+                <span className="action-cta-left">
+                  <span className="icon">
+                    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <rect x="3" y="3" width="7" height="9" rx="2"/>
+                      <rect x="14" y="3" width="7" height="5" rx="2"/>
+                      <rect x="14" y="12" width="7" height="9" rx="2"/>
+                      <rect x="3" y="16" width="7" height="5" rx="2"/>
+                    </svg>
+                  </span>
+                  <span>
+                    <div className="label">Go to Dashboard</div>
+                    <div className="sub">Students, progress and today's overview</div>
+                  </span>
+                </span>
+                <span className="arrow">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M5 12h14M13 6l6 6-6 6"/>
+                  </svg>
+                </span>
               </button>
-              <button 
-                className="btn-secondary"
+
+              <button
+                className="action-card earnings"
                 onClick={() => navigate('/tutor/earnings')}
               >
-                💰 View Earnings
+                <span className="tile">
+                  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M3 17l6-6 4 4 8-8"/>
+                    <path d="M15 7h6v6"/>
+                  </svg>
+                </span>
+                <span className="text">
+                  <div className="label">View Earnings</div>
+                  <div className="sub">Payouts, history and monthly totals</div>
+                </span>
+                <svg className="chev" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M9 6l6 6-6 6"/>
+                </svg>
               </button>
-              <button 
-                className="btn-secondary"
+
+              <button
+                className="action-card sessions"
                 onClick={() => navigate('/my-sessions')}
               >
-                📅 My Sessions
+                <span className="tile">
+                  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <rect x="3" y="4" width="18" height="17" rx="3"/>
+                    <path d="M8 2v4M16 2v4M3 10h18"/>
+                    <circle cx="12" cy="15" r="1.4" fill="currentColor"/>
+                  </svg>
+                </span>
+                <span className="text">
+                  <div className="label">My Sessions</div>
+                  <div className="sub">Upcoming lessons and past bookings</div>
+                </span>
+                <svg className="chev" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M9 6l6 6-6 6"/>
+                </svg>
               </button>
-              <button 
-                className="btn-secondary"
-                onClick={() => navigate('/team')}
+
+              <button
+                className="action-card team"
+                onClick={() => navigate('/profile')}
               >
-                👥 Meet Our Team
+                <span className="tile">
+                  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <circle cx="9" cy="8" r="3.5"/>
+                    <path d="M2.5 20c0-3.6 2.9-6 6.5-6s6.5 2.4 6.5 6"/>
+                    <path d="M16 4.6a3.5 3.5 0 010 6.8M18 14.3c2.2.6 3.5 2.4 3.5 5.2"/>
+                  </svg>
+                </span>
+                <span className="text">
+                  <div className="label">Update Profile</div>
+                  <div className="sub">Keep your tutor profile current</div>
+                </span>
+                <svg className="chev" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M9 6l6 6-6 6"/>
+                </svg>
               </button>
             </div>
 
@@ -858,32 +755,67 @@ function Home() {
               <h2>Manage your tutoring</h2>
               <p>Everything you need to manage your tutoring business</p>
             </div>
-            <div className="quick-actions-grid">
-              <div className="quick-action-card" onClick={() => navigate('/tutor/students')}>
-                <div className="quick-action-icon">👨‍🎓</div>
-                <h4>View Students</h4>
-                <p>See all students you're teaching</p>
-              </div>
-              <div className="quick-action-card" onClick={() => navigate('/tutor/earnings')}>
-                <div className="quick-action-icon">💰</div>
-                <h4>Check Earnings</h4>
-                <p>Track your tutoring income</p>
-              </div>
-              <div className="quick-action-card" onClick={() => navigate('/my-sessions')}>
-                <div className="quick-action-icon">📅</div>
-                <h4>Manage Sessions</h4>
-                <p>View and manage your sessions</p>
-              </div>
-              <div className="quick-action-card" onClick={() => navigate('/profile')}>
-                <div className="quick-action-icon">👤</div>
-                <h4>Update Profile</h4>
-                <p>Keep your tutor profile current</p>
-              </div>
-              <div className="quick-action-card" onClick={() => navigate('/team')}>
-                <div className="quick-action-icon">👥</div>
-                <h4>Meet Our Team</h4>
-                <p>Learn about the people behind EduSpantech</p>
-              </div>
+            <div className="action-actions" style={{ gridTemplateColumns: 'repeat(auto-fit,minmax(260px,1fr))' }}>
+              <button className="action-card earnings" onClick={() => navigate('/tutor/students')}>
+                <span className="tile">
+                  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/>
+                    <circle cx="9" cy="7" r="4"/>
+                    <path d="M23 21v-2a4 4 0 00-3-3.87"/>
+                  </svg>
+                </span>
+                <span className="text">
+                  <div className="label">View Students</div>
+                  <div className="sub">See all students you're teaching</div>
+                </span>
+                <svg className="chev" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M9 6l6 6-6 6"/>
+                </svg>
+              </button>
+              <button className="action-card sessions" onClick={() => navigate('/tutor/earnings')}>
+                <span className="tile">
+                  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M3 17l6-6 4 4 8-8"/>
+                    <path d="M15 7h6v6"/>
+                  </svg>
+                </span>
+                <span className="text">
+                  <div className="label">Check Earnings</div>
+                  <div className="sub">Track your tutoring income</div>
+                </span>
+                <svg className="chev" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M9 6l6 6-6 6"/>
+                </svg>
+              </button>
+              <button className="action-card team" onClick={() => navigate('/my-sessions')}>
+                <span className="tile">
+                  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <rect x="3" y="4" width="18" height="17" rx="3"/>
+                    <path d="M8 2v4M16 2v4M3 10h18"/>
+                  </svg>
+                </span>
+                <span className="text">
+                  <div className="label">Manage Sessions</div>
+                  <div className="sub">View and manage your sessions</div>
+                </span>
+                <svg className="chev" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M9 6l6 6-6 6"/>
+                </svg>
+              </button>
+              <button className="action-card earnings" onClick={() => navigate('/profile')}>
+                <span className="tile">
+                  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 3.6-7 8-7s8 3 8 7"/>
+                  </svg>
+                </span>
+                <span className="text">
+                  <div className="label">Update Profile</div>
+                  <div className="sub">Keep your tutor profile current</div>
+                </span>
+                <svg className="chev" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M9 6l6 6-6 6"/>
+                </svg>
+              </button>
             </div>
           </div>
         </section>
@@ -892,8 +824,8 @@ function Home() {
           <div className="container">
             <div className="section-header">
               <span className="section-tag">Why EduSpantech</span>
-              <h2>Built for mathematical excellence</h2>
-              <p>Our platform delivers premium mathematics education through cutting-edge technology and expert South African tutors.</p>
+              <h2>Built for educational excellence</h2>
+              <p>Our platform delivers premium education through cutting-edge technology and expert South African tutors.</p>
             </div>
             <div className="features-grid">
               <div className="feature-card feature-card-1">
@@ -907,7 +839,7 @@ function Home() {
               <div className="feature-card feature-card-2">
                 <div className="feature-icon">📐</div>
                 <h3>Interactive Whiteboard</h3>
-                <p>Real-time collaborative math solving with ultra-low-bandwidth vector rendering — only 15MB per hour.</p>
+                <p>Real-time collaborative solving with ultra-low-bandwidth vector rendering — only 15MB per hour.</p>
                 <div className="feature-meta">
                   <span>🖊️ WebGL powered</span>
                 </div>
@@ -938,33 +870,22 @@ function Home() {
           </div>
         </section>
 
-        {teamMembers && teamMembers.length > 0 && (
-          <section className="team-carousel-section">
-            <div className="container">
-              <TeamCarousel 
-                members={teamMembers} 
-                onViewAll={() => navigate('/team')}
-              />
-            </div>
-          </section>
-        )}
-
         <section className="curriculum-section">
           <div className="container">
             <div className="section-header">
               <span className="section-tag">Global Reach</span>
-              <h2>Mathematics without borders</h2>
+              <h2>Education without borders</h2>
               <p>Our South African tutors are trained to teach multiple international curricula seamlessly.</p>
             </div>
             <div className="curriculum-grid">
               {countries.map((country) => {
                 const flagUrl = `https://flagcdn.com/w80/${country.id}.png`;
                 const showFallback = failedFlags[country.id];
-                
+
                 return (
                   <div key={country.id} className="curriculum-item">
                     {!showFallback ? (
-                      <img 
+                      <img
                         src={flagUrl}
                         alt={`${country.name} flag`}
                         className="curriculum-flag-img"
@@ -1024,9 +945,27 @@ function Home() {
           <div className="container">
             <div className="cta-content">
               <h2>Ready for your next <br />tutoring session?</h2>
-              <p>Continue helping students master mathematics.</p>
-              <button className="btn-primary btn-large" onClick={() => navigate('/tutor/dashboard')}>
-                📊 Go to Dashboard
+              <p>Continue helping students master their subjects.</p>
+              <button className="action-cta" style={{ maxWidth: 380, margin: '0 auto' }} onClick={() => navigate('/tutor/dashboard')}>
+                <span className="action-cta-left">
+                  <span className="icon">
+                    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <rect x="3" y="3" width="7" height="9" rx="2"/>
+                      <rect x="14" y="3" width="7" height="5" rx="2"/>
+                      <rect x="14" y="12" width="7" height="9" rx="2"/>
+                      <rect x="3" y="16" width="7" height="5" rx="2"/>
+                    </svg>
+                  </span>
+                  <span>
+                    <div className="label">Go to Dashboard</div>
+                    <div className="sub">Students, progress and today's overview</div>
+                  </span>
+                </span>
+                <span className="arrow">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M5 12h14M13 6l6 6-6 6"/>
+                  </svg>
+                </span>
               </button>
             </div>
           </div>
@@ -1051,65 +990,154 @@ function Home() {
                 <span className="highlight">{getUserName()}! 👋</span>
               </h1>
               <p className="hero-subtitle">
-                Continue your mathematics journey with your {getUserTier()} Tier plan.
+                Continue your education journey with your {getUserTier()} Tier plan.
                 Your next session is just a click away.
               </p>
             </>
           ) : (
             <>
-              <h1 className="hero-title">
-                Education for the <br />
-                <span className="highlight">love of your life</span> ❤️
+              <h1 className="hero-title-refined">
+                Education for the<br />
+                <em className="accent">love of my life</em> ❤️
               </h1>
-              <p className="hero-subtitle">
-                From Grade 8 to 2nd-Year Tertiary — world-class mathematics tutoring,
-                powered by a 24/7 global infrastructure across 9 AWS regions.
+              <p className="hero-subtitle-refined">
+                From Grade 8 to 2nd-Year Tertiary — world-class tutoring, powered
+                by a 24/7 global infrastructure across 9 AWS regions.
               </p>
             </>
           )}
-          
-          <div className="hero-actions">
+
+          <div className="action-actions" style={{ maxWidth: 420, marginTop: 34 }}>
             {isAuthenticated ? (
               <>
-                <button 
-                  className="btn-primary"
+                <button
+                  className="action-cta"
                   onClick={() => navigate('/subjects')}
                 >
-                  📚 Continue Learning
+                  <span className="action-cta-left">
+                    <span className="icon">
+                      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M4 19.5A2.5 2.5 0 016.5 17H20"/>
+                        <path d="M6.5 2H20v20H6.5A2.5 2.5 0 014 19.5v-15A2.5 2.5 0 016.5 2z"/>
+                      </svg>
+                    </span>
+                    <span>
+                      <div className="label">Continue Learning</div>
+                      <div className="sub">Browse your subjects and resources</div>
+                    </span>
+                  </span>
+                  <span className="arrow">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M5 12h14M13 6l6 6-6 6"/>
+                    </svg>
+                  </span>
                 </button>
-                <button 
-                  className="btn-secondary"
-                  onClick={() => navigate('/profile')}
-                >
-                  👤 My Profile
+
+                <button className="action-card earnings" onClick={() => navigate('/profile')}>
+                  <span className="tile">
+                    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 3.6-7 8-7s8 3 8 7"/>
+                    </svg>
+                  </span>
+                  <span className="text">
+                    <div className="label">My Profile</div>
+                    <div className="sub">Manage your account and preferences</div>
+                  </span>
+                  <svg className="chev" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M9 6l6 6-6 6"/>
+                  </svg>
                 </button>
-                <button 
-                  className="btn-secondary"
-                  onClick={() => navigate('/team')}
-                >
-                  👥 Meet Our Team
+
+                <button className="action-card sessions" onClick={() => navigate('/tutors')}>
+                  <span className="tile">
+                    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/>
+                      <circle cx="9" cy="7" r="4"/>
+                      <path d="M23 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75"/>
+                    </svg>
+                  </span>
+                  <span className="text">
+                    <div className="label">Find a Tutor</div>
+                    <div className="sub">Connect with expert educators</div>
+                  </span>
+                  <svg className="chev" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M9 6l6 6-6 6"/>
+                  </svg>
                 </button>
               </>
             ) : (
               <>
-                <button 
-                  className="btn-primary"
+                <button
+                  className="action-cta"
                   onClick={() => navigate('/register')}
                 >
-                  Get Started — Free Trial
+                  <span className="action-cta-left">
+                    <span className="icon">
+                      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M12 5v14M5 12h14"/>
+                      </svg>
+                    </span>
+                    <span>
+                      <div className="label">Start a free trial</div>
+                      <div className="sub">No card required — 7 days on us</div>
+                    </span>
+                  </span>
+                  <span className="arrow">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M5 12h14M13 6l6 6-6 6"/>
+                    </svg>
+                  </span>
                 </button>
-                <button 
-                  className="btn-secondary"
+
+                {/* ✅ FIXED: navigates to /tutors (was /team) */}
+                <button
+                  className="action-card team"
+                  onClick={() => navigate('/tutors')}
+                >
+                  <span className="tile">
+                    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <circle cx="9" cy="8" r="3.5"/>
+                      <path d="M2.5 20c0-3.6 2.9-6 6.5-6s6.5 2.4 6.5 6"/>
+                    </svg>
+                  </span>
+                  <span className="text">
+                    <div className="label">Meet our tutors</div>
+                    <div className="sub">See the educators behind EduSpantech</div>
+                  </span>
+                  <svg className="chev" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M9 6l6 6-6 6"/>
+                  </svg>
+                </button>
+
+                <button
+                  className="action-card sessions"
                   onClick={() => navigate('/login')}
                 >
-                  Sign In
+                  <span className="tile">
+                    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M15 3h4a2 2 0 012 2v14a2 2 0 01-2 2h-4"/>
+                      <path d="M10 17l5-5-5-5M15 12H3"/>
+                    </svg>
+                  </span>
+                  <span className="text">
+                    <div className="label">Sign in</div>
+                    <div className="sub">Already have an account?</div>
+                  </span>
+                  <svg className="chev" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M9 6l6 6-6 6"/>
+                  </svg>
                 </button>
-                <button 
-                  className="btn-secondary"
-                  onClick={() => navigate('/team')}
-                >
-                  👥 Meet Our Team
-                </button>
+
+                <p className="hero-cta-note" style={{ marginTop: 4 }}>
+                  No card required. Already have an account?{' '}
+                  <button
+                    type="button"
+                    className="hero-cta-link"
+                    onClick={() => navigate('/login')}
+                  >
+                    Sign in
+                  </button>
+                </p>
               </>
             )}
           </div>
@@ -1133,22 +1161,20 @@ function Home() {
                 </div>
               </>
             ) : (
-              <>
-                <div className="stat-item">
-                  <span className="stat-number">9</span>
-                  <span className="stat-label-white">Global Regions</span>
+              <div className="hero-stats-refined">
+                <div className="stat-refined">
+                  <div className="stat-refined-num">9</div>
+                  <div className="stat-refined-lbl">Global regions covered</div>
                 </div>
-                <div className="stat-divider"></div>
-                <div className="stat-item">
-                  <span className="stat-number">24/7</span>
-                  <span className="stat-label-white">Tutor Availability</span>
+                <div className="stat-refined">
+                  <div className="stat-refined-num">24/7</div>
+                  <div className="stat-refined-lbl">Tutor availability</div>
                 </div>
-                <div className="stat-divider"></div>
-                <div className="stat-item">
-                  <span className="stat-number">12</span>
-                  <span className="stat-label-white">Expert Tutors</span>
+                <div className="stat-refined">
+                  <div className="stat-refined-num">12</div>
+                  <div className="stat-refined-lbl">Expert tutors on staff</div>
                 </div>
-              </>
+              </div>
             )}
           </div>
         </div>
@@ -1161,32 +1187,67 @@ function Home() {
       {isAuthenticated && !isTutor && (
         <section className="quick-actions-section">
           <div className="container">
-            <div className="quick-actions-grid">
-              <div className="quick-action-card" onClick={() => navigate('/subjects')}>
-                <div className="quick-action-icon">📖</div>
-                <h4>Browse Subjects</h4>
-                <p>Explore available mathematics topics</p>
-              </div>
-              <div className="quick-action-card" onClick={() => navigate('/tutors')}>
-                <div className="quick-action-icon">🧑‍🏫</div>
-                <h4>Find a Tutor</h4>
-                <p>Connect with expert mathematics tutors</p>
-              </div>
-              <div className="quick-action-card" onClick={() => navigate('/profile')}>
-                <div className="quick-action-icon">⚙️</div>
-                <h4>Account Settings</h4>
-                <p>Manage your profile and preferences</p>
-              </div>
-              <div className="quick-action-card" onClick={() => navigate('/resources')}>
-                <div className="quick-action-icon">📚</div>
-                <h4>Learning Resources</h4>
-                <p>Access on-demand math content vaults</p>
-              </div>
-              <div className="quick-action-card" onClick={() => navigate('/team')}>
-                <div className="quick-action-icon">👥</div>
-                <h4>Meet Our Team</h4>
-                <p>Learn about the people behind EduSpantech</p>
-              </div>
+            <div className="action-actions" style={{ gridTemplateColumns: 'repeat(auto-fit,minmax(240px,1fr))' }}>
+              <button className="action-card earnings" onClick={() => navigate('/subjects')}>
+                <span className="tile">
+                  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M4 19.5A2.5 2.5 0 016.5 17H20"/>
+                    <path d="M6.5 2H20v20H6.5A2.5 2.5 0 014 19.5v-15A2.5 2.5 0 016.5 2z"/>
+                  </svg>
+                </span>
+                <span className="text">
+                  <div className="label">Browse Subjects</div>
+                  <div className="sub">Explore available topics</div>
+                </span>
+                <svg className="chev" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M9 6l6 6-6 6"/>
+                </svg>
+              </button>
+              <button className="action-card sessions" onClick={() => navigate('/tutors')}>
+                <span className="tile">
+                  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/>
+                    <circle cx="9" cy="7" r="4"/>
+                    <path d="M23 21v-2a4 4 0 00-3-3.87"/>
+                  </svg>
+                </span>
+                <span className="text">
+                  <div className="label">Find a Tutor</div>
+                  <div className="sub">Connect with expert educators</div>
+                </span>
+                <svg className="chev" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M9 6l6 6-6 6"/>
+                </svg>
+              </button>
+              <button className="action-card team" onClick={() => navigate('/profile')}>
+                <span className="tile">
+                  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 3.6-7 8-7s8 3 8 7"/>
+                  </svg>
+                </span>
+                <span className="text">
+                  <div className="label">Account Settings</div>
+                  <div className="sub">Manage your profile and preferences</div>
+                </span>
+                <svg className="chev" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M9 6l6 6-6 6"/>
+                </svg>
+              </button>
+              <button className="action-card earnings" onClick={() => navigate('/resources')}>
+                <span className="tile">
+                  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M2 3h6a4 4 0 014 4v14a3 3 0 00-3-3H2z"/>
+                    <path d="M22 3h-6a4 4 0 00-4 4v14a3 3 0 013-3h7z"/>
+                  </svg>
+                </span>
+                <span className="text">
+                  <div className="label">Learning Resources</div>
+                  <div className="sub">Access on-demand content vaults</div>
+                </span>
+                <svg className="chev" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M9 6l6 6-6 6"/>
+                </svg>
+              </button>
             </div>
           </div>
         </section>
@@ -1199,15 +1260,15 @@ function Home() {
               {isAuthenticated ? 'Your Learning Tools' : 'Why EduSpantech'}
             </span>
             <h2>
-              {isAuthenticated 
-                ? `Continue mastering mathematics, ${getUserName()}`
-                : 'Built for mathematical excellence'
+              {isAuthenticated
+                ? `Continue your learning journey, ${getUserName()}`
+                : 'Built for educational excellence'
               }
             </h2>
             <p>
               {isAuthenticated
-                ? 'Access your personalized learning tools and continue your journey to mathematical mastery.'
-                : 'Our platform delivers premium mathematics education through cutting-edge technology and expert South African tutors.'
+                ? 'Access your personalized learning tools and continue your journey to mastery.'
+                : 'Our platform delivers premium education through cutting-edge technology and expert South African tutors.'
               }
             </p>
           </div>
@@ -1223,7 +1284,7 @@ function Home() {
             <div className="feature-card feature-card-2">
               <div className="feature-icon">📐</div>
               <h3>Interactive Whiteboard</h3>
-              <p>Real-time collaborative math solving with ultra-low-bandwidth vector rendering — only 15MB per hour.</p>
+              <p>Real-time collaborative solving with ultra-low-bandwidth vector rendering — only 15MB per hour.</p>
               <div className="feature-meta">
                 <span>🖊️ WebGL powered</span>
               </div>
@@ -1254,17 +1315,6 @@ function Home() {
         </div>
       </section>
 
-      {teamMembers && teamMembers.length > 0 && (
-        <section className="team-carousel-section">
-          <div className="container">
-            <TeamCarousel 
-              members={teamMembers} 
-              onViewAll={() => navigate('/team')}
-            />
-          </div>
-        </section>
-      )}
-
       {!isAuthenticated && <Pricing />}
 
       {isAuthenticated && !isTutor && (
@@ -1273,7 +1323,7 @@ function Home() {
             <div className="progress-content">
               <div className="progress-text">
                 <span className="section-tag">Your Progress</span>
-                <h2>Track your mathematical journey</h2>
+                <h2>Track your learning journey</h2>
                 <p>Stay motivated with real-time progress tracking and personalized learning recommendations.</p>
               </div>
               <div className="progress-stats">
@@ -1305,18 +1355,18 @@ function Home() {
         <div className="container">
           <div className="section-header">
             <span className="section-tag">Global Reach</span>
-            <h2>Mathematics without borders</h2>
+            <h2>Education without borders</h2>
             <p>Our South African tutors are trained to teach multiple international curricula seamlessly.</p>
           </div>
           <div className="curriculum-grid">
             {countries.map((country) => {
               const flagUrl = `https://flagcdn.com/w80/${country.id}.png`;
               const showFallback = failedFlags[country.id];
-              
+
               return (
                 <div key={country.id} className="curriculum-item">
                   {!showFallback ? (
-                    <img 
+                    <img
                       src={flagUrl}
                       alt={`${country.name} flag`}
                       className="curriculum-flag-img"
@@ -1377,18 +1427,49 @@ function Home() {
           <div className="cta-content">
             {isAuthenticated ? (
               <>
-                <h2>Ready for your next <br />mathematics session?</h2>
+                <h2>Ready for your next <br />session?</h2>
                 <p>Continue your learning journey with your personalized tutor matching.</p>
-                <button className="btn-primary btn-large" onClick={() => navigate('/subjects')}>
-                  📚 Browse Subjects
+                <button className="action-cta" style={{ maxWidth: 380, margin: '0 auto' }} onClick={() => navigate('/subjects')}>
+                  <span className="action-cta-left">
+                    <span className="icon">
+                      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M4 19.5A2.5 2.5 0 016.5 17H20"/>
+                        <path d="M6.5 2H20v20H6.5A2.5 2.5 0 014 19.5v-15A2.5 2.5 0 016.5 2z"/>
+                      </svg>
+                    </span>
+                    <span>
+                      <div className="label">Browse Subjects</div>
+                      <div className="sub">Continue where you left off</div>
+                    </span>
+                  </span>
+                  <span className="arrow">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M5 12h14M13 6l6 6-6 6"/>
+                    </svg>
+                  </span>
                 </button>
               </>
             ) : (
               <>
-                <h2>Ready to make mathematics <br />the love of your life?</h2>
+                <h2>Ready to make education <br />the love of my life?</h2>
                 <p>Join thousands of students already learning with EduSpantech.</p>
-                <button className="btn-primary btn-large" onClick={() => navigate('/register')}>
-                  Start Your Free Trial
+                <button className="action-cta" style={{ maxWidth: 380, margin: '0 auto' }} onClick={() => navigate('/register')}>
+                  <span className="action-cta-left">
+                    <span className="icon">
+                      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M12 5v14M5 12h14"/>
+                      </svg>
+                    </span>
+                    <span>
+                      <div className="label">Start Your Free Trial</div>
+                      <div className="sub">No credit card required</div>
+                    </span>
+                  </span>
+                  <span className="arrow">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M5 12h14M13 6l6 6-6 6"/>
+                    </svg>
+                  </span>
                 </button>
                 <p className="cta-small">No credit card required • 7-day free trial</p>
               </>

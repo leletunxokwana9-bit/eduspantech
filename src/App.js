@@ -1,4 +1,4 @@
-// src/App.js - COMPLETE WITH ADMIN ROUTES + ADMIN LOGIN LAYOUT + ADMIN ROUTE CHECK + TUTOR APPLICATION + TRACK APPLICATION
+// src/App.js - COMPLETE WITH ADMIN ROUTES + ADMIN LOGIN LAYOUT + ADMIN ROUTE CHECK + TUTOR APPLICATION + TRACK APPLICATION + ADMIN PRICING
 import React, { Suspense, lazy } from 'react';
 import { BrowserRouter as Router, Routes, Route, useLocation } from 'react-router-dom';
 import Navbar from './components/Navbar';
@@ -66,6 +66,7 @@ import AdminSettings from './pages/Admin/AdminSettings';
 import AdminActivity from './pages/Admin/AdminActivity';
 import AdminLogin from './pages/Admin/AdminLogin';
 import AdminProfile from './pages/Admin/AdminProfile';
+import AdminPricing from './pages/Admin/AdminPricing';
 
 // ============================================
 // ADMIN LOGIN LAYOUT (No Navbar)
@@ -289,6 +290,7 @@ const AppContent = () => {
               <Route path="content" element={<AdminContent />} />
               <Route path="content/:subjectId" element={<AdminSubjectContent />} />
               <Route path="payments" element={<AdminPayments />} />
+              <Route path="pricing" element={<AdminPricing />} />
               <Route path="analytics" element={<AdminAnalytics />} />
               <Route path="settings" element={<AdminSettings />} />
               <Route path="activity" element={<AdminActivity />} />

@@ -26,7 +26,8 @@ const TutorManagement = () => {
   const navigate = useNavigate();
   const [applications, setApplications] = useState([]);
   const [counts, setCounts] = useState({});
-  const [activeTab, setActiveTab] = useState('pending');
+  // ✅ CHANGED: default tab is now 'all' instead of 'pending'
+  const [activeTab, setActiveTab] = useState('all');
   const [search, setSearch] = useState('');
   const [loading, setLoading] = useState(true);
   const [selected, setSelected] = useState(null);

@@ -21,6 +21,13 @@ const CANONICAL_GRADES = {
   'tertiary':    { key: 'tertiary',   label: '1st & 2nd Year Tertiary', tier: 'tertiary' },
 };
 
+const TIER_TO_KEY = {
+  '8-9': 'grade8-9',
+  '10-11': 'grade10-11',
+  '12': 'grade12',
+  'tertiary': 'tertiary',
+};
+
 const canonicalGrade = (raw) => {
   if (!raw) return null;
   const clean = String(raw).trim().toLowerCase();
@@ -151,6 +158,7 @@ const Subjects = () => {
   );
 
   const memberTier = data?.memberTier || null;
+  const memberGrade = data?.memberGrade || null;
 
   const allowedGrades = useMemo(() => {
     if (!memberTier) return grades;
@@ -165,17 +173,24 @@ const Subjects = () => {
   const isCrossLevel = viewTier === 'other' && memberTier && effectiveTier && effectiveTier !== memberTier;
   const crossLevelLocked = isCrossLevel && !access?.crossLevel;
 
-  // Hero's "You're viewing …" line.
+  // Hero's "You're viewing …" — exact numeric grade > selected pill > tier bucket
   const viewingLabel = useMemo(() => {
     if (selectedGrade) {
       const g = gradeByKey[selectedGrade];
       if (g?.label) return g.label;
+      const meta = canonicalGrade(selectedGrade);
+      if (meta?.label) return meta.label;
+    }
+    if (memberGrade && memberGrade >= 1 && memberGrade <= 12) {
+      return `Grade ${memberGrade}`;
     }
     if (memberTier) {
       const g = grades.find(
         (x) => !x.is_all && (x.tier || canonicalGrade(x.key)?.tier) === memberTier
       );
       if (g?.label) return g.label;
+      const meta = canonicalGrade(TIER_TO_KEY[memberTier]);
+      if (meta?.label) return meta.label;
     }
     const realGrades = grades.filter((g) => !g.is_all);
     if (realGrades.length === 1) return realGrades[0].label;
@@ -187,7 +202,7 @@ const Subjects = () => {
       if (meta?.label) return meta.label;
     }
     return null;
-  }, [selectedGrade, gradeByKey, memberTier, grades, allSubjects]);
+  }, [selectedGrade, gradeByKey, memberGrade, memberTier, grades, allSubjects]);
 
   const viewingPrefix = text('viewing_prefix') || "You're viewing";
 
@@ -333,11 +348,12 @@ const Subjects = () => {
     (selectedCategory ? 1 : 0) +
     (searchQuery.trim() ? 1 : 0);
   const hasAnySubjects = allSubjects.length > 0;
+  const visibleCategories = categories.filter((cat) => (categoryCounts[cat.key] || 0) > 0);
 
   return (
     <div className="subjects-page">
 
-      {/* ===== HERO — keeps "You're viewing <grade>" ===== */}
+      {/* ===== HERO — with "You're viewing <grade>" ===== */}
       <section className="subjects-hero">
         <div className="subjects-hero-content">
           {text('hero_eyebrow') && (
@@ -373,7 +389,7 @@ const Subjects = () => {
         </div>
       </section>
 
-      {/* ===== SINGLE SUBJECTS PANEL: heading + search + grade + category chips + grid ===== */}
+      {/* ===== SUBJECTS PANEL ===== */}
       <section className="subjects-filter-section" aria-labelledby="subjects-section-title">
         <div className="subjects-section-head">
           <div>
@@ -398,7 +414,6 @@ const Subjects = () => {
           </div>
         </div>
 
-        {/* Search + sort */}
         <div className="subjects-filter-search-row">
           <label className="subjects-search subjects-search-lg">
             <svg className="subjects-search-icon" width="20" height="20" viewBox="0 0 24 24"
@@ -435,7 +450,6 @@ const Subjects = () => {
           </label>
         </div>
 
-        {/* Grade pills */}
         {allowedGrades.length > 1 && (
           <div className="subjects-filter-group" role="group" aria-label="Filter by grade">
             <span className="subjects-filter-label">Grade</span>
@@ -458,8 +472,7 @@ const Subjects = () => {
           </div>
         )}
 
-        {/* Category chips — the ONLY place categories appear */}
-        {categories.length > 0 && (
+        {visibleCategories.length > 0 && (
           <div className="subjects-filter-group" role="group" aria-label="Filter by category">
             <span className="subjects-filter-label">Category</span>
             <div className="subjects-filter-pills">
@@ -472,7 +485,7 @@ const Subjects = () => {
                 All
                 <span className="filter-pill-count">{countsBeforeCategory.length}</span>
               </button>
-              {categories.map((cat) => {
+              {visibleCategories.map((cat) => {
                 const active = selectedCategory === cat.key;
                 const count = categoryCounts[cat.key] || 0;
                 return (
@@ -494,7 +507,6 @@ const Subjects = () => {
           </div>
         )}
 
-        {/* Results summary */}
         {hasAnySubjects && (
           <p className="subjects-results-summary" role="status" aria-live="polite">
             {visibleSubjects.length === 0
@@ -504,7 +516,7 @@ const Subjects = () => {
         )}
       </section>
 
-      {/* ===== RESULTS GRID (or placeholder if no subjects) ===== */}
+      {/* ===== RESULTS GRID ===== */}
       <section ref={resultsRef} className="subjects-results" aria-labelledby="subjects-results-title">
         {!hasAnySubjects ? (
           <EmptyState
@@ -730,10 +742,6 @@ const Subjects = () => {
           )
         )}
       </section>
-
-      <footer className="subjects-slogan-footer">
-        {text('slogan') || '© EduSpantech — Education for the love of your life ❤️'}
-      </footer>
     </div>
   );
 };

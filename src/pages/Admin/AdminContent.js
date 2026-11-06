@@ -1,8 +1,9 @@
 // src/pages/Admin/AdminContent.js
-import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '../../services/supabaseClient';
 import './AdminContent.css';
+import '../Pricing.css';
 
 const API_URL = process.env.REACT_APP_API_URL || 'https://eduspantech-backend.onrender.com/api';
 const STORAGE_BUCKET = 'content';
@@ -17,6 +18,18 @@ const SECTIONS = [
 ];
 
 const DEFAULT_COLORS = ['#4f46e5','#7c3aed','#06b6d4','#10b981','#f59e0b','#ef4444','#ec4899','#8b5cf6','#14b8a6','#f97316'];
+
+const HIGHSCHOOL_GRADES = [
+  { key: 'grade-8-9',   label: 'Grade 8 – 9',   tier: '8-9' },
+  { key: 'grade-10-11', label: 'Grade 10 – 11', tier: '10-11' },
+  { key: 'grade-12',    label: 'Grade 12',      tier: '12' },
+];
+const TERTIARY_GRADES = [
+  { key: 'tertiary-year-1', label: 'Tertiary – Year 1', tier: 'tertiary' },
+  { key: 'tertiary-year-2', label: 'Tertiary – Year 2', tier: 'tertiary' },
+];
+const ALL_FALLBACK_GRADES = [...HIGHSCHOOL_GRADES, ...TERTIARY_GRADES];
+const isTertiaryKey = (key) => String(key || '').toLowerCase().includes('tertiary');
 
 const getDefaultIcon = (name) => {
   if (!name) return '📚';
@@ -38,10 +51,17 @@ const initialForm = () => ({
   allowed_plans: [], soon: false, region: 'Global', year_level: '1ST_YEAR',
 });
 
+const initialResourceDraft = () => ({
+  name: '', type: 'pdf', url: '', description: '', topicIndex: '',
+  youtube_id: '', thumbnail_url: '', duration: '', difficulty: 'beginner', is_free: false,
+});
+
 const AdminContent = () => {
   const navigate = useNavigate();
 
   const [viewMode, setViewMode] = useState('list');
+  const [contentTab, setContentTab] = useState('highschool');
+
   const [subjects, setSubjects] = useState([]);
   const [filteredSubjects, setFilteredSubjects] = useState([]);
   const [searchTerm, setSearchTerm] = useState('');
@@ -63,53 +83,83 @@ const AdminContent = () => {
   const [previewMode, setPreviewMode] = useState('open');
   const [editingSubject, setEditingSubject] = useState(null);
 
-  const [showSuccessPopup, setShowSuccessPopup] = useState(false);
-  const [successMessage, setSuccessMessage] = useState('');
-  const [showErrorPopup, setShowErrorPopup] = useState(false);
-  const [errorMessage, setErrorMessage] = useState('');
+  // -------- POPUP STATE --------
+  const [modal, setModal] = useState(null);
+  // modal = { icon, title, body, buttons: [{label, variant, onClick, disabled}] }
+
+  const showModal = (icon, title, body, buttons) => {
+    setModal({ icon, title, body, buttons });
+  };
+  const closeModal = () => setModal(null);
+
   const [showDeletePopup, setShowDeletePopup] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState(null);
   const [deleteLoading, setDeleteLoading] = useState(false);
   const [showTogglePopup, setShowTogglePopup] = useState(false);
   const [toggleTarget, setToggleTarget] = useState(null);
   const [toggleLoading, setToggleLoading] = useState(false);
+
   const [showResourceDraftPopup, setShowResourceDraftPopup] = useState(false);
-  const [resourceDraft, setResourceDraft] = useState({
-    name: '', type: 'pdf', url: '', description: '', topicIndex: '',
-    youtube_id: '', thumbnail_url: '', duration: '', difficulty: 'beginner', is_free: false,
-  });
+  const [resourceDraft, setResourceDraft] = useState(initialResourceDraft());
+  const [resourceUploading, setResourceUploading] = useState(false);
+  const [resourceFileName, setResourceFileName] = useState('');
+  const resourceFileRef = useRef(null);
+
   const [newTopicName, setNewTopicName] = useState('');
   const [newTopicDesc, setNewTopicDesc] = useState('');
 
   const token = () => localStorage.getItem('accessToken');
 
-  const authHeaders = useCallback(() => ({
-    Authorization: `Bearer ${token()}`,
-    'Content-Type': 'application/json',
-  }), []);
+  // -------- Feedback helpers (all use the modal) --------
+  const showSuccess = (msg) => showModal('✅', 'Success', msg, [{ label: 'Continue', variant: 'primary', onClick: closeModal }]);
+  const showError = (msg) => showModal('⚠️', 'Something needs fixing', msg, [{ label: 'OK', variant: 'primary', onClick: closeModal }]);
+  const showInfo = (msg) => showModal('ℹ️', 'Notice', msg, [{ label: 'OK', variant: 'primary', onClick: closeModal }]);
 
-  // -------- Toast helpers --------
-  const showSuccess = (msg) => { setSuccessMessage(msg); setShowSuccessPopup(true); };
-  const showError = (msg) => { setErrorMessage(msg); setShowErrorPopup(true); };
+  // -------- Inline Modal Component using Pricing's login-prompt styles --------
+  const Modal = () => {
+    if (!modal) return null;
+    return (
+      <div className="login-prompt-overlay" onClick={closeModal}>
+        <div className="login-prompt-modal" onClick={(e) => e.stopPropagation()}>
+          <button className="login-prompt-close" onClick={closeModal}>×</button>
+          <div className="login-prompt-icon">{modal.icon || 'ℹ️'}</div>
+          <h3>{modal.title}</h3>
+          <p style={{ whiteSpace: 'pre-line' }}>{modal.body}</p>
+          <div className="login-prompt-actions">
+            {modal.buttons.map((btn, i) => (
+              <button
+                key={i}
+                className={btn.variant === 'ghost' ? 'login-prompt-cancel' : 'login-prompt-btn'}
+                onClick={btn.onClick}
+                disabled={btn.disabled}
+              >
+                {btn.label}
+              </button>
+            ))}
+          </div>
+        </div>
+      </div>
+    );
+  };
 
-  // -------- Fetch everything --------
-  const fetchInitialData = async (retryCount = 0) => {
+  // -------- Auth fetch --------
+  const authFetch = useCallback(async (url, options = {}, retry = true) => {
+    const headers = {
+      'Content-Type': 'application/json',
+      ...(options.headers || {}),
+      Authorization: `Bearer ${token()}`,
+    };
+    let res;
     try {
-      setLoading(true);
+      res = await fetch(url, { ...options, headers });
+    } catch (err) {
+      throw new Error("We couldn't reach the server. Please check your connection.");
+    }
 
-      if (!token()) {
-        showError('No authentication token. Please log in again.');
-        setTimeout(() => { window.location.href = '/admin/login'; }, 1500);
-        setLoading(false);
-        return;
-      }
-
-      // Subjects
-      const subRes = await fetch(`${API_URL}/admin/content/subjects`, { headers: authHeaders() });
-      if (subRes.status === 401 && retryCount === 0) {
-        // Try refresh
-        const rt = localStorage.getItem('refreshToken');
-        if (rt) {
+    if (res.status === 401 && retry) {
+      const rt = localStorage.getItem('refreshToken');
+      if (rt) {
+        try {
           const r = await fetch(`${API_URL}/auth/refresh`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -119,75 +169,106 @@ const AdminContent = () => {
             const d = await r.json();
             localStorage.setItem('accessToken', d.accessToken);
             if (d.refreshToken) localStorage.setItem('refreshToken', d.refreshToken);
-            return fetchInitialData(retryCount + 1);
+            return authFetch(url, options, false);
           }
+        } catch { /* ignore */ }
+      }
+      throw new Error('SESSION_EXPIRED');
+    }
+    return res;
+  }, []);
+
+  // -------- Fetch initial data --------
+  const fetchInitialData = async () => {
+    try {
+      setLoading(true);
+
+      if (!token()) {
+        showError('Please log in again to continue.');
+        setTimeout(() => { window.location.href = '/admin/login'; }, 1500);
+        setLoading(false);
+        return;
+      }
+
+      try {
+        const subRes = await authFetch(`${API_URL}/admin/content/subjects`);
+        if (subRes.ok) {
+          const subData = await subRes.json();
+          const mapped = (subData.subjects || []).map((s) => ({
+            ...s,
+            icon: s.icon || getDefaultIcon(s.name),
+            color: s.color || getDefaultColor(s.name),
+            grade_key: s.grade_key || '',
+            category_id: s.category_id || '',
+            allowed_plans: s.allowed_plans || [],
+          }));
+          setSubjects(mapped);
+          setFilteredSubjects(mapped);
+        }
+      } catch (e) {
+        if (e.message === 'SESSION_EXPIRED') {
+          showError('Your session expired. Please log in again.');
+          setTimeout(() => { window.location.href = '/admin/login'; }, 1500);
+          setLoading(false);
+          return;
         }
       }
-      const subData = await subRes.json();
-      const mapped = (subData.subjects || []).map((s) => ({
-        ...s,
-        icon: s.icon || getDefaultIcon(s.name),
-        color: s.color || getDefaultColor(s.name),
-        grade_key: s.grade_key || '',
-        category_id: s.category_id || '',
-        allowed_plans: s.allowed_plans || [],
-      }));
-      setSubjects(mapped);
-      setFilteredSubjects(mapped);
 
-      // Grades
+      let resolvedGrades = [];
       try {
-        const gRes = await fetch(`${API_URL}/admin/grades`, { headers: authHeaders() });
+        const gRes = await authFetch(`${API_URL}/admin/grades`);
         if (gRes.ok) {
           const gData = await gRes.json();
           const fromApi = gData.grades || gData.data || [];
-          if (Array.isArray(fromApi) && fromApi.length) setGrades(fromApi);
-          else throw new Error('empty');
-        } else throw new Error('not ok');
-      } catch {
-        // Fallback: pull directly from Supabase
-        const { data: gRows } = await supabase.from('subject_grades').select('*').order('sort_order');
-        if (Array.isArray(gRows) && gRows.length) {
-          setGrades(gRows.map((g) => ({ key: g.key, label: g.label, tier: g.tier })));
-        } else {
-          setGrades([
-            { key: 'grade-8-9',   label: 'Grade 8 – 9',   tier: '8-9' },
-            { key: 'grade-10-11', label: 'Grade 10 – 11', tier: '10-11' },
-            { key: 'grade-12',    label: 'Grade 12',      tier: '12' },
-          ]);
+          if (Array.isArray(fromApi) && fromApi.length) resolvedGrades = fromApi;
         }
-      }
+      } catch { /* silent */ }
 
-      // Categories
+      if (resolvedGrades.length === 0) {
+        try {
+          const { data: gRows, error: gErr } = await supabase.from('subject_grades').select('*');
+          if (!gErr && Array.isArray(gRows) && gRows.length) {
+            resolvedGrades = gRows.map((g) => ({ key: g.key, label: g.label, tier: g.tier, sort_order: g.sort_order || 0 }))
+              .sort((a, b) => (a.sort_order || 0) - (b.sort_order || 0));
+          }
+        } catch { /* silent */ }
+      }
+      if (resolvedGrades.length === 0) resolvedGrades = ALL_FALLBACK_GRADES;
+      setGrades(resolvedGrades);
+
+      let resolvedCategories = [];
       try {
-        const cRes = await fetch(`${API_URL}/admin/categories`, { headers: authHeaders() });
+        const cRes = await authFetch(`${API_URL}/admin/categories`);
         if (cRes.ok) {
           const cData = await cRes.json();
           const fromApi = cData.categories || cData.data || [];
           if (Array.isArray(fromApi) && fromApi.length) {
-            setCategories(fromApi.map((c) => ({ id: c.id, name: c.name, key: c.key || c.slug || c.id, icon: c.icon, color: c.color })));
-          } else throw new Error('empty');
-        } else throw new Error('not ok');
-      } catch {
-        const { data: cRows } = await supabase.from('subject_categories').select('*').order('name');
-        if (Array.isArray(cRows) && cRows.length) {
-          setCategories(cRows.map((c) => ({ id: c.id, name: c.name, key: c.key || c.slug || c.id, icon: c.icon, color: c.color })));
+            resolvedCategories = fromApi.map((c) => ({ id: c.id, name: c.name, key: c.key || c.slug || c.id, icon: c.icon, color: c.color }));
+          }
         }
-      }
+      } catch { /* silent */ }
 
-      // Plans
+      if (resolvedCategories.length === 0) {
+        try {
+          const { data: cRows } = await supabase.from('subject_categories').select('*').order('name');
+          if (Array.isArray(cRows) && cRows.length) {
+            resolvedCategories = cRows.map((c) => ({ id: c.id, name: c.name, key: c.key || c.slug || c.id, icon: c.icon, color: c.color }));
+          }
+        } catch { /* silent */ }
+      }
+      setCategories(resolvedCategories);
+
       try {
-        const pRes = await fetch(`${API_URL}/admin/pricing/plans`, { headers: authHeaders() });
+        const pRes = await authFetch(`${API_URL}/admin/pricing/plans`);
         if (pRes.ok) {
           const pData = await pRes.json();
           const fromApi = pData.plans || pData.data || [];
           if (Array.isArray(fromApi)) setPlans(fromApi);
         }
-      } catch { /* plans are optional */ }
+      } catch { /* optional */ }
 
     } catch (err) {
-      console.error(err);
-      showError('Network error while loading admin data.');
+      showError(err.message || 'We could not load the admin page.');
     } finally {
       setLoading(false);
     }
@@ -195,7 +276,6 @@ const AdminContent = () => {
 
   useEffect(() => { fetchInitialData(); /* eslint-disable-next-line */ }, []);
 
-  // -------- Slug auto --------
   useEffect(() => {
     if (viewMode === 'builder' && formData.name && !editingSubject) {
       const base = formData.name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
@@ -205,43 +285,53 @@ const AdminContent = () => {
     // eslint-disable-next-line
   }, [formData.name, formData.grade_key, viewMode, editingSubject]);
 
-  // -------- Search filter --------
   useEffect(() => {
-    if (!searchTerm.trim()) { setFilteredSubjects(subjects); return; }
-    const q = searchTerm.toLowerCase();
-    setFilteredSubjects(subjects.filter((s) =>
-      (s.name || '').toLowerCase().includes(q) ||
-      (s.code || '').toLowerCase().includes(q) ||
-      (s.description || '').toLowerCase().includes(q) ||
-      (s.track || '').toLowerCase().includes(q) ||
-      (s.institution || '').toLowerCase().includes(q)
-    ));
-  }, [searchTerm, subjects]);
+    let list = subjects.filter((s) => {
+      const tertiary = isTertiaryKey(s.grade_key);
+      return contentTab === 'tertiary' ? tertiary : !tertiary;
+    });
+    if (searchTerm.trim()) {
+      const q = searchTerm.toLowerCase();
+      list = list.filter((s) =>
+        (s.name || '').toLowerCase().includes(q) ||
+        (s.code || '').toLowerCase().includes(q) ||
+        (s.description || '').toLowerCase().includes(q) ||
+        (s.track || '').toLowerCase().includes(q) ||
+        (s.institution || '').toLowerCase().includes(q)
+      );
+    }
+    setFilteredSubjects(list);
+  }, [searchTerm, subjects, contentTab]);
 
-  // -------- Validation --------
-  const validationIssues = useMemo(() => {
+  const gradeOptions = useMemo(() => {
+    return grades.filter((g) => {
+      const tertiary = isTertiaryKey(g.key) || String(g.tier || '').toLowerCase() === 'tertiary';
+      return contentTab === 'tertiary' ? tertiary : !tertiary;
+    });
+  }, [grades, contentTab]);
+
+  const missingFields = useMemo(() => {
+    const missing = [];
+    if (!formData.name.trim()) missing.push('Subject name');
+    if (!formData.grade_key) missing.push('Grade');
+    if (!formData.category_id) missing.push('Category');
+    if (formData.is_active && formData.allowed_plans.length === 0) missing.push('At least one access plan');
+    return missing;
+  }, [formData]);
+
+  const otherIssues = useMemo(() => {
     const issues = [];
-    if (!formData.name.trim()) issues.push({ sec: 'basics', level: 'error', msg: 'Subject name is required.' });
-    if (!formData.grade_key) issues.push({ sec: 'basics', level: 'error', msg: 'Grade is required.' });
-    if (!formData.category_id) issues.push({ sec: 'basics', level: 'error', msg: 'Category is required.' });
-
     const blankTopics = builderTopics.filter((t) => !t.name?.trim()).length;
-    if (blankTopics) issues.push({ sec: 'topics', level: 'error', msg: `${blankTopics} topic(s) have no title.` });
-
+    if (blankTopics) issues.push({ sec: 'topics', level: 'error', msg: `${blankTopics} topic${blankTopics > 1 ? 's have' : ' has'} no title` });
     const papersMissing = builderPapers.filter((p) => !p.paper_url).length;
-    if (builderPapers.length === 0) issues.push({ sec: 'papers', level: 'warn', msg: 'No past papers added yet.' });
-    else if (papersMissing) issues.push({ sec: 'papers', level: 'error', msg: `${papersMissing} paper(s) have no PDF uploaded.` });
-
+    if (builderPapers.length > 0 && papersMissing) issues.push({ sec: 'papers', level: 'error', msg: `${papersMissing} paper${papersMissing > 1 ? 's need' : ' needs'} a PDF file` });
     const noMemos = builderPapers.filter((p) => p.paper_url && !p.memo_url).length;
-    if (noMemos) issues.push({ sec: 'papers', level: 'warn', msg: `${noMemos} paper(s) have no memo yet.` });
-
-    if (formData.is_active && formData.allowed_plans.length === 0)
-      issues.push({ sec: 'access', level: 'error', msg: 'Choose at least one plan that can open this subject.' });
-
+    if (noMemos) issues.push({ sec: 'papers', level: 'warn', msg: `${noMemos} paper${noMemos > 1 ? 's have' : ' has'} no memo yet` });
+    if (builderPapers.length === 0) issues.push({ sec: 'papers', level: 'warn', msg: 'no past papers added yet' });
     return issues;
-  }, [formData, builderTopics, builderPapers]);
+  }, [builderTopics, builderPapers]);
 
-  const errorCount = validationIssues.filter((i) => i.level === 'error').length;
+  const errorCount = missingFields.length + otherIssues.filter((i) => i.level === 'error').length;
   const completeness = Math.max(0, 5 - errorCount) * 20;
 
   // -------- Upload --------
@@ -251,9 +341,9 @@ const AdminContent = () => {
     const { error } = await supabase.storage.from(STORAGE_BUCKET).upload(fileName, file, { cacheControl: '3600', upsert: false });
     if (error) {
       if (String(error.message).toLowerCase().includes('bucket')) {
-        throw new Error(`Storage bucket "${STORAGE_BUCKET}" doesn't exist. Create it in Supabase → Storage.`);
+        throw new Error("The storage bucket isn't set up yet.");
       }
-      throw error;
+      throw new Error('The file could not be uploaded. Please try again.');
     }
     const { data } = supabase.storage.from(STORAGE_BUCKET).getPublicUrl(fileName);
     return data.publicUrl;
@@ -262,7 +352,7 @@ const AdminContent = () => {
   const handleFileUpload = async (e, type, index) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    if (file.type !== 'application/pdf') { showError('Only PDF files are allowed.'); return; }
+    if (file.type !== 'application/pdf') { showError('Please choose a PDF file.'); return; }
     try {
       setUploading(true);
       const publicUrl = await uploadFile(file);
@@ -278,10 +368,30 @@ const AdminContent = () => {
       if (type === 'paper_memo') update(setBuilderPapers);
       if (type === 'mock_qp') update(setBuilderMocks);
       if (type === 'mock_memo') update(setBuilderMocks);
+      showSuccess(`${file.name} uploaded.`);
     } catch (err) {
-      showError('Upload failed: ' + err.message);
+      showError(err.message);
     } finally {
       setUploading(false);
+      e.target.value = '';
+    }
+  };
+
+  const handleResourceFileUpload = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (file.type !== 'application/pdf') { showError('Please choose a PDF file.'); return; }
+    if (file.size > 50 * 1024 * 1024) { showError('The PDF must be smaller than 50MB.'); return; }
+    try {
+      setResourceUploading(true);
+      const publicUrl = await uploadFile(file, 'resources');
+      setResourceDraft((prev) => ({ ...prev, url: publicUrl, name: prev.name || file.name.replace(/\.pdf$/i, '') }));
+      setResourceFileName(file.name);
+      showSuccess(`${file.name} uploaded.`);
+    } catch (err) {
+      showError(err.message);
+    } finally {
+      setResourceUploading(false);
       e.target.value = '';
     }
   };
@@ -293,13 +403,9 @@ const AdminContent = () => {
       return copy;
     });
 
-  // -------- Topics --------
   const addTopicToBuilder = () => {
     if (!newTopicName.trim()) return;
-    setBuilderTopics((prev) => [
-      ...prev,
-      { id: `local-${Date.now()}`, name: newTopicName.trim(), description: newTopicDesc.trim(), display_order: prev.length, is_active: true },
-    ]);
+    setBuilderTopics((prev) => [...prev, { id: `local-${Date.now()}`, name: newTopicName.trim(), description: newTopicDesc.trim(), display_order: prev.length, is_active: true }]);
     setNewTopicName(''); setNewTopicDesc('');
   };
   const removeTopicFromBuilder = (id) => {
@@ -307,7 +413,6 @@ const AdminContent = () => {
     setBuilderResources((prev) => prev.map((r) => (r.topicLocalId === id ? { ...r, topicLocalId: null } : r)));
   };
 
-  // -------- Resource --------
   const parseYouTubeId = (url) => {
     if (!url) return null;
     const pats = [/(?:youtube\.com\/watch\?v=)([\w-]+)/, /(?:youtu\.be\/)([\w-]+)/, /(?:youtube\.com\/embed\/)([\w-]+)/, /(?:youtube\.com\/shorts\/)([\w-]+)/];
@@ -324,9 +429,19 @@ const AdminContent = () => {
       return next;
     });
   };
+
+  const openResourcePopup = () => {
+    setResourceDraft(initialResourceDraft());
+    setResourceFileName('');
+    setShowResourceDraftPopup(true);
+  };
+
   const confirmAddResourceDraft = () => {
-    if (!resourceDraft.name.trim()) { showError('Resource name required'); return; }
-    if (resourceDraft.type !== 'practice' && !resourceDraft.url.trim()) { showError('URL required'); return; }
+    if (!resourceDraft.name.trim()) { showError('Please give the resource a name.'); return; }
+    if (resourceDraft.type !== 'practice' && !resourceDraft.url.trim()) {
+      showError(resourceDraft.type === 'pdf' ? 'Please upload a PDF file first.' : 'Please paste the video link.');
+      return;
+    }
     const topicLocalId = resourceDraft.topicIndex !== '' ? builderTopics[Number(resourceDraft.topicIndex)]?.id || null : null;
     setBuilderResources((prev) => [...prev, {
       id: `local-res-${Date.now()}`, name: resourceDraft.name.trim(), type: resourceDraft.type,
@@ -335,17 +450,20 @@ const AdminContent = () => {
       duration: resourceDraft.duration, difficulty: resourceDraft.difficulty,
       is_free: resourceDraft.is_free, display_order: prev.length, is_active: true,
     }]);
+    setResourceDraft(initialResourceDraft());
+    setResourceFileName('');
     setShowResourceDraftPopup(false);
+    showSuccess('Resource added.');
   };
+
   const getResourceIcon = (t) => ({ video: '🎬', pdf: '📄', practice: '✏️', guide: '📖', quiz: '📝', link: '🔗' }[t] || '📎');
 
-  // -------- Load existing content for edit --------
   const loadExistingContent = async (subjectId) => {
     try {
       const [tRes, rRes, pRes] = await Promise.all([
-        fetch(`${API_URL}/admin/content/subjects/${subjectId}/topics`, { headers: authHeaders() }),
-        fetch(`${API_URL}/admin/content/subjects/${subjectId}/resources`, { headers: authHeaders() }),
-        fetch(`${API_URL}/admin/content/subjects/${subjectId}/papers`, { headers: authHeaders() }),
+        authFetch(`${API_URL}/admin/content/subjects/${subjectId}/topics`),
+        authFetch(`${API_URL}/admin/content/subjects/${subjectId}/resources`),
+        authFetch(`${API_URL}/admin/content/subjects/${subjectId}/papers`),
       ]);
       if (tRes.ok) {
         const d = await tRes.json();
@@ -380,20 +498,21 @@ const AdminContent = () => {
         })));
       }
     } catch (err) {
-      console.warn('Could not load existing content', err);
+      showError('Could not load existing content.');
     }
   };
 
-  // -------- Save --------
   const handleSaveSubject = async (opts = {}) => {
     const isDraft = opts.draft === true;
 
-    if (!isDraft && errorCount > 0) {
-      showError(`Cannot publish. Fix ${errorCount} error(s) first.`);
+    if (!isDraft && missingFields.length > 0) {
+      const list = missingFields.map((m) => `• ${m}`).join('\n');
+      showError(`Please fill in these required fields:\n\n${list}`);
       return;
     }
-    if (!formData.name.trim() || !formData.grade_key || !formData.category_id) {
-      showError('Name, grade and category are required.');
+    if (!isDraft && otherIssues.some((i) => i.level === 'error')) {
+      const list = otherIssues.filter((i) => i.level === 'error').map((i) => `• ${i.msg}`).join('\n');
+      showError(`A few things need attention:\n\n${list}`);
       return;
     }
 
@@ -409,20 +528,22 @@ const AdminContent = () => {
         color: formData.color || getDefaultColor(formData.name),
         grade_key: formData.grade_key, category_id: formData.category_id,
         is_active: isDraft ? false : formData.is_active,
-        code: formData.code || '', track: formData.track || '',
+        ...(formData.code ? { code: formData.code } : {}),
+        track: formData.track || '',
         semester: formData.semester || '', institution: formData.institution || '',
         allowed_plans: formData.allowed_plans,
       };
 
-      const res = await fetch(url, { method, headers: authHeaders(), body: JSON.stringify(payload) });
+      const res = await authFetch(url, { method, body: JSON.stringify(payload) });
       const data = await res.json();
-      if (!data.success) { showError(data.error || 'Save failed'); return; }
+      if (!res.ok || !data.success) {
+        showError(data.error || 'Could not save. Please try again.');
+        return;
+      }
 
       const newId = data.subject?.id || data.data?.id || data.id || editingSubject?.id;
-      if (!newId) { showError('Save returned no subject id'); return; }
+      if (!newId) { showError('Saved but ID missing.'); return; }
 
-      // Sync topics (simplified: delete & recreate — safest for both create & edit)
-      // 1. fetch existing topic ids to delete
       if (editingSubject) {
         const { data: oldTopics } = await supabase.from('topics').select('id').eq('subject_id', newId);
         if (Array.isArray(oldTopics) && oldTopics.length) {
@@ -432,34 +553,36 @@ const AdminContent = () => {
       const topicIdMap = {};
       for (const t of builderTopics) {
         if (!t.name?.trim()) continue;
-        const r = await fetch(`${API_URL}/admin/content/topics`, {
-          method: 'POST', headers: authHeaders(),
+        const r = await authFetch(`${API_URL}/admin/content/topics`, {
+          method: 'POST',
           body: JSON.stringify({ subject_id: newId, name: t.name, description: t.description || '', display_order: t.display_order || 0, is_active: true }),
         });
-        const d = await r.json();
-        const tid = d.topic?.id || d.data?.id || d.id;
-        if (tid) topicIdMap[t.id] = tid;
+        if (r.ok) {
+          const d = await r.json();
+          const tid = d.topic?.id || d.data?.id || d.id;
+          if (tid) topicIdMap[t.id] = tid;
+        }
       }
 
-      for (const res of builderResources) {
-        await fetch(`${API_URL}/admin/content/resources`, {
-          method: 'POST', headers: authHeaders(),
+      for (const res2 of builderResources) {
+        await authFetch(`${API_URL}/admin/content/resources`, {
+          method: 'POST',
           body: JSON.stringify({
-            subject_id: newId, topic_id: res.topicLocalId ? (topicIdMap[res.topicLocalId] || null) : null,
-            subtopic_id: null, name: res.name, description: res.description || '',
-            type: res.type, url: res.url || '',
-            youtube_id: res.youtube_id || '', thumbnail_url: res.thumbnail_url || '',
-            duration: res.duration || '', difficulty: res.difficulty || 'beginner',
-            content: { problems: [] }, is_free: !!res.is_free, is_featured: false,
-            display_order: res.display_order || 0, is_active: true,
+            subject_id: newId, topic_id: res2.topicLocalId ? (topicIdMap[res2.topicLocalId] || null) : null,
+            subtopic_id: null, name: res2.name, description: res2.description || '',
+            type: res2.type, url: res2.url || '',
+            youtube_id: res2.youtube_id || '', thumbnail_url: res2.thumbnail_url || '',
+            duration: res2.duration || '', difficulty: res2.difficulty || 'beginner',
+            content: { problems: [] }, is_free: !!res2.is_free, is_featured: false,
+            display_order: res2.display_order || 0, is_active: true,
           }),
         });
       }
 
       for (const p of builderPapers) {
         if (!p.paper_url && !isDraft) continue;
-        await fetch(`${API_URL}/admin/content/papers`, {
-          method: 'POST', headers: authHeaders(),
+        await authFetch(`${API_URL}/admin/content/papers`, {
+          method: 'POST',
           body: JSON.stringify({
             subject_id: newId, year: p.year, session: p.session, paper_number: p.paper,
             is_mock: false, paper_url: p.paper_url || null, memo_url: p.memo_url || null,
@@ -468,8 +591,8 @@ const AdminContent = () => {
       }
       for (const m of builderMocks) {
         if (!m.paper_url && !isDraft) continue;
-        await fetch(`${API_URL}/admin/content/papers`, {
-          method: 'POST', headers: authHeaders(),
+        await authFetch(`${API_URL}/admin/content/papers`, {
+          method: 'POST',
           body: JSON.stringify({
             subject_id: newId, is_mock: true, title: m.title,
             duration_minutes: m.duration, total_marks: m.marks,
@@ -483,20 +606,27 @@ const AdminContent = () => {
       resetForm();
       fetchInitialData();
     } catch (err) {
-      showError('Network error: ' + err.message);
+      if (err.message === 'SESSION_EXPIRED') {
+        showError('Session expired. Please log in again.');
+        setTimeout(() => { window.location.href = '/admin/login'; }, 1500);
+      } else {
+        showError(err.message || 'Could not save.');
+      }
     } finally {
       setActionLoading(false);
     }
   };
 
-  // -------- CRUD --------
   const openAddModal = () => {
     setEditingSubject(null);
     resetForm();
+    const defaultGrade = contentTab === 'tertiary' ? 'tertiary-year-1' : 'grade-8-9';
+    setFormData((prev) => ({ ...prev, grade_key: defaultGrade }));
     setViewMode('builder');
     setActiveSection('basics');
   };
   const openEditModal = async (subject) => {
+    setContentTab(isTertiaryKey(subject.grade_key) ? 'tertiary' : 'highschool');
     setEditingSubject(subject);
     setFormData({
       name: subject.name || '', slug: subject.slug || '',
@@ -524,25 +654,25 @@ const AdminContent = () => {
     if (!deleteTarget) return;
     try {
       setDeleteLoading(true);
-      const res = await fetch(`${API_URL}/admin/content/subjects/${deleteTarget.id}`, { method: 'DELETE', headers: authHeaders() });
+      const res = await authFetch(`${API_URL}/admin/content/subjects/${deleteTarget.id}`, { method: 'DELETE' });
       const data = await res.json();
       if (data.success) { setShowDeletePopup(false); fetchInitialData(); showSuccess('Subject deleted.'); }
-      else { setShowDeletePopup(false); showError(data.error || 'Delete failed'); }
-    } catch { showError('Network error'); } finally { setDeleteLoading(false); }
+      else { setShowDeletePopup(false); showError(data.error || 'Could not delete.'); }
+    } catch { showError('Could not reach the server.'); } finally { setDeleteLoading(false); }
   };
   const handleToggleClick = (subject) => { setToggleTarget(subject); setShowTogglePopup(true); };
   const confirmToggle = async () => {
     if (!toggleTarget) return;
     try {
       setToggleLoading(true);
-      const res = await fetch(`${API_URL}/admin/content/subjects/${toggleTarget.id}`, {
-        method: 'PUT', headers: authHeaders(),
+      const res = await authFetch(`${API_URL}/admin/content/subjects/${toggleTarget.id}`, {
+        method: 'PUT',
         body: JSON.stringify({ is_active: !toggleTarget.is_active }),
       });
       const data = await res.json();
       if (data.success) { setShowTogglePopup(false); fetchInitialData(); showSuccess('Status updated.'); }
-      else { setShowTogglePopup(false); showError(data.error || 'Toggle failed'); }
-    } catch { showError('Network error'); } finally { setToggleLoading(false); }
+      else { setShowTogglePopup(false); showError(data.error || 'Could not change status.'); }
+    } catch { showError('Could not reach the server.'); } finally { setToggleLoading(false); }
   };
 
   const getGradeBadge = (grade_key) => {
@@ -555,98 +685,117 @@ const AdminContent = () => {
     return <span className="tier-badge" style={{ background: color }}>{g.label}</span>;
   };
 
-  // -------- Render: list --------
+  // -------- Loading --------
   if (loading) return <div className="admin-content-loading"><div className="loading-spinner" /><p>Loading content...</p></div>;
 
+  // -------- LIST VIEW --------
   if (viewMode === 'list') {
+    const highschoolCount = subjects.filter((s) => !isTertiaryKey(s.grade_key)).length;
+    const tertiaryCount = subjects.filter((s) => isTertiaryKey(s.grade_key)).length;
+
     return (
       <div className="admin-content">
+        <Modal />
+
         <div className="content-header">
-          <div className="header-left"><h2>📚 Content Management</h2><p className="header-subtitle">Manage subjects, resources, and learning materials</p></div>
+          <div className="header-left">
+            <h2>📚 Content Management</h2>
+            <p className="header-subtitle">Manage subjects, resources, and learning materials</p>
+          </div>
           <div className="header-actions">
-            <button className="refresh-btn" onClick={fetchInitialData}>🔄</button>
+            <button className="refresh-btn" onClick={fetchInitialData} title="Refresh">🔄</button>
             <button className="add-btn" onClick={openAddModal}>➕ Add Subject</button>
           </div>
         </div>
-        <div className="content-stats">
-          <div className="stat-item"><span className="stat-number">{subjects.length}</span><span className="stat-label">Total Subjects</span></div>
-          <div className="stat-item"><span className="stat-number">{subjects.filter((s) => s.is_active).length}</span><span className="stat-label">Active</span></div>
-          <div className="stat-item"><span className="stat-number">{subjects.filter((s) => !s.is_active).length}</span><span className="stat-label">Inactive</span></div>
+
+        <div className="content-type-toggle" role="tablist" aria-label="Content type">
+          <button type="button" role="tab" aria-selected={contentTab === 'highschool'} className={`content-type-btn ${contentTab === 'highschool' ? 'active' : ''}`} onClick={() => setContentTab('highschool')}>
+            🏫 Highschool <span className="content-type-count">{highschoolCount}</span>
+          </button>
+          <button type="button" role="tab" aria-selected={contentTab === 'tertiary'} className={`content-type-btn ${contentTab === 'tertiary' ? 'active' : ''}`} onClick={() => setContentTab('tertiary')}>
+            🎓 Tertiary <span className="content-type-count">{tertiaryCount}</span>
+          </button>
         </div>
+
+        <div className="content-stats">
+          <div className="stat-item">
+            <span className="stat-number">{contentTab === 'highschool' ? highschoolCount : tertiaryCount}</span>
+            <span className="stat-label">{contentTab === 'highschool' ? 'Highschool Subjects' : 'Tertiary Subjects'}</span>
+          </div>
+          <div className="stat-item">
+            <span className="stat-number">{subjects.filter((s) => (contentTab === 'highschool' ? !isTertiaryKey(s.grade_key) : isTertiaryKey(s.grade_key)) && s.is_active).length}</span>
+            <span className="stat-label">Active</span>
+          </div>
+          <div className="stat-item">
+            <span className="stat-number">{subjects.filter((s) => (contentTab === 'highschool' ? !isTertiaryKey(s.grade_key) : isTertiaryKey(s.grade_key)) && !s.is_active).length}</span>
+            <span className="stat-label">Inactive</span>
+          </div>
+        </div>
+
         <div className="content-search">
           <div className="search-wrapper">
             <span className="search-icon">🔍</span>
             <input type="text" className="search-input" placeholder="Search..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} />
           </div>
         </div>
-        <div className="subjects-grid">
-          {filteredSubjects.map((subject) => (
-            <div key={subject.id} className="subject-card" style={{ borderColor: subject.color }}>
-              <div className="subject-card-header">
-                <div className="subject-icon" style={{ background: subject.color }}>{subject.icon}</div>
-                <div className="subject-info">
-                  <h4>{subject.name}</h4>
-                  <p>{subject.description}</p>
-                  <div className="subject-meta">
-                    {getGradeBadge(subject.grade_key)}
-                    <span className={`status-badge ${subject.is_active ? 'active' : 'inactive'}`}>{subject.is_active ? '✅ Active' : '❌ Inactive'}</span>
+
+        {filteredSubjects.length === 0 ? (
+          <div className="content-empty">
+            <p>No {contentTab === 'highschool' ? 'highschool' : 'tertiary'} subjects yet.</p>
+            <button className="add-btn" onClick={openAddModal}>➕ Add your first subject</button>
+          </div>
+        ) : (
+          <div className="subjects-grid">
+            {filteredSubjects.map((subject) => (
+              <div key={subject.id} className="subject-card" style={{ borderColor: subject.color }}>
+                <div className="subject-card-header">
+                  <div className="subject-icon" style={{ background: subject.color }}>{subject.icon}</div>
+                  <div className="subject-info">
+                    <h4>{subject.name}</h4>
+                    <p>{subject.description}</p>
+                    <div className="subject-meta">
+                      {getGradeBadge(subject.grade_key)}
+                      <span className={`status-badge ${subject.is_active ? 'active' : 'inactive'}`}>{subject.is_active ? '✅ Active' : '❌ Inactive'}</span>
+                    </div>
                   </div>
                 </div>
+                <div className="subject-actions">
+                  <button className="action-btn content" onClick={() => navigate(`/admin/content/${subject.id}`)}>📖 Manage</button>
+                  <button className="action-btn toggle" onClick={() => handleToggleClick(subject)}>{subject.is_active ? '🔴 Deactivate' : '🟢 Activate'}</button>
+                  <button className="action-btn edit" onClick={() => openEditModal(subject)}>✏️ Edit</button>
+                  <button className="action-btn delete" onClick={() => handleDeleteClick(subject)}>🗑️ Delete</button>
+                </div>
               </div>
-              <div className="subject-actions">
-                <button className="action-btn content" onClick={() => navigate(`/admin/content/${subject.id}`)}>📖 Manage</button>
-                <button className="action-btn toggle" onClick={() => handleToggleClick(subject)}>{subject.is_active ? '🔴 Deactivate' : '🟢 Activate'}</button>
-                <button className="action-btn edit" onClick={() => openEditModal(subject)}>✏️ Edit</button>
-                <button className="action-btn delete" onClick={() => handleDeleteClick(subject)}>🗑️ Delete</button>
-              </div>
-            </div>
-          ))}
-        </div>
+            ))}
+          </div>
+        )}
 
         {showDeletePopup && deleteTarget && (
-          <div className="ac-popup-overlay" onClick={() => !deleteLoading && setShowDeletePopup(false)}>
-            <div className="ac-popup ac-popup-small" onClick={(e) => e.stopPropagation()}>
-              <div className="ac-popup-icon-wrapper danger"><span className="ac-popup-big-icon">🗑️</span></div>
-              <div className="ac-popup-header centered"><h3>Delete Subject?</h3><p>Delete <strong>{deleteTarget.name}</strong>.</p></div>
-              <div className="ac-popup-footer centered">
-                <button className="ac-btn ac-btn-secondary" onClick={() => setShowDeletePopup(false)} disabled={deleteLoading}>Cancel</button>
-                <button className="ac-btn ac-btn-danger" onClick={confirmDelete} disabled={deleteLoading}>{deleteLoading ? '⏳ Deleting…' : '🗑️ Delete'}</button>
+          <div className="login-prompt-overlay" onClick={() => !deleteLoading && setShowDeletePopup(false)}>
+            <div className="login-prompt-modal" onClick={(e) => e.stopPropagation()}>
+              <button className="login-prompt-close" onClick={() => !deleteLoading && setShowDeletePopup(false)}>×</button>
+              <div className="login-prompt-icon">🗑️</div>
+              <h3>Delete this subject?</h3>
+              <p><strong>{deleteTarget.name}</strong> will be removed permanently. This can't be undone.</p>
+              <div className="login-prompt-actions">
+                <button className="login-prompt-cancel" onClick={() => setShowDeletePopup(false)} disabled={deleteLoading}>Cancel</button>
+                <button className="login-prompt-btn" onClick={confirmDelete} disabled={deleteLoading}>{deleteLoading ? 'Deleting…' : 'Delete'}</button>
               </div>
             </div>
           </div>
         )}
 
         {showTogglePopup && toggleTarget && (
-          <div className="ac-popup-overlay" onClick={() => !toggleLoading && setShowTogglePopup(false)}>
-            <div className="ac-popup ac-popup-small" onClick={(e) => e.stopPropagation()}>
-              <div className={`ac-popup-icon-wrapper ${toggleTarget.is_active ? 'warning' : 'success'}`}><span className="ac-popup-big-icon">{toggleTarget.is_active ? '⚠️' : '✅'}</span></div>
-              <div className="ac-popup-header centered"><h3>{toggleTarget.is_active ? 'Deactivate?' : 'Activate?'}</h3></div>
-              <div className="ac-popup-footer centered">
-                <button className="ac-btn ac-btn-secondary" onClick={() => setShowTogglePopup(false)} disabled={toggleLoading}>Cancel</button>
-                <button className={`ac-btn ${toggleTarget.is_active ? 'ac-btn-warning' : 'ac-btn-primary'}`} onClick={confirmToggle} disabled={toggleLoading}>
-                  {toggleLoading ? '⏳…' : toggleTarget.is_active ? 'Deactivate' : 'Activate'}
-                </button>
+          <div className="login-prompt-overlay" onClick={() => !toggleLoading && setShowTogglePopup(false)}>
+            <div className="login-prompt-modal" onClick={(e) => e.stopPropagation()}>
+              <button className="login-prompt-close" onClick={() => !toggleLoading && setShowTogglePopup(false)}>×</button>
+              <div className="login-prompt-icon">{toggleTarget.is_active ? '⚠️' : '✅'}</div>
+              <h3>{toggleTarget.is_active ? 'Deactivate this subject?' : 'Activate this subject?'}</h3>
+              <p>{toggleTarget.is_active ? "Students won't be able to see it." : 'Students will be able to see it again.'}</p>
+              <div className="login-prompt-actions">
+                <button className="login-prompt-cancel" onClick={() => setShowTogglePopup(false)} disabled={toggleLoading}>Cancel</button>
+                <button className="login-prompt-btn" onClick={confirmToggle} disabled={toggleLoading}>{toggleLoading ? 'Saving…' : (toggleTarget.is_active ? 'Deactivate' : 'Activate')}</button>
               </div>
-            </div>
-          </div>
-        )}
-
-        {showSuccessPopup && (
-          <div className="ac-popup-overlay" onClick={() => setShowSuccessPopup(false)}>
-            <div className="ac-popup ac-popup-small" onClick={(e) => e.stopPropagation()}>
-              <div className="ac-popup-icon-wrapper success"><span className="ac-popup-big-icon">✅</span></div>
-              <div className="ac-popup-header centered"><h3>Success</h3><p>{successMessage}</p></div>
-              <div className="ac-popup-footer centered"><button className="ac-btn ac-btn-primary" onClick={() => setShowSuccessPopup(false)}>Continue</button></div>
-            </div>
-          </div>
-        )}
-
-        {showErrorPopup && (
-          <div className="ac-popup-overlay" onClick={() => setShowErrorPopup(false)}>
-            <div className="ac-popup ac-popup-small" onClick={(e) => e.stopPropagation()}>
-              <div className="ac-popup-icon-wrapper danger"><span className="ac-popup-big-icon">⚠️</span></div>
-              <div className="ac-popup-header centered"><h3>Error</h3><p>{errorMessage}</p></div>
-              <div className="ac-popup-footer centered"><button className="ac-btn ac-btn-secondary" onClick={() => setShowErrorPopup(false)}>Close</button></div>
             </div>
           </div>
         )}
@@ -654,12 +803,14 @@ const AdminContent = () => {
     );
   }
 
-  // -------- Render: builder --------
+  // -------- BUILDER VIEW --------
   return (
     <div className="ac-builder-page">
+      <Modal />
+
       <header className="ac-builder-header">
         <div>
-          <div className="ac-breadcrumb">Admin / Subjects / <span>{editingSubject ? 'Edit subject' : 'Add subject'}</span></div>
+          <div className="ac-breadcrumb">Admin / {contentTab === 'tertiary' ? 'Tertiary' : 'Highschool'} / <span>{editingSubject ? 'Edit subject' : 'Add subject'}</span></div>
           <h1>{editingSubject ? 'Edit subject' : 'Add subject content'} {editingSubject && <span className="ac-status-badge published">Published</span>}</h1>
           <p>Everything here feeds the student Subjects page.</p>
         </div>
@@ -675,17 +826,16 @@ const AdminContent = () => {
       <div className="ac-layout">
         <nav className="ac-nav">
           {SECTIONS.map((sec, idx) => {
-            const issues = validationIssues.filter((i) => i.sec === sec.id);
-            const hasErr = issues.some((i) => i.level === 'error');
+            const issues = otherIssues.filter((i) => i.sec === sec.id);
+            const hasErr = (sec.id === 'basics' && missingFields.length > 0) || issues.some((i) => i.level === 'error');
             const hasWarn = issues.some((i) => i.level === 'warn');
             let badgeCls = 'ok'; let badgeText = 'Done';
-            if (hasErr) { badgeCls = 'error'; badgeText = `${issues.filter((i) => i.level === 'error').length} issue`; }
-            else if (hasWarn) { badgeCls = 'warn'; badgeText = `${issues.filter((i) => i.level === 'warn').length} note`; }
+            if (hasErr) { badgeCls = 'error'; badgeText = 'Needs attention'; }
+            else if (hasWarn) { badgeCls = 'warn'; badgeText = 'Note'; }
             else if (sec.id === 'topics') badgeText = builderTopics.length;
             else if (sec.id === 'papers') badgeText = builderPapers.length;
             else if (sec.id === 'mocks') badgeText = builderMocks.length;
-            else if (sec.id === 'review') { badgeCls = errorCount ? 'error' : 'ok'; badgeText = errorCount ? `${errorCount} to fix` : 'Ready'; }
-
+            else if (sec.id === 'review') { badgeCls = errorCount ? 'error' : 'ok'; badgeText = errorCount ? 'To fix' : 'Ready'; }
             return (
               <button key={sec.id} className={`ac-nav-btn ${activeSection === sec.id ? 'active' : ''}`} onClick={() => setActiveSection(sec.id)}>
                 <span className="ac-nav-num">{idx + 1}</span>
@@ -697,7 +847,7 @@ const AdminContent = () => {
           <div className="ac-progress-card">
             <h4>Completeness</h4>
             <div className="ac-progress-track"><div className="ac-progress-fill" style={{ width: `${completeness}%` }} /></div>
-            <div className="ac-progress-text">{Math.floor(completeness / 20)} of 5 sections complete, {errorCount} to fix.</div>
+            <div className="ac-progress-text">{errorCount === 0 ? 'Ready to publish.' : `${errorCount} thing${errorCount > 1 ? 's' : ''} to fix.`}</div>
           </div>
         </nav>
 
@@ -716,7 +866,7 @@ const AdminContent = () => {
                   <label>Grade *</label>
                   <select value={formData.grade_key} onChange={(e) => setFormData({ ...formData, grade_key: e.target.value })}>
                     <option value="" disabled>Select a grade…</option>
-                    {grades.map((g) => <option key={g.key} value={g.key}>{g.label}</option>)}
+                    {gradeOptions.map((g) => <option key={g.key} value={g.key}>{g.label}</option>)}
                   </select>
                 </div>
                 <div className="ac-field">
@@ -760,7 +910,7 @@ const AdminContent = () => {
                 ))}
                 {builderTopics.length === 0 && <p className="ac-muted-text">No topics yet.</p>}
               </div>
-              <button className="ac-btn-dashed" onClick={() => setShowResourceDraftPopup(true)}>➕ Add resource (PDF / Video)</button>
+              <button className="ac-btn-dashed" onClick={openResourcePopup}>➕ Add resource (PDF / Video)</button>
               <div className="ac-list" style={{ marginTop: 12 }}>
                 {builderResources.map((r) => (
                   <div key={r.id} className="ac-list-row">
@@ -864,9 +1014,7 @@ const AdminContent = () => {
                   return (
                     <label key={plan.id} className="ac-checkbox-card">
                       <input type="checkbox" checked={checked} onChange={(e) => {
-                        const next = e.target.checked
-                          ? [...formData.allowed_plans, key]
-                          : formData.allowed_plans.filter((t) => t !== key);
+                        const next = e.target.checked ? [...formData.allowed_plans, key] : formData.allowed_plans.filter((t) => t !== key);
                         setFormData({ ...formData, allowed_plans: next });
                       }} />
                       <div><b>{plan.name}</b>{plan.price != null && <small> R{plan.price}/month</small>}</div>
@@ -886,6 +1034,7 @@ const AdminContent = () => {
               <h2>Review and publish</h2>
               <p className="ac-subtitle">A last look at what will go live.</p>
               <div className="ac-review-grid">
+                <div className="ac-review-item"><dt>Type</dt><dd>{contentTab === 'tertiary' ? 'Tertiary' : 'Highschool'}</dd></div>
                 <div className="ac-review-item"><dt>Subject</dt><dd>{formData.name || 'Untitled'} {grades.find((g) => g.key === formData.grade_key)?.label ? `— ${grades.find((g) => g.key === formData.grade_key).label}` : ''}</dd></div>
                 <div className="ac-review-item"><dt>Category</dt><dd>{categories.find((c) => c.id === formData.category_id)?.name || '—'}</dd></div>
                 <div className="ac-review-item"><dt>Topics</dt><dd>{builderTopics.length}</dd></div>
@@ -897,9 +1046,18 @@ const AdminContent = () => {
               </div>
               <h3 style={{ fontSize: 14, color: '#fff', marginBottom: 12 }}>Things to fix or check</h3>
               <div className="ac-issue-list">
-                {validationIssues.length === 0 && <p style={{ color: '#22c55e', fontWeight: 600 }}>All checks passed. Ready to publish.</p>}
-                {validationIssues.map((iss, i) => (
-                  <div key={i} className="ac-issue-item" onClick={() => setActiveSection(iss.sec)}>
+                {missingFields.length === 0 && otherIssues.length === 0 && (
+                  <p style={{ color: '#22c55e', fontWeight: 600 }}>All checks passed. Ready to publish.</p>
+                )}
+                {missingFields.map((m, i) => (
+                  <div key={`mf-${i}`} className="ac-issue-item" onClick={() => setActiveSection('basics')}>
+                    <span className="ac-tag error">Fix</span>
+                    <span className="ac-issue-msg">Please add a {m}.</span>
+                    <span className="ac-issue-where">Basic info</span>
+                  </div>
+                ))}
+                {otherIssues.map((iss, i) => (
+                  <div key={`oi-${i}`} className="ac-issue-item" onClick={() => setActiveSection(iss.sec)}>
                     <span className={`ac-tag ${iss.level}`}>{iss.level === 'error' ? 'Fix' : 'Check'}</span>
                     <span className="ac-issue-msg">{iss.msg}</span>
                     <span className="ac-issue-where">{SECTIONS.find((s) => s.id === iss.sec)?.label}</span>
@@ -959,12 +1117,18 @@ const AdminContent = () => {
 
           <div className="ac-panel" style={{ padding: 16, marginTop: 16 }}>
             <h3 style={{ fontSize: 13, color: '#fff', marginBottom: 12 }}>Readiness</h3>
-            {validationIssues.length === 0 ? (
+            {missingFields.length === 0 && otherIssues.length === 0 ? (
               <p style={{ color: '#22c55e', fontWeight: 600, fontSize: 12 }}>No blocking issues.</p>
             ) : (
               <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                {validationIssues.map((iss, i) => (
-                  <div key={i} style={{ display: 'flex', gap: 8, fontSize: 12 }}>
+                {missingFields.map((m, i) => (
+                  <div key={`rm-${i}`} style={{ display: 'flex', gap: 8, fontSize: 12 }}>
+                    <span className="ac-tag error" style={{ height: 'fit-content' }}>Fix</span>
+                    <span style={{ color: '#e5e7eb' }}>Add a {m}.</span>
+                  </div>
+                ))}
+                {otherIssues.map((iss, i) => (
+                  <div key={`ro-${i}`} style={{ display: 'flex', gap: 8, fontSize: 12 }}>
                     <span className={`ac-tag ${iss.level}`} style={{ height: 'fit-content' }}>{iss.level === 'error' ? 'Fix' : 'Check'}</span>
                     <span style={{ color: '#e5e7eb' }}>{iss.msg}</span>
                   </div>
@@ -976,26 +1140,74 @@ const AdminContent = () => {
       </div>
 
       {showResourceDraftPopup && (
-        <div className="ac-popup-overlay ac-nested" onClick={() => setShowResourceDraftPopup(false)}>
-          <div className="ac-popup" onClick={(e) => e.stopPropagation()}>
-            <button className="ac-popup-close" onClick={() => setShowResourceDraftPopup(false)}>✕</button>
-            <div className="ac-popup-header"><h3>Add resource</h3><p>Attach a PDF or video link.</p></div>
-            <div className="ac-popup-body">
-              <div className="ac-form-group">
-                <label>Resource type *</label>
-                <select value={resourceDraft.type} onChange={(e) => setResourceDraft({ ...resourceDraft, type: e.target.value })}>
+        <div className="login-prompt-overlay" onClick={() => !resourceUploading && setShowResourceDraftPopup(false)}>
+          <div className="login-prompt-modal" onClick={(e) => e.stopPropagation()}>
+            <button className="login-prompt-close" onClick={() => !resourceUploading && setShowResourceDraftPopup(false)}>×</button>
+            <div className="login-prompt-icon">📚</div>
+            <h3>Add resource</h3>
+            <p>Upload a PDF or paste a video link.</p>
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 12, textAlign: 'left', marginBottom: 20 }}>
+              <label style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                <span style={{ fontSize: 12, fontWeight: 600, color: 'rgba(255,255,255,0.7)' }}>Resource type</span>
+                <select
+                  value={resourceDraft.type}
+                  onChange={(e) => setResourceDraft({ ...resourceDraft, type: e.target.value, url: '' })}
+                  style={{ padding: '10px 12px', borderRadius: 10, background: '#0f0f24', border: '1px solid #5b5b8f', color: '#fff' }}
+                >
                   <option value="pdf">📄 PDF document</option>
                   <option value="video">🎬 Video (YouTube)</option>
                 </select>
-              </div>
-              <div className="ac-form-group"><label>Name *</label><input value={resourceDraft.name} onChange={(e) => setResourceDraft({ ...resourceDraft, name: e.target.value })} placeholder="e.g. Intro to Algebra" /></div>
-              {resourceDraft.type !== 'practice' && (
-                <div className="ac-form-group"><label>URL *</label><input value={resourceDraft.url} onChange={(e) => handleResourceUrlChange(e.target.value)} placeholder="https://…" /></div>
+              </label>
+
+              <label style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                <span style={{ fontSize: 12, fontWeight: 600, color: 'rgba(255,255,255,0.7)' }}>Name *</span>
+                <input
+                  value={resourceDraft.name}
+                  onChange={(e) => setResourceDraft({ ...resourceDraft, name: e.target.value })}
+                  placeholder="e.g. Intro to Algebra"
+                  style={{ padding: '10px 12px', borderRadius: 10, background: '#0f0f24', border: '1px solid #5b5b8f', color: '#fff' }}
+                />
+              </label>
+
+              {resourceDraft.type === 'pdf' && (
+                <label style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                  <span style={{ fontSize: 12, fontWeight: 600, color: 'rgba(255,255,255,0.7)' }}>PDF file *</span>
+                  <div
+                    className={`resource-upload-zone ${resourceDraft.url ? 'has-file' : ''}`}
+                    onClick={() => !resourceUploading && resourceFileRef.current?.click()}
+                  >
+                    <input
+                      ref={resourceFileRef}
+                      type="file"
+                      accept="application/pdf"
+                      onChange={handleResourceFileUpload}
+                      disabled={resourceUploading}
+                      style={{ display: 'none' }}
+                    />
+                    {resourceUploading ? <span>⏳ Uploading…</span>
+                      : resourceDraft.url ? <span>✅ {resourceFileName || 'PDF'} uploaded — click to replace</span>
+                      : <span>📤 Click to upload a PDF (max 50MB)</span>}
+                  </div>
+                </label>
+              )}
+
+              {resourceDraft.type === 'video' && (
+                <label style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                  <span style={{ fontSize: 12, fontWeight: 600, color: 'rgba(255,255,255,0.7)' }}>YouTube URL *</span>
+                  <input
+                    value={resourceDraft.url}
+                    onChange={(e) => handleResourceUrlChange(e.target.value)}
+                    placeholder="https://youtube.com/watch?v=…"
+                    style={{ padding: '10px 12px', borderRadius: 10, background: '#0f0f24', border: '1px solid #5b5b8f', color: '#fff' }}
+                  />
+                </label>
               )}
             </div>
-            <div className="ac-popup-footer">
-              <button className="ac-btn ac-btn-secondary" onClick={() => setShowResourceDraftPopup(false)}>Cancel</button>
-              <button className="ac-btn ac-btn-primary" onClick={confirmAddResourceDraft}>➕ Add to list</button>
+
+            <div className="login-prompt-actions">
+              <button className="login-prompt-cancel" onClick={() => setShowResourceDraftPopup(false)} disabled={resourceUploading}>Cancel</button>
+              <button className="login-prompt-btn" onClick={confirmAddResourceDraft} disabled={resourceUploading}>Add to list</button>
             </div>
           </div>
         </div>

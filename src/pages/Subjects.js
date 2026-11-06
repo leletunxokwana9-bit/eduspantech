@@ -126,6 +126,7 @@ const Subjects = () => {
   const papers = data?.papers || [];
   const jumpBackIn = data?.jumpBackIn || [];
   const access = data?.access || {};
+  const loggedIn = !!data?.loggedIn;
 
   const categoryByKey = useMemo(() => {
     const map = {};
@@ -173,8 +174,10 @@ const Subjects = () => {
   const isCrossLevel = viewTier === 'other' && memberTier && effectiveTier && effectiveTier !== memberTier;
   const crossLevelLocked = isCrossLevel && !access?.crossLevel;
 
-  // Hero's "You're viewing …" — exact numeric grade > selected pill > tier bucket
+  // Hero's "You're viewing …" — only for logged-in users
   const viewingLabel = useMemo(() => {
+    if (!loggedIn) return null;
+
     if (selectedGrade) {
       const g = gradeByKey[selectedGrade];
       if (g?.label) return g.label;
@@ -202,7 +205,7 @@ const Subjects = () => {
       if (meta?.label) return meta.label;
     }
     return null;
-  }, [selectedGrade, gradeByKey, memberGrade, memberTier, grades, allSubjects]);
+  }, [loggedIn, selectedGrade, gradeByKey, memberGrade, memberTier, grades, allSubjects]);
 
   const viewingPrefix = text('viewing_prefix') || "You're viewing";
 
@@ -353,7 +356,7 @@ const Subjects = () => {
   return (
     <div className="subjects-page">
 
-      {/* ===== HERO — with "You're viewing <grade>" ===== */}
+      {/* ===== HERO ===== */}
       <section className="subjects-hero">
         <div className="subjects-hero-content">
           {text('hero_eyebrow') && (
@@ -399,7 +402,7 @@ const Subjects = () => {
             <p className="subjects-section-subtitle">
               {hasAnySubjects
                 ? `${plural(allSubjects.length)} available — search, filter, or pick a category below.`
-                : 'Subjects will appear here once your admin publishes them.'}
+                : 'Your subjects will appear here soon.'}
             </p>
           </div>
           <div className="subjects-section-head-actions">
@@ -520,13 +523,13 @@ const Subjects = () => {
       <section ref={resultsRef} className="subjects-results" aria-labelledby="subjects-results-title">
         {!hasAnySubjects ? (
           <EmptyState
-            title="Subjects will appear here once they're added."
-            hint="Your admin hasn't published any subjects for this level yet. Check back soon."
+            title="No subjects yet."
+            hint="We're still setting things up. Check back soon."
           />
         ) : visibleSubjects.length === 0 ? (
           <EmptyState
-            title={text('empty_message') || 'No subjects match your filters yet.'}
-            hint="Try clearing the search or picking a different grade."
+            title={text('empty_message') || 'Nothing here yet.'}
+            hint="Try a different search, or clear your filters."
             action={text('clear_filters_label') || 'Clear filters'}
             onAction={clearFilters}
           />
@@ -601,7 +604,7 @@ const Subjects = () => {
         <div className="subjects-section-header">
           <div>
             <h2 id="subjects-jumpback-title">{text('jump_back_in_title') || 'Jump back in'}</h2>
-            <p>{text('jump_back_in_subtitle') || 'Resume the lessons and papers you were working on.'}</p>
+            <p>{text('jump_back_in_subtitle') || 'Pick up where you left off.'}</p>
           </div>
         </div>
         {jumpBackIn.length > 0 ? (
@@ -619,8 +622,10 @@ const Subjects = () => {
             ))}
           </div>
         ) : (
-          <EmptyState title="Nothing to resume yet."
-            hint="Start a lesson or attempt a paper and it will appear here for quick access." />
+          <EmptyState
+            title="Nothing here yet."
+            hint="Once you open a subject or try a past paper, it'll show up here."
+          />
         )}
       </section>
 
@@ -656,8 +661,8 @@ const Subjects = () => {
           </label>
         </div>
         {filteredPapers.length === 0 ? (
-          <EmptyState title={text('papers_empty') || 'No papers available for this selection.'}
-            hint="Try clearing the filters or picking a different subject."
+          <EmptyState title={text('papers_empty') || 'No papers yet.'}
+            hint="Try a different filter, or check back soon for more."
             action={text('clear_filters_label') || 'Clear filters'}
             onAction={() => { setPapersSubject('all'); setPapersYear('all'); setPapersSession('all'); }} />
         ) : (

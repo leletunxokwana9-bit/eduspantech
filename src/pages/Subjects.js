@@ -18,7 +18,7 @@ const CANONICAL_GRADES = {
   'grade8-9':    { key: 'grade8-9',   label: 'Grade 8 – 9',   tier: '8-9' },
   'grade10-11':  { key: 'grade10-11', label: 'Grade 10 – 11', tier: '10-11' },
   'grade12':     { key: 'grade12',    label: 'Grade 12',      tier: '12' },
-  'tertiary':    { key: 'tertiary',   label: '1st & 2nd Year Tertiary', tier: 'tertiary' },
+  'tertiary':    { key: 'tertiary',   label: 'Tertiary (Years 1 – 2)', tier: 'tertiary' },
 };
 
 const TIER_TO_KEY = {
@@ -106,7 +106,6 @@ const Subjects = () => {
   const [selectedGrade, setSelectedGrade] = useState(null);
   const [selectedCategory, setSelectedCategory] = useState(null);
   const [sortBy, setSortBy] = useState('popular');
-  const [viewTier, setViewTier] = useState('own');
   const [otherLevelOpen, setOtherLevelOpen] = useState(false);
 
   const [papersSubject, setPapersSubject] = useState('all');
@@ -161,32 +160,23 @@ const Subjects = () => {
   const memberTier = data?.memberTier || null;
   const memberGrade = data?.memberGrade || null;
 
-  const allowedGrades = useMemo(() => {
-    if (!memberTier) return grades;
-    return grades.filter((g) => {
-      if (g.is_all) return true;
-      const gTier = g.tier || canonicalGrade(g.key)?.tier;
-      return gTier === memberTier;
-    });
-  }, [grades, memberTier]);
+  const allowedGrades = grades;
 
-  const effectiveTier = viewTier === 'own' ? memberTier : (data?.otherTier || null);
-  const isCrossLevel = viewTier === 'other' && memberTier && effectiveTier && effectiveTier !== memberTier;
-  const crossLevelLocked = isCrossLevel && !access?.crossLevel;
+  const effectiveTier = (() => {
+    if (loggedIn) return memberTier;
+    if (selectedGrade) return canonicalGrade(selectedGrade)?.tier || null;
+    return null;
+  })();
 
-  // Hero's "You're viewing …" — only for logged-in users
   const viewingLabel = useMemo(() => {
     if (!loggedIn) return null;
-
     if (selectedGrade) {
       const g = gradeByKey[selectedGrade];
       if (g?.label) return g.label;
       const meta = canonicalGrade(selectedGrade);
       if (meta?.label) return meta.label;
     }
-    if (memberGrade && memberGrade >= 1 && memberGrade <= 12) {
-      return `Grade ${memberGrade}`;
-    }
+    if (memberGrade && memberGrade >= 1 && memberGrade <= 12) return `Grade ${memberGrade}`;
     if (memberTier) {
       const g = grades.find(
         (x) => !x.is_all && (x.tier || canonicalGrade(x.key)?.tier) === memberTier
@@ -195,17 +185,8 @@ const Subjects = () => {
       const meta = canonicalGrade(TIER_TO_KEY[memberTier]);
       if (meta?.label) return meta.label;
     }
-    const realGrades = grades.filter((g) => !g.is_all);
-    if (realGrades.length === 1) return realGrades[0].label;
-    const presentGradeKeys = Array.from(
-      new Set(allSubjects.map((s) => s.grade_key).filter(Boolean))
-    );
-    if (presentGradeKeys.length === 1) {
-      const meta = canonicalGrade(presentGradeKeys[0]);
-      if (meta?.label) return meta.label;
-    }
     return null;
-  }, [loggedIn, selectedGrade, gradeByKey, memberGrade, memberTier, grades, allSubjects]);
+  }, [loggedIn, selectedGrade, gradeByKey, memberGrade, memberTier, grades]);
 
   const viewingPrefix = text('viewing_prefix') || "You're viewing";
 
@@ -221,13 +202,12 @@ const Subjects = () => {
         const sTier = tierForSubject(s);
         if (sTier && sTier !== effectiveTier) return false;
       }
-      if (selectedGrade && s.grade_key !== selectedGrade) return false;
       if (selectedCategory && subjectCategoryKey(s) !== selectedCategory) return false;
       if (!matchesSearch(s, searchQuery, categories, grades)) return false;
       return true;
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [allSubjects, selectedGrade, selectedCategory, searchQuery, effectiveTier, categoryById, categories, grades]);
+  }, [allSubjects, selectedCategory, searchQuery, effectiveTier, categoryById, categories, grades]);
 
   const countsBeforeCategory = useMemo(() => {
     return allSubjects.filter((s) => {
@@ -235,12 +215,11 @@ const Subjects = () => {
         const sTier = tierForSubject(s);
         if (sTier && sTier !== effectiveTier) return false;
       }
-      if (selectedGrade && s.grade_key !== selectedGrade) return false;
       if (!matchesSearch(s, searchQuery, categories, grades)) return false;
       return true;
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [allSubjects, selectedGrade, searchQuery, effectiveTier, categories, grades]);
+  }, [allSubjects, searchQuery, effectiveTier, categories, grades]);
 
   const categoryCounts = useMemo(() => {
     const counts = {};
@@ -289,12 +268,6 @@ const Subjects = () => {
     Object.values(map).forEach((arr) => arr.sort((a, b) => (b.year || 0) - (a.year || 0)));
     return map;
   }, [filteredPapers]);
-
-  useEffect(() => {
-    if (!selectedGrade) return;
-    const stillAllowed = allowedGrades.some((g) => !g.is_all && g.key === selectedGrade);
-    if (!stillAllowed) setSelectedGrade(null);
-  }, [allowedGrades, selectedGrade]);
 
   const clearFilters = () => {
     setSelectedGrade(null);
@@ -353,6 +326,10 @@ const Subjects = () => {
   const hasAnySubjects = allSubjects.length > 0;
   const visibleCategories = categories.filter((cat) => (categoryCounts[cat.key] || 0) > 0);
 
+  const gradeSectionTitle = loggedIn
+    ? (viewingLabel ? `Grade: ${viewingLabel}` : 'Grade')
+    : 'Choose your level';
+
   return (
     <div className="subjects-page">
 
@@ -377,6 +354,12 @@ const Subjects = () => {
             )}
           </h1>
           {text('hero_subtext') && <p className="subjects-hero-subtext">{text('hero_subtext')}</p>}
+          {!loggedIn && (
+            <p className="subjects-hero-guest-hint">
+              Browse all grades below — pick your level to see subjects, or{' '}
+              <Link to="/login" className="subjects-hero-link">log in</Link> for a personalised view.
+            </p>
+          )}
         </div>
         <div className="subjects-hero-illustration" aria-hidden="true">
           {heroSymbols.map((sym, idx) => (
@@ -453,27 +436,26 @@ const Subjects = () => {
           </label>
         </div>
 
-        {allowedGrades.length > 1 && (
-          <div className="subjects-filter-group" role="group" aria-label="Filter by grade">
-            <span className="subjects-filter-label">Grade</span>
-            <div className="subjects-filter-pills">
-              {allowedGrades.map((g) => {
-                const active = g.is_all ? selectedGrade === null : selectedGrade === g.key;
-                return (
-                  <button
-                    key={g.key}
-                    type="button"
-                    className={`filter-pill ${active ? 'active' : ''}`}
-                    aria-pressed={active}
-                    onClick={() => setSelectedGrade(g.is_all ? null : g.key)}
-                  >
-                    {g.label}
-                  </button>
-                );
-              })}
-            </div>
+        {/* Grade pills — always shown for guests, only for their tier when logged in */}
+        <div className="subjects-filter-group" role="group" aria-label="Filter by grade">
+          <span className="subjects-filter-label">{gradeSectionTitle}</span>
+          <div className="subjects-filter-pills">
+            {(loggedIn ? allowedGrades : grades).map((g) => {
+              const active = g.is_all ? selectedGrade === null : selectedGrade === g.key;
+              return (
+                <button
+                  key={g.key}
+                  type="button"
+                  className={`filter-pill ${active ? 'active' : ''}`}
+                  aria-pressed={active}
+                  onClick={() => setSelectedGrade(g.is_all ? null : g.key)}
+                >
+                  {g.label}
+                </button>
+              );
+            })}
           </div>
-        )}
+        </div>
 
         {visibleCategories.length > 0 && (
           <div className="subjects-filter-group" role="group" aria-label="Filter by category">
@@ -534,7 +516,7 @@ const Subjects = () => {
             onAction={clearFilters}
           />
         ) : (
-          <div className="subjects-page-grid" key={`${selectedCategory}-${selectedGrade}-${sortBy}-${viewTier}-${searchQuery}`}>
+          <div className="subjects-page-grid" key={`${selectedCategory}-${selectedGrade}-${sortBy}-${searchQuery}`}>
             {visibleSubjects.map((subject, i) => {
               const cat = categoryByKey[subjectCategoryKey(subject)]
                        || (subject.category_id ? categoryById[subject.category_id] : null);
@@ -545,12 +527,11 @@ const Subjects = () => {
               const stats = subject.stats || {};
               const paperRange = formatYearRange(stats.paperYearMin, stats.paperYearMax);
               const empty = !stats.lessonCount && !stats.paperCount && !stats.mockCount;
-              const locked = isCrossLevel && crossLevelLocked;
 
               return (
                 <div
                   key={subject.id}
-                  className={`subjects-page-card ${locked ? 'locked' : ''}`}
+                  className="subjects-page-card"
                   style={{ '--i': Math.min(i, 12), '--subject-color': color }}
                 >
                   <div className="subjects-page-card-top">
@@ -580,17 +561,11 @@ const Subjects = () => {
                     <p className="subjects-page-coming-soon">{text('coming_soon_label') || 'Content coming soon'}</p>
                   )}
                   <div className="subjects-page-card-footer">
-                    {locked ? (
-                      <span className="subjects-page-locked">{text('locked_label') || 'Locked'}</span>
-                    ) : (
-                      <>
-                        <Link to={`/subjects/${subject.slug}`} className="subjects-view-link">
-                          {text('view_subject_label') || 'View Subject'} →
-                        </Link>
-                        <Link to={`/subjects/${subject.slug}/papers`} className="subjects-page-arrow-btn"
-                          aria-label={text('view_papers_label') || 'View past papers'}>→</Link>
-                      </>
-                    )}
+                    <Link to={`/subjects/${subject.slug}`} className="subjects-view-link">
+                      {text('view_subject_label') || 'View Subject'} →
+                    </Link>
+                    <Link to={`/subjects/${subject.slug}/papers`} className="subjects-page-arrow-btn"
+                      aria-label={text('view_papers_label') || 'View past papers'}>→</Link>
                   </div>
                 </div>
               );
@@ -673,28 +648,25 @@ const Subjects = () => {
               <div key={subjectId} className="subjects-papers-group">
                 <h3 className="subjects-papers-group-title">{subject.name}</h3>
                 <ul className="subjects-papers-list">
-                  {list.map((p) => {
-                    const locked = isCrossLevel && crossLevelLocked;
-                    return (
-                      <li key={p.id} className={`subjects-paper-row ${locked ? 'locked' : ''}`}>
-                        <span className="subjects-paper-meta">
-                          <span className="subjects-paper-year">{p.year || ''}</span>
-                          <span className="subjects-paper-session">{p.session || ''}</span>
-                          <span className="subjects-paper-number">{p.paper_number || ''}</span>
-                          {p.is_mock && <span className="subjects-paper-tag">{text('tag_mock') || 'Mock'}</span>}
-                        </span>
-                        <span className="subjects-paper-links">
-                          <a href={locked ? undefined : p.paper_url} className="subjects-paper-link" aria-disabled={locked}>
-                            {text('paper_label') || 'Paper'}
-                          </a>
-                          <span className="subjects-paper-sep" aria-hidden="true">|</span>
-                          <a href={locked ? undefined : p.memo_url} className="subjects-paper-link" aria-disabled={locked}>
-                            {text('memo_label') || 'Memo'}
-                          </a>
-                        </span>
-                      </li>
-                    );
-                  })}
+                  {list.map((p) => (
+                    <li key={p.id} className="subjects-paper-row">
+                      <span className="subjects-paper-meta">
+                        <span className="subjects-paper-year">{p.year || ''}</span>
+                        <span className="subjects-paper-session">{p.session || ''}</span>
+                        <span className="subjects-paper-number">{p.paper_number || ''}</span>
+                        {p.is_mock && <span className="subjects-paper-tag">{text('tag_mock') || 'Mock'}</span>}
+                      </span>
+                      <span className="subjects-paper-links">
+                        <a href={p.paper_url} className="subjects-paper-link">
+                          {text('paper_label') || 'Paper'}
+                        </a>
+                        <span className="subjects-paper-sep" aria-hidden="true">|</span>
+                        <a href={p.memo_url} className="subjects-paper-link">
+                          {text('memo_label') || 'Memo'}
+                        </a>
+                      </span>
+                    </li>
+                  ))}
                 </ul>
               </div>
             );
@@ -727,9 +699,8 @@ const Subjects = () => {
                   className={`subjects-other-level-pill ${lvl.tier === effectiveTier ? 'active' : ''}`}
                   onClick={() => {
                     if (!lvl.enabled && !access?.crossLevel) return;
-                    setViewTier('other');
+                    setSelectedGrade(TIER_TO_KEY[lvl.tier] || null);
                     setSelectedCategory(null);
-                    setSelectedGrade(null);
                   }}
                 >
                   {lvl.label}

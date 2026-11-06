@@ -6,7 +6,7 @@ const GRADE_LABEL_MAP = {
   'grade8-9':   'Grade 8 – 9',
   'grade10-11': 'Grade 10 – 11',
   'grade12':    'Grade 12',
-  'tertiary':   '1st & 2nd Year Tertiary',
+  'tertiary':   'Tertiary (Years 1 – 2)',
 };
 
 const GRADE_TIER_MAP = {
@@ -152,17 +152,23 @@ function normaliseCategories(rawCategories, subjects) {
     .filter((c) => (hasKeyMatch ? usedKeys.has(c.key) : usedIds.has(c.id)));
 }
 
-function deriveGrades(subjects, memberGrade) {
+// For logged-out: always show the four standard grades even if empty,
+// so a stranger can pick what they're looking for.
+function deriveGrades(subjects, memberGrade, loggedIn) {
   const present = new Set(
     (subjects || []).map((s) => s.grade_key).filter(Boolean)
   );
-  const real = Array.from(present)
-    .filter((key) => GRADE_LABEL_MAP[key])
+
+  const keysToShow = loggedIn
+    ? Array.from(present).filter((key) => GRADE_LABEL_MAP[key])
+    : GRADE_ORDER.filter((key) => GRADE_LABEL_MAP[key]);
+
+  const real = keysToShow
     .sort((a, b) => GRADE_ORDER.indexOf(a) - GRADE_ORDER.indexOf(b))
     .map((key) => {
       const tier = GRADE_TIER_MAP[key] || null;
       let label = GRADE_LABEL_MAP[key];
-      if (memberGrade && tier) {
+      if (loggedIn && memberGrade && tier) {
         const inTier =
           (tier === '8-9'   && (memberGrade === 8  || memberGrade === 9))  ||
           (tier === '10-11' && (memberGrade === 10 || memberGrade === 11)) ||
@@ -171,6 +177,7 @@ function deriveGrades(subjects, memberGrade) {
       }
       return { key, label, tier };
     });
+
   return [{ key: 'all', label: 'All', is_all: true }, ...real];
 }
 
@@ -221,33 +228,23 @@ export function useSubjectsPage() {
         : null;
 
       const memberGrade = loggedIn
-        ? (
-            gradeFromUser(payload?.user) ||
-            gradeFromUser(storedUser) ||
-            null
-          )
+        ? (gradeFromUser(payload?.user) || gradeFromUser(storedUser) || null)
         : null;
 
-      // Guests: all subjects. Logged-in with a known tier: only their tier.
+      // Logged-in: scope to tier. Logged-out: all subjects (filtering happens in UI).
       const scopedSubjects = (loggedIn && memberTier)
         ? rawSubjects.filter((s) => tierForSubject(s) === memberTier)
         : rawSubjects;
 
-      // Papers follow the subjects that are visible
-      const visibleSubjectIds = new Set(scopedSubjects.map((s) => s.id));
-      const scopedPapers = loggedIn && memberTier
-        ? rawPapers.filter((p) => visibleSubjectIds.has(p.subject_id))
-        : rawPapers;
-
       const scopedCategories = normaliseCategories(rawCategories, scopedSubjects);
-      const scopedGrades = deriveGrades(scopedSubjects, memberGrade);
+      const scopedGrades = deriveGrades(scopedSubjects, memberGrade, loggedIn);
 
       setData({
         settings:      sanitizeSettings(payload?.settings),
         categories:    scopedCategories,
         grades:        scopedGrades,
         subjects:      scopedSubjects,
-        papers:        scopedPapers,
+        papers:        rawPapers,
         jumpBackIn:    Array.isArray(payload?.jumpBackIn) ? payload.jumpBackIn : [],
         access:        payload?.access || {},
         memberTier,

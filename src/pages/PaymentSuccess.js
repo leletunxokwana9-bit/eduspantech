@@ -1,175 +1,195 @@
-import React, { useEffect } from 'react';
+// src/pages/PaymentSuccess.js
+import React, { useEffect, useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
+import TermsOfService from './Terms';
+import PrivacyPolicy from './Privacy';
 import './PaymentSuccess.css';
+import './Checkout.css'; // 👈 Import Checkout CSS to use the modal styles
 
 const PaymentSuccess = () => {
   const navigate = useNavigate();
   const location = useLocation();
-  const { plan, user, transaction, subscription } = location.state || {};
 
+  // Extract state passed from Checkout.js
+  const { reference, plan, user } = location.state || {};
+
+  // Modal State
+  const [showTermsModal, setShowTermsModal] = useState(false);
+  const [showPrivacyModal, setShowPrivacyModal] = useState(false);
+
+  // If someone navigates here directly without paying, kick them back
   useEffect(() => {
-    if (!plan || !user) {
+    if (!reference) {
       navigate('/pricing');
     }
-  }, [plan, user, navigate]);
+  }, [reference, navigate]);
 
-  if (!plan || !user) return null;
+  if (!reference) return null;
 
-  const getTierFeatures = () => {
-    const tier = plan.tier?.toLowerCase() || '';
-    const features = {
-      silver: [
-        'On-demand whiteboard playback archives',
-        'Step-by-step mathematical proofs',
-        'Static notes and resources',
-        '24/7 Access to recorded lessons'
-      ],
-      gold: [
-        'Live drop-in evening homework clinics (16:00-23:00 Local Time)',
-        'Real-time interactive whiteboard',
-        'South African tutor shifts',
-        '24/7 Access to recorded lessons',
-        'Homework help from expert tutors'
-      ],
-      platinum: [
-        'All Gold features',
-        'Weekend clinic access (Sat 08:00-14:00, Sun 16:00-23:00)',
-        'Queue-bypass privileges during high-volume test weeks',
-        'Priority access to tutors',
-        'Advanced analytics and insights'
-      ]
-    };
-    return features[tier] || features.gold;
+  // ============================================
+  // MODALS (Matches Checkout.js exactly)
+  // ============================================
+  const TermsModal = () => {
+    if (!showTermsModal) return null;
+    const terms = TermsOfService.sections || [];
+    const effectiveDate = TermsOfService.effectiveDate || '2026-07-09';
+
+    return (
+      <div className="checkout-modal-overlay" onClick={() => setShowTermsModal(false)}>
+        <div className="checkout-modal terms-modal" onClick={(e) => e.stopPropagation()}>
+          <button className="checkout-modal-close" onClick={() => setShowTermsModal(false)}>×</button>
+          <h2 className="modal-title">📋 Terms of Service</h2>
+          <div className="modal-scroll-content">
+            <div className="last-updated">Last Updated: {effectiveDate}</div>
+            {terms.map((section) => (
+              <div key={section.id} className="section">
+                <h3>{section.title}</h3>
+                {section.content.map((paragraph, index) => <p key={index}>{paragraph}</p>)}
+              </div>
+            ))}
+          </div>
+          <button className="btn-primary modal-close-btn" onClick={() => setShowTermsModal(false)}>Close</button>
+        </div>
+      </div>
+    );
   };
 
-  const features = getTierFeatures();
+  const PrivacyModal = () => {
+    if (!showPrivacyModal) return null;
+    const privacy = PrivacyPolicy.sections || [];
+    const effectiveDate = PrivacyPolicy.effectiveDate || '2026-07-09';
+
+    return (
+      <div className="checkout-modal-overlay" onClick={() => setShowPrivacyModal(false)}>
+        <div className="checkout-modal privacy-modal" onClick={(e) => e.stopPropagation()}>
+          <button className="checkout-modal-close" onClick={() => setShowPrivacyModal(false)}>×</button>
+          <h2 className="modal-title">🔒 Privacy Policy</h2>
+          <div className="modal-scroll-content">
+            <div className="last-updated">Last Updated: {effectiveDate}</div>
+            {privacy.map((section) => (
+              <div key={section.id} className="section">
+                <h3>{section.title}</h3>
+                {section.content.map((paragraph, index) => <p key={index}>{paragraph}</p>)}
+              </div>
+            ))}
+          </div>
+          <button className="btn-primary modal-close-btn" onClick={() => setShowPrivacyModal(false)}>Close</button>
+        </div>
+      </div>
+    );
+  };
 
   return (
-    <div className="payment-success-page">
-      <div className="payment-success-container">
-        <div className="success-icon">
-          <div className="success-circle">
-            <span className="success-check">✓</span>
-          </div>
-        </div>
+    <div className="success-page">
+      <TermsModal />
+      <PrivacyModal />
 
-        <h1 className="success-title">Payment Successful! 🎉</h1>
-        <p className="success-subtitle">
-          Your enrollment is complete. Welcome to EduSpantech!
-        </p>
+      <div className="success-container">
+        
+        {/* Main Success Card */}
+        <div className="success-card">
+          <div className="success-icon-wrapper">
+            <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
+              <polyline points="22 4 12 14.01 9 11.01"></polyline>
+            </svg>
+          </div>
 
-        {transaction && (
-          <div className="success-transaction">
-            <span className="transaction-label">Transaction ID:</span>
-            <span className="transaction-id">{transaction}</span>
-          </div>
-        )}
+          <h1>Payment Successful</h1>
+          <p className="success-subtitle">
+            Your enrollment is complete. Your account has been successfully updated to the <strong>{plan?.name || 'new'}</strong> plan.
+          </p>
 
-        <div className="success-user-info">
-          <div className="info-row">
-            <span className="info-label">Student</span>
-            <span className="info-value">{user.name}</span>
-          </div>
-          <div className="info-row">
-            <span className="info-label">Email</span>
-            <span className="info-value">{user.email}</span>
-          </div>
-          <div className="info-row">
-            <span className="info-label">Plan</span>
-            <span className="info-value plan-badge">{plan.name}</span>
-          </div>
-          <div className="info-row">
-            <span className="info-label">Price</span>
-            <span className="info-value">{plan.price}{plan.period}</span>
-          </div>
-          <div className="info-row">
-            <span className="info-label">Cohort</span>
-            <span className="info-value">{user.cohort || 'HighSchool'}</span>
-          </div>
-          {subscription && (
-            <div className="info-row">
-              <span className="info-label">Subscription</span>
-              <span className="info-value">{subscription}</span>
+          {/* Receipt Box */}
+          <div className="receipt-box">
+            <div className="receipt-row">
+              <span className="receipt-label">Student</span>
+              <span className="receipt-value">{user?.email}</span>
             </div>
-          )}
+            <div className="receipt-row">
+              <span className="receipt-label">Plan Upgraded To</span>
+              <span className="receipt-value">{plan?.name || 'Subscription'}</span>
+            </div>
+            <div className="receipt-row">
+              <span className="receipt-label">Amount Paid</span>
+              <span className="receipt-value">R{plan?.price || '0.00'}{plan?.period || '/month'}</span>
+            </div>
+            <div className="receipt-row">
+              <span className="receipt-label">Reference</span>
+              <span className="receipt-value mono">{reference}</span>
+            </div>
+            <div className="receipt-row">
+              <span className="receipt-label">Date</span>
+              <span className="receipt-value">{new Date().toLocaleDateString('en-ZA', { year: 'numeric', month: 'long', day: 'numeric' })}</span>
+            </div>
+          </div>
+
+          <div className="success-actions">
+            <button className="btn-primary" onClick={() => navigate('/dashboard')}>
+              Go to Dashboard
+            </button>
+            <button className="btn-secondary" onClick={() => window.print()}>
+              Print Receipt
+            </button>
+          </div>
         </div>
 
-        <div className="success-features">
-          <h3>What's Included:</h3>
+        {/* Next Steps / What to expect */}
+        <div className="next-steps-card">
+          <h3>What happens next?</h3>
           <ul>
-            {features.map((feature, index) => (
-              <li key={index}>
-                <span className="feature-check">✓</span>
-                {feature}
-              </li>
-            ))}
+            <li>
+              <div className="step-icon">🔓</div>
+              <div>
+                <strong>Instant Access</strong>
+                <p>You can now access all resources included in your {plan?.name} plan.</p>
+              </div>
+            </li>
+            <li>
+              <div className="step-icon">⏰</div>
+              <div>
+                <strong>Auto-Renewal</strong>
+                <p>Your subscription will automatically renew on {new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toLocaleDateString('en-ZA')}. You can cancel anytime.</p>
+              </div>
+            </li>
+            <li>
+              <div className="step-icon">📧</div>
+              <div>
+                <strong>Confirmation Email</strong>
+                <p>A receipt and confirmation have been sent to {user?.email}.</p>
+              </div>
+            </li>
           </ul>
         </div>
 
-        <div className="success-next-steps">
-          <h3>Next Steps:</h3>
-          <ol>
-            <li>
-              <strong>Check your email</strong> - We've sent you a confirmation with login details
-            </li>
-            <li>
-              <strong>Access your dashboard</strong> - Start learning immediately
-            </li>
-            <li>
-              <strong>Book a session</strong> - Schedule your first live tutoring session
-            </li>
-          </ol>
+        {/* Professional Corporate Disclaimer with Modals */}
+        <div className="disclaimer-section">
+          <p>
+            <strong>Billing Disclaimer:</strong> Your subscription will automatically renew at the end of the billing period unless cancelled. 
+            You can manage or cancel your subscription at any time from your account dashboard. 
+            By completing this purchase, you agree to our{' '}
+            <button 
+              type="button" 
+              className="disclaimer-link-btn" 
+              onClick={() => setShowTermsModal(true)}
+            >
+              Terms of Service
+            </button>{' '}
+            and{' '}
+            <button 
+              type="button" 
+              className="disclaimer-link-btn" 
+              onClick={() => setShowPrivacyModal(true)}
+            >
+              Privacy Policy
+            </button>.
+          </p>
+          <p>
+            Need help? Contact our support team at <a href="mailto:support@eduspantech.com">support@eduspantech.com</a>. 
+            Please retain this email as proof of purchase.
+          </p>
         </div>
 
-        <div className="success-notes">
-          <div className="note-item">
-            <span className="note-icon">📧</span>
-            <div>
-              <strong>Confirmation Email Sent</strong>
-              <p>Check your inbox for login credentials and next steps</p>
-            </div>
-          </div>
-          <div className="note-item">
-            <span className="note-icon">🔒</span>
-            <div>
-              <strong>Secure & Encrypted</strong>
-              <p>Your data is protected with AES-256 encryption</p>
-            </div>
-          </div>
-          <div className="note-item">
-            <span className="note-icon">🔄</span>
-            <div>
-              <strong>Auto-Renewal Active</strong>
-              <p>Your subscription will renew automatically each month</p>
-            </div>
-          </div>
-          <div className="note-item">
-            <span className="note-icon">⏰</span>
-            <div>
-              <strong>72-Hour Refund Window</strong>
-              <p>Refund requests must be filed within 72 hours with zero usage</p>
-            </div>
-          </div>
-        </div>
-
-        <div className="success-actions">
-          <button
-            className="btn-dashboard"
-            onClick={() => navigate('/dashboard')}
-          >
-            Go to Dashboard →
-          </button>
-          <button
-            className="btn-session"
-            onClick={() => navigate('/tutors')}
-          >
-            Book a Session
-          </button>
-        </div>
-
-        <div className="success-footer">
-          <p>© 2026 EduSpantech - Education for the love of your life ❤️</p>
-        </div>
       </div>
     </div>
   );

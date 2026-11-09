@@ -2,6 +2,7 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import useWebRTC from '../hooks/useWebRTC';
+import { supabase } from '../services/supabaseClient';
 import './TutorSession.css';
 
 // ============================================
@@ -11,9 +12,7 @@ const SoundGenerator = {
   generateTypingSound: () => {
     try {
       const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-      if (audioCtx.state === 'suspended') {
-        audioCtx.resume();
-      }
+      if (audioCtx.state === 'suspended') audioCtx.resume();
       const oscillator = audioCtx.createOscillator();
       const gainNode = audioCtx.createGain();
       oscillator.connect(gainNode);
@@ -29,9 +28,7 @@ const SoundGenerator = {
   generateMessageSound: () => {
     try {
       const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-      if (audioCtx.state === 'suspended') {
-        audioCtx.resume();
-      }
+      if (audioCtx.state === 'suspended') audioCtx.resume();
       const oscillator = audioCtx.createOscillator();
       const gainNode = audioCtx.createGain();
       oscillator.connect(gainNode);
@@ -61,9 +58,7 @@ const SoundGenerator = {
   generateRaiseHandSound: () => {
     try {
       const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-      if (audioCtx.state === 'suspended') {
-        audioCtx.resume();
-      }
+      if (audioCtx.state === 'suspended') audioCtx.resume();
       const oscillator = audioCtx.createOscillator();
       const gainNode = audioCtx.createGain();
       oscillator.connect(gainNode);
@@ -116,20 +111,12 @@ const WaitingForTutor = ({ onLeave }) => (
         <span className="waiting-emoji">⏳</span>
       </div>
       <h2>Waiting for Tutor...</h2>
-      <p>
-        Your tutor will join the session shortly. 
-        Please stay connected.
-      </p>
+      <p>Your tutor will join the session shortly. Please stay connected.</p>
       <div className="waiting-status">
         <span className="status-dot pulsating"></span>
         <span>Connecting to session...</span>
       </div>
-      <button 
-        className="leave-waiting-btn"
-        onClick={onLeave}
-      >
-        Leave Waiting Room
-      </button>
+      <button className="leave-waiting-btn" onClick={onLeave}>Leave Waiting Room</button>
     </div>
   </div>
 );
@@ -151,12 +138,12 @@ const TutorSession = () => {
   const [roleLoaded, setRoleLoaded] = useState(false);
   
   // ============================================
-  // ✅ FIX: ROLE DETECTION - RUNS FIRST
+  // ROLE DETECTION & TOKEN REFRESH
   // ============================================
   useEffect(() => {
     const checkRole = async () => {
       console.log('🔍 Checking user role...');
-      const token = localStorage.getItem('accessToken');
+      let token = localStorage.getItem('accessToken');
       
       if (!token) {
         console.log('⚠️ No token found, defaulting to student');
@@ -170,9 +157,32 @@ const TutorSession = () => {
       
       try {
         const API_URL = process.env.REACT_APP_API_URL || 'https://eduspantech-backend.onrender.com/api';
-        const response = await fetch(`${API_URL}/auth/me`, {
+        let response = await fetch(`${API_URL}/auth/me`, {
           headers: { 'Authorization': `Bearer ${token}` }
         });
+
+        // ✅ FIX: If 401, try to refresh the token
+        if (response.status === 401) {
+          console.log('🔄 Token expired, attempting refresh...');
+          const refreshToken = localStorage.getItem('refreshToken');
+          if (refreshToken) {
+            const refreshRes = await fetch(`${API_URL}/auth/refresh`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ refreshToken })
+            });
+            if (refreshRes.ok) {
+              const refreshData = await refreshRes.json();
+              localStorage.setItem('accessToken', refreshData.accessToken);
+              token = refreshData.accessToken;
+              
+              // Retry with new token
+              response = await fetch(`${API_URL}/auth/me`, {
+                headers: { 'Authorization': `Bearer ${token}` }
+              });
+            }
+          }
+        }
         
         if (response.ok) {
           const data = await response.json();
@@ -187,27 +197,30 @@ const TutorSession = () => {
           setIsTutorUser(isTutor);
           setRoleLoaded(true);
           
-          console.log('👤 User role determined:', isTutor ? 'TUTOR' : 'STUDENT');
-          console.log('👤 User ID:', id);
-          console.log('👤 User Name:', name);
-          
-          // Store in session storage for debugging
-          sessionStorage.setItem('userRole', isTutor ? 'tutor' : 'student');
-          sessionStorage.setItem('userId', id);
+          console.log('👤 User role determined (Backend):', isTutor ? 'TUTOR' : 'STUDENT');
         } else {
-          console.error('❌ Failed to fetch user data:', response.status);
-          setUserRole('student');
-          setUserId(`user-${Date.now()}`);
-          setUserName('You');
-          setIsTutorUser(false);
-          setRoleLoaded(true);
+          throw new Error('Backend rejected token');
         }
       } catch (error) {
-        console.error('❌ Failed to check role:', error);
-        setUserRole('student');
-        setUserId(`user-${Date.now()}`);
-        setUserName('You');
-        setIsTutorUser(false);
+        console.warn('⚠️ Backend auth failed, falling back to Supabase...', error);
+        
+        // ✅ FALLBACK TO SUPABASE
+        try {
+          const { data: { session } } = await supabase.auth.getSession();
+          if (session?.user) {
+            const { data: profile } = await supabase.from('users').select('*').eq('id', session.user.id).single();
+            if (profile) {
+              const isTutor = profile.is_tutor === true || profile.role === 'tutor';
+              setUserRole(isTutor ? 'tutor' : 'student');
+              setUserId(profile.id);
+              setUserName(profile.name || 'You');
+              setIsTutorUser(isTutor);
+              console.log('👤 User role determined (Supabase Fallback):', isTutor ? 'TUTOR' : 'STUDENT');
+            }
+          }
+        } catch (supaErr) {
+          console.error('Supabase fallback also failed:', supaErr);
+        }
         setRoleLoaded(true);
       }
     };
@@ -216,7 +229,7 @@ const TutorSession = () => {
   }, []);
 
   // ============================================
-  // ✅ WEBRTC HOOK - WAIT FOR ROLE TO LOAD
+  // WEBRTC HOOK
   // ============================================
   const {
     isConnected,
@@ -236,7 +249,7 @@ const TutorSession = () => {
   );
 
   // ============================================
-  // ✅ WAITING STATE
+  // WAITING STATE
   // ============================================
   const [showWaitingScreen, setShowWaitingScreen] = useState(false);
   const [sessionReady, setSessionReady] = useState(false);
@@ -244,57 +257,34 @@ const TutorSession = () => {
   useEffect(() => {
     if (!roleLoaded) return;
     
-    // If user is tutor, always show session
     if (userRole === 'tutor') {
       setShowWaitingScreen(false);
       setSessionReady(true);
       return;
     }
     
-    // If user is student, wait for tutor
     if (userRole === 'student') {
-      // Check if tutor is already in participants
       const hasTutor = participants.some(p => p.role === 'tutor');
-      
       if (hasTutor || tutorJoined) {
         setShowWaitingScreen(false);
         setSessionReady(true);
-        console.log('✅ Tutor present, session ready!');
       } else {
         setShowWaitingScreen(true);
         setSessionReady(false);
-        console.log('⏳ Waiting for tutor...');
       }
     }
   }, [roleLoaded, userRole, participants, tutorJoined]);
 
-  // ============================================
-  // ✅ LISTEN FOR TUTOR JOINED EVENT
-  // ============================================
   useEffect(() => {
     const handleTutorJoined = () => {
-      console.log('👨‍🏫 Tutor joined event received!');
       if (userRole === 'student') {
         setShowWaitingScreen(false);
         setSessionReady(true);
       }
     };
-    
     window.addEventListener('tutor-joined', handleTutorJoined);
     return () => window.removeEventListener('tutor-joined', handleTutorJoined);
   }, [userRole]);
-
-  // ============================================
-  // ✅ DEBUG: LOG PARTICIPANTS
-  // ============================================
-  useEffect(() => {
-    if (participants.length > 0) {
-      console.log('👥 Participants:', participants);
-      const hasTutor = participants.some(p => p.role === 'tutor');
-      const hasStudent = participants.some(p => p.role === 'student');
-      console.log('📊 Room status:', { hasTutor, hasStudent, count: participants.length });
-    }
-  }, [participants]);
 
   // ============================================
   // WHITEBOARD STATE
@@ -310,7 +300,7 @@ const TutorSession = () => {
   const [maxHistory] = useState(50);
 
   // ============================================
-  // CHAT STATE
+  // CHAT & UI STATE
   // ============================================
   const [messages, setMessages] = useState([]);
   const [newMessage, setNewMessage] = useState('');
@@ -354,38 +344,52 @@ const TutorSession = () => {
   const drawingDataRef = useRef([]);
 
   // ============================================
-  // CANVAS SETUP
+  // CANVAS SETUP (FIXED PASSIVE LISTENERS)
   // ============================================
   useEffect(() => {
-    const canvas = canvasRef.current;
-    if (!canvas) return;
+    const timer = setTimeout(() => {
+      const canvas = canvasRef.current;
+      if (!canvas) return;
 
-    const ctx = canvas.getContext('2d');
-    ctx.lineWidth = strokeWidth;
-    ctx.lineCap = 'round';
-    ctx.lineJoin = 'round';
-    ctx.strokeStyle = selectedColor;
-    ctxRef.current = ctx;
+      const ctx = canvas.getContext('2d');
+      ctx.lineWidth = strokeWidth;
+      ctx.lineCap = 'round';
+      ctx.lineJoin = 'round';
+      ctx.strokeStyle = selectedColor;
+      ctxRef.current = ctx;
 
-    const resizeCanvas = () => {
-      const rect = canvas.parentElement?.getBoundingClientRect();
-      if (!rect) return;
-      const dpr = window.devicePixelRatio || 1;
-      canvas.width = rect.width * dpr;
-      canvas.height = rect.height * dpr;
-      canvas.style.width = rect.width + 'px';
-      canvas.style.height = rect.height + 'px';
-      ctx.scale(dpr, dpr);
+      const resizeCanvas = () => {
+        const rect = canvas.parentElement?.getBoundingClientRect();
+        if (!rect) return;
+        const dpr = window.devicePixelRatio || 1;
+        canvas.width = rect.width * dpr;
+        canvas.height = rect.height * dpr;
+        canvas.style.width = rect.width + 'px';
+        canvas.style.height = rect.height + 'px';
+        ctx.scale(dpr, dpr);
+        
+        if (drawingData.length > 0) {
+          redrawCanvas();
+        }
+      };
+
+      resizeCanvas();
+      window.addEventListener('resize', resizeCanvas);
+
+      // ✅ FIX: Prevent scrolling while drawing on mobile
+      const preventScroll = (e) => { if (userRole === 'tutor') e.preventDefault(); };
+      canvas.addEventListener('touchstart', preventScroll, { passive: false });
+      canvas.addEventListener('touchmove', preventScroll, { passive: false });
       
-      if (drawingData.length > 0) {
-        redrawCanvas();
-      }
-    };
+      return () => {
+        window.removeEventListener('resize', resizeCanvas);
+        canvas.removeEventListener('touchstart', preventScroll);
+        canvas.removeEventListener('touchmove', preventScroll);
+      };
+    }, 100);
 
-    resizeCanvas();
-    window.addEventListener('resize', resizeCanvas);
-    return () => window.removeEventListener('resize', resizeCanvas);
-  }, [strokeWidth, selectedColor]);
+    return () => clearTimeout(timer);
+  }, [strokeWidth, selectedColor, sessionReady, userRole]); 
 
   // ============================================
   // REDRAW CANVAS
@@ -422,7 +426,7 @@ const TutorSession = () => {
   // DRAWING HANDLERS
   // ============================================
   const startDrawing = (e) => {
-    if (userRole !== 'tutor') return;
+    if (userRole !== 'tutor' || !ctxRef.current) return;
     e.preventDefault();
     
     const canvas = canvasRef.current;
@@ -439,7 +443,7 @@ const TutorSession = () => {
   };
 
   const draw = (e) => {
-    if (!isDrawing || userRole !== 'tutor') return;
+    if (!isDrawing || userRole !== 'tutor' || !ctxRef.current) return;
     e.preventDefault();
     
     const canvas = canvasRef.current;
@@ -504,7 +508,7 @@ const TutorSession = () => {
   // CANVAS CLEAR
   // ============================================
   const clearWhiteboard = () => {
-    if (userRole !== 'tutor') return;
+    if (userRole !== 'tutor' || !ctxRef.current) return;
     const canvas = canvasRef.current;
     const ctx = ctxRef.current;
     ctx.clearRect(0, 0, canvas.width, canvas.height);
@@ -523,7 +527,7 @@ const TutorSession = () => {
   // UNDO / REDO
   // ============================================
   const undo = () => {
-    if (userRole !== 'tutor' || historyIndex <= 0) return;
+    if (userRole !== 'tutor' || historyIndex <= 0 || !ctxRef.current) return;
     const newIndex = historyIndex - 1;
     setHistoryIndex(newIndex);
     const canvas = canvasRef.current;
@@ -538,7 +542,7 @@ const TutorSession = () => {
   };
 
   const redo = () => {
-    if (userRole !== 'tutor' || historyIndex >= canvasHistory.length - 1) return;
+    if (userRole !== 'tutor' || historyIndex >= canvasHistory.length - 1 || !ctxRef.current) return;
     const newIndex = historyIndex + 1;
     setHistoryIndex(newIndex);
     const canvas = canvasRef.current;
@@ -553,7 +557,7 @@ const TutorSession = () => {
   };
 
   // ============================================
-  // RECEIVE WHITEBOARD UPDATES FROM TUTOR
+  // RECEIVE WHITEBOARD UPDATES
   // ============================================
   useEffect(() => {
     const handleWhiteboardUpdate = (event) => {

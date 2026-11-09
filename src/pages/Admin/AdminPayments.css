@@ -179,3 +179,11 @@
         padding: 8px 12px;
     }
 }
+
+.payments-table td button {
+    transition: opacity 0.2s;
+}
+
+.payments-table td button:hover {
+    opacity: 0.8;
+}

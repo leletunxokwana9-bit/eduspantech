@@ -1,303 +1,302 @@
-/* PaymentSuccess.css - Updated with Theme Variables */
+/* src/pages/PaymentSuccess.css */
 
-.payment-success-page {
+.success-page {
+  padding: 60px 20px 80px;
   min-height: 100vh;
-  padding: 40px 20px;
-  background: var(--bg-primary);
+  background: #0a0e1a !important;
   display: flex;
-  align-items: center;
   justify-content: center;
-  transition: background 0.3s ease;
+  font-family: inherit;
 }
 
-.payment-success-container {
-  background: var(--bg-secondary);
-  border-radius: 24px;
-  padding: 48px 40px;
+.success-container {
   max-width: 600px;
   width: 100%;
-  box-shadow: 0 20px 60px var(--shadow-color);
-  animation: fadeInUp 0.6s ease-out;
-  border: 1px solid var(--border-color);
 }
 
-@keyframes fadeInUp {
-  from {
-    opacity: 0;
-    transform: translateY(30px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
-.success-icon {
-  display: flex;
-  justify-content: center;
+/* ===== MAIN CARD ===== */
+.success-card {
+  background: #141b2d !important;
+  border: 1px solid rgba(255, 255, 255, 0.06) !important;
+  border-radius: 20px;
+  padding: 40px;
+  text-align: center;
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.4);
   margin-bottom: 24px;
 }
 
-.success-circle {
+.success-icon-wrapper {
   width: 80px;
   height: 80px;
+  background: rgba(52, 211, 153, 0.1);
   border-radius: 50%;
-  background: var(--accent-success);
   display: flex;
   align-items: center;
   justify-content: center;
-  box-shadow: 0 8px 30px rgba(34, 197, 94, 0.3);
-  animation: popIn 0.5s ease-out 0.2s both;
+  margin: 0 auto 24px;
+  color: #34d399;
 }
 
-@keyframes popIn {
-  from {
-    transform: scale(0);
-  }
-  to {
-    transform: scale(1);
-  }
-}
-
-.success-check {
-  font-size: 40px;
-  color: white;
-  font-weight: 700;
-}
-
-.success-title {
-  text-align: center;
+.success-card h1 {
   font-size: 28px;
   font-weight: 800;
-  color: var(--text-primary);
-  margin-bottom: 6px;
+  color: #ffffff !important;
+  margin: 0 0 12px 0;
 }
 
 .success-subtitle {
-  text-align: center;
   font-size: 16px;
-  color: var(--text-secondary);
-  margin-bottom: 28px;
+  color: #94a3b8 !important;
+  margin: 0 0 32px 0;
+  line-height: 1.5;
 }
 
-.success-transaction {
-  text-align: center;
-  font-size: 12px;
-  color: var(--text-muted);
-  margin-bottom: 20px;
+.success-subtitle strong {
+  color: #ffffff !important;
 }
 
-.transaction-label {
-  font-weight: 600;
-  color: var(--text-secondary);
-}
-
-.transaction-id {
-  font-family: monospace;
-  color: var(--text-primary);
-  margin-left: 4px;
-}
-
-.success-user-info {
-  background: var(--bg-card);
+/* ===== RECEIPT BOX ===== */
+.receipt-box {
+  background: rgba(255, 255, 255, 0.02) !important;
+  border: 1px solid rgba(255, 255, 255, 0.06) !important;
   border-radius: 12px;
-  padding: 16px 20px;
-  margin-bottom: 24px;
+  padding: 20px;
+  margin-bottom: 32px;
+  text-align: left;
 }
 
-.info-row {
+.receipt-row {
   display: flex;
   justify-content: space-between;
-  padding: 6px 0;
-  border-bottom: 1px solid var(--border-color);
-}
-
-.info-row:last-child {
-  border-bottom: none;
-}
-
-.info-label {
-  font-size: 14px;
-  color: var(--text-secondary);
-  font-weight: 500;
-}
-
-.info-value {
-  font-size: 14px;
-  color: var(--text-primary);
-  font-weight: 600;
-}
-
-.plan-badge {
-  background: var(--gradient-primary);
-  color: white;
-  padding: 2px 12px;
-  border-radius: 12px;
-  font-size: 12px;
-}
-
-.success-features {
-  margin-bottom: 24px;
-}
-
-.success-features h3 {
-  font-size: 16px;
-  font-weight: 700;
-  color: var(--text-primary);
-  margin-bottom: 10px;
-}
-
-.success-features ul {
-  list-style: none;
-  padding: 0;
-  margin: 0;
-}
-
-.success-features li {
-  display: flex;
+  padding: 10px 0;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.04);
   align-items: center;
-  gap: 8px;
+}
+
+.receipt-row:first-child { padding-top: 0; }
+.receipt-row:last-child { border-bottom: none; padding-bottom: 0; }
+
+.receipt-label {
+  color: #94a3b8 !important;
   font-size: 14px;
-  color: var(--text-secondary);
-  padding: 4px 0;
 }
 
-.feature-check {
-  color: var(--accent-success);
-  font-weight: 700;
-  font-size: 16px;
-}
-
-.success-next-steps {
-  background: rgba(79, 70, 229, 0.08);
-  border-radius: 12px;
-  padding: 16px 20px;
-  margin-bottom: 24px;
-}
-
-.success-next-steps h3 {
-  font-size: 16px;
-  font-weight: 700;
-  color: var(--text-primary);
-  margin-bottom: 10px;
-}
-
-.success-next-steps ol {
-  margin: 0;
-  padding-left: 20px;
-}
-
-.success-next-steps li {
+.receipt-value {
+  color: #ffffff !important;
+  font-weight: 600;
   font-size: 14px;
-  color: var(--text-secondary);
-  line-height: 1.7;
-  padding: 2px 0;
+  text-align: right;
+  word-break: break-all;
 }
 
-.success-next-steps li strong {
-  color: var(--text-primary);
+.receipt-value.mono {
+  font-family: 'Courier New', Courier, monospace;
+  letter-spacing: 0.5px;
+  color: #818cf8 !important;
 }
 
-.success-notes {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 12px;
-  margin-bottom: 28px;
-}
-
-.note-item {
-  display: flex;
-  gap: 10px;
-  padding: 12px 14px;
-  background: var(--bg-card);
-  border-radius: 10px;
-  align-items: flex-start;
-}
-
-.note-icon {
-  font-size: 18px;
-  flex-shrink: 0;
-  margin-top: 2px;
-}
-
-.note-item strong {
-  font-size: 13px;
-  color: var(--text-primary);
-  display: block;
-}
-
-.note-item p {
-  font-size: 12px;
-  color: var(--text-secondary);
-  margin: 2px 0 0 0;
-}
-
+/* ===== ACTIONS ===== */
 .success-actions {
   display: flex;
   gap: 12px;
-  margin-bottom: 20px;
+  justify-content: center;
 }
 
-.btn-dashboard,
-.btn-session {
+.btn-primary, .btn-secondary {
   padding: 14px 24px;
-  border: none;
   border-radius: 10px;
-  font-size: 16px;
-  font-weight: 700;
+  font-size: 15px;
+  font-weight: 600;
   cursor: pointer;
+  border: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   transition: all 0.3s ease;
+}
+
+.btn-primary {
+  background: linear-gradient(135deg, #4f46e5, #7c3aed) !important;
+  color: #ffffff !important;
   flex: 1;
 }
 
-.btn-dashboard {
-  background: var(--gradient-primary);
-  color: white;
-}
-
-.btn-dashboard:hover {
+.btn-primary:hover {
   transform: translateY(-2px);
-  box-shadow: 0 8px 25px rgba(79, 70, 229, 0.25);
+  box-shadow: 0 8px 25px rgba(79, 70, 229, 0.3);
 }
 
-.btn-session {
-  background: var(--bg-card);
-  color: var(--text-primary);
-  border: 1px solid var(--border-color);
+.btn-secondary {
+  background: rgba(255, 255, 255, 0.04) !important;
+  color: #ffffff !important;
+  border: 1px solid rgba(255, 255, 255, 0.1);
 }
 
-.btn-session:hover {
-  background: var(--bg-hover);
+.btn-secondary:hover {
+  background: rgba(255, 255, 255, 0.08) !important;
 }
 
-.success-footer {
+/* ===== NEXT STEPS ===== */
+.next-steps-card {
+  background: #141b2d !important;
+  border: 1px solid rgba(255, 255, 255, 0.06) !important;
+  border-radius: 20px;
+  padding: 32px;
+  margin-bottom: 24px;
+}
+
+.next-steps-card h3 {
+  font-size: 18px;
+  font-weight: 700;
+  color: #ffffff !important;
+  margin: 0 0 20px 0;
+}
+
+.next-steps-card ul {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.next-steps-card li {
+  display: flex;
+  gap: 16px;
+  align-items: flex-start;
+}
+
+.step-icon {
+  font-size: 24px;
+  background: rgba(255, 255, 255, 0.04);
+  width: 48px;
+  height: 48px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 12px;
+  flex-shrink: 0;
+}
+
+.next-steps-card li strong {
+  display: block;
+  color: #ffffff !important;
+  font-size: 15px;
+  margin-bottom: 4px;
+}
+
+.next-steps-card li p {
+  margin: 0;
+  font-size: 14px;
+  color: #94a3b8 !important;
+  line-height: 1.5;
+}
+
+/* ===== DISCLAIMER ===== */
+.disclaimer-section {
+  padding: 0 12px;
   text-align: center;
-  font-size: 13px;
-  color: var(--text-muted);
-  padding-top: 16px;
-  border-top: 1px solid var(--border-color);
 }
 
-@media (max-width: 480px) {
-  .payment-success-container {
-    padding: 28px 20px;
-  }
+.disclaimer-section p {
+  font-size: 12px;
+  color: #64748b !important;
+  line-height: 1.6;
+  margin-bottom: 12px;
+}
 
-  .success-title {
-    font-size: 24px;
-  }
+.disclaimer-section strong { color: #94a3b8 !important; }
 
-  .success-notes {
-    grid-template-columns: 1fr;
-  }
+.disclaimer-section a {
+  color: #818cf8;
+  text-decoration: none;
+}
 
-  .success-actions {
-    flex-direction: column;
-  }
+.disclaimer-section a:hover {
+  color: #a5b4fc;
+  text-decoration: underline;
+}
 
-  .btn-dashboard,
-  .btn-session {
-    flex: none;
-    text-align: center;
-  }
+/* ===== RESPONSIVE ===== */
+@media (max-width: 600px) {
+  .success-page { padding: 40px 16px; }
+  .success-card { padding: 32px 20px; }
+  .success-actions { flex-direction: column; }
+  .btn-primary, .btn-secondary { width: 100%; }
+  .next-steps-card { padding: 24px 20px; }
+  .receipt-row { flex-direction: column; align-items: flex-start; gap: 4px; }
+  .receipt-value { text-align: left; }
+}
+
+/* ===== LIGHT THEME ===== */
+[data-theme="light"] .success-page { background: #f8fafc !important; }
+
+[data-theme="light"] .success-card,
+[data-theme="light"] .next-steps-card {
+  background: #ffffff !important;
+  border-color: rgba(0, 0, 0, 0.06) !important;
+}
+
+[data-theme="light"] .success-card h1,
+[data-theme="light"] .next-steps-card h3,
+[data-theme="light"] .success-subtitle strong,
+[data-theme="light"] .receipt-value,
+[data-theme="light"] .next-steps-card li strong {
+  color: #0f172a !important;
+}
+
+[data-theme="light"] .success-subtitle,
+[data-theme="light"] .receipt-label,
+[data-theme="light"] .next-steps-card li p {
+  color: rgba(0, 0, 0, 0.6) !important;
+}
+
+[data-theme="light"] .receipt-box {
+  background: rgba(0, 0, 0, 0.02) !important;
+  border-color: rgba(0, 0, 0, 0.06) !important;
+}
+
+[data-theme="light"] .receipt-row { border-bottom-color: rgba(0, 0, 0, 0.04); }
+
+[data-theme="light"] .btn-secondary {
+  background: rgba(0, 0, 0, 0.04) !important;
+  color: #0f172a !important;
+  border-color: rgba(0, 0, 0, 0.1);
+}
+
+[data-theme="light"] .btn-secondary:hover { background: rgba(0, 0, 0, 0.08) !important; }
+
+[data-theme="light"] .step-icon { background: rgba(0, 0, 0, 0.03); }
+
+[data-theme="light"] .disclaimer-section p { color: rgba(0, 0, 0, 0.5) !important; }
+[data-theme="light"] .disclaimer-section strong { color: rgba(0, 0, 0, 0.7) !important; }
+[data-theme="light"] .disclaimer-section a { color: #4f46e5; }
+[data-theme="light"] .receipt-value.mono { color: #4f46e5 !important; }
+
+/* Add this at the bottom of PaymentSuccess.css */
+
+.disclaimer-link-btn {
+  background: none;
+  border: none;
+  padding: 0;
+  font-family: inherit;
+  font-size: inherit;
+  color: #818cf8;
+  cursor: pointer;
+  text-decoration: none;
+  transition: color 0.2s ease;
+}
+
+.disclaimer-link-btn:hover {
+  color: #a5b4fc;
+  text-decoration: underline;
+}
+
+[data-theme="light"] .disclaimer-link-btn {
+  color: #4f46e5;
+}
+
+[data-theme="light"] .disclaimer-link-btn:hover {
+  color: #4338ca;
 }

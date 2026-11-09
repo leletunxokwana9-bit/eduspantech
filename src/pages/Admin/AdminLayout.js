@@ -1,7 +1,33 @@
 // src/pages/Admin/AdminLayout.js - COMPLETE WITH PRICING (SUPER-ADMIN ONLY)
 import React, { useState, useEffect, useRef } from 'react';
 import { Outlet, NavLink, useNavigate, useLocation } from 'react-router-dom';
+import { 
+    LayoutDashboard, 
+    Users, 
+    FileText, 
+    BookOpen, 
+    CreditCard, 
+    Gem, 
+    TrendingUp, 
+    Settings, 
+    ClipboardList, 
+    Bell, 
+    User, 
+    LogOut, 
+    RefreshCw,
+    ChevronLeft,
+    ChevronRight,
+    AlertTriangle,
+    CheckCircle,
+    PlayCircle,
+    FileEdit,
+    XCircle,
+    Megaphone
+} from 'lucide-react';
 import './AdminLayout.css';
+
+// Import your favicon
+import EduSpantechFavicon from '../../assets/favicon-96x96.png';
 
 const API = process.env.REACT_APP_API_URL || 'https://eduspantech-backend.onrender.com/api';
 
@@ -168,28 +194,26 @@ const AdminLayout = () => {
     };
 
     // ============================================================
-    // SIDEBAR MENU
-    // Dashboard now points to /admin/dashboard with end:true
-    // Pricing item is only rendered for super-admins
+    // SIDEBAR MENU (Lucide Icons)
     // ============================================================
     const baseMenuItems = [
-        { path: '/admin/dashboard', icon: '📊', label: 'Dashboard', end: true },
-        { path: '/admin/users', icon: '👥', label: 'Members' },
-        { path: '/admin/tutors', icon: '📝', label: 'Tutor Applications' },
-        { path: '/admin/content', icon: '📚', label: 'Content' },
-        { path: '/admin/payments', icon: '💰', label: 'Payments' }
+        { path: '/admin/dashboard', icon: <LayoutDashboard size={20} />, label: 'Dashboard', end: true },
+        { path: '/admin/users', icon: <Users size={20} />, label: 'Members' },
+        { path: '/admin/tutors', icon: <FileText size={20} />, label: 'Tutor Applications' },
+        { path: '/admin/content', icon: <BookOpen size={20} />, label: 'Content' },
+        { path: '/admin/payments', icon: <CreditCard size={20} />, label: 'Payments' }
     ];
 
     const superAdminItems = [
-        { path: '/admin/pricing', icon: '💎', label: 'Pricing Plans' }
+        { path: '/admin/pricing', icon: <Gem size={20} />, label: 'Pricing Plans' }
     ];
 
     const tailMenuItems = [
-        { path: '/admin/analytics', icon: '📈', label: 'Analytics' },
-        { path: '/admin/settings', icon: '⚙️', label: 'Settings' },
-        { path: '/admin/activity', icon: '📋', label: 'Activity Log' },
-        { path: '/admin/notifications', icon: '🔔', label: 'Notifications' },
-        { path: '/admin/profile', icon: '👤', label: 'My Profile' }
+        { path: '/admin/analytics', icon: <TrendingUp size={20} />, label: 'Analytics' },
+        { path: '/admin/settings', icon: <Settings size={20} />, label: 'Settings' },
+        { path: '/admin/activity', icon: <ClipboardList size={20} />, label: 'Activity Log' },
+        { path: '/admin/notifications', icon: <Bell size={20} />, label: 'Notifications' },
+        { path: '/admin/profile', icon: <User size={20} />, label: 'My Profile' }
     ];
 
     const menuItems = [
@@ -220,18 +244,19 @@ const AdminLayout = () => {
     const avatarSrc = admin?.avatar;
     const avatarInitial = admin?.name?.[0]?.toUpperCase() || 'A';
 
+    // Notification Icon Helper
     const getIcon = (type, source) => {
-        if (source === 'platform') return '📣';
+        if (source === 'platform') return <Megaphone size={18} />;
         switch (type) {
-            case 'warning': return '⚠️';
-            case 'session_booked': return '📚';
-            case 'session_accepted': return '✅';
-            case 'session_started': return '▶️';
-            case 'session_ended': return '📝';
-            case 'session_cancelled': return '❌';
-            case 'new_tutor': return '👨‍🏫';
-            case 'system': return '📣';
-            default: return '🔔';
+            case 'warning': return <AlertTriangle size={18} />;
+            case 'session_booked': return <BookOpen size={18} />;
+            case 'session_accepted': return <CheckCircle size={18} />;
+            case 'session_started': return <PlayCircle size={18} />;
+            case 'session_ended': return <FileEdit size={18} />;
+            case 'session_cancelled': return <XCircle size={18} />;
+            case 'new_tutor': return <User size={18} />;
+            case 'system': return <Megaphone size={18} />;
+            default: return <Bell size={18} />;
         }
     };
 
@@ -240,7 +265,8 @@ const AdminLayout = () => {
             <aside className="admin-sidebar">
                 <div className="sidebar-header">
                     <div className="logo">
-                        <span className="logo-icon">🎓</span>
+                        {/* Using the favicon as the logo */}
+                        <img src={EduSpantechFavicon} alt="EduSpantech" className="logo-img" />
                         <span className="logo-text">EduSpantech</span>
                     </div>
                     <span className="admin-badge">Admin</span>
@@ -310,7 +336,8 @@ const AdminLayout = () => {
                         </div>
                     </div>
                     <button className="logout-btn" onClick={handleLogout}>
-                        🚪 Logout
+                        <LogOut size={16} style={{ marginRight: '8px' }} />
+                        Logout
                     </button>
                 </div>
             </aside>
@@ -322,7 +349,7 @@ const AdminLayout = () => {
                         onClick={() => setSidebarOpen(!sidebarOpen)}
                         aria-label="Toggle sidebar"
                     >
-                        {sidebarOpen ? '◀' : '▶'}
+                        {sidebarOpen ? <ChevronLeft size={20} /> : <ChevronRight size={20} />}
                     </button>
                     <div className="header-title">
                         <h1>Administration Panel</h1>
@@ -342,7 +369,7 @@ const AdminLayout = () => {
                                 title="Notifications"
                                 onClick={handleBellToggle}
                             >
-                                🔔
+                                <Bell size={20} />
                                 {unreadCount > 0 && (
                                     <span className="header-badge">{unreadCount}</span>
                                 )}
@@ -365,7 +392,7 @@ const AdminLayout = () => {
                                     <div className="admin-bell-body">
                                         {notifications.length === 0 ? (
                                             <div className="admin-bell-empty">
-                                                <span>🔔</span>
+                                                <Bell size={24} style={{ opacity: 0.5, marginBottom: '8px' }} />
                                                 <p>No notifications</p>
                                             </div>
                                         ) : (
@@ -421,7 +448,7 @@ const AdminLayout = () => {
                             title="Refresh"
                             onClick={() => window.location.reload()}
                         >
-                            🔄
+                            <RefreshCw size={20} />
                         </button>
                     </div>
                 </header>

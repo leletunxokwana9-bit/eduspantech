@@ -56,8 +56,7 @@ const Register = () => {
     checkAuth();
   }, [navigate]);
 
-  // ✅ CHANGED: Tutor alert text + redirect target now points to /tutors
-  // Show message that only students can register
+  // Tutor alert text + redirect target now points to /tutors
   useEffect(() => {
     const urlParams = new URLSearchParams(window.location.search);
     if (urlParams.get('type') === 'tutor') {
@@ -66,9 +65,6 @@ const Register = () => {
     }
   }, [navigate]);
 
-  // ============================================
-  // FIX: Return integer values for grade
-  // ============================================
   const getGradeOptions = () => {
     if (formData.cohort === 'HighSchool') {
       return [
@@ -94,9 +90,6 @@ const Register = () => {
     });
   };
 
-  // ============================================
-  // FIX: Handle grade selection with integer value
-  // ============================================
   const handleGradeChange = (e) => {
     const value = e.target.value;
     const selectedGrade = getGradeOptions().find(g => g.label === value);
@@ -130,9 +123,6 @@ const Register = () => {
       return;
     }
 
-    // ============================================
-    // FIX: Use gradeValue (integer) not grade (string)
-    // ============================================
     if (!formData.gradeValue) {
       setError('Please select your grade');
       setLoading(false);
@@ -146,7 +136,7 @@ const Register = () => {
         password: formData.password,
         cohort: formData.cohort,
         country: formData.country,
-        grade: formData.gradeValue,  // ← FIXED: Send integer value
+        grade: formData.gradeValue,
         cohort_flag: formData.cohort === 'HighSchool' ? 'HighSchool' : 'UniversityFirstYear',
         role: 'student'
       };
@@ -282,80 +272,51 @@ const Register = () => {
         </div>
 
         <div className="register-container">
-          <div className="register-right" style={{ maxWidth: '500px', margin: '0 auto' }}>
-            <div className="register-card" style={{ textAlign: 'center', padding: '48px 40px' }}>
+          <div className="register-right" style={{ maxWidth: '500px', margin: '0 auto', width: '100%' }}>
+            <div className="register-card verify-success-card">
               <div className="verification-success">
-                <div className="success-icon">📧</div>
-                <h2 style={{ fontSize: '28px', fontWeight: 800, marginTop: '16px', color: '#1a1a2e' }}>
-                  Verify Your Email
-                </h2>
-                <p style={{ fontSize: '16px', color: '#4b5563', lineHeight: '1.7', marginTop: '8px' }}>
+                <div className="success-icon">
+                  <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
+                    <polyline points="22 4 12 14.01 9 11.01"></polyline>
+                  </svg>
+                </div>
+                
+                <h2>Verify Your Email</h2>
+                <p className="verify-subtitle">
                   We've sent a verification link to <br />
-                  <strong style={{ color: '#4f46e5' }}>{registeredEmail}</strong>
+                  <strong>{registeredEmail}</strong>
                 </p>
-                <div style={{ 
-                  background: '#f0f4ff', 
-                  padding: '16px', 
-                  borderRadius: '12px', 
-                  marginTop: '20px',
-                  border: '1px solid #c7d2fe'
-                }}>
-                  <p style={{ fontSize: '14px', color: '#3730a3' }}>
-                    🔒 Please check your inbox and click the verification link to activate your account.
-                  </p>
+
+                <div className="verify-note">
+                  <p>🔒 Please check your inbox and click the verification link to activate your account.</p>
                 </div>
-                <div style={{ marginTop: '24px' }}>
-                  <p style={{ fontSize: '14px', color: '#6b7280' }}>
-                    Didn't receive the email? <br />
-                    <button 
-                      onClick={async () => {
-                        try {
-                          setLoading(true);
-                          await authService.resendVerification(registeredEmail);
-                          alert('Verification email resent! Please check your inbox.');
-                        } catch (err) {
-                          alert('Failed to resend verification email. Please try again.');
-                        } finally {
-                          setLoading(false);
-                        }
-                      }}
-                      disabled={loading}
-                      style={{
-                        background: 'none',
-                        border: 'none',
-                        color: '#4f46e5',
-                        fontWeight: 600,
-                        cursor: 'pointer',
-                        textDecoration: 'underline',
-                        marginTop: '4px'
-                      }}
-                    >
-                      {loading ? 'Sending...' : 'Resend verification email'}
-                    </button>
-                  </p>
+
+                <div className="verify-resend">
+                  <p>Didn't receive the email?</p>
+                  <button 
+                    onClick={async () => {
+                      try {
+                        setLoading(true);
+                        await authService.resendVerification(registeredEmail);
+                        alert('Verification email resent! Please check your inbox.');
+                      } catch (err) {
+                        alert('Failed to resend verification email. Please try again.');
+                      } finally {
+                        setLoading(false);
+                      }
+                    }}
+                    disabled={loading}
+                    className="resend-link"
+                  >
+                    {loading ? 'Sending...' : 'Resend verification email'}
+                  </button>
                 </div>
+
                 <button
                   onClick={() => navigate('/login')}
-                  style={{
-                    marginTop: '24px',
-                    padding: '12px 32px',
-                    background: '#4f46e5',
-                    color: 'white',
-                    border: 'none',
-                    borderRadius: '10px',
-                    fontSize: '16px',
-                    fontWeight: 600,
-                    cursor: 'pointer',
-                    transition: 'all 0.3s ease'
-                  }}
-                  onMouseEnter={(e) => {
-                    e.target.style.background = '#4338ca';
-                    e.target.style.transform = 'translateY(-2px)';
-                  }}
-                  onMouseLeave={(e) => {
-                    e.target.style.background = '#4f46e5';
-                    e.target.style.transform = 'translateY(0)';
-                  }}
+                  className="register-submit-btn"
+                  style={{ marginTop: '24px', width: '100%' }}
                 >
                   Go to Login →
                 </button>
@@ -417,8 +378,6 @@ const Register = () => {
               </div>
             </div>
 
-            {/* Tutor Registration Note */}
-            {/* ✅ CHANGED: "admin team" → "Eduspantech team", and link now points to /tutors */}
             <div className="tutor-note">
               <div className="tutor-note-icon">👨‍🏫</div>
               <div className="tutor-note-content">

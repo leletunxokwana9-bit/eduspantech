@@ -584,14 +584,12 @@ function Navbar() {
                     ) : (
                       <span className="user-avatar-initial">{getUserInitial()}</span>
                     )}
-                    {/* Role badge */}
+                    {/* Role badge (admin only) */}
                     {isAdmin && (
                       <span className="admin-badge-avatar" title="Admin">👑</span>
                     )}
-                    {isTutor && !isAdmin && (
-                      <span className="tutor-badge" title="Tutor">👨‍🏫</span>
-                    )}
-                    {/* ✅ NEW: Chevron badge at bottom-right of avatar */}
+                    {/* ✅ FIX: Removed the interfering 👨‍🏫 tutor emoji badge here */}
+                    {/* Chevron badge at bottom-right of avatar */}
                     <span className="avatar-chevron" aria-hidden="true">
                       <FiChevronDown />
                     </span>

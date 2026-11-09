@@ -1,16 +1,17 @@
-// Authentication hook with mock data for development
-import { useState } from 'react';
+// src/hooks/useAuth.js
+import { createContext, useContext, useState, useCallback } from 'react';
 import authService from '../services/authService';
 
-export const useAuth = () => {
+const AuthContext = createContext(null);
+
+export const AuthProvider = ({ children }) => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
-  const [user, setUser] = useState(null);
+  const [user, setUser] = useState(() => authService.getStoredUser());
 
-  const register = async (userData) => {
+  const register = useCallback(async (userData) => {
     setLoading(true);
     setError(null);
-    
     try {
       const result = await authService.register(userData);
       setUser(result.user);
@@ -21,12 +22,11 @@ export const useAuth = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
-  const login = async (email, password) => {
+  const login = useCallback(async (email, password) => {
     setLoading(true);
     setError(null);
-    
     try {
       const result = await authService.login(email, password);
       setUser(result.user);
@@ -37,12 +37,11 @@ export const useAuth = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
-  const logout = async () => {
+  const logout = useCallback(async () => {
     setLoading(true);
     setError(null);
-    
     try {
       const result = await authService.logout();
       setUser(null);
@@ -53,12 +52,11 @@ export const useAuth = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
-  const getCurrentUser = async () => {
+  const getCurrentUser = useCallback(async () => {
     setLoading(true);
     setError(null);
-    
     try {
       const result = await authService.getCurrentUser();
       setUser(result);
@@ -69,9 +67,9 @@ export const useAuth = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
-  return {
+  const value = {
     loading,
     error,
     user,
@@ -79,8 +77,18 @@ export const useAuth = () => {
     login,
     logout,
     getCurrentUser,
-    isAuthenticated: !!user
+    isAuthenticated: !!user,
   };
+
+  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
+};
+
+export const useAuth = () => {
+  const ctx = useContext(AuthContext);
+  if (!ctx) {
+    throw new Error('useAuth must be used inside <AuthProvider>');
+  }
+  return ctx;
 };
 
 export default useAuth;

@@ -1,6 +1,25 @@
 // src/pages/Admin/AdminDashboard.js
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { 
+    Users, 
+    GraduationCap, 
+    Clock, 
+    BookOpen, 
+    Wallet, 
+    TrendingUp,
+    ShieldCheck,
+    UserCog,
+    UserX,
+    UserCheck,
+    Trash2,
+    CheckCircle,
+    XCircle,
+    Settings,
+    CalendarClock,
+    FileEdit,
+    Activity
+} from 'lucide-react';
 import './AdminDashboard.css';
 
 const AdminDashboard = () => {
@@ -92,22 +111,23 @@ const AdminDashboard = () => {
     );
 
     const getActionIcon = (action) => {
+        const iconProps = { size: 18 };
         const icons = {
-            'admin_access': '🔐',
-            'update_user': '✏️',
-            'ban_user': '🚫',
-            'unban_user': '✅',
-            'delete_user': '🗑️',
-            'approve_tutor': '✅',
-            'reject_tutor': '❌',
-            'create_subject': '📚',
-            'update_subject': '✏️',
-            'delete_subject': '🗑️',
-            'update_settings': '⚙️',
-            'create_shift': '🕐',
-            'update_shift': '✏️'
+            'admin_access': <ShieldCheck {...iconProps} />,
+            'update_user': <UserCog {...iconProps} />,
+            'ban_user': <UserX {...iconProps} />,
+            'unban_user': <UserCheck {...iconProps} />,
+            'delete_user': <Trash2 {...iconProps} />,
+            'approve_tutor': <CheckCircle {...iconProps} />,
+            'reject_tutor': <XCircle {...iconProps} />,
+            'create_subject': <BookOpen {...iconProps} />,
+            'update_subject': <FileEdit {...iconProps} />,
+            'delete_subject': <Trash2 {...iconProps} />,
+            'update_settings': <Settings {...iconProps} />,
+            'create_shift': <CalendarClock {...iconProps} />,
+            'update_shift': <FileEdit {...iconProps} />
         };
-        return icons[action] || '📝';
+        return icons[action] || <Activity {...iconProps} />;
     };
 
     if (loading) {
@@ -125,21 +145,21 @@ const AdminDashboard = () => {
                 <StatCard 
                     title="Total Users" 
                     value={stats?.users?.total?.toLocaleString()} 
-                    icon="👥" 
+                    icon={<Users size={24} />} 
                     color="blue"
                     onClick={() => navigate('/admin/users')}
                 />
                 <StatCard 
                     title="Total Tutors" 
                     value={stats?.users?.tutors?.toLocaleString()} 
-                    icon="👨‍🏫" 
+                    icon={<GraduationCap size={24} />} 
                     color="green"
                     onClick={() => navigate('/admin/tutors')}
                 />
                 <StatCard 
                     title="Pending Tutors" 
                     value={stats?.users?.pendingTutors} 
-                    icon="⏳" 
+                    icon={<Clock size={24} />} 
                     color="yellow"
                     subtitle="Awaiting approval"
                     onClick={() => navigate('/admin/tutors?status=pending')}
@@ -147,21 +167,21 @@ const AdminDashboard = () => {
                 <StatCard 
                     title="Active Sessions" 
                     value={stats?.sessions?.active} 
-                    icon="📚" 
+                    icon={<BookOpen size={24} />} 
                     color="purple"
                     subtitle={`${stats?.sessions?.today || 0} today`}
                 />
                 <StatCard 
                     title="Total Revenue" 
                     value={`R${stats?.revenue?.total?.toLocaleString() || 0}`} 
-                    icon="💰" 
+                    icon={<Wallet size={24} />} 
                     color="emerald"
                     onClick={() => navigate('/admin/payments')}
                 />
                 <StatCard 
                     title="Monthly Revenue" 
                     value={`R${stats?.revenue?.monthly?.toLocaleString() || 0}`} 
-                    icon="📈" 
+                    icon={<TrendingUp size={24} />} 
                     color="indigo"
                     subtitle={`Weekly: R${stats?.revenue?.weekly?.toLocaleString() || 0}`}
                 />

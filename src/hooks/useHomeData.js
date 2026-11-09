@@ -1,10 +1,7 @@
 // src/hooks/useHomeData.js
 import { useState, useEffect } from 'react';
 import { homeService } from '../services/homeService';
-
-const API_URL =
-  process.env.REACT_APP_API_URL ||
-  'https://eduspantech-backend.onrender.com/api';
+import { useAuth } from './useAuth';
 
 const CANONICAL_GRADES = {
   'grade-8-9':   { key: 'grade8-9',   label: 'Grade 8 – 9',   tier: '8-9' },
@@ -24,7 +21,6 @@ const canonicalGrade = (raw) => {
   return CANONICAL_GRADES[clean] || null;
 };
 
-// numeric grade ("8", 8, "12") → tier key ('8-9', '12')
 const numericGradeToTier = (rawGrade) => {
   if (rawGrade == null || rawGrade === '') return null;
   const n = parseInt(rawGrade, 10);
@@ -95,39 +91,11 @@ const normaliseSubject = (subject) => {
   };
 };
 
-const fetchCategories = async () => {
-  try {
-    const res = await fetch(`${API_URL}/content/categories`);
-    if (!res.ok) return [];
-    const json = await res.json();
-    if (Array.isArray(json?.categories)) return json.categories;
-    if (Array.isArray(json)) return json;
-    return [];
-  } catch {
-    return [];
-  }
-};
-
-const fetchMe = async () => {
-  try {
-    const token =
-      localStorage.getItem('accessToken') ||
-      localStorage.getItem('token') ||
-      localStorage.getItem('authToken');
-    if (!token) return null;
-    const res = await fetch(`${API_URL}/auth/me`, {
-      headers: { Authorization: `Bearer ${token}` },
-    });
-    if (!res.ok) return null;
-    return await res.json();
-  } catch {
-    return null;
-  }
-};
-
-// ---- Resolve member tier from /auth/me OR localStorage.user ----
 const resolveMemberTier = (me, homeResult) => {
   const candidates = [
+    me?.grade_key,
+    me?.tier,
+    me?.grade,
     me?.user?.grade_key,
     me?.user?.tier,
     me?.user?.grade,
@@ -145,8 +113,7 @@ const resolveMemberTier = (me, homeResult) => {
   try {
     const stored = JSON.parse(localStorage.getItem('user') || 'null');
     if (stored) {
-      const storedCandidates = [stored.grade_key, stored.tier, stored.grade];
-      for (const c of storedCandidates) {
+      for (const c of [stored.grade_key, stored.tier, stored.grade]) {
         if (!c) continue;
         const canon = canonicalGrade(c);
         if (canon) return canon.tier;
@@ -160,6 +127,7 @@ const resolveMemberTier = (me, homeResult) => {
 };
 
 export const useHomeData = () => {
+  const { user: me } = useAuth();
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -171,12 +139,7 @@ export const useHomeData = () => {
       try {
         setLoading(true);
 
-        const [homeResult, rawCategories, me] = await Promise.all([
-          homeService.getHomeData().catch(() => null),
-          fetchCategories(),
-          fetchMe(),
-        ]);
-
+        const homeResult = await homeService.getHomeData().catch(() => null);
         if (cancelled) return;
 
         let subjectsArray = [];
@@ -186,9 +149,7 @@ export const useHomeData = () => {
         }
         const mappedSubjects = subjectsArray.map(normaliseSubject).filter(Boolean);
 
-        let categoriesArray = [];
-        if (rawCategories.length > 0) categoriesArray = rawCategories;
-        else if (Array.isArray(homeResult?.categories)) categoriesArray = homeResult.categories;
+        const categoriesArray = Array.isArray(homeResult?.categories) ? homeResult.categories : [];
 
         const mappedCategories = categoriesArray.map((c) => ({
           id: c.id,
@@ -247,7 +208,7 @@ export const useHomeData = () => {
 
     run();
     return () => { cancelled = true; };
-  }, []);
+  }, [me]);
 
   return { data, loading, error };
 };

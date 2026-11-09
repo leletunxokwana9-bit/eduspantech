@@ -1,28 +1,11 @@
 // src/pages/Admin/AdminLogin.js
 import React, { useState, useEffect, useRef } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
+// Remove Link from react-router-dom since we deleted the footer link
 import './AdminLogin.css';
 
-const Logomark = ({ size = 28 }) => (
-  <svg width={size} height={size} viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
-    <defs>
-      <linearGradient id="logoGradient" x1="0" y1="0" x2="40" y2="40" gradientUnits="userSpaceOnUse">
-        <stop offset="0%" stopColor="#fbbf24" />
-        <stop offset="100%" stopColor="#d97706" />
-      </linearGradient>
-    </defs>
-    <path d="M20 5 L37 13.5 L20 22 L3 13.5 Z" fill="url(#logoGradient)" />
-    <path
-      d="M11 17.5 V27 C11 27 14.5 31 20 31 C25.5 31 29 27 29 27 V17.5"
-      stroke="url(#logoGradient)"
-      strokeWidth="2.2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      fill="none"
-    />
-    <path d="M34.5 15 V25" stroke="url(#logoGradient)" strokeWidth="2.2" strokeLinecap="round" />
-  </svg>
-);
+// Import your favicon
+import EduSpantechFavicon from '../../assets/favicon-96x96.png';
 
 const FeatureIcon = ({ path }) => (
   <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
@@ -289,7 +272,8 @@ const AdminLogin = () => {
 
         <div className="admin-login-hero-content">
           <div className="admin-login-hero-brand">
-            <Logomark size={30} />
+            {/* Replaced SVG with the actual favicon logo */}
+            <img src={EduSpantechFavicon} alt="EduSpantech" className="brand-logo-img" />
             <span className="admin-login-hero-brand-name">EduSpantech</span>
           </div>
 
@@ -322,7 +306,8 @@ const AdminLogin = () => {
       <main className="admin-login-panel">
         <div className="admin-login-card">
           <div className="admin-login-card-brand">
-            <Logomark size={26} />
+            {/* Replaced SVG with the actual favicon logo */}
+            <img src={EduSpantechFavicon} alt="EduSpantech" className="brand-logo-img" />
             <span>EduSpantech</span>
           </div>
 
@@ -476,16 +461,8 @@ const AdminLogin = () => {
               )}
             </button>
           </form>
-
-          <div className="admin-login-footer">
-            <Link to="/login">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <line x1="19" y1="12" x2="5" y2="12" />
-                <polyline points="12 19 5 12 12 5" />
-              </svg>
-              Back to user login
-            </Link>
-          </div>
+          
+          {/* Footer link REMOVED as requested */}
         </div>
       </main>
     </div>

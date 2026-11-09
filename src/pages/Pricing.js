@@ -2,11 +2,11 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { authService } from '../services/authService';
-import pricingService from '../services/pricingService';
+// 👇 FIXED: Added curly braces to match the named export
+import { pricingService } from '../services/pricingService';
+import { supabase } from '../services/supabaseClient'; 
 import './Pricing.css';
 
-// ✅ NEW: audiences shown in the toggle. `id` must match plan.audience from the backend.
-// Plans with no `audience` value are treated as 'school'; plans with audience 'all' show in both views.
 const AUDIENCES = [
   {
     id: 'school',
@@ -36,16 +36,13 @@ const AUDIENCES = [
 
 const AUDIENCE_STORAGE_KEY = 'pricingAudience';
 
-// ✅ NEW: initial audience = ?audience=tertiary in the URL, else last choice, else 'school'
 const getInitialAudience = () => {
   try {
     const fromUrl = new URLSearchParams(window.location.search).get('audience');
     if (AUDIENCES.some((a) => a.id === fromUrl)) return fromUrl;
     const saved = localStorage.getItem(AUDIENCE_STORAGE_KEY);
     if (AUDIENCES.some((a) => a.id === saved)) return saved;
-  } catch (err) {
-    // storage or URL access blocked: fall back to default
-  }
+  } catch (err) {}
   return 'school';
 };
 
@@ -53,7 +50,7 @@ const Pricing = () => {
   const navigate = useNavigate();
   const [plans, setPlans] = useState([]);
   const [billingCycle, setBillingCycle] = useState('monthly');
-  const [audience, setAudience] = useState(getInitialAudience); // ✅ NEW
+  const [audience, setAudience] = useState(getInitialAudience);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -64,46 +61,48 @@ const Pricing = () => {
   useEffect(() => {
     const init = async () => {
       try {
-        console.log('🔍 Pricing page initializing...');
-        console.log('📦 pricingService:', pricingService);
-
         const token = localStorage.getItem('accessToken');
-        let user = null;
+        let userId = null;
 
         if (token) {
           try {
-            user = await authService.getCurrentUser();
-            if (user) {
+            const user = await authService.getCurrentUser();
+            if (user && user.id) {
+              userId = user.id;
               setIsAuthenticated(true);
-              if (pricingService && typeof pricingService.getUserSubscription === 'function') {
-                const subscription = await pricingService.getUserSubscription(user.id);
-                setUserSubscription(subscription);
-              }
+            }
+          } catch (err) {
+            console.warn("⚠️ Backend auth failed, checking Supabase session...");
+            const { data: { session } } = await supabase.auth.getSession();
+            if (session?.user) {
+              userId = session.user.id;
+              setIsAuthenticated(true);
             } else {
               setIsAuthenticated(false);
               authService.logout();
             }
-          } catch (err) {
-            console.error('Auth check failed:', err);
-            setIsAuthenticated(false);
           }
         } else {
           setIsAuthenticated(false);
         }
 
-        // Fetch pricing plans
-        if (pricingService && typeof pricingService.getPricingPlans === 'function') {
-          console.log('📊 Fetching pricing plans...');
+        if (userId) {
+          try {
+            const subscription = await pricingService.getUserSubscription(userId);
+            setUserSubscription(subscription);
+          } catch (subErr) {
+            console.warn("⚠️ Could not fetch user subscription:", subErr);
+          }
+        }
+
+        if (pricingService?.getPricingPlans) {
           const pricingPlans = await pricingService.getPricingPlans();
-          console.log('✅ Pricing plans:', pricingPlans);
-          setPlans(pricingPlans);
+          setPlans(pricingPlans || []);
         } else {
-          console.error('❌ pricingService.getPricingPlans is not a function');
-          console.error('📦 pricingService:', pricingService);
           setError('Pricing service not available');
         }
       } catch (err) {
-        console.error('❌ Error initializing pricing page:', err);
+        console.error('Error initializing pricing page:', err);
         setError('Failed to load pricing data');
       } finally {
         setLoading(false);
@@ -112,6 +111,13 @@ const Pricing = () => {
 
     init();
   }, []);
+
+  useEffect(() => {
+    const subscribedAudience = userSubscription?.plan?.audience;
+    if (subscribedAudience && AUDIENCES.some((a) => a.id === subscribedAudience)) {
+      setAudience(subscribedAudience);
+    }
+  }, [userSubscription]);
 
   if (loading) {
     return (
@@ -131,30 +137,18 @@ const Pricing = () => {
     );
   }
 
-  if (plans.length === 0) {
-    return <div className="pricing-page-empty">No pricing plans available</div>;
-  }
-
-  // ✅ NEW: only the plans for the selected audience
   const activeAudience = AUDIENCES.find((a) => a.id === audience) || AUDIENCES[0];
-  const visiblePlans = plans.filter((plan) => {
-    const planAudience = plan.audience || 'school';
-    return planAudience === 'all' || planAudience === audience;
-  });
+  const visiblePlans = plans.filter((plan) => plan?.audience === 'all' || plan?.audience === audience || !plan?.audience);
 
-  // ✅ CHANGED: annual pricing is checked against the visible plans only
-  const hasAnnualPricing = visiblePlans.some(plan => plan.annualPrice !== null && plan.annualPrice > 0);
-
-  // ✅ NEW: if the chosen audience has no annual pricing, fall back to monthly
+  const hasAnnualPricing = visiblePlans.some(plan => plan?.annualPrice !== null && plan?.annualPrice > 0);
   const activeBilling = hasAnnualPricing ? billingCycle : 'monthly';
+
+  const subscribedAudience = userSubscription?.plan?.audience;
+  const showTierHint = Boolean(isAuthenticated && subscribedAudience && subscribedAudience !== audience);
 
   const handleAudienceChange = (nextAudience) => {
     setAudience(nextAudience);
-    try {
-      localStorage.setItem(AUDIENCE_STORAGE_KEY, nextAudience);
-    } catch (err) {
-      // storage blocked: the choice just won't be remembered
-    }
+    try { localStorage.setItem(AUDIENCE_STORAGE_KEY, nextAudience); } catch (err) {}
   };
 
   const handleGetStarted = (plan) => {
@@ -164,25 +158,21 @@ const Pricing = () => {
       return;
     }
 
-    if (userSubscription && userSubscription.plan_id === plan.id) {
+    if (userSubscription && (userSubscription?.plan_id === plan?.id || userSubscription?.plan?.id === plan?.id)) {
       alert('You are already subscribed to this plan!');
       return;
     }
 
-    // ✅ CHANGED: audience is passed so checkout can tell Gold (school) from Gold (tertiary)
-    navigate(`/checkout?plan=${plan.tier.toLowerCase()}&billing=${activeBilling}&audience=${audience}`);
+    const planTier = plan?.tier ? plan.tier.toLowerCase() : 'standard';
+
+    navigate(
+      `/checkout?plan=${planTier}&billing=${activeBilling}&audience=${audience}`,
+      { state: { plan } }
+    );
   };
 
-  const handleLoginRedirect = () => {
-    navigate('/login', { state: { from: '/pricing' } });
-  };
-
-  const handleLogout = () => {
-    authService.logout();
-    setIsAuthenticated(false);
-    setUserSubscription(null);
-    navigate('/');
-  };
+  const handleLoginRedirect = () => navigate('/login', { state: { from: '/pricing' } });
+  const handleLogout = () => { authService.logout(); setIsAuthenticated(false); setUserSubscription(null); navigate('/'); };
 
   const LoginPrompt = () => (
     <div className="login-prompt-overlay" onClick={() => setShowLoginPrompt(false)}>
@@ -190,18 +180,11 @@ const Pricing = () => {
         <button className="login-prompt-close" onClick={() => setShowLoginPrompt(false)}>×</button>
         <div className="login-prompt-icon">🔒</div>
         <h3>Login Required</h3>
-        <p>Please log in to subscribe to the <strong>{selectedPlan?.name}</strong> plan.</p>
+        <p>Please log in to subscribe to the <strong>{selectedPlan?.name || 'selected'}</strong> plan.</p>
         <div className="login-prompt-actions">
-          <button className="login-prompt-btn" onClick={handleLoginRedirect}>
-            Login Now →
-          </button>
-          <button className="login-prompt-cancel" onClick={() => setShowLoginPrompt(false)}>
-            Cancel
-          </button>
+          <button className="login-prompt-btn" onClick={handleLoginRedirect}>Login Now →</button>
+          <button className="login-prompt-cancel" onClick={() => setShowLoginPrompt(false)}>Cancel</button>
         </div>
-        <p className="login-prompt-register">
-          Don't have an account? <span onClick={() => navigate('/register')}>Register here</span>
-        </p>
       </div>
     </div>
   );
@@ -222,27 +205,18 @@ const Pricing = () => {
 
         {isAuthenticated && userSubscription && (
           <div className="current-plan-banner">
-            <span>✅ You are currently on the <strong>{userSubscription.plan?.name || 'Free'}</strong> plan</span>
-            {userSubscription.plan?.name !== 'Free' && (
-              <button onClick={handleLogout} className="logout-btn">
-                Sign Out
-              </button>
+            <span>✅ You are currently on the <strong>{userSubscription?.plan?.name || 'Free'}</strong> plan</span>
+            {(userSubscription?.plan?.name ?? 'Free') !== 'Free' && (
+              <button onClick={handleLogout} className="logout-btn">Sign Out</button>
             )}
           </div>
         )}
 
-        {/* ✅ NEW: audience toggle (Grade 8–12 Learners / Tertiary Students) */}
         <div className="audience-toggle-wrap">
-          <span className="audience-toggle-label" id="audience-toggle-label">I am a</span>
-          <div className="audience-toggle" role="group" aria-labelledby="audience-toggle-label">
+          <span className="audience-toggle-label">I am a</span>
+          <div className="audience-toggle">
             {AUDIENCES.map((option) => (
-              <button
-                key={option.id}
-                type="button"
-                className={`audience-btn ${audience === option.id ? 'active' : ''}`}
-                aria-pressed={audience === option.id}
-                onClick={() => handleAudienceChange(option.id)}
-              >
+              <button key={option.id} type="button" className={`audience-btn ${audience === option.id ? 'active' : ''}`} onClick={() => handleAudienceChange(option.id)}>
                 {option.icon}
                 <span className="audience-btn-text">
                   <span className="audience-btn-title">{option.title}</span>
@@ -251,95 +225,66 @@ const Pricing = () => {
               </button>
             ))}
           </div>
+          {showTierHint && <p className="audience-hint">You're viewing <strong>{activeAudience.title}</strong> pricing.</p>}
         </div>
 
         {hasAnnualPricing && (
           <div className="billing-toggle">
-            <button
-              className={`toggle-btn ${activeBilling === 'monthly' ? 'active' : ''}`}
-              onClick={() => setBillingCycle('monthly')}
-            >
-              Monthly
-            </button>
-            <button
-              className={`toggle-btn ${activeBilling === 'annual' ? 'active' : ''}`}
-              onClick={() => setBillingCycle('annual')}
-            >
-              Annual
-              {/* ✅ FIXED: was "Save 10%", actual discount is 16.7% (2 months free) */}
-              <span className="toggle-save">Save 17%</span>
-            </button>
+            <button className={`toggle-btn ${activeBilling === 'monthly' ? 'active' : ''}`} onClick={() => setBillingCycle('monthly')}>Monthly</button>
+            <button className={`toggle-btn ${activeBilling === 'annual' ? 'active' : ''}`} onClick={() => setBillingCycle('annual')}>Annual <span className="toggle-save">Save 17%</span></button>
           </div>
         )}
       </div>
 
-      {/* ✅ NEW: empty state when the selected audience has no plans yet */}
       {visiblePlans.length === 0 ? (
-        <div className="audience-empty">
-          <h3>{activeAudience.title} plans are coming soon</h3>
-          <p>We're still setting up pricing for this group. Check back shortly.</p>
-        </div>
+        <div className="audience-empty"><h3>No plans found</h3></div>
       ) : (
-        // ✅ CHANGED: key={audience} remounts the grid so it fades in on every switch
         <div className="pricing-page-grid audience-fade" key={audience}>
           {visiblePlans.map((plan) => {
-            const isPopular = plan.popular;
-            const price = activeBilling === 'annual' && plan.annualPrice ? plan.annualPrice : plan.price;
-            // ✅ FIXED: added parentheses for correct operator precedence
-            const period = (activeBilling === 'annual' && plan.annualPrice) ? '/year' : (plan.period || '/month');
-            const isCurrentPlan = userSubscription && userSubscription.plan_id === plan.id;
-            const isFreePlan = plan.tier === 'Free' || plan.name === 'Free';
-            const currencySymbol = plan.currency === 'ZAR' ? 'R' : '$';
+            if (!plan) return null;
+            const isPopular = plan?.popular;
+            const price = activeBilling === 'annual' && plan?.annualPrice ? plan.annualPrice : (plan?.price || 0);
+            const period = (activeBilling === 'annual' && plan?.annualPrice) ? '/year' : (plan?.period || '/month');
+            
+            const isCurrentPlan = userSubscription && (userSubscription?.plan_id === plan?.id || userSubscription?.plan?.id === plan?.id);
+            
+            const isFreePlan = plan?.tier === 'Free' || plan?.name === 'Free';
+            const currencySymbol = plan?.currency === 'ZAR' ? 'R' : '$';
+            const badgeText = plan?.badge || (isPopular ? 'Popular' : null);
 
             return (
-              <div key={plan.id} className={`pricing-page-card ${isPopular ? 'popular' : ''} ${isCurrentPlan ? 'current-plan' : ''}`}>
-                {isPopular && <div className="popular-badge">⭐ Most Popular</div>}
-                {isCurrentPlan && <div className="current-badge">✅ Current Plan</div>}
+              <div key={plan.id || Math.random()} className={`pricing-page-card ${isPopular ? 'popular' : ''} ${isCurrentPlan ? 'current-plan' : ''}`}>
+                
+                {isCurrentPlan && <div className="current-badge">✅ YOUR PLAN</div>}
+                {!isCurrentPlan && badgeText && <div className="popular-badge">⭐ {badgeText}</div>}
+
                 <div className="pricing-page-plan-icon">📐</div>
-                <div className="pricing-page-plan-name">{plan.name}</div>
+                <div className="pricing-page-plan-name">{plan?.name || 'Plan'}</div>
+                
                 <div className="pricing-page-plan-price">
                   {price === 0 ? 'Free' : `${currencySymbol}${price}`}
                   <span>{period}</span>
                 </div>
-                <div className="pricing-page-plan-tier">{plan.tier}</div>
-                <p className="pricing-page-plan-description">{plan.description}</p>
+                
+                <p className="pricing-page-plan-description">{plan?.description || ''}</p>
+                
                 <ul className="pricing-page-features">
-                  {plan.features && plan.features.map((feature, index) => (
+                  {plan?.features && Array.isArray(plan.features) && plan.features.map((feature, index) => (
                     <li key={index}>
-                      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                        <polyline points="20 6 9 17 4 12"></polyline>
-                      </svg>
+                      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
                       {feature}
                     </li>
                   ))}
                 </ul>
+
                 {isFreePlan ? (
-                  <button
-                    className={`pricing-page-cta ${isPopular ? 'popular-cta' : ''}`}
-                    onClick={() => navigate('/dashboard')}
-                  >
-                    Get Started Free
-                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                      <line x1="5" y1="12" x2="19" y2="12"></line>
-                      <polyline points="12 5 19 12 12 19"></polyline>
-                    </svg>
-                  </button>
+                  <button className={`pricing-page-cta ${isPopular ? 'popular-cta' : ''}`} onClick={() => navigate('/dashboard')}>Get Started Free</button>
                 ) : (
-                  <button
-                    className={`pricing-page-cta ${isPopular ? 'popular-cta' : ''} ${isCurrentPlan ? 'current-plan-btn' : ''}`}
-                    onClick={() => handleGetStarted(plan)}
-                    disabled={isCurrentPlan}
-                  >
-                    {isCurrentPlan ? 'Current Plan' : 'Get Started'}
-                    {!isCurrentPlan && (
-                      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                        <line x1="5" y1="12" x2="19" y2="12"></line>
-                        <polyline points="12 5 19 12 12 19"></polyline>
-                      </svg>
-                    )}
+                  <button className={`pricing-page-cta ${isPopular && !isCurrentPlan ? 'popular-cta' : ''} ${isCurrentPlan ? 'current-plan-btn' : ''}`} onClick={() => handleGetStarted(plan)} disabled={isCurrentPlan}>
+                    {isCurrentPlan ? 'Active Plan' : 'Get Started'}
                   </button>
                 )}
-                {plan.note && <div className="pricing-page-note">{plan.note}</div>}
+                {plan?.note && <div className="pricing-page-note">{plan.note}</div>}
               </div>
             );
           })}

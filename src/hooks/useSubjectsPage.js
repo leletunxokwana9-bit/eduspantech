@@ -6,7 +6,7 @@ const GRADE_LABEL_MAP = {
   'grade8-9':   'Grade 8 – 9',
   'grade10-11': 'Grade 10 – 11',
   'grade12':    'Grade 12',
-  'tertiary':   'Tertiary (Years 1 – 2)',
+  'tertiary':   '1st & 2nd Year Tertiary',
 };
 
 const GRADE_TIER_MAP = {
@@ -80,21 +80,28 @@ const isAuthenticated = () => {
   }
 };
 
+// ✅ Robust tier matching for weird admin inputs like "g(8-9)"
 const tierForSubject = (s) => {
   if (!s) return null;
   const key = s.grade_key;
   if (!key) return null;
-  const clean = String(key).trim().toLowerCase();
-  const normalised = clean.replace(/-/g, '');
-  if (GRADE_TIER_MAP[normalised]) return GRADE_TIER_MAP[normalised];
-  if (GRADE_TIER_MAP[clean]) return GRADE_TIER_MAP[clean];
-  const m = clean.match(/(\d+)/);
-  if (m) {
-    const n = parseInt(m[1], 10);
-    if (n === 8 || n === 9) return '8-9';
-    if (n === 10 || n === 11) return '10-11';
-    if (n === 12) return '12';
+  
+  // Strip everything except letters and numbers
+  const clean = String(key).toLowerCase().replace(/[^a-z0-9]/g, '');
+  
+  if (clean.includes('89') || clean.includes('grade89') || clean === '8' || clean === '9' || clean.includes('g8') || clean.includes('g9')) {
+    return '8-9';
   }
+  if (clean.includes('1011') || clean.includes('grade1011') || clean === '10' || clean === '11') {
+    return '10-11';
+  }
+  if (clean.includes('12') || clean.includes('grade12')) {
+    return '12';
+  }
+  if (clean.includes('tertiary') || clean.includes('year')) {
+    return 'tertiary';
+  }
+  
   return null;
 };
 
@@ -133,10 +140,10 @@ function sanitizeSettings(raw) {
   return out;
 }
 
-function normaliseCategories(rawCategories, subjects) {
+function normaliseCategories(rawCategories, scopedSubjects) {
   const usedKeys = new Set();
   const usedIds = new Set();
-  (subjects || []).forEach((s) => {
+  (scopedSubjects || []).forEach((s) => {
     if (s.category_key) usedKeys.add(s.category_key);
     if (s.category_id) usedIds.add(s.category_id);
   });
@@ -152,13 +159,12 @@ function normaliseCategories(rawCategories, subjects) {
     .filter((c) => (hasKeyMatch ? usedKeys.has(c.key) : usedIds.has(c.id)));
 }
 
-// For logged-out: always show the four standard grades even if empty,
-// so a stranger can pick what they're looking for.
-function deriveGrades(subjects, memberGrade, loggedIn) {
+function deriveGrades(scopedSubjects, memberGrade, loggedIn) {
   const present = new Set(
-    (subjects || []).map((s) => s.grade_key).filter(Boolean)
+    (scopedSubjects || []).map((s) => s.grade_key).filter(Boolean)
   );
-
+  
+  // For logged out, always show all grade options
   const keysToShow = loggedIn
     ? Array.from(present).filter((key) => GRADE_LABEL_MAP[key])
     : GRADE_ORDER.filter((key) => GRADE_LABEL_MAP[key]);
@@ -177,7 +183,6 @@ function deriveGrades(subjects, memberGrade, loggedIn) {
       }
       return { key, label, tier };
     });
-
   return [{ key: 'all', label: 'All', is_all: true }, ...real];
 }
 

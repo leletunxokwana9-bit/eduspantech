@@ -1,20 +1,14 @@
-// src/index.js - COMPLETE FIXED VERSION WITH NO ESLINT ERRORS
-// ===== APP IMPORTS (MUST BE AT THE TOP) =====
+// src/index.js
 import React from 'react';
 import ReactDOM from 'react-dom/client';
 import './index.css';
 import App from './App';
 import reportWebVitals from './reportWebVitals';
+import { AuthProvider } from './hooks/useAuth';
 
 // ===== POLYFILL FOR ENVIRONMENT VARIABLES =====
-// ✅ This fixes the [SENSITIVE] placeholder issue
-// The [SENSITIVE] placeholder is used in some compiled files
-// and needs to be replaced with the actual API URL
-
-// Set environment variables if not already set
 if (typeof process !== 'undefined' && process.env) {
   if (!process.env.REACT_APP_API_URL) {
-    // ✅ FIXED: Removed /v1 from the URL
     process.env.REACT_APP_API_URL = 'https://eduspantech-backend.onrender.com/api';
   }
   if (!process.env.REACT_APP_SUPABASE_URL) {
@@ -25,28 +19,22 @@ if (typeof process !== 'undefined' && process.env) {
   }
 }
 
-// ✅ Console log to verify environment variables
 console.log('🚀 App starting...');
 console.log('📋 API URL from env:', process.env.REACT_APP_API_URL);
 console.log('📋 Supabase URL from env:', process.env.REACT_APP_SUPABASE_URL);
 console.log('📋 Supabase Key exists:', !!process.env.REACT_APP_SUPABASE_ANON_KEY);
 
-// ✅ Fetch interceptor to fix [SENSITIVE] in URLs
-// Some compiled code uses [SENSITIVE] as a placeholder
+// ===== FETCH INTERCEPTOR =====
 const originalFetch = window.fetch;
-window.fetch = function(url, options) {
+window.fetch = function (url, options) {
   if (typeof url === 'string') {
-    // Replace [SENSITIVE] with actual API URL
     if (url.includes('[SENSITIVE]')) {
       console.log('🔧 Fetch interceptor: Replacing [SENSITIVE] in URL');
-      // ✅ FIXED: Removed /v1 from the fallback URL
       const apiUrl = process.env.REACT_APP_API_URL || 'https://eduspantech-backend.onrender.com/api';
       url = url.replace(/\[SENSITIVE\]/g, apiUrl);
       console.log('🔧 New URL:', url);
     }
-    // Also handle any other placeholder patterns
     if (url.includes('[API_URL]')) {
-      // ✅ FIXED: Removed /v1 from the fallback URL
       const apiUrl = process.env.REACT_APP_API_URL || 'https://eduspantech-backend.onrender.com/api';
       url = url.replace(/\[API_URL\]/g, apiUrl);
     }
@@ -58,13 +46,12 @@ window.fetch = function(url, options) {
   return originalFetch.call(this, url, options);
 };
 
-// ✅ Override any global references
+// ===== GLOBAL REFS =====
 if (typeof window !== 'undefined') {
   window.__API_URL = process.env.REACT_APP_API_URL;
   window.__SUPABASE_URL = process.env.REACT_APP_SUPABASE_URL;
   window.__SUPABASE_KEY = process.env.REACT_APP_SUPABASE_ANON_KEY;
-  
-  // If there's a variable named [SENSITIVE], override it
+
   if (window['[SENSITIVE]']) {
     console.log('🔧 Overriding window.[SENSITIVE]');
     window['[SENSITIVE]'] = process.env.REACT_APP_API_URL;
@@ -77,12 +64,10 @@ if (typeof window !== 'undefined') {
 
 // ===== RENDER APP =====
 const root = ReactDOM.createRoot(document.getElementById('root'));
-// ✅ REMOVED React.StrictMode to fix duplicate rendering
 root.render(
-  <App />
+  <AuthProvider>
+    <App />
+  </AuthProvider>
 );
 
-// If you want to start measuring performance in your app, pass a function
-// to log results (for example: reportWebVitals(console.log))
-// or send to an analytics endpoint. Learn more: https://bit.ly/CRA-vitals
 reportWebVitals();

@@ -6,7 +6,6 @@ import './AdminContent.css';
 import '../Pricing.css';
 
 const API_URL = process.env.REACT_APP_API_URL || 'https://eduspantech-backend.onrender.com/api';
-const STORAGE_BUCKET = 'content';
 
 const SECTIONS = [
   { id: 'basics',  label: 'Basic info' },
@@ -19,15 +18,20 @@ const SECTIONS = [
 
 const DEFAULT_COLORS = ['#4f46e5','#7c3aed','#06b6d4','#10b981','#f59e0b','#ef4444','#ec4899','#8b5cf6','#14b8a6','#f97316'];
 
+// ✅ FIXED: Individual grades instead of buckets
 const HIGHSCHOOL_GRADES = [
-  { key: 'grade-8-9',   label: 'Grade 8 – 9',   tier: '8-9' },
-  { key: 'grade-10-11', label: 'Grade 10 – 11', tier: '10-11' },
-  { key: 'grade-12',    label: 'Grade 12',      tier: '12' },
+  { key: 'grade-8',   label: 'Grade 8',   tier: '8' },
+  { key: 'grade-9',   label: 'Grade 9',   tier: '9' },
+  { key: 'grade-10',  label: 'Grade 10',  tier: '10' },
+  { key: 'grade-11',  label: 'Grade 11',  tier: '11' },
+  { key: 'grade-12',  label: 'Grade 12',  tier: '12' },
 ];
+
 const TERTIARY_GRADES = [
   { key: 'tertiary-year-1', label: 'Tertiary – Year 1', tier: 'tertiary' },
   { key: 'tertiary-year-2', label: 'Tertiary – Year 2', tier: 'tertiary' },
 ];
+
 const ALL_FALLBACK_GRADES = [...HIGHSCHOOL_GRADES, ...TERTIARY_GRADES];
 const isTertiaryKey = (key) => String(key || '').toLowerCase().includes('tertiary');
 
@@ -37,6 +41,7 @@ const getDefaultIcon = (name) => {
   for (const [k, v] of Object.entries(icons)) if (name.toLowerCase().includes(k.toLowerCase())) return v;
   return '📚';
 };
+
 const getDefaultColor = (name) => {
   if (!name) return '#4f46e5';
   const m = { Mathematics:'#4f46e5', Physics:'#06b6d4', Chemistry:'#10b981', Biology:'#22c55e', Accounting:'#f59e0b', Economics:'#8b5cf6', Business:'#ec4899', Statistics:'#14b8a6', Engineering:'#f97316', Computer:'#3b82f6', Finance:'#10b981' };
@@ -55,6 +60,8 @@ const initialResourceDraft = () => ({
   name: '', type: 'pdf', url: '', description: '', topicIndex: '',
   youtube_id: '', thumbnail_url: '', duration: '', difficulty: 'beginner', is_free: false,
 });
+
+const normGrade = (k) => String(k || '').toLowerCase().replace(/[^a-z0-9]/g, '');
 
 const AdminContent = () => {
   const navigate = useNavigate();
@@ -83,14 +90,11 @@ const AdminContent = () => {
   const [previewMode, setPreviewMode] = useState('open');
   const [editingSubject, setEditingSubject] = useState(null);
 
-  // -------- POPUP STATE --------
-  const [modal, setModal] = useState(null);
-  // modal = { icon, title, body, buttons: [{label, variant, onClick, disabled}] }
-
-  const showModal = (icon, title, body, buttons) => {
-    setModal({ icon, title, body, buttons });
-  };
-  const closeModal = () => setModal(null);
+  const [feedback, setFeedback] = useState(null);
+  const showFeedback = (type, title, message) => setFeedback({ type, title, message });
+  const showSuccess = (msg) => showFeedback('success', 'Success', msg);
+  const showError = (msg) => showFeedback('error', 'Something needs fixing', msg);
+  const closeFeedback = () => setFeedback(null);
 
   const [showDeletePopup, setShowDeletePopup] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState(null);
@@ -110,23 +114,17 @@ const AdminContent = () => {
 
   const token = () => localStorage.getItem('accessToken');
 
-  // -------- Feedback helpers (all use the modal) --------
-  const showSuccess = (msg) => showModal('✅', 'Success', msg, [{ label: 'Continue', variant: 'primary', onClick: closeModal }]);
-  const showError = (msg) => showModal('⚠️', 'Something needs fixing', msg, [{ label: 'OK', variant: 'primary', onClick: closeModal }]);
-  const showInfo = (msg) => showModal('ℹ️', 'Notice', msg, [{ label: 'OK', variant: 'primary', onClick: closeModal }]);
-
-  // -------- Inline Modal Component using Pricing's login-prompt styles --------
-  const Modal = () => {
-    if (!modal) return null;
+  const PromptModal = ({ open, icon, title, children, buttons, onClose }) => {
+    if (!open) return null;
     return (
-      <div className="login-prompt-overlay" onClick={closeModal}>
+      <div className="login-prompt-overlay" onClick={onClose}>
         <div className="login-prompt-modal" onClick={(e) => e.stopPropagation()}>
-          <button className="login-prompt-close" onClick={closeModal}>×</button>
-          <div className="login-prompt-icon">{modal.icon || 'ℹ️'}</div>
-          <h3>{modal.title}</h3>
-          <p style={{ whiteSpace: 'pre-line' }}>{modal.body}</p>
+          {onClose && <button className="login-prompt-close" onClick={onClose}>×</button>}
+          <div className="login-prompt-icon">{icon}</div>
+          <h3>{title}</h3>
+          <div style={{ marginBottom: 20, whiteSpace: 'pre-line' }}>{children}</div>
           <div className="login-prompt-actions">
-            {modal.buttons.map((btn, i) => (
+            {buttons.map((btn, i) => (
               <button
                 key={i}
                 className={btn.variant === 'ghost' ? 'login-prompt-cancel' : 'login-prompt-btn'}
@@ -142,7 +140,6 @@ const AdminContent = () => {
     );
   };
 
-  // -------- Auth fetch --------
   const authFetch = useCallback(async (url, options = {}, retry = true) => {
     const headers = {
       'Content-Type': 'application/json',
@@ -178,7 +175,6 @@ const AdminContent = () => {
     return res;
   }, []);
 
-  // -------- Fetch initial data --------
   const fetchInitialData = async () => {
     try {
       setLoading(true);
@@ -274,7 +270,7 @@ const AdminContent = () => {
     }
   };
 
-  useEffect(() => { fetchInitialData(); /* eslint-disable-next-line */ }, []);
+  useEffect(() => { fetchInitialData(); }, []);
 
   useEffect(() => {
     if (viewMode === 'builder' && formData.name && !editingSubject) {
@@ -282,7 +278,6 @@ const AdminContent = () => {
       const gs = formData.grade_key ? `-${formData.grade_key}` : '';
       setFormData((p) => ({ ...p, slug: `${base}${gs}` }));
     }
-    // eslint-disable-next-line
   }, [formData.name, formData.grade_key, viewMode, editingSubject]);
 
   useEffect(() => {
@@ -334,19 +329,31 @@ const AdminContent = () => {
   const errorCount = missingFields.length + otherIssues.filter((i) => i.level === 'error').length;
   const completeness = Math.max(0, 5 - errorCount) * 20;
 
-  // -------- Upload --------
-  const uploadFile = async (file, folder = 'subjects') => {
-    const ext = file.name.split('.').pop();
-    const fileName = `${folder}/${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${ext}`;
-    const { error } = await supabase.storage.from(STORAGE_BUCKET).upload(fileName, file, { cacheControl: '3600', upsert: false });
-    if (error) {
-      if (String(error.message).toLowerCase().includes('bucket')) {
-        throw new Error("The storage bucket isn't set up yet.");
-      }
-      throw new Error('The file could not be uploaded. Please try again.');
+  // ✅ FIXED: Use the Render Backend for PDF uploads (like BecomeATutor)
+  const uploadFile = async (file, folder = 'content') => {
+    const formData = new FormData();
+    formData.append('file', file);
+    formData.append('folder', folder);
+
+    const res = await fetch(`${API_URL}/upload`, {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${token()}`
+      },
+      body: formData
+    });
+
+    if (!res.ok) {
+      const errorData = await res.json().catch(() => ({}));
+      throw new Error(errorData.error || 'The file could not be uploaded. Please try again.');
     }
-    const { data } = supabase.storage.from(STORAGE_BUCKET).getPublicUrl(fileName);
-    return data.publicUrl;
+
+    const data = await res.json();
+    if (!data.success || !data.url) {
+      throw new Error('Upload succeeded but no URL was returned.');
+    }
+    
+    return data.url;
   };
 
   const handleFileUpload = async (e, type, index) => {
@@ -620,7 +627,7 @@ const AdminContent = () => {
   const openAddModal = () => {
     setEditingSubject(null);
     resetForm();
-    const defaultGrade = contentTab === 'tertiary' ? 'tertiary-year-1' : 'grade-8-9';
+    const defaultGrade = contentTab === 'tertiary' ? 'tertiary-year-1' : 'grade-8';
     setFormData((prev) => ({ ...prev, grade_key: defaultGrade }));
     setViewMode('builder');
     setActiveSection('basics');
@@ -676,26 +683,54 @@ const AdminContent = () => {
   };
 
   const getGradeBadge = (grade_key) => {
-    const g = grades.find((x) => x.key === grade_key);
-    if (!g) return <span className="tier-badge" style={{ background: '#6b7280' }}>No Grade</span>;
+    const target = normGrade(grade_key);
+    const g = grades.find((x) => normGrade(x.key) === target);
+
+    if (!g) {
+      if (target.includes('8')) return <span className="tier-badge" style={{ background: '#10b981' }}>Grade 8</span>;
+      if (target.includes('9')) return <span className="tier-badge" style={{ background: '#10b981' }}>Grade 9</span>;
+      if (target.includes('10')) return <span className="tier-badge" style={{ background: '#f59e0b' }}>Grade 10</span>;
+      if (target.includes('11')) return <span className="tier-badge" style={{ background: '#f59e0b' }}>Grade 11</span>;
+      if (target.includes('12')) return <span className="tier-badge" style={{ background: '#ef4444' }}>Grade 12</span>;
+      if (target.includes('tertiary')) return <span className="tier-badge" style={{ background: '#4f46e5' }}>Tertiary</span>;
+      return <span className="tier-badge" style={{ background: '#6b7280' }}>No Grade</span>;
+    }
+
     let color = '#10b981';
-    if (g.tier === '10-11') color = '#f59e0b';
+    if (g.tier === '10' || g.tier === '11') color = '#f59e0b';
     if (g.tier === '12') color = '#ef4444';
     if (g.tier === 'tertiary') color = '#4f46e5';
     return <span className="tier-badge" style={{ background: color }}>{g.label}</span>;
   };
 
-  // -------- Loading --------
+  const renderFeedback = () => {
+    if (!feedback) return null;
+    const iconChar = feedback.type === 'success' ? '✅' : feedback.type === 'error' ? '⚠️' : 'ℹ️';
+
+    return (
+      <div className="login-prompt-overlay" onClick={closeFeedback}>
+        <div className="login-prompt-modal" onClick={(e) => e.stopPropagation()}>
+          <button className="login-prompt-close" onClick={closeFeedback}>×</button>
+          <div className="login-prompt-icon">{iconChar}</div>
+          <h3>{feedback.title}</h3>
+          <p style={{ whiteSpace: 'pre-line' }}>{feedback.message}</p>
+          <div className="login-prompt-actions">
+            <button className="login-prompt-btn" onClick={closeFeedback}>Continue</button>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
   if (loading) return <div className="admin-content-loading"><div className="loading-spinner" /><p>Loading content...</p></div>;
 
-  // -------- LIST VIEW --------
   if (viewMode === 'list') {
     const highschoolCount = subjects.filter((s) => !isTertiaryKey(s.grade_key)).length;
     const tertiaryCount = subjects.filter((s) => isTertiaryKey(s.grade_key)).length;
 
     return (
       <div className="admin-content">
-        <Modal />
+        {renderFeedback()}
 
         <div className="content-header">
           <div className="header-left">
@@ -771,42 +806,41 @@ const AdminContent = () => {
         )}
 
         {showDeletePopup && deleteTarget && (
-          <div className="login-prompt-overlay" onClick={() => !deleteLoading && setShowDeletePopup(false)}>
-            <div className="login-prompt-modal" onClick={(e) => e.stopPropagation()}>
-              <button className="login-prompt-close" onClick={() => !deleteLoading && setShowDeletePopup(false)}>×</button>
-              <div className="login-prompt-icon">🗑️</div>
-              <h3>Delete this subject?</h3>
-              <p><strong>{deleteTarget.name}</strong> will be removed permanently. This can't be undone.</p>
-              <div className="login-prompt-actions">
-                <button className="login-prompt-cancel" onClick={() => setShowDeletePopup(false)} disabled={deleteLoading}>Cancel</button>
-                <button className="login-prompt-btn" onClick={confirmDelete} disabled={deleteLoading}>{deleteLoading ? 'Deleting…' : 'Delete'}</button>
-              </div>
-            </div>
-          </div>
+          <PromptModal
+            open={showDeletePopup}
+            icon="🗑️"
+            title="Delete this subject?"
+            onClose={() => !deleteLoading && setShowDeletePopup(false)}
+            buttons={[
+              { label: 'Cancel', variant: 'ghost', onClick: () => setShowDeletePopup(false), disabled: deleteLoading },
+              { label: deleteLoading ? 'Deleting…' : 'Delete', onClick: confirmDelete, disabled: deleteLoading },
+            ]}
+          >
+            <strong>{deleteTarget.name}</strong> will be removed permanently. This can't be undone.
+          </PromptModal>
         )}
 
         {showTogglePopup && toggleTarget && (
-          <div className="login-prompt-overlay" onClick={() => !toggleLoading && setShowTogglePopup(false)}>
-            <div className="login-prompt-modal" onClick={(e) => e.stopPropagation()}>
-              <button className="login-prompt-close" onClick={() => !toggleLoading && setShowTogglePopup(false)}>×</button>
-              <div className="login-prompt-icon">{toggleTarget.is_active ? '⚠️' : '✅'}</div>
-              <h3>{toggleTarget.is_active ? 'Deactivate this subject?' : 'Activate this subject?'}</h3>
-              <p>{toggleTarget.is_active ? "Students won't be able to see it." : 'Students will be able to see it again.'}</p>
-              <div className="login-prompt-actions">
-                <button className="login-prompt-cancel" onClick={() => setShowTogglePopup(false)} disabled={toggleLoading}>Cancel</button>
-                <button className="login-prompt-btn" onClick={confirmToggle} disabled={toggleLoading}>{toggleLoading ? 'Saving…' : (toggleTarget.is_active ? 'Deactivate' : 'Activate')}</button>
-              </div>
-            </div>
-          </div>
+          <PromptModal
+            open={showTogglePopup}
+            icon={toggleTarget.is_active ? '⚠️' : '✅'}
+            title={toggleTarget.is_active ? 'Deactivate this subject?' : 'Activate this subject?'}
+            onClose={() => !toggleLoading && setShowTogglePopup(false)}
+            buttons={[
+              { label: 'Cancel', variant: 'ghost', onClick: () => setShowTogglePopup(false), disabled: toggleLoading },
+              { label: toggleLoading ? 'Saving…' : (toggleTarget.is_active ? 'Deactivate' : 'Activate'), onClick: confirmToggle, disabled: toggleLoading },
+            ]}
+          >
+            {toggleTarget.is_active ? "Students won't be able to see it." : 'Students will be able to see it again.'}
+          </PromptModal>
         )}
       </div>
     );
   }
 
-  // -------- BUILDER VIEW --------
   return (
     <div className="ac-builder-page">
-      <Modal />
+      {renderFeedback()}
 
       <header className="ac-builder-header">
         <div>
@@ -1035,7 +1069,7 @@ const AdminContent = () => {
               <p className="ac-subtitle">A last look at what will go live.</p>
               <div className="ac-review-grid">
                 <div className="ac-review-item"><dt>Type</dt><dd>{contentTab === 'tertiary' ? 'Tertiary' : 'Highschool'}</dd></div>
-                <div className="ac-review-item"><dt>Subject</dt><dd>{formData.name || 'Untitled'} {grades.find((g) => g.key === formData.grade_key)?.label ? `— ${grades.find((g) => g.key === formData.grade_key).label}` : ''}</dd></div>
+                <div className="ac-review-item"><dt>Subject</dt><dd>{formData.name || 'Untitled'} {grades.find((g) => normGrade(g.key) === normGrade(formData.grade_key))?.label ? `— ${grades.find((g) => normGrade(g.key) === normGrade(formData.grade_key)).label}` : ''}</dd></div>
                 <div className="ac-review-item"><dt>Category</dt><dd>{categories.find((c) => c.id === formData.category_id)?.name || '—'}</dd></div>
                 <div className="ac-review-item"><dt>Topics</dt><dd>{builderTopics.length}</dd></div>
                 <div className="ac-review-item"><dt>Past papers</dt><dd>{builderPapers.length}</dd></div>
@@ -1085,7 +1119,7 @@ const AdminContent = () => {
           <div className="ac-pv-card" style={{ '--c': formData.color || '#a78bfa', opacity: previewMode === 'locked' ? 0.7 : 1 }}>
             <div className="ac-pv-top">
               <span className="ac-pv-icon">{formData.icon || '📚'}</span>
-              <span className="ac-pv-grade">{grades.find((g) => g.key === formData.grade_key)?.label || 'Grade ?'}</span>
+              <span className="ac-pv-grade">{grades.find((g) => normGrade(g.key) === normGrade(formData.grade_key))?.label || 'Grade ?'}</span>
             </div>
             <h4>{formData.name || 'Subject name'}</h4>
             <p>{formData.description || 'Description…'}</p>
@@ -1140,77 +1174,74 @@ const AdminContent = () => {
       </div>
 
       {showResourceDraftPopup && (
-        <div className="login-prompt-overlay" onClick={() => !resourceUploading && setShowResourceDraftPopup(false)}>
-          <div className="login-prompt-modal" onClick={(e) => e.stopPropagation()}>
-            <button className="login-prompt-close" onClick={() => !resourceUploading && setShowResourceDraftPopup(false)}>×</button>
-            <div className="login-prompt-icon">📚</div>
-            <h3>Add resource</h3>
-            <p>Upload a PDF or paste a video link.</p>
+        <PromptModal
+          open={showResourceDraftPopup}
+          icon="📚"
+          title="Add resource"
+          onClose={() => !resourceUploading && setShowResourceDraftPopup(false)}
+          buttons={[
+            { label: 'Cancel', variant: 'ghost', onClick: () => setShowResourceDraftPopup(false), disabled: resourceUploading },
+            { label: 'Add to list', onClick: confirmAddResourceDraft, disabled: resourceUploading },
+          ]}
+        >
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 12, textAlign: 'left' }}>
+            <label style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+              <span style={{ fontSize: 12, fontWeight: 600, color: 'rgba(255,255,255,0.7)' }}>Resource type</span>
+              <select
+                value={resourceDraft.type}
+                onChange={(e) => setResourceDraft({ ...resourceDraft, type: e.target.value, url: '' })}
+                style={{ padding: '10px 12px', borderRadius: 10, background: '#0f0f24', border: '1px solid #5b5b8f', color: '#fff' }}
+              >
+                <option value="pdf">📄 PDF document</option>
+                <option value="video">🎬 Video (YouTube)</option>
+              </select>
+            </label>
 
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 12, textAlign: 'left', marginBottom: 20 }}>
+            <label style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+              <span style={{ fontSize: 12, fontWeight: 600, color: 'rgba(255,255,255,0.7)' }}>Name *</span>
+              <input
+                value={resourceDraft.name}
+                onChange={(e) => setResourceDraft({ ...resourceDraft, name: e.target.value })}
+                placeholder="e.g. Intro to Algebra"
+                style={{ padding: '10px 12px', borderRadius: 10, background: '#0f0f24', border: '1px solid #5b5b8f', color: '#fff' }}
+              />
+            </label>
+
+            {resourceDraft.type === 'pdf' && (
               <label style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-                <span style={{ fontSize: 12, fontWeight: 600, color: 'rgba(255,255,255,0.7)' }}>Resource type</span>
-                <select
-                  value={resourceDraft.type}
-                  onChange={(e) => setResourceDraft({ ...resourceDraft, type: e.target.value, url: '' })}
-                  style={{ padding: '10px 12px', borderRadius: 10, background: '#0f0f24', border: '1px solid #5b5b8f', color: '#fff' }}
+                <span style={{ fontSize: 12, fontWeight: 600, color: 'rgba(255,255,255,0.7)' }}>PDF file *</span>
+                <div
+                  className={`resource-upload-zone ${resourceDraft.url ? 'has-file' : ''}`}
+                  onClick={() => !resourceUploading && resourceFileRef.current?.click()}
                 >
-                  <option value="pdf">📄 PDF document</option>
-                  <option value="video">🎬 Video (YouTube)</option>
-                </select>
+                  <input
+                    ref={resourceFileRef}
+                    type="file"
+                    accept="application/pdf"
+                    onChange={handleResourceFileUpload}
+                    disabled={resourceUploading}
+                    style={{ display: 'none' }}
+                  />
+                  {resourceUploading ? <span>⏳ Uploading…</span>
+                    : resourceDraft.url ? <span>✅ {resourceFileName || 'PDF'} uploaded — click to replace</span>
+                    : <span>📤 Click to upload a PDF (max 50MB)</span>}
+                </div>
               </label>
+            )}
 
+            {resourceDraft.type === 'video' && (
               <label style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-                <span style={{ fontSize: 12, fontWeight: 600, color: 'rgba(255,255,255,0.7)' }}>Name *</span>
+                <span style={{ fontSize: 12, fontWeight: 600, color: 'rgba(255,255,255,0.7)' }}>YouTube URL *</span>
                 <input
-                  value={resourceDraft.name}
-                  onChange={(e) => setResourceDraft({ ...resourceDraft, name: e.target.value })}
-                  placeholder="e.g. Intro to Algebra"
+                  value={resourceDraft.url}
+                  onChange={(e) => handleResourceUrlChange(e.target.value)}
+                  placeholder="https://youtube.com/watch?v=…"
                   style={{ padding: '10px 12px', borderRadius: 10, background: '#0f0f24', border: '1px solid #5b5b8f', color: '#fff' }}
                 />
               </label>
-
-              {resourceDraft.type === 'pdf' && (
-                <label style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-                  <span style={{ fontSize: 12, fontWeight: 600, color: 'rgba(255,255,255,0.7)' }}>PDF file *</span>
-                  <div
-                    className={`resource-upload-zone ${resourceDraft.url ? 'has-file' : ''}`}
-                    onClick={() => !resourceUploading && resourceFileRef.current?.click()}
-                  >
-                    <input
-                      ref={resourceFileRef}
-                      type="file"
-                      accept="application/pdf"
-                      onChange={handleResourceFileUpload}
-                      disabled={resourceUploading}
-                      style={{ display: 'none' }}
-                    />
-                    {resourceUploading ? <span>⏳ Uploading…</span>
-                      : resourceDraft.url ? <span>✅ {resourceFileName || 'PDF'} uploaded — click to replace</span>
-                      : <span>📤 Click to upload a PDF (max 50MB)</span>}
-                  </div>
-                </label>
-              )}
-
-              {resourceDraft.type === 'video' && (
-                <label style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-                  <span style={{ fontSize: 12, fontWeight: 600, color: 'rgba(255,255,255,0.7)' }}>YouTube URL *</span>
-                  <input
-                    value={resourceDraft.url}
-                    onChange={(e) => handleResourceUrlChange(e.target.value)}
-                    placeholder="https://youtube.com/watch?v=…"
-                    style={{ padding: '10px 12px', borderRadius: 10, background: '#0f0f24', border: '1px solid #5b5b8f', color: '#fff' }}
-                  />
-                </label>
-              )}
-            </div>
-
-            <div className="login-prompt-actions">
-              <button className="login-prompt-cancel" onClick={() => setShowResourceDraftPopup(false)} disabled={resourceUploading}>Cancel</button>
-              <button className="login-prompt-btn" onClick={confirmAddResourceDraft} disabled={resourceUploading}>Add to list</button>
-            </div>
+            )}
           </div>
-        </div>
+        </PromptModal>
       )}
     </div>
   );

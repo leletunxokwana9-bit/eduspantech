@@ -1,0 +1,101 @@
+/* src/components/SplashScreen.css */
+.splash-container {
+  position: fixed;
+  inset: 0;
+  background-color: #0a0e1a;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 99999;
+  overflow: hidden;
+  transition: opacity 0.4s ease-out, visibility 0.4s ease-out;
+}
+
+.splash-container.splash-fade-out {
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+}
+
+.splash-bg-glow {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 70vw;
+  height: 70vw;
+  max-width: 800px;
+  max-height: 800px;
+  background: radial-gradient(circle, rgba(124, 58, 237, 0.12) 0%, rgba(10, 14, 26, 0) 65%);
+  animation: splashPulse 4s ease-in-out infinite alternate;
+}
+
+@keyframes splashPulse {
+  0% { transform: translate(-50%, -50%) scale(0.9); opacity: 0.6; }
+  100% { transform: translate(-50%, -50%) scale(1.1); opacity: 1; }
+}
+
+.splash-content {
+  position: relative;
+  z-index: 2;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  animation: splashEnter 0.8s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+  opacity: 0;
+  transform: translateY(20px);
+}
+
+@keyframes splashEnter {
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* ✅ Logo bouncing slowly and breathing */
+.splash-logo-wrapper {
+  margin-bottom: 24px;
+  animation: logoBounceBreath 3s ease-in-out infinite;
+}
+
+@keyframes logoBounceBreath {
+  0% { transform: translateY(0) scale(1); }
+  50% { transform: translateY(-15px) scale(1.05); } /* Bounces up and slightly expands */
+  100% { transform: translateY(0) scale(1); }
+}
+
+.splash-logo {
+  width: 140px;
+  height: 140px;
+  object-fit: contain;
+  /* Soft purple glow behind the logo */
+  filter: drop-shadow(0 0 30px rgba(124, 58, 237, 0.5)); 
+}
+
+.splash-title {
+  font-size: 34px;
+  font-weight: 800;
+  color: #ffffff;
+  margin: 0 0 8px 0;
+  letter-spacing: -0.5px;
+}
+
+.splash-tagline {
+  font-size: 15px;
+  color: #9a9ab8;
+  margin: 0 0 48px 0;
+  font-weight: 500;
+}
+
+.splash-loader-track {
+  width: 220px;
+  height: 4px;
+  background: rgba(255, 255, 255, 0.08);
+  border-radius: 99px;
+  overflow: hidden;
+}
+
+.splash-loader-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #4f46e5, #a78bfa);
+  border-radius: 99px;
+  transition: width 0.3s ease-out;
+}

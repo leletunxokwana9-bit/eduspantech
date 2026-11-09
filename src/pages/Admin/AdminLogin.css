@@ -7,6 +7,15 @@
   background: #0a0e1a;
 }
 
+/* ---------------- Logo Image ---------------- */
+.brand-logo-img {
+  width: 30px;
+  height: 30px;
+  object-fit: cover;
+  border-radius: 8px; /* Rounds out the favicon */
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.3);
+}
+
 /* ---------------- Hero (left) ---------------- */
 
 .admin-login-hero {
@@ -54,7 +63,7 @@
 .admin-login-hero-brand {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 12px;
   margin-bottom: 56px;
 }
 
@@ -177,7 +186,7 @@
 .admin-login-card-brand {
   display: none;
   align-items: center;
-  gap: 9px;
+  gap: 12px;
   margin-bottom: 36px;
 }
 
@@ -345,28 +354,6 @@
   cursor: not-allowed;
 }
 
-.admin-login-footer {
-  margin-top: 22px;
-  padding-top: 20px;
-  border-top: 1px solid rgba(255, 255, 255, 0.06);
-  display: flex;
-  justify-content: center;
-}
-
-.admin-login-footer a {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  color: rgba(255, 255, 255, 0.4);
-  text-decoration: none;
-  font-size: 13.5px;
-  transition: color 0.15s;
-}
-
-.admin-login-footer a:hover {
-  color: rgba(255, 255, 255, 0.75);
-}
-
 /* ---------------- Responsive ---------------- */
 
 @media (max-width: 960px) {
@@ -392,11 +379,11 @@
     font-size: 22px;
   }
 }
+
 /* ============================================
    ENHANCED ADMIN LOGIN — LOCKOUT & ATTEMPTS
    ============================================ */
 
-/* Lockout banner */
 .admin-login-lockout {
   display: flex;
   align-items: flex-start;
@@ -447,7 +434,6 @@
   font-weight: 700;
 }
 
-/* Attempts warning */
 .admin-login-attempts {
   display: flex;
   align-items: center;
@@ -467,7 +453,6 @@
   color: #f59e0b;
 }
 
-/* Tabular numerals for countdown in button */
 .admin-login-btn {
   font-variant-numeric: tabular-nums;
 }

@@ -1,88 +1,166 @@
-.verify-container {
+/* src/pages/VerifyEmail.css */
+
+.verify-page {
   min-height: 100vh;
   display: flex;
   align-items: center;
   justify-content: center;
-  background: linear-gradient(135deg, #f8f9fa 0%, #eef2ff 100%);
-  padding: 20px;
+  background: #0a0e1a;
+  position: relative;
+  overflow: hidden;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
 }
 
-.verify-card {
-  background: white;
-  border-radius: 20px;
-  padding: 48px 40px;
-  max-width: 450px;
+/* Floating Background Orbs */
+.verify-bg {
+  position: absolute;
+  top: 0; left: 0; right: 0; bottom: 0;
+  pointer-events: none;
+}
+
+.gradient-orb {
+  position: absolute;
+  border-radius: 50%;
+  filter: blur(100px);
+  opacity: 0.3;
+}
+
+.orb-1 {
+  width: 400px;
+  height: 400px;
+  background: #4f46e5;
+  top: -100px;
+  left: -100px;
+}
+
+.orb-2 {
+  width: 350px;
+  height: 350px;
+  background: #7c3aed;
+  bottom: -50px;
+  right: -50px;
+}
+
+.verify-container {
+  position: relative;
+  z-index: 1;
   width: 100%;
-  text-align: center;
-  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.06);
-  animation: fadeInUp 0.6s ease-out;
+  max-width: 480px;
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
 }
 
-@keyframes fadeInUp {
-  from {
-    opacity: 0;
-    transform: translateY(30px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
+/* Brand Logo */
+.verify-brand {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 40px;
 }
 
-.spinner {
+.verify-logo-img {
   width: 48px;
   height: 48px;
-  border: 4px solid #f0f0f0;
-  border-top-color: #4f46e5;
-  border-radius: 50%;
-  animation: spin 0.8s linear infinite;
-  margin: 0 auto 20px;
+  object-fit: contain;
+  border-radius: 8px; /* Optional: softens the image edges */
 }
 
-@keyframes spin {
-  to {
-    transform: rotate(360deg);
-  }
+.verify-logo-text {
+  font-size: 24px;
+  font-weight: 700;
+  color: #ffffff;
+  letter-spacing: -0.5px;
 }
 
+/* Card */
+.verify-card {
+  width: 100%;
+  background: #141b2d;
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 24px;
+  padding: 48px 40px;
+  text-align: center;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.4);
+  animation: slideUp 0.5s ease-out;
+}
+
+@keyframes slideUp {
+  from { opacity: 0; transform: translateY(20px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.verify-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+/* Icons */
 .success-icon {
-  font-size: 64px;
-  margin-bottom: 16px;
+  color: #34d399;
+  margin-bottom: 20px;
+  animation: scaleIn 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
 }
 
 .error-icon {
-  font-size: 64px;
-  margin-bottom: 16px;
+  color: #ef4444;
+  margin-bottom: 20px;
+  animation: scaleIn 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
 }
 
+@keyframes scaleIn {
+  0% { transform: scale(0); }
+  70% { transform: scale(1.1); }
+  100% { transform: scale(1); }
+}
+
+/* Typography */
 .verify-card h2 {
   font-size: 24px;
-  font-weight: 700;
-  color: #1a1a2e;
-  margin-bottom: 8px;
+  font-weight: 800;
+  color: #ffffff;
+  margin-bottom: 12px;
 }
 
 .verify-card p {
-  font-size: 16px;
-  color: #6b7280;
+  font-size: 15px;
+  color: #94a3b8;
   line-height: 1.6;
   margin-bottom: 24px;
 }
 
+/* Spinner */
+.spinner {
+  width: 48px;
+  height: 48px;
+  border: 3px solid rgba(255, 255, 255, 0.1);
+  border-top-color: #4f46e5;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+  margin-bottom: 24px;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+/* Button */
 .verify-btn {
-  padding: 12px 32px;
-  background: #4f46e5;
-  color: white;
+  padding: 14px 32px;
+  background: linear-gradient(135deg, #4f46e5, #7c3aed);
+  color: #ffffff;
   border: none;
-  border-radius: 10px;
-  font-size: 16px;
-  font-weight: 600;
+  border-radius: 12px;
+  font-size: 15px;
+  font-weight: 700;
   cursor: pointer;
   transition: all 0.3s ease;
+  width: 100%;
 }
 
 .verify-btn:hover {
-  background: #4338ca;
   transform: translateY(-2px);
-  box-shadow: 0 8px 25px rgba(79, 70, 229, 0.25);
+  box-shadow: 0 8px 25px rgba(79, 70, 229, 0.3);
 }

@@ -333,7 +333,6 @@ const Subjects = () => {
   return (
     <div className="subjects-page">
 
-      {/* ===== HERO ===== */}
       <section className="subjects-hero">
         <div className="subjects-hero-content">
           {text('hero_eyebrow') && (
@@ -375,7 +374,6 @@ const Subjects = () => {
         </div>
       </section>
 
-      {/* ===== SUBJECTS PANEL ===== */}
       <section className="subjects-filter-section" aria-labelledby="subjects-section-title">
         <div className="subjects-section-head">
           <div>
@@ -436,7 +434,6 @@ const Subjects = () => {
           </label>
         </div>
 
-        {/* Grade pills — always shown for guests, only for their tier when logged in */}
         <div className="subjects-filter-group" role="group" aria-label="Filter by grade">
           <span className="subjects-filter-label">{gradeSectionTitle}</span>
           <div className="subjects-filter-pills">
@@ -501,7 +498,6 @@ const Subjects = () => {
         )}
       </section>
 
-      {/* ===== RESULTS GRID ===== */}
       <section ref={resultsRef} className="subjects-results" aria-labelledby="subjects-results-title">
         {!hasAnySubjects ? (
           <EmptyState
@@ -574,7 +570,6 @@ const Subjects = () => {
         )}
       </section>
 
-      {/* ===== JUMP BACK IN ===== */}
       <section className="subjects-jumpback" aria-labelledby="subjects-jumpback-title">
         <div className="subjects-section-header">
           <div>
@@ -597,14 +592,11 @@ const Subjects = () => {
             ))}
           </div>
         ) : (
-          <EmptyState
-            title="Nothing here yet."
-            hint="Once you open a subject or try a past paper, it'll show up here."
-          />
+          <EmptyState title="Nothing to show."
+            hint="Recently opened subjects and papers will appear here." />
         )}
       </section>
 
-      {/* ===== PAST PAPERS ===== */}
       <section ref={papersRef} className="subjects-papers" aria-labelledby="subjects-papers-title">
         <div className="subjects-section-header">
           <div>
@@ -674,7 +666,6 @@ const Subjects = () => {
         )}
       </section>
 
-      {/* ===== OTHER LEVELS ===== */}
       <section className="subjects-other-levels" aria-labelledby="subjects-other-levels-title">
         <button
           type="button"

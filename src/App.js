@@ -1,5 +1,5 @@
-// src/App.js - COMPLETE WITH ADMIN ROUTES + ADMIN LOGIN LAYOUT + ADMIN ROUTE CHECK + TUTOR APPLICATION + TRACK APPLICATION + ADMIN PRICING
-import React, { Suspense, lazy } from 'react';
+// src/App.js - COMPLETE WITH ADMIN ROUTES + ADMIN LOGIN LAYOUT + ADMIN ROUTE CHECK + TUTOR APPLICATION + TRACK APPLICATION + ADMIN PRICING + SPLASH SCREEN + VERIFY EMAIL STANDALONE
+import React, { Suspense, lazy, useState, useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route, useLocation } from 'react-router-dom';
 import Navbar from './components/Navbar';
 import Footer from './components/Footer';
@@ -77,6 +77,11 @@ import AdminLoginLayout from './pages/Admin/AdminLoginLayout';
 // PUBLIC SUBJECT CONTENT (Student view)
 // ============================================
 import SubjectContent from './pages/SubjectContent';
+
+// ============================================
+// ✅ SPLASH SCREEN
+// ============================================
+import SplashScreen from './components/SplashScreen';
 
 // ============================================
 // ERROR BOUNDARY COMPONENT
@@ -171,7 +176,9 @@ const withLazyErrorHandling = (importFn, componentName) => {
     importFn()
       .then(module => {
         console.log(`✅ ${componentName} loaded successfully`);
-        return module;
+        if (module.default) return module;
+        if (module[componentName]) return { default: module[componentName] };
+        throw new Error(`${componentName} has no default or named export`);
       })
       .catch(err => {
         console.error(`❌ Failed to load ${componentName}:`, err);
@@ -259,19 +266,29 @@ const PageLoader = () => (
 );
 
 // ============================================
-// WRAPPER COMPONENT FOR NAVBAR CONDITIONAL RENDERING
+// WRAPPER COMPONENT FOR CONDITIONAL LAYOUT RENDERING
 // ============================================
 const AppContent = () => {
   const location = useLocation();
+  
+  // Hide Navbar/Footer/ChatWidget on Admin routes and VerifyEmail
   const isAdminRoute = location.pathname.startsWith('/admin');
+  const isVerifyEmailRoute = location.pathname === '/verify-email';
+
+  const hideNavigation = isAdminRoute || isVerifyEmailRoute;
 
   return (
     <div className="app">
-      {/* ✅ Hide Navbar on admin routes */}
-      {!isAdminRoute && <Navbar />}
+      {!hideNavigation && <Navbar />}
+      
       <main className="app-main">
         <Suspense fallback={<PageLoader />}>
           <Routes>
+            {/* ============================================
+                ✅ STANDALONE ROUTES (No Navbar/Footer)
+                ============================================ */}
+            <Route path="/verify-email" element={<VerifyEmail />} />
+
             {/* ============================================
                 ✅ ADMIN LOGIN - NO NAVBAR (Layout Route with Outlet)
                 ============================================ */}
@@ -295,7 +312,6 @@ const AppContent = () => {
               <Route path="settings" element={<AdminSettings />} />
               <Route path="activity" element={<AdminActivity />} />
               <Route path="profile" element={<AdminProfile />} />
-              {/* ✅ Admin notifications — lives inside the admin shell */}
               <Route path="notifications" element={<Notifications />} />
             </Route>
 
@@ -305,7 +321,6 @@ const AppContent = () => {
             <Route path="/forgot-password" element={<ForgotPassword />} />
             <Route path="/login" element={<Login />} />
             <Route path="/register" element={<Register />} />
-            <Route path="/verify-email" element={<VerifyEmail />} />
 
             {/* ============================================
                 PUBLIC ROUTES - No authentication needed
@@ -326,23 +341,9 @@ const AppContent = () => {
             <Route path="/terms" element={<Terms />} />
             <Route path="/privacy" element={<Privacy />} />
             <Route path="/search" element={<SearchResults />} />
-
-            {/* ✅ PUBLIC SUBJECT CONTENT VIEWER */}
             <Route path="/subject-content/:subjectId" element={<SubjectContent />} />
-
-            {/* ============================================
-                TEAM ROUTE
-                ============================================ */}
             <Route path="/team" element={<Team />} />
-
-            {/* ============================================
-                ✅ BECOME A TUTOR - Public application
-                ============================================ */}
             <Route path="/become-a-tutor" element={<BecomeATutor />} />
-
-            {/* ============================================
-                ✅ TRACK APPLICATION - Public status check
-                ============================================ */}
             <Route path="/track-application" element={<TrackApplication />} />
 
             {/* ============================================
@@ -375,8 +376,9 @@ const AppContent = () => {
           </Routes>
         </Suspense>
       </main>
-      <Footer />
-      <ChatWidget />
+      
+      {!hideNavigation && <Footer />}
+      {!hideNavigation && <ChatWidget />}
     </div>
   );
 };
@@ -388,6 +390,16 @@ function App() {
   console.log('🚀 App starting...');
   console.log('📋 Environment:', process.env.NODE_ENV);
 
+  const [isAppReady, setIsAppReady] = useState(false);
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setIsAppReady(true);
+    }, 2000); 
+
+    return () => clearTimeout(timer);
+  }, []);
+
   return (
     <ErrorBoundary>
       <Router>
@@ -395,6 +407,7 @@ function App() {
           <ThemeProvider>
             <LanguageProvider>
               <SessionSettingsProvider>
+                <SplashScreen isReady={isAppReady} />
                 <AppContent />
               </SessionSettingsProvider>
             </LanguageProvider>

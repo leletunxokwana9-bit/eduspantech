@@ -1,16 +1,10 @@
 // src/services/pricingService.js
 import { supabase } from './supabaseClient';
 
-const pricingService = {
+export const pricingService = {
   getPricingPlans: async function() {
     try {
-      // Check if supabase is available
-      if (!supabase) {
-        console.error('❌ Supabase client not available');
-        return [];
-      }
-
-      console.log('📊 Fetching pricing plans from Supabase...');
+      if (!supabase) return [];
 
       const { data: plans, error: plansError } = await supabase
         .from('pricing_plans')
@@ -18,24 +12,10 @@ const pricingService = {
         .eq('is_active', true)
         .order('display_order', { ascending: true });
 
-      if (plansError) {
-        console.error('❌ Error fetching plans:', plansError);
-        throw plansError;
-      }
+      if (plansError) throw plansError;
+      if (!plans || plans.length === 0) return [];
 
-      console.log('✅ Plans fetched:', plans);
-
-      if (!plans || plans.length === 0) {
-        console.warn('⚠️ No plans found in database');
-        return [];
-      }
-
-      // ============================================================
-      // Features are stored on pricing_plans.features (JSON array),
-      // not in a separate pricing_features table.
-      // ============================================================
       return plans.map(plan => {
-        // Normalize features — could be an array, JSON string, or null
         let features = [];
         if (Array.isArray(plan.features)) {
           features = plan.features;
@@ -43,19 +23,11 @@ const pricingService = {
           try {
             const parsed = JSON.parse(plan.features);
             if (Array.isArray(parsed)) features = parsed;
-          } catch (e) {
-            console.warn('Could not parse features for plan', plan.tier, e.message);
-          }
+          } catch (e) {}
         }
 
-        // ✅ FIXED: read `price` first (matches admin CRUD), fall back to legacy column
-        const monthlyPrice = Number(
-          plan.price ?? plan.price_monthly ?? 0
-        );
-        // ✅ FIXED: read `annual_price` first, fall back to legacy column
-        const annualPrice = Number(
-          plan.annual_price ?? plan.price_annual ?? 0
-        );
+        const monthlyPrice = Number(plan.price ?? plan.price_monthly ?? 0);
+        const annualPrice = Number(plan.annual_price ?? plan.price_annual ?? 0);
 
         return {
           id: plan.id,
@@ -70,9 +42,8 @@ const pricingService = {
           note: plan.note,
           badge: plan.badge || null,
           features,
-          // ✅ FIXED: pass the DB audience through so Pricing.js can split
-          // school vs tertiary. Plans with no audience default to 'school'.
-          audience: plan.audience || 'school'
+          audience: plan.audience || 'school',
+          paystack_plan_code: plan.paystack_plan_code
         };
       });
     } catch (error) {
@@ -83,22 +54,37 @@ const pricingService = {
 
   getUserSubscription: async function(userId) {
     try {
-      if (!supabase) {
-        console.error('❌ Supabase client not available');
-        return null;
-      }
+      if (!supabase) return null;
 
-      const { data, error } = await supabase
+      const { data: subData, error: subError } = await supabase
         .from('user_subscriptions')
-        .select('*, plan:pricing_plans(*)')
+        .select('*')
         .eq('user_id', userId)
         .eq('status', 'active')
         .order('created_at', { ascending: false })
         .limit(1)
-        .single();
+        .maybeSingle();
 
-      if (error && error.code !== 'PGRST116') throw error;
-      return data || null;
+      if (subError) {
+        console.error('Error fetching subscription:', subError);
+        return null;
+      }
+
+      if (!subData) return null;
+
+      if (subData.plan_id) {
+        const { data: planData, error: planError } = await supabase
+          .from('pricing_plans')
+          .select('*')
+          .eq('id', subData.plan_id)
+          .maybeSingle();
+
+        if (planData && !planError) {
+          subData.plan = planData;
+        }
+      }
+
+      return subData;
     } catch (error) {
       console.error('Error fetching user subscription:', error);
       return null;
@@ -107,4 +93,3 @@ const pricingService = {
 };
 
 export default pricingService;
-export { pricingService };

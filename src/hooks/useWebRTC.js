@@ -22,9 +22,6 @@ const useWebRTC = (sessionId, role, userId) => {
     process.env.REACT_APP_WS_URL ||
     (process.env.REACT_APP_API_URL?.replace('http', 'ws') || 'ws://localhost:3000');
 
-  // ============================================
-  // HANDLE INCOMING MESSAGES
-  // ============================================
   const handleWebSocketMessage = useCallback((data) => {
     switch (data.type) {
       case 'connected':
@@ -44,7 +41,13 @@ const useWebRTC = (sessionId, role, userId) => {
       case 'tutor-joined':
         console.log('👨‍🏫 TUTOR JOINED THE SESSION!');
         setTutorJoined(true);
-        window.dispatchEvent(new CustomEvent('tutor-joined', { detail: { tutorId: data.tutorId } }));
+        window.dispatchEvent(new CustomEvent('tutor-joined', {
+          detail: { tutorId: data.tutorId, name: data.name }
+        }));
+        break;
+
+      case 'student-joined':
+        window.dispatchEvent(new CustomEvent('student-joined', { detail: data }));
         break;
 
       case 'tutor-left':
@@ -53,30 +56,46 @@ const useWebRTC = (sessionId, role, userId) => {
         window.dispatchEvent(new CustomEvent('tutor-left'));
         break;
 
+      case 'student-left':
+        window.dispatchEvent(new CustomEvent('student-left', { detail: data }));
+        break;
+
+      // ✅ FIX: ignore signaling messages echoed back to the sender
       case 'offer':
+        if (data.fromUserId === userId) break;
         console.log('📞 Received offer from:', data.fromUserId);
         handleOffer(data);
         break;
 
       case 'answer':
+        if (data.fromUserId === userId) break;
         console.log('📞 Received answer from:', data.fromUserId);
         handleAnswer(data);
         break;
 
       case 'ice-candidate':
+        if (data.fromUserId === userId) break;
         console.log('🧊 Received ICE candidate from:', data.fromUserId);
         handleIceCandidate(data);
         break;
 
       case 'whiteboard-update':
         window.dispatchEvent(new CustomEvent('whiteboard-update', {
-          detail: { action: data.action, data: data.data, timestamp: data.timestamp }
+          detail: {
+            action: data.action || 'sync',
+            data: Array.isArray(data.data) ? data.data : [],
+            pathCount: data.pathCount,
+            timestamp: data.timestamp
+          }
         }));
         break;
 
       case 'whiteboard-sync':
         window.dispatchEvent(new CustomEvent('whiteboard-sync', {
-          detail: { data: data.data, timestamp: data.timestamp }
+          detail: {
+            data: Array.isArray(data.data) ? data.data : [],
+            timestamp: data.timestamp
+          }
         }));
         break;
 
@@ -123,11 +142,8 @@ const useWebRTC = (sessionId, role, userId) => {
         console.log('Unknown message type:', data.type);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [userId]);
 
-  // ============================================
-  // CONNECT WEBSOCKET
-  // ============================================
   const connectWebSocket = useCallback(() => {
     const encodedUserId = encodeURIComponent(userId || 'unknown');
     const encodedRole = encodeURIComponent(role || 'student');
@@ -135,7 +151,6 @@ const useWebRTC = (sessionId, role, userId) => {
 
     const wsUrl = `${WS_URL}/webrtc?userId=${encodedUserId}&roomId=${encodedRoomId}&role=${encodedRole}`;
     console.log(`🔗 Connecting to WebSocket: ${wsUrl}`);
-    console.log(`👤 Role: ${role}, UserId: ${userId}, Room: ${sessionId}`);
 
     const socket = new WebSocket(wsUrl);
     socketRef.current = socket;
@@ -164,12 +179,12 @@ const useWebRTC = (sessionId, role, userId) => {
       setIsConnected(false);
       setConnectionStatus('disconnected');
 
-      if (reconnectAttempts.current < maxReconnectAttempts) {
+      if (event.code !== 1000 && reconnectAttempts.current < maxReconnectAttempts) {
         reconnectAttempts.current++;
         const delay = 2000 * reconnectAttempts.current;
         console.log(`🔄 Reconnecting attempt ${reconnectAttempts.current}/${maxReconnectAttempts} in ${delay}ms...`);
         setTimeout(() => connectWebSocket(), delay);
-      } else {
+      } else if (reconnectAttempts.current >= maxReconnectAttempts) {
         console.log('❌ Max reconnect attempts reached');
         setError('Failed to connect to WebRTC server');
       }
@@ -182,11 +197,9 @@ const useWebRTC = (sessionId, role, userId) => {
 
     setWs(socket);
     return socket;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [WS_URL, userId, sessionId, role, handleWebSocketMessage]);
 
-  // ============================================
-  // ✅ FIX: ACTUALLY CONNECT ON MOUNT
-  // ============================================
   useEffect(() => {
     if (!sessionId || !userId) {
       console.log('⏸️ useWebRTC: waiting for sessionId/userId', { sessionId, userId });
@@ -201,7 +214,7 @@ const useWebRTC = (sessionId, role, userId) => {
       try {
         if (socket && socket.readyState === WebSocket.OPEN) {
           socket.send(JSON.stringify({ type: 'leave-room' }));
-          socket.close();
+          socket.close(1000, 'component-unmount');
         }
       } catch (e) {}
       if (localStream.current) {
@@ -218,10 +231,12 @@ const useWebRTC = (sessionId, role, userId) => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [sessionId, userId, role]);
 
-  // ============================================
-  // AUDIO
-  // ============================================
   const initializeAudio = useCallback(async () => {
+    if (!navigator.mediaDevices?.getUserMedia) {
+      console.warn('⚠️ getUserMedia not available on this device');
+      setError('Microphone not available. Voice features disabled.');
+      return;
+    }
     try {
       const stream = await navigator.mediaDevices.getUserMedia({
         audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true }
@@ -235,9 +250,6 @@ const useWebRTC = (sessionId, role, userId) => {
     }
   }, []);
 
-  // ============================================
-  // WEBRTC PEER CONNECTION
-  // ============================================
   const createPeerConnection = useCallback(async (targetUserId) => {
     const pc = new RTCPeerConnection({
       iceServers: [
@@ -250,6 +262,14 @@ const useWebRTC = (sessionId, role, userId) => {
     if (localStream.current) {
       localStream.current.getTracks().forEach(track => pc.addTrack(track, localStream.current));
     }
+
+    pc.onconnectionstatechange = () => {
+      const state = pc.connectionState;
+      console.log('🔗 Peer connection state:', targetUserId, state);
+      if (state === 'connected') setConnectionStatus('connected');
+      else if (state === 'failed' || state === 'disconnected' || state === 'closed') setConnectionStatus('connecting');
+      else if (state === 'connecting') setConnectionStatus('connecting');
+    };
 
     pc.ontrack = (event) => {
       remoteStreams.current[targetUserId] = event.streams[0];
@@ -266,8 +286,8 @@ const useWebRTC = (sessionId, role, userId) => {
     };
 
     pc.onicecandidate = (event) => {
-      if (event.candidate && ws && ws.readyState === WebSocket.OPEN) {
-        ws.send(JSON.stringify({
+      if (event.candidate && socketRef.current && socketRef.current.readyState === WebSocket.OPEN) {
+        socketRef.current.send(JSON.stringify({
           type: 'ice-candidate',
           targetUserId,
           candidate: event.candidate,
@@ -278,7 +298,7 @@ const useWebRTC = (sessionId, role, userId) => {
 
     peerConnections.current[targetUserId] = pc;
     return pc;
-  }, [ws, sessionId]);
+  }, [sessionId]);
 
   const handleOffer = useCallback(async (data) => {
     const { fromUserId, offer } = data;
@@ -288,8 +308,8 @@ const useWebRTC = (sessionId, role, userId) => {
       await pc.setRemoteDescription(new RTCSessionDescription(offer));
       const answer = await pc.createAnswer();
       await pc.setLocalDescription(answer);
-      if (ws && ws.readyState === WebSocket.OPEN) {
-        ws.send(JSON.stringify({
+      if (socketRef.current && socketRef.current.readyState === WebSocket.OPEN) {
+        socketRef.current.send(JSON.stringify({
           type: 'answer',
           targetUserId: fromUserId,
           answer: pc.localDescription,
@@ -299,7 +319,7 @@ const useWebRTC = (sessionId, role, userId) => {
     } catch (error) {
       console.error('Error handling offer:', error);
     }
-  }, [createPeerConnection, ws, sessionId]);
+  }, [createPeerConnection, sessionId]);
 
   const handleAnswer = useCallback(async (data) => {
     const { fromUserId, answer } = data;
@@ -321,63 +341,88 @@ const useWebRTC = (sessionId, role, userId) => {
     }
   }, []);
 
-  // ============================================
-  // PUBLIC METHODS
-  // ============================================
+  useEffect(() => {
+    const handleRequestOffer = async (e) => {
+      const { targetUserId } = e.detail || {};
+      if (!targetUserId) return;
+      if (peerConnections.current[targetUserId]) return;
+      try {
+        console.log('📞 Creating offer for:', targetUserId);
+        const pc = await createPeerConnection(targetUserId);
+        const offer = await pc.createOffer();
+        await pc.setLocalDescription(offer);
+        if (socketRef.current?.readyState === WebSocket.OPEN) {
+          socketRef.current.send(JSON.stringify({
+            type: 'offer',
+            targetUserId,
+            offer: pc.localDescription,
+            roomId: sessionId
+          }));
+        }
+      } catch (err) {
+        console.error('Offer creation failed:', err);
+      }
+    };
+    window.addEventListener('request-offer', handleRequestOffer);
+    return () => window.removeEventListener('request-offer', handleRequestOffer);
+  }, [createPeerConnection, sessionId]);
+
   const toggleAudio = useCallback(() => {
     if (localStream.current) {
       localStream.current.getTracks().forEach(track => { track.enabled = !isAudioEnabled; });
       setIsAudioEnabled(!isAudioEnabled);
-      if (ws && ws.readyState === WebSocket.OPEN) {
-        ws.send(JSON.stringify({ type: 'audio-toggle', enabled: !isAudioEnabled }));
+      if (socketRef.current && socketRef.current.readyState === WebSocket.OPEN) {
+        socketRef.current.send(JSON.stringify({ type: 'audio-toggle', enabled: !isAudioEnabled }));
       }
+    } else {
+      setError('No microphone to toggle');
     }
-  }, [isAudioEnabled, ws]);
+  }, [isAudioEnabled]);
 
   const broadcastWhiteboardUpdate = useCallback((action, data) => {
-    if (ws && ws.readyState === WebSocket.OPEN) {
-      ws.send(JSON.stringify({
-        type: 'whiteboard-draw',
-        action,
-        paths: data,
+    if (socketRef.current && socketRef.current.readyState === WebSocket.OPEN) {
+      socketRef.current.send(JSON.stringify({
+        type: 'whiteboard-update',
+        action: action || 'draw',
+        data: Array.isArray(data) ? data : [],
         timestamp: Date.now()
       }));
     }
-  }, [ws]);
+  }, []);
 
   const clearWhiteboard = useCallback(() => {
-    if (ws && ws.readyState === WebSocket.OPEN) {
-      ws.send(JSON.stringify({ type: 'whiteboard-clear' }));
+    if (socketRef.current && socketRef.current.readyState === WebSocket.OPEN) {
+      socketRef.current.send(JSON.stringify({ type: 'whiteboard-clear' }));
     }
-  }, [ws]);
+  }, []);
 
   const sendChatMessage = useCallback((message, name) => {
-    if (ws && ws.readyState === WebSocket.OPEN) {
-      ws.send(JSON.stringify({
+    if (socketRef.current && socketRef.current.readyState === WebSocket.OPEN) {
+      socketRef.current.send(JSON.stringify({
         type: 'chat-message',
         message,
         name: name || 'You',
         time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
       }));
     }
-  }, [ws]);
+  }, []);
 
   const raiseHand = useCallback((raised) => {
-    if (ws && ws.readyState === WebSocket.OPEN) {
-      ws.send(JSON.stringify({ type: 'hand-raise', raised }));
+    if (socketRef.current && socketRef.current.readyState === WebSocket.OPEN) {
+      socketRef.current.send(JSON.stringify({ type: 'hand-raise', raised }));
     }
-  }, [ws]);
+  }, []);
 
   const sendTyping = useCallback((isTyping) => {
-    if (ws && ws.readyState === WebSocket.OPEN) {
-      ws.send(JSON.stringify({ type: isTyping ? 'typing-start' : 'typing-stop' }));
+    if (socketRef.current && socketRef.current.readyState === WebSocket.OPEN) {
+      socketRef.current.send(JSON.stringify({ type: isTyping ? 'typing-start' : 'typing-stop' }));
     }
-  }, [ws]);
+  }, []);
 
   const leaveSession = useCallback(() => {
-    if (ws && ws.readyState === WebSocket.OPEN) {
-      ws.send(JSON.stringify({ type: 'leave-room' }));
-      ws.close();
+    if (socketRef.current && socketRef.current.readyState === WebSocket.OPEN) {
+      socketRef.current.send(JSON.stringify({ type: 'leave-room' }));
+      socketRef.current.close(1000, 'user-left');
     }
     if (localStream.current) {
       localStream.current.getTracks().forEach(track => track.stop());
@@ -389,7 +434,7 @@ const useWebRTC = (sessionId, role, userId) => {
       try { audio.pause(); audio.srcObject = null; } catch (e) {}
     });
     audioElements.current = {};
-  }, [ws]);
+  }, []);
 
   return {
     isConnected,

@@ -58,7 +58,7 @@ const MySessions = () => {
   const fetchUserSessions = async () => {
     try {
       const token = localStorage.getItem('accessToken');
-      
+
       if (!token) {
         console.log('No token found, skipping session fetch');
         setSessions([]);
@@ -66,7 +66,7 @@ const MySessions = () => {
       }
 
       console.log('📡 Fetching sessions from:', `${API_BASE_URL}/sessions`);
-      
+
       const response = await fetch(`${API_BASE_URL}/sessions`, {
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -98,7 +98,7 @@ const MySessions = () => {
         const enrichedSessions = await Promise.all(
           sessionsList.map(async (session) => {
             let tutor = null;
-            
+
             if (session.tutor_id) {
               try {
                 const tutorResponse = await fetch(`${API_BASE_URL}/tutors/${session.tutor_id}`, {
@@ -107,7 +107,7 @@ const MySessions = () => {
                     'Content-Type': 'application/json'
                   }
                 });
-                
+
                 if (tutorResponse.ok) {
                   const tutorData = await tutorResponse.json();
                   tutor = tutorData.tutor || tutorData;
@@ -120,7 +120,7 @@ const MySessions = () => {
 
             // ✅ FIX: Use 'date' column (not 'start_time')
             const sessionDate = session.date || session.created_at;
-            
+
             // Calculate duration
             let duration = session.duration || 60;
             if (session.end_time && session.date) {
@@ -129,19 +129,27 @@ const MySessions = () => {
               duration = Math.round((end - start) / 60000);
             }
 
-            // Determine status
+            // ✅ FIX: Always derive status from dates (except cancelled/completed).
+            // Previously only 'upcoming'/'active' were recomputed, so sessions
+            // with backend status like 'scheduled'/'confirmed' never got
+            // reclassified and matched no Join condition in the UI.
             const now = new Date();
             const startTime = session.date ? new Date(session.date) : null;
-            const endTime = session.end_time ? new Date(session.end_time) : null;
+            const endTime = session.end_time
+              ? new Date(session.end_time)
+              : (startTime ? new Date(startTime.getTime() + duration * 60000) : null);
+
             let status = session.status || 'upcoming';
-            
-            if (status === 'upcoming' || status === 'active') {
-              if (endTime && endTime < now) {
-                status = 'completed';
-              } else if (startTime && startTime < now && endTime && endTime > now) {
+
+            if (status !== 'cancelled' && status !== 'completed') {
+              if (!startTime) {
+                status = 'upcoming';
+              } else if (now < startTime) {
+                status = 'upcoming';
+              } else if (endTime && now <= endTime) {
                 status = 'ongoing';
-              } else if (startTime && startTime < now && !endTime) {
-                status = 'active';
+              } else {
+                status = 'completed';
               }
             }
 
@@ -150,7 +158,8 @@ const MySessions = () => {
               date: session.date,
               end_time: session.end_time,
               duration: session.duration,
-              status: session.status,
+              backendStatus: session.status,
+              computedStatus: status,
               topic: session.topic
             });
 
@@ -195,12 +204,12 @@ const MySessions = () => {
     if (!tutor) return '🧑‍🏫';
 
     const photoUrl = tutor.avatar || tutor.profileImage;
-    
+
     if (photoUrl) {
       return (
-        <img 
-          src={photoUrl} 
-          alt={tutor.name} 
+        <img
+          src={photoUrl}
+          alt={tutor.name}
           className="tutor-avatar-img"
           loading="lazy"
           onError={(e) => {
@@ -213,11 +222,11 @@ const MySessions = () => {
                 .join('')
                 .toUpperCase()
                 .slice(0, 2);
-              
+
               const colors = ['#1a73e8', '#e91e63', '#ff6f00', '#7b1fa2', '#0d47a1', '#00695c', '#bf360c', '#4a148c', '#1a237e', '#880e4f', '#004d40'];
               const hash = tutor.name.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
               const color = colors[hash % colors.length];
-              
+
               const fallbackDiv = document.createElement('div');
               fallbackDiv.className = 'tutor-avatar-default';
               fallbackDiv.style.cssText = `
@@ -241,20 +250,20 @@ const MySessions = () => {
         />
       );
     }
-    
+
     const initials = tutor.name
       .split(' ')
       .map(word => word[0])
       .join('')
       .toUpperCase()
       .slice(0, 2);
-    
+
     const colors = ['#1a73e8', '#e91e63', '#ff6f00', '#7b1fa2', '#0d47a1', '#00695c', '#bf360c', '#4a148c', '#1a237e', '#880e4f', '#004d40'];
     const hash = tutor.name.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
     const color = colors[hash % colors.length];
-    
+
     return (
-      <div 
+      <div
         className="tutor-avatar-default"
         style={{
           width: '48px',
@@ -341,6 +350,29 @@ const MySessions = () => {
   };
 
   // ============================================
+  // ✅ FIX: JOINABILITY HELPER
+  // A session is joinable from 10 min before start until its end time.
+  // This replaces the old `status === 'upcoming'` gate that hid the
+  // Join button on sessions that were already in progress.
+  // ============================================
+  const isJoinable = (session) => {
+    if (!session) return false;
+    if (session.status === 'completed' || session.status === 'cancelled') return false;
+
+    const now = new Date();
+    const start = session.date ? new Date(session.date) : null;
+    if (!start || isNaN(start.getTime())) return false;
+
+    const durationMs = (session.duration || 60) * 60 * 1000;
+    const end = session.end_time
+      ? new Date(session.end_time)
+      : new Date(start.getTime() + durationMs);
+
+    const opensAt = new Date(start.getTime() - 10 * 60 * 1000); // 10 min before
+    return now >= opensAt && now <= end;
+  };
+
+  // ============================================
   // ✅ CUSTOM POPUP HELPERS
   // ============================================
   const showSuccessPopupMessage = (title, message) => {
@@ -367,9 +399,9 @@ const MySessions = () => {
 
   const confirmCancel = async () => {
     if (!sessionToCancel) return;
-    
+
     setActionLoading(true);
-    
+
     try {
       const token = localStorage.getItem('accessToken');
       const response = await fetch(`${API_BASE_URL}/sessions/${sessionToCancel.id}/cancel`, {
@@ -381,18 +413,18 @@ const MySessions = () => {
       });
 
       if (response.ok) {
-        setSessions(prev => 
-          prev.map(s => 
-            s.id === sessionToCancel.id 
+        setSessions(prev =>
+          prev.map(s =>
+            s.id === sessionToCancel.id
               ? { ...s, status: 'cancelled' }
               : s
           )
         );
-        
+
         setShowCancelPopup(false);
         setSessionToCancel(null);
         showSuccessPopupMessage('✅ Session Cancelled', 'Your session has been cancelled successfully.');
-        
+
         setTimeout(() => {
           fetchUserSessions();
         }, 1000);
@@ -421,17 +453,17 @@ const MySessions = () => {
 
   const confirmReschedule = async () => {
     if (!sessionToReschedule) return;
-    
+
     if (!rescheduleDate) {
       showErrorPopupMessage('Please select a new date and time.');
       return;
     }
 
     setActionLoading(true);
-    
+
     try {
       const token = localStorage.getItem('accessToken');
-      
+
       const cancelResponse = await fetch(`${API_BASE_URL}/sessions/${sessionToReschedule.id}/cancel`, {
         method: 'PUT',
         headers: {
@@ -466,7 +498,7 @@ const MySessions = () => {
         setShowReschedulePopup(false);
         setSessionToReschedule(null);
         showSuccessPopupMessage('✅ Session Rescheduled', 'Your session has been rescheduled successfully!');
-        
+
         setTimeout(() => {
           fetchUserSessions();
         }, 1000);
@@ -489,11 +521,14 @@ const MySessions = () => {
     setExpandedSession(expandedSession === session.id ? null : session.id);
   };
 
+  // ✅ FIX: Pass sessionId in navigate state so TutorSession can read it
   const handleJoinSession = (session) => {
     if (session.meetingLink) {
       window.open(session.meetingLink, '_blank');
     } else {
-      navigate(`/session/${session.id}`, { state: { tutor: session.tutor } });
+      navigate(`/session/${session.id}`, {
+        state: { tutor: session.tutor, sessionId: session.id }
+      });
     }
   };
 
@@ -512,6 +547,10 @@ const MySessions = () => {
 
   const getFilteredSessions = () => {
     if (filterStatus === 'all') return sessions;
+    // ✅ FIX: 'upcoming' filter should include ongoing sessions
+    if (filterStatus === 'upcoming') {
+      return sessions.filter(s => s.status === 'upcoming' || s.status === 'ongoing');
+    }
     return sessions.filter(s => s.status === filterStatus);
   };
 
@@ -617,7 +656,7 @@ const MySessions = () => {
           <p className="popup-message">
             Reschedule your session with <strong>{session.tutor?.name || 'Tutor'}</strong>
           </p>
-          
+
           <div className="reschedule-form">
             <div className="form-group">
               <label>📅 New Date & Time</label>
@@ -746,7 +785,7 @@ const MySessions = () => {
                 My Sessions
               </h1>
               <p className="header-subtitle">
-                {sessions.length === 0 
+                {sessions.length === 0
                   ? "You haven't booked any sessions yet"
                   : `${sessions.length} session${sessions.length > 1 ? 's' : ''} total`
                 }
@@ -754,7 +793,7 @@ const MySessions = () => {
             </div>
             {sessions.length > 0 && (
               <div className="header-right">
-                <button 
+                <button
                   className="book-new-btn"
                   onClick={handleRedirectToTutors}
                 >
@@ -797,25 +836,25 @@ const MySessions = () => {
         {sessions.length > 0 && (
           <div className="filter-bar">
             <div className="filter-buttons">
-              <button 
+              <button
                 className={`filter-btn ${filterStatus === 'all' ? 'active' : ''}`}
                 onClick={() => setFilterStatus('all')}
               >
                 All ({sessions.length})
               </button>
-              <button 
+              <button
                 className={`filter-btn ${filterStatus === 'upcoming' ? 'active' : ''}`}
                 onClick={() => setFilterStatus('upcoming')}
               >
                 Upcoming ({upcomingSessions.length})
               </button>
-              <button 
+              <button
                 className={`filter-btn ${filterStatus === 'completed' ? 'active' : ''}`}
                 onClick={() => setFilterStatus('completed')}
               >
                 Completed ({completedSessions.length})
               </button>
-              <button 
+              <button
                 className={`filter-btn ${filterStatus === 'cancelled' ? 'active' : ''}`}
                 onClick={() => setFilterStatus('cancelled')}
               >
@@ -831,10 +870,10 @@ const MySessions = () => {
             <div className="empty-icon">📅</div>
             <h3>No Sessions Booked Yet</h3>
             <p>
-              You haven't booked any tutoring sessions. Browse our expert tutors and 
+              You haven't booked any tutoring sessions. Browse our expert tutors and
               schedule your first session today!
             </p>
-            <button 
+            <button
               className="empty-book-btn"
               onClick={handleRedirectToTutors}
             >
@@ -844,11 +883,11 @@ const MySessions = () => {
         ) : (
           <div className="sessions-grid">
             {filteredSessions.map((session) => (
-              <div 
-                key={session.id} 
+              <div
+                key={session.id}
                 className={`session-card ${expandedSession === session.id ? 'expanded' : ''}`}
               >
-                <div 
+                <div
                   className="session-card-header"
                   onClick={() => handleSessionClick(session)}
                 >
@@ -856,7 +895,7 @@ const MySessions = () => {
                     <span className={`status-dot ${getStatusColor(session.status)}`}></span>
                     <span className="status-label">{getStatusLabel(session.status)}</span>
                   </div>
-                  
+
                   <div className="session-info">
                     <h3 className="session-title">{session.topic || 'Tutoring Session'}</h3>
                     <div className="session-meta">
@@ -880,8 +919,10 @@ const MySessions = () => {
                   </div>
 
                   <div className="session-actions-preview">
-                    {session.status === 'upcoming' && (
-                      <button 
+                    {/* ✅ FIX: Show Join whenever the session is joinable,
+                        not only when status === 'upcoming'. */}
+                    {isJoinable(session) && (
+                      <button
                         className="session-action-btn join-btn"
                         onClick={(e) => {
                           e.stopPropagation();
@@ -962,23 +1003,27 @@ const MySessions = () => {
                     </div>
 
                     <div className="session-actions">
-                      {session.status === 'upcoming' && (
+                      {/* ✅ FIX: Show actions for upcoming AND ongoing sessions.
+                          Join itself is gated by isJoinable(). */}
+                      {(session.status === 'upcoming' || session.status === 'ongoing') && (
                         <>
-                          <button 
-                            className="action-btn join-btn"
-                            onClick={() => handleJoinSession(session)}
-                          >
-                            <span className="btn-icon">▶️</span>
-                            Join Session
-                          </button>
-                          <button 
+                          {isJoinable(session) && (
+                            <button
+                              className="action-btn join-btn"
+                              onClick={() => handleJoinSession(session)}
+                            >
+                              <span className="btn-icon">▶️</span>
+                              Join Session
+                            </button>
+                          )}
+                          <button
                             className="action-btn reschedule-btn"
                             onClick={() => handleRescheduleClick(session)}
                           >
                             <span className="btn-icon">🔄</span>
                             Reschedule
                           </button>
-                          <button 
+                          <button
                             className="action-btn cancel-btn"
                             onClick={() => handleCancelClick(session)}
                           >
@@ -988,7 +1033,7 @@ const MySessions = () => {
                         </>
                       )}
                       {session.status === 'completed' && (
-                        <button 
+                        <button
                           className="action-btn review-btn"
                           onClick={() => navigate(`/session/${session.id}/review`)}
                         >
@@ -1042,7 +1087,7 @@ const MySessions = () => {
             <div className="popup-icon">🔔</div>
             <h3 className="popup-title">No Sessions Booked</h3>
             <p className="popup-message">
-              You haven't booked any tutoring sessions yet. You will be redirected to 
+              You haven't booked any tutoring sessions yet. You will be redirected to
               the tutors page to browse and book your first session.
             </p>
             <div className="popup-actions">

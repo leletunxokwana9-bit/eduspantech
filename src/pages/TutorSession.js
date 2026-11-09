@@ -1,6 +1,6 @@
-// src/pages/TutorSession.js - COMPLETE FIXED VERSION
+// src/pages/TutorSession.js
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { useNavigate, useLocation } from 'react-router-dom';
+import { useNavigate, useLocation, useParams } from 'react-router-dom';
 import useWebRTC from '../hooks/useWebRTC';
 import { supabase } from '../services/supabaseClient';
 import './TutorSession.css';
@@ -69,7 +69,6 @@ const SoundGenerator = {
       gainNode.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.3);
       oscillator.start(audioCtx.currentTime);
       oscillator.stop(audioCtx.currentTime + 0.3);
-      
       setTimeout(() => {
         try {
           const osc2 = audioCtx.createOscillator();
@@ -89,7 +88,7 @@ const SoundGenerator = {
 };
 
 // ============================================
-// EMOJI DATA
+// EMOJIS
 // ============================================
 const EMOJIS = [
   '😀', '😁', '😂', '🤣', '😃', '😄', '😅', '😆', '😉', '😊', '😋', '😎', '😍', '🥰', '😘', '😗', '😙', '😚', '🙂', '🤗', '🤩', '🤔', '🤨', '😐', '😑', '😶', '🙄', '😏', '😣', '😥', '😮', '🤐', '😯', '😪', '😫', '😴', '😌', '😛', '😜', '😝', '🤤', '😒', '😓', '😔', '😕', '🙃', '🤑', '😲', '☹️', '🙁', '😖', '😞', '😟', '😤', '😢', '😭', '😦', '😧', '😨', '😩', '🤯', '😬', '😰', '😱', '🥵', '🥶', '😳', '🤪', '😵', '😡', '😠', '🤬',
@@ -99,7 +98,7 @@ const EMOJIS = [
 ];
 
 // ============================================
-// WAITING FOR TUTOR COMPONENT
+// WAITING FOR TUTOR
 // ============================================
 const WaitingForTutor = ({ onLeave }) => (
   <div className="waiting-for-tutor">
@@ -127,24 +126,24 @@ const WaitingForTutor = ({ onLeave }) => (
 const TutorSession = () => {
   const navigate = useNavigate();
   const location = useLocation();
+  const { sessionId: routeSessionId } = useParams();
   const tutor = location.state?.tutor;
-  const sessionId = location.state?.sessionId || `session-${Date.now()}`;
-  
-  // User state
+  const sessionId = routeSessionId || location.state?.sessionId || `session-${Date.now()}`;
+
   const [userRole, setUserRole] = useState('student');
   const [userId, setUserId] = useState(null);
   const [userName, setUserName] = useState('You');
   const [isTutorUser, setIsTutorUser] = useState(false);
   const [roleLoaded, setRoleLoaded] = useState(false);
-  
+
   // ============================================
-  // ROLE DETECTION & TOKEN REFRESH
+  // ROLE DETECTION
   // ============================================
   useEffect(() => {
     const checkRole = async () => {
       console.log('🔍 Checking user role...');
       let token = localStorage.getItem('accessToken');
-      
+
       if (!token) {
         console.log('⚠️ No token found, defaulting to student');
         setUserRole('student');
@@ -154,14 +153,13 @@ const TutorSession = () => {
         setRoleLoaded(true);
         return;
       }
-      
+
       try {
         const API_URL = process.env.REACT_APP_API_URL || 'https://eduspantech-backend.onrender.com/api';
         let response = await fetch(`${API_URL}/auth/me`, {
           headers: { 'Authorization': `Bearer ${token}` }
         });
 
-        // ✅ FIX: If 401, try to refresh the token
         if (response.status === 401) {
           console.log('🔄 Token expired, attempting refresh...');
           const refreshToken = localStorage.getItem('refreshToken');
@@ -175,36 +173,33 @@ const TutorSession = () => {
               const refreshData = await refreshRes.json();
               localStorage.setItem('accessToken', refreshData.accessToken);
               token = refreshData.accessToken;
-              
-              // Retry with new token
               response = await fetch(`${API_URL}/auth/me`, {
                 headers: { 'Authorization': `Bearer ${token}` }
               });
             }
           }
         }
-        
+
         if (response.ok) {
           const data = await response.json();
           const user = data.user || data;
           const isTutor = user.is_tutor === true || user.role === 'tutor';
           const id = user.id || user.userId || `user-${Date.now()}`;
           const name = user.name || user.fullName || 'You';
-          
+
           setUserRole(isTutor ? 'tutor' : 'student');
           setUserId(id);
           setUserName(name);
           setIsTutorUser(isTutor);
           setRoleLoaded(true);
-          
+
           console.log('👤 User role determined (Backend):', isTutor ? 'TUTOR' : 'STUDENT');
         } else {
           throw new Error('Backend rejected token');
         }
       } catch (error) {
         console.warn('⚠️ Backend auth failed, falling back to Supabase...', error);
-        
-        // ✅ FALLBACK TO SUPABASE
+
         try {
           const { data: { session } } = await supabase.auth.getSession();
           if (session?.user) {
@@ -224,12 +219,12 @@ const TutorSession = () => {
         setRoleLoaded(true);
       }
     };
-    
+
     checkRole();
   }, []);
 
   // ============================================
-  // WEBRTC HOOK
+  // WEBRTC
   // ============================================
   const {
     isConnected,
@@ -243,26 +238,21 @@ const TutorSession = () => {
     broadcastWhiteboardUpdate,
     clearWhiteboard: clearWhiteboardRemote,
   } = useWebRTC(
-    roleLoaded ? sessionId : null, 
-    roleLoaded ? userRole : 'student', 
+    roleLoaded ? sessionId : null,
+    roleLoaded ? userRole : 'student',
     roleLoaded ? userId : null
   );
 
-  // ============================================
-  // WAITING STATE
-  // ============================================
   const [showWaitingScreen, setShowWaitingScreen] = useState(false);
   const [sessionReady, setSessionReady] = useState(false);
 
   useEffect(() => {
     if (!roleLoaded) return;
-    
     if (userRole === 'tutor') {
       setShowWaitingScreen(false);
       setSessionReady(true);
       return;
     }
-    
     if (userRole === 'student') {
       const hasTutor = participants.some(p => p.role === 'tutor');
       if (hasTutor || tutorJoined) {
@@ -300,7 +290,7 @@ const TutorSession = () => {
   const [maxHistory] = useState(50);
 
   // ============================================
-  // CHAT & UI STATE
+  // CHAT & UI
   // ============================================
   const [messages, setMessages] = useState([]);
   const [newMessage, setNewMessage] = useState('');
@@ -314,27 +304,16 @@ const TutorSession = () => {
   const [isMuted, setIsMuted] = useState(false);
   const [showRatingModal, setShowRatingModal] = useState(false);
   const [ratingData, setRatingData] = useState({
-    overall: 0,
-    communication: 0,
-    knowledge: 0,
-    teaching: 0,
-    punctuality: 0,
-    review: ''
+    overall: 0, communication: 0, knowledge: 0, teaching: 0, punctuality: 0, review: ''
   });
   const [ratingSubmitted, setRatingSubmitted] = useState(false);
   const [ratingLoading, setRatingLoading] = useState(false);
   const [sessionEnded, setSessionEnded] = useState(false);
   const [hoveredStar, setHoveredStar] = useState(0);
   const [sessionStats, setSessionStats] = useState({
-    whiteboardActions: 0,
-    messagesSent: 0,
-    handRaises: 0,
-    startTime: Date.now()
+    whiteboardActions: 0, messagesSent: 0, handRaises: 0, startTime: Date.now()
   });
 
-  // ============================================
-  // REFS
-  // ============================================
   const canvasRef = useRef(null);
   const ctxRef = useRef(null);
   const messagesEndRef = useRef(null);
@@ -344,7 +323,7 @@ const TutorSession = () => {
   const drawingDataRef = useRef([]);
 
   // ============================================
-  // CANVAS SETUP (FIXED PASSIVE LISTENERS)
+  // CANVAS SETUP
   // ============================================
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -367,20 +346,16 @@ const TutorSession = () => {
         canvas.style.width = rect.width + 'px';
         canvas.style.height = rect.height + 'px';
         ctx.scale(dpr, dpr);
-        
-        if (drawingData.length > 0) {
-          redrawCanvas();
-        }
+        if (drawingData.length > 0) redrawCanvas();
       };
 
       resizeCanvas();
       window.addEventListener('resize', resizeCanvas);
 
-      // ✅ FIX: Prevent scrolling while drawing on mobile
       const preventScroll = (e) => { if (userRole === 'tutor') e.preventDefault(); };
       canvas.addEventListener('touchstart', preventScroll, { passive: false });
       canvas.addEventListener('touchmove', preventScroll, { passive: false });
-      
+
       return () => {
         window.removeEventListener('resize', resizeCanvas);
         canvas.removeEventListener('touchstart', preventScroll);
@@ -389,11 +364,8 @@ const TutorSession = () => {
     }, 100);
 
     return () => clearTimeout(timer);
-  }, [strokeWidth, selectedColor, sessionReady, userRole]); 
+  }, [strokeWidth, selectedColor, sessionReady, userRole]);
 
-  // ============================================
-  // REDRAW CANVAS
-  // ============================================
   const redrawCanvas = useCallback(() => {
     const ctx = ctxRef.current;
     const canvas = canvasRef.current;
@@ -401,7 +373,7 @@ const TutorSession = () => {
 
     const dpr = window.devicePixelRatio || 1;
     ctx.clearRect(0, 0, canvas.width, canvas.height);
-    
+
     drawingData.forEach(path => {
       if (!path || !path.points || path.points.length < 2) return;
       ctx.beginPath();
@@ -417,18 +389,11 @@ const TutorSession = () => {
     });
   }, [drawingData]);
 
-  // Update drawingDataRef
-  useEffect(() => {
-    drawingDataRef.current = drawingData;
-  }, [drawingData]);
+  useEffect(() => { drawingDataRef.current = drawingData; }, [drawingData]);
 
-  // ============================================
-  // DRAWING HANDLERS
-  // ============================================
   const startDrawing = (e) => {
     if (userRole !== 'tutor' || !ctxRef.current) return;
     e.preventDefault();
-    
     const canvas = canvasRef.current;
     const rect = canvas.getBoundingClientRect();
     const dpr = window.devicePixelRatio || 1;
@@ -436,7 +401,6 @@ const TutorSession = () => {
     const clientY = e.clientY || e.touches?.[0]?.clientY || 0;
     const x = (clientX - rect.left) * (canvas.width / rect.width / dpr);
     const y = (clientY - rect.top) * (canvas.height / rect.height / dpr);
-
     setIsDrawing(true);
     setLastPos({ x, y });
     setSessionStats(prev => ({ ...prev, whiteboardActions: prev.whiteboardActions + 1 }));
@@ -445,7 +409,6 @@ const TutorSession = () => {
   const draw = (e) => {
     if (!isDrawing || userRole !== 'tutor' || !ctxRef.current) return;
     e.preventDefault();
-    
     const canvas = canvasRef.current;
     const rect = canvas.getBoundingClientRect();
     const dpr = window.devicePixelRatio || 1;
@@ -473,11 +436,7 @@ const TutorSession = () => {
           return newData;
         }
       }
-      newData.push({
-        points: [{ x, y }],
-        color: selectedColor,
-        width: strokeWidth
-      });
+      newData.push({ points: [{ x, y }], color: selectedColor, width: strokeWidth });
       return newData;
     });
 
@@ -494,7 +453,6 @@ const TutorSession = () => {
         if (newHistory.length > maxHistory) newHistory.shift();
         setCanvasHistory(newHistory);
         setHistoryIndex(newHistory.length - 1);
-        
         const currentDrawingData = drawingDataRef.current;
         console.log('📤 Broadcasting whiteboard data:', currentDrawingData.length, 'paths');
         broadcastWhiteboardUpdate('draw', currentDrawingData);
@@ -504,9 +462,6 @@ const TutorSession = () => {
     setLastPos(null);
   };
 
-  // ============================================
-  // CANVAS CLEAR
-  // ============================================
   const clearWhiteboard = () => {
     if (userRole !== 'tutor' || !ctxRef.current) return;
     const canvas = canvasRef.current;
@@ -514,7 +469,6 @@ const TutorSession = () => {
     ctx.clearRect(0, 0, canvas.width, canvas.height);
     setDrawingData([]);
     clearWhiteboardRemote();
-    
     const dataUrl = canvas.toDataURL();
     const newHistory = canvasHistory.slice(0, historyIndex + 1);
     newHistory.push(dataUrl);
@@ -523,9 +477,6 @@ const TutorSession = () => {
     setHistoryIndex(newHistory.length - 1);
   };
 
-  // ============================================
-  // UNDO / REDO
-  // ============================================
   const undo = () => {
     if (userRole !== 'tutor' || historyIndex <= 0 || !ctxRef.current) return;
     const newIndex = historyIndex - 1;
@@ -533,10 +484,7 @@ const TutorSession = () => {
     const canvas = canvasRef.current;
     const ctx = ctxRef.current;
     const img = new Image();
-    img.onload = () => {
-      ctx.clearRect(0, 0, canvas.width, canvas.height);
-      ctx.drawImage(img, 0, 0);
-    };
+    img.onload = () => { ctx.clearRect(0, 0, canvas.width, canvas.height); ctx.drawImage(img, 0, 0); };
     img.src = canvasHistory[newIndex];
     broadcastWhiteboardUpdate('undo', canvasHistory[newIndex]);
   };
@@ -548,45 +496,31 @@ const TutorSession = () => {
     const canvas = canvasRef.current;
     const ctx = ctxRef.current;
     const img = new Image();
-    img.onload = () => {
-      ctx.clearRect(0, 0, canvas.width, canvas.height);
-      ctx.drawImage(img, 0, 0);
-    };
+    img.onload = () => { ctx.clearRect(0, 0, canvas.width, canvas.height); ctx.drawImage(img, 0, 0); };
     img.src = canvasHistory[newIndex];
     broadcastWhiteboardUpdate('redo', canvasHistory[newIndex]);
   };
 
-  // ============================================
-  // RECEIVE WHITEBOARD UPDATES
-  // ============================================
   useEffect(() => {
     const handleWhiteboardUpdate = (event) => {
       const { action, data } = event.detail;
       console.log('📥 Received whiteboard update:', action, data?.length || 'data');
-      
       if (action === 'draw' && Array.isArray(data)) {
-        console.log('🔄 Updating whiteboard with', data.length, 'paths');
         setDrawingData(data);
         setTimeout(() => redrawCanvas(), 50);
       } else if (action === 'clear') {
-        console.log('🧹 Clearing whiteboard');
         setDrawingData([]);
         setTimeout(() => redrawCanvas(), 50);
       } else if (action === 'undo' || action === 'redo') {
-        console.log('↩️ Undo/Redo received');
         const img = new Image();
         img.onload = () => {
           const canvas = canvasRef.current;
           const ctx = ctxRef.current;
-          if (canvas && ctx) {
-            ctx.clearRect(0, 0, canvas.width, canvas.height);
-            ctx.drawImage(img, 0, 0);
-          }
+          if (canvas && ctx) { ctx.clearRect(0, 0, canvas.width, canvas.height); ctx.drawImage(img, 0, 0); }
         };
         img.src = data;
       }
     };
-
     const handleWhiteboardSync = (event) => {
       const { data } = event.detail;
       console.log('🔄 Whiteboard sync received:', data?.length || 'data');
@@ -595,17 +529,13 @@ const TutorSession = () => {
         setTimeout(() => redrawCanvas(), 50);
       }
     };
-
     const handleClearWhiteboard = () => {
-      console.log('🧹 Clear whiteboard event received');
       setDrawingData([]);
       setTimeout(() => redrawCanvas(), 50);
     };
-
     window.addEventListener('whiteboard-update', handleWhiteboardUpdate);
     window.addEventListener('whiteboard-sync', handleWhiteboardSync);
     window.addEventListener('clear-whiteboard', handleClearWhiteboard);
-
     return () => {
       window.removeEventListener('whiteboard-update', handleWhiteboardUpdate);
       window.removeEventListener('whiteboard-sync', handleWhiteboardSync);
@@ -613,19 +543,11 @@ const TutorSession = () => {
     };
   }, [redrawCanvas]);
 
-  // ============================================
-  // TIMER
-  // ============================================
   useEffect(() => {
-    timerRef.current = setInterval(() => {
-      setTimeElapsed(prev => prev + 1);
-    }, 1000);
+    timerRef.current = setInterval(() => setTimeElapsed(prev => prev + 1), 1000);
     return () => clearInterval(timerRef.current);
   }, []);
 
-  // ============================================
-  // GET MOCK CHAT MESSAGES
-  // ============================================
   const getMockMessages = () => {
     const currentTime = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
     return [
@@ -634,17 +556,9 @@ const TutorSession = () => {
     ];
   };
 
-  useEffect(() => {
-    setMessages(getMockMessages());
-  }, [tutor]);
-
-  useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [messages]);
-
-  useEffect(() => {
-    chatInputRef.current?.focus();
-  }, []);
+  useEffect(() => { setMessages(getMockMessages()); }, [tutor]);
+  useEffect(() => { messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' }); }, [messages]);
+  useEffect(() => { chatInputRef.current?.focus(); }, []);
 
   useEffect(() => {
     const handleClickOutside = (event) => {
@@ -662,101 +576,55 @@ const TutorSession = () => {
     return () => window.removeEventListener('resize', handleResize);
   }, []);
 
-  useEffect(() => {
-    if (!isMobile) setShowChat(false);
-  }, [isMobile]);
+  useEffect(() => { if (!isMobile) setShowChat(false); }, [isMobile]);
 
-  // ============================================
-  // FORMAT TIME
-  // ============================================
   const formatTime = (seconds) => {
     const mins = Math.floor(seconds / 60);
     const secs = seconds % 60;
     return `${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
   };
 
-  // ============================================
-  // RENDER TUTOR AVATAR
-  // ============================================
   const renderTutorAvatar = (tutorData) => {
     if (!tutorData) {
       return (
-        <div className="tutor-avatar-default" style={{ 
-          width: '100%', 
-          height: '100%', 
-          borderRadius: '50%',
-          background: '#4f46e5',
-          color: 'white',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          fontSize: '18px',
-          fontWeight: 'bold'
+        <div className="tutor-avatar-default" style={{
+          width: '100%', height: '100%', borderRadius: '50%',
+          background: '#4f46e5', color: 'white',
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          fontSize: '18px', fontWeight: 'bold'
         }}>T</div>
       );
     }
-
     const photoUrl = tutorData.avatar || tutorData.profileImage;
-    
     if (photoUrl && typeof photoUrl === 'string') {
       return (
-        <img 
-          src={photoUrl} 
-          alt={tutorData.name || 'Tutor'} 
-          className="tutor-avatar-img"
+        <img src={photoUrl} alt={tutorData.name || 'Tutor'} className="tutor-avatar-img"
           loading="lazy"
           style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: '50%' }}
-          onError={(e) => {
-            e.target.style.display = 'none';
-          }}
+          onError={(e) => { e.target.style.display = 'none'; }}
         />
       );
     }
-    
     const name = tutorData.name || 'Tutor';
-    const initials = name
-      .split(' ')
-      .map(word => (word && word[0]) || '')
-      .join('')
-      .toUpperCase()
-      .slice(0, 2);
-    
+    const initials = name.split(' ').map(w => (w && w[0]) || '').join('').toUpperCase().slice(0, 2);
     const colors = ['#1a73e8', '#e91e63', '#ff6f00', '#7b1fa2', '#0d47a1', '#00695c', '#bf360c', '#4a148c', '#1a237e', '#880e4f', '#004d40'];
     const hash = name.split('').reduce((acc, char) => acc + (char.charCodeAt(0) || 0), 0);
     const color = colors[Math.abs(hash) % colors.length] || '#4f46e5';
-    
     return (
-      <div 
-        className="tutor-avatar-default"
-        style={{
-          width: '100%',
-          height: '100%',
-          borderRadius: '50%',
-          background: color,
-          color: 'white',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          fontSize: '18px',
-          fontWeight: 'bold',
-          textTransform: 'uppercase'
-        }}
-      >
-        {initials || 'T'}
-      </div>
+      <div className="tutor-avatar-default" style={{
+        width: '100%', height: '100%', borderRadius: '50%',
+        background: color, color: 'white',
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+        fontSize: '18px', fontWeight: 'bold', textTransform: 'uppercase'
+      }}>{initials || 'T'}</div>
     );
   };
 
-  // ============================================
-  // CHAT FUNCTIONS
-  // ============================================
   const sendMessage = (e) => {
     e?.preventDefault();
     if (!newMessage.trim()) return;
     const message = {
-      id: Date.now(),
-      sender: 'student',
-      name: userName || 'You',
+      id: Date.now(), sender: 'student', name: userName || 'You',
       message: newMessage,
       time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
       type: 'text',
@@ -787,9 +655,7 @@ const TutorSession = () => {
         "Great work! Keep going."
       ];
       const reply = {
-        id: Date.now() + 1,
-        sender: 'tutor',
-        name: tutor?.name || 'Tutor',
+        id: Date.now() + 1, sender: 'tutor', name: tutor?.name || 'Tutor',
         message: responses[Math.floor(Math.random() * responses.length)],
         time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
         type: 'text',
@@ -800,10 +666,7 @@ const TutorSession = () => {
   };
 
   const handleKeyPress = (e) => {
-    if (e.key === 'Enter' && !e.shiftKey) {
-      e.preventDefault();
-      sendMessage(e);
-    }
+    if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(e); }
   };
 
   const insertEmoji = (emoji) => {
@@ -818,68 +681,45 @@ const TutorSession = () => {
     if (newState) {
       SoundGenerator.generateRaiseHandSound();
       setSessionStats(prev => ({ ...prev, handRaises: prev.handRaises + 1 }));
-      const message = {
-        id: Date.now(),
-        sender: 'system',
-        name: 'System',
+      setMessages(prev => [...prev, {
+        id: Date.now(), sender: 'system', name: 'System',
         message: '🙋 You raised your hand',
         time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
         type: 'system',
-      };
-      setMessages(prev => [...prev, message]);
+      }]);
       setTimeout(() => {
         setIsHandRaised(false);
-        const lowerMessage = {
-          id: Date.now() + 1,
-          sender: 'system',
-          name: 'System',
+        setMessages(prev => [...prev, {
+          id: Date.now() + 1, sender: 'system', name: 'System',
           message: 'Hand lowered',
           time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
           type: 'system',
-        };
-        setMessages(prev => [...prev, lowerMessage]);
+        }]);
       }, 15000);
     } else {
-      const message = {
-        id: Date.now(),
-        sender: 'system',
-        name: 'System',
+      setMessages(prev => [...prev, {
+        id: Date.now(), sender: 'system', name: 'System',
         message: 'Hand lowered',
         time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
         type: 'system',
-      };
-      setMessages(prev => [...prev, message]);
+      }]);
     }
   };
 
-  // ============================================
-  // RATING FUNCTIONS
-  // ============================================
-  const handleRatingChange = (category, value) => {
-    setRatingData(prev => ({ ...prev, [category]: value }));
-  };
-
-  const handleReviewChange = (e) => {
-    setRatingData(prev => ({ ...prev, review: e.target.value }));
-  };
+  const handleRatingChange = (category, value) => setRatingData(prev => ({ ...prev, [category]: value }));
+  const handleReviewChange = (e) => setRatingData(prev => ({ ...prev, review: e.target.value }));
 
   const submitRating = async () => {
-    if (ratingData.overall === 0) {
-      alert('Please rate the overall experience');
-      return;
-    }
+    if (ratingData.overall === 0) { alert('Please rate the overall experience'); return; }
     setRatingLoading(true);
     try {
       const token = localStorage.getItem('accessToken');
       const API_URL = process.env.REACT_APP_API_URL || 'https://eduspantech-backend.onrender.com/api';
       const response = await fetch(`${API_URL}/ratings`, {
         method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        },
+        headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          sessionId: sessionId,
+          sessionId,
           tutorId: tutor?.id || 'unknown',
           rating: ratingData.overall,
           review: ratingData.review,
@@ -892,10 +732,7 @@ const TutorSession = () => {
       if (response.ok) {
         setRatingSubmitted(true);
         setRatingLoading(false);
-        setTimeout(() => {
-          setShowRatingModal(false);
-          navigate('/dashboard');
-        }, 2000);
+        setTimeout(() => { setShowRatingModal(false); navigate('/dashboard'); }, 2000);
       } else {
         const error = await response.json();
         alert('Failed to submit rating: ' + (error.message || 'Please try again'));
@@ -914,58 +751,35 @@ const TutorSession = () => {
     const value = category === 'overall' ? (hover || rating) : rating;
     for (let i = 1; i <= 5; i++) {
       stars.push(
-        <span
-          key={i}
+        <span key={i}
           className={`star ${i <= value ? 'filled' : ''}`}
           onMouseEnter={() => category === 'overall' && setHoveredStar(i)}
           onMouseLeave={() => category === 'overall' && setHoveredStar(0)}
           onClick={() => handleRatingChange(category, i)}
-          style={{
-            cursor: 'pointer',
-            fontSize: '28px',
-            color: i <= value ? '#f59e0b' : '#4b5563',
-            transition: 'color 0.2s ease'
-          }}
-        >
-          ★
-        </span>
+          style={{ cursor: 'pointer', fontSize: '28px', color: i <= value ? '#f59e0b' : '#4b5563', transition: 'color 0.2s ease' }}
+        >★</span>
       );
     }
     return stars;
   };
 
-  const skipRating = () => {
-    setShowRatingModal(false);
-    navigate('/dashboard');
-  };
+  const skipRating = () => { setShowRatingModal(false); navigate('/dashboard'); };
 
-  // ============================================
-  // END SESSION
-  // ============================================
   const endSession = async () => {
     if (sessionEnded) return;
     const duration = Math.floor((Date.now() - sessionStats.startTime) / 1000);
     setSessionStats(prev => ({ ...prev, duration }));
     setSessionEnded(true);
     setShowRatingModal(true);
-    
     leaveWebRTCSession();
-    
     try {
       const token = localStorage.getItem('accessToken');
-      const finalSessionId = sessionId !== 'temp_session' ? sessionId : sessionId;
-      if (finalSessionId && finalSessionId !== 'temp_session') {
+      if (sessionId && sessionId !== 'temp_session') {
         const API_URL = process.env.REACT_APP_API_URL || 'https://eduspantech-backend.onrender.com/api';
         const response = await fetch(`${API_URL}/sessions/end`, {
           method: 'POST',
-          headers: {
-            'Authorization': `Bearer ${token}`,
-            'Content-Type': 'application/json'
-          },
-          body: JSON.stringify({
-            sessionId: finalSessionId,
-            duration: duration
-          })
+          headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+          body: JSON.stringify({ sessionId, duration })
         });
         if (response.ok) console.log('✅ Session ended successfully');
       }
@@ -974,20 +788,13 @@ const TutorSession = () => {
     }
   };
 
-  // ============================================
-  // HANDLE LEAVE WAITING ROOM
-  // ============================================
   const handleLeaveWaitingRoom = () => {
     leaveWebRTCSession();
     navigate('/my-sessions');
   };
 
-  // ============================================
-  // RATING MODAL
-  // ============================================
   const RatingModal = () => {
     if (!showRatingModal) return null;
-    
     return (
       <div className="rating-modal-overlay">
         <div className="rating-modal">
@@ -1002,43 +809,16 @@ const TutorSession = () => {
                   <label>Overall Experience</label>
                   <div className="stars-container">
                     {renderStars(ratingData.overall, 'overall')}
-                    <span className="rating-label">
-                      {ratingData.overall > 0 ? `${ratingData.overall}.0` : 'Select'}
-                    </span>
+                    <span className="rating-label">{ratingData.overall > 0 ? `${ratingData.overall}.0` : 'Select'}</span>
                   </div>
                 </div>
-                <div className="rating-category">
-                  <label>💬 Communication</label>
-                  <div className="stars-container">
-                    {renderStars(ratingData.communication, 'communication')}
-                  </div>
-                </div>
-                <div className="rating-category">
-                  <label>📚 Subject Knowledge</label>
-                  <div className="stars-container">
-                    {renderStars(ratingData.knowledge, 'knowledge')}
-                  </div>
-                </div>
-                <div className="rating-category">
-                  <label>📖 Teaching Style</label>
-                  <div className="stars-container">
-                    {renderStars(ratingData.teaching, 'teaching')}
-                  </div>
-                </div>
-                <div className="rating-category">
-                  <label>⏰ Punctuality</label>
-                  <div className="stars-container">
-                    {renderStars(ratingData.punctuality, 'punctuality')}
-                  </div>
-                </div>
+                <div className="rating-category"><label>💬 Communication</label><div className="stars-container">{renderStars(ratingData.communication, 'communication')}</div></div>
+                <div className="rating-category"><label>📚 Subject Knowledge</label><div className="stars-container">{renderStars(ratingData.knowledge, 'knowledge')}</div></div>
+                <div className="rating-category"><label>📖 Teaching Style</label><div className="stars-container">{renderStars(ratingData.teaching, 'teaching')}</div></div>
+                <div className="rating-category"><label>⏰ Punctuality</label><div className="stars-container">{renderStars(ratingData.punctuality, 'punctuality')}</div></div>
                 <div className="rating-review">
                   <label>Write a Review (Optional)</label>
-                  <textarea
-                    placeholder="Share your experience with this tutor..."
-                    value={ratingData.review}
-                    onChange={handleReviewChange}
-                    rows="3"
-                  />
+                  <textarea placeholder="Share your experience with this tutor..." value={ratingData.review} onChange={handleReviewChange} rows="3" />
                 </div>
               </>
             ) : (
@@ -1052,21 +832,13 @@ const TutorSession = () => {
           <div className="rating-modal-footer">
             {!ratingSubmitted ? (
               <>
-                <button className="btn-skip" onClick={skipRating} disabled={ratingLoading}>
-                  Skip
-                </button>
-                <button 
-                  className="btn-submit-rating" 
-                  onClick={submitRating} 
-                  disabled={ratingLoading || ratingData.overall === 0}
-                >
+                <button className="btn-skip" onClick={skipRating} disabled={ratingLoading}>Skip</button>
+                <button className="btn-submit-rating" onClick={submitRating} disabled={ratingLoading || ratingData.overall === 0}>
                   {ratingLoading ? 'Submitting...' : 'Submit Rating'}
                 </button>
               </>
             ) : (
-              <button className="btn-done" onClick={() => navigate('/dashboard')}>
-                Go to Dashboard
-              </button>
+              <button className="btn-done" onClick={() => navigate('/dashboard')}>Go to Dashboard</button>
             )}
           </div>
         </div>
@@ -1074,9 +846,6 @@ const TutorSession = () => {
     );
   };
 
-  // ============================================
-  // LOADING STATE
-  // ============================================
   if (!roleLoaded) {
     return (
       <div className="session-loading">
@@ -1095,16 +864,10 @@ const TutorSession = () => {
     );
   }
 
-  // ============================================
-  // WAITING FOR TUTOR SCREEN
-  // ============================================
   if (showWaitingScreen && userRole === 'student') {
     return <WaitingForTutor onLeave={handleLeaveWaitingRoom} />;
   }
 
-  // ============================================
-  // MAIN RENDER
-  // ============================================
   return (
     <div className="session-container dark">
       {showRatingModal && <RatingModal />}
@@ -1120,9 +883,7 @@ const TutorSession = () => {
               </span>
               <span className="session-timer">⏱ {formatTime(timeElapsed)}</span>
               <span className="session-participants">👥 {participants.length + 1}</span>
-              <span className="session-stats">
-                ✏️ {sessionStats.whiteboardActions} | 💬 {sessionStats.messagesSent}
-              </span>
+              <span className="session-stats">✏️ {sessionStats.whiteboardActions} | 💬 {sessionStats.messagesSent}</span>
               {isHandRaised && <span className="hand-raised-badge">🙋 Hand Raised</span>}
               {webrtcError && <span className="error-badge">⚠️ {webrtcError}</span>}
             </div>
@@ -1130,11 +891,11 @@ const TutorSession = () => {
         </div>
         <div className="session-header-right">
           <span className="video-free-badge">🎧 Audio + Whiteboard</span>
-          <span className="connection-quality" style={{ 
-            color: connectionStatus === 'connected' ? '#27ae60' : connectionStatus === 'connecting' ? '#f59e0b' : '#ef4444' 
+          <span className="connection-quality" style={{
+            color: connectionStatus === 'connected' ? '#27ae60' : connectionStatus === 'connecting' ? '#f59e0b' : '#ef4444'
           }}>
-            <span className="quality-dot" style={{ 
-              background: connectionStatus === 'connected' ? '#27ae60' : connectionStatus === 'connecting' ? '#f59e0b' : '#ef4444' 
+            <span className="quality-dot" style={{
+              background: connectionStatus === 'connected' ? '#27ae60' : connectionStatus === 'connecting' ? '#f59e0b' : '#ef4444'
             }}></span>
             {connectionStatus === 'connected' ? 'Connected' : connectionStatus === 'connecting' ? 'Connecting...' : 'Disconnected'}
           </span>
@@ -1160,14 +921,8 @@ const TutorSession = () => {
               <span className="tutor-card-role">{isTutorUser ? '👨‍🏫 Tutor' : '👨‍🎓 Student'}</span>
             </div>
             <div className="tutor-card-controls">
-              <button 
-                className={`tutor-control-btn ${isMuted ? 'muted' : ''}`} 
-                onClick={() => {
-                  setIsMuted(!isMuted);
-                  toggleAudio();
-                }} 
-                title="Mute Audio"
-              >
+              <button className={`tutor-control-btn ${isMuted ? 'muted' : ''}`}
+                onClick={() => { setIsMuted(!isMuted); toggleAudio(); }} title="Mute Audio">
                 {isMuted ? '🔇' : '🔊'}
               </button>
               {!isTutorUser && (
@@ -1197,8 +952,8 @@ const TutorSession = () => {
                       <option value={4}>Medium</option>
                       <option value={6}>Thick</option>
                     </select>
-                    <button className="tool-btn" onClick={undo} title="Undo (Ctrl+Z)">↩️</button>
-                    <button className="tool-btn" onClick={redo} title="Redo (Ctrl+Y)">↪️</button>
+                    <button className="tool-btn" onClick={undo} title="Undo">↩️</button>
+                    <button className="tool-btn" onClick={redo} title="Redo">↪️</button>
                     <button className="tool-btn clear" onClick={clearWhiteboard} title="Clear">🗑️</button>
                   </>
                 ) : (
@@ -1222,14 +977,8 @@ const TutorSession = () => {
           </div>
 
           <div className="bottom-control-dock">
-            <button 
-              className={`dock-btn ${isMuted ? 'active' : ''}`} 
-              onClick={() => {
-                setIsMuted(!isMuted);
-                toggleAudio();
-              }} 
-              title="Toggle Audio"
-            >
+            <button className={`dock-btn ${isMuted ? 'active' : ''}`}
+              onClick={() => { setIsMuted(!isMuted); toggleAudio(); }} title="Toggle Audio">
               {isMuted ? '🔇' : '🔊'}
             </button>
             {!isTutorUser && (
@@ -1237,9 +986,7 @@ const TutorSession = () => {
                 {isHandRaised ? '🙋' : '🤚'}
               </button>
             )}
-            <button className="dock-btn leave-btn" onClick={endSession} disabled={sessionEnded} title="Leave Session">
-              Leave
-            </button>
+            <button className="dock-btn leave-btn" onClick={endSession} disabled={sessionEnded} title="Leave Session">Leave</button>
           </div>
         </div>
 
@@ -1317,14 +1064,14 @@ const TutorSession = () => {
                   </div>
                 </div>
               )}
-              <input 
-                ref={chatInputRef} 
-                type="text" 
-                value={newMessage} 
-                onChange={(e) => setNewMessage(e.target.value)} 
-                onKeyDown={handleKeyPress} 
-                placeholder="Type your message..." 
-                className="chat-input" 
+              <input
+                ref={chatInputRef}
+                type="text"
+                value={newMessage}
+                onChange={(e) => setNewMessage(e.target.value)}
+                onKeyDown={handleKeyPress}
+                placeholder="Type your message..."
+                className="chat-input"
               />
               <button type="submit" className="send-btn" disabled={!newMessage.trim()}>Send</button>
             </form>

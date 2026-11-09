@@ -6,7 +6,7 @@ import TermsOfService from './Terms';
 import PrivacyPolicy from './Privacy';
 import {
   LifeBuoy, Search, Rocket, GraduationCap, PenTool, CreditCard, Settings,
-  Mail, MessageCircle, Clock, FileText, Shield, Cookie, Plus, Minus,
+  Mail, MessageCircle, Clock, FileText, Shield, ListChecks, Plus, Minus,
 } from 'lucide-react';
 import './Help.css';
 import './Register.css';
@@ -33,7 +33,7 @@ const Modal = ({ isOpen, onClose, title, children }) => {
 };
 
 // ---------------------------------------------------------------
-// Content rendered from Terms.js / Privacy.js — identical to Register
+// Terms — identical to Register
 // ---------------------------------------------------------------
 const TermsContent = () => {
   const terms = TermsOfService.getFullTerms();
@@ -52,6 +52,9 @@ const TermsContent = () => {
   );
 };
 
+// ---------------------------------------------------------------
+// Privacy — identical to Register
+// ---------------------------------------------------------------
 const PrivacyContent = () => {
   const privacy = PrivacyPolicy.getFullPolicy();
   return (
@@ -69,63 +72,33 @@ const PrivacyContent = () => {
   );
 };
 
-// Cookie policy — uses ./Cookies.js if present, else inline fallback
-const CookiesContent = () => {
-  let sections = null;
-  let effectiveDate = null;
-  try {
-    // eslint-disable-next-line global-require
-    const CookiesPolicy = require('./Cookies').default;
-    if (CookiesPolicy?.getFullPolicy) {
-      sections = CookiesPolicy.getFullPolicy();
-      effectiveDate = CookiesPolicy.effectiveDate;
-    }
-  } catch (e) {
-    // No Cookies.js — use fallback below
-  }
-
-  if (sections) {
-    return (
-      <div>
-        {effectiveDate && (
-          <div className="register-modal-date">Last Updated: {effectiveDate}</div>
-        )}
-        {sections.map((section) => (
-          <div key={section.id} className="register-modal-section">
-            <h3>{section.title}</h3>
-            {section.content.map((paragraph, index) => (
-              <p key={index}>{paragraph}</p>
-            ))}
-          </div>
-        ))}
-      </div>
-    );
-  }
-
-  return (
-    <div>
-      <div className="register-modal-date">
-        Last Updated: {new Date().toLocaleDateString('en-ZA', { year: 'numeric', month: 'long', day: 'numeric' })}
-      </div>
-      <div className="register-modal-section">
-        <h3>1. What Are Cookies?</h3>
-        <p>Cookies are small text files stored in your browser. We also use localStorage and sessionStorage for similar purposes.</p>
-      </div>
-      <div className="register-modal-section">
-        <h3>2. Cookies We Use</h3>
-        <p>Essential cookies for authentication and login. Preference cookies for pricing audience and UI settings. Analytics cookies for aggregated usage. Third-party cookies during checkout and authenticated API calls.</p>
-      </div>
-      <div className="register-modal-section">
-        <h3>3. Managing Cookies</h3>
-        <p>You can delete or block cookies from your browser settings. Blocking essential cookies may prevent login or joining sessions.</p>
-      </div>
-      <div className="register-modal-section">
-        <h3>4. Contact</h3>
-        <p>Questions? Email privacy@eduspantech.com.</p>
-      </div>
+// ---------------------------------------------------------------
+// Cookies — inline only. No require('./Cookies') so the build
+// never fails on a missing module.
+// ---------------------------------------------------------------
+const CookiesContent = () => (
+  <div>
+    <div className="register-modal-date">
+      Last Updated: {new Date().toLocaleDateString('en-ZA', { year: 'numeric', month: 'long', day: 'numeric' })}
     </div>
-  );
-};
+    <div className="register-modal-section">
+      <h3>1. What Are Cookies?</h3>
+      <p>Cookies are small text files stored in your browser. We also use localStorage and sessionStorage for similar purposes.</p>
+    </div>
+    <div className="register-modal-section">
+      <h3>2. Cookies We Use</h3>
+      <p>Essential cookies for authentication and login. Preference cookies for pricing audience and UI settings. Analytics cookies for aggregated usage. Third-party cookies during checkout and authenticated API calls.</p>
+    </div>
+    <div className="register-modal-section">
+      <h3>3. Managing Cookies</h3>
+      <p>You can delete or block cookies from your browser settings. Blocking essential cookies may prevent login or joining sessions.</p>
+    </div>
+    <div className="register-modal-section">
+      <h3>4. Contact</h3>
+      <p>Questions? Email privacy@eduspantech.com.</p>
+    </div>
+  </div>
+);
 
 // ---------------------------------------------------------------
 // Live subscription answer
@@ -184,12 +157,10 @@ const Help = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [expandedFaq, setExpandedFaq] = useState(null);
 
-  // modal state — same as Register
   const [showTermsModal, setShowTermsModal] = useState(false);
   const [showPrivacyModal, setShowPrivacyModal] = useState(false);
   const [showCookiesModal, setShowCookiesModal] = useState(false);
 
-  // live plans
   const [plans, setPlans] = useState([]);
   const [plansLoading, setPlansLoading] = useState(true);
   const [plansError, setPlansError] = useState(null);
@@ -330,7 +301,6 @@ const Help = () => {
           </div>
         </div>
 
-        {/* ✅ Legal links — same click-to-modal pattern as Register */}
         <div className="help-legal-links">
           <button
             type="button"
@@ -356,7 +326,7 @@ const Help = () => {
             onClick={() => setShowCookiesModal(true)}
             style={{ background: 'none', border: 'none', cursor: 'pointer', font: 'inherit', padding: 0, display: 'inline-flex', alignItems: 'center', gap: 6 }}
           >
-            <Cookie size={16} strokeWidth={2} />
+            <ListChecks size={16} strokeWidth={2} />
             Cookie Policy
           </button>
         </div>
@@ -367,7 +337,6 @@ const Help = () => {
         </div>
       </div>
 
-      {/* ✅ Modals — content comes from the SAME Terms.js / Privacy.js as Register */}
       <Modal isOpen={showTermsModal} onClose={() => setShowTermsModal(false)} title="Terms of Service">
         <TermsContent />
       </Modal>

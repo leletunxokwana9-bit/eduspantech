@@ -57,6 +57,10 @@ const AdminLogin = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  
+  // ✅ NEW STATE FOR NON-ADMIN DETECTION
+  const [isNotAdmin, setIsNotAdmin] = useState(false);
+
   const [attemptsLeft, setAttemptsLeft] = useState(null);
 
   // 2FA state (activated only if backend returns requires2FA)
@@ -136,6 +140,7 @@ const AdminLogin = () => {
     submittingRef.current = true;
     setLoading(true);
     setError('');
+    setIsNotAdmin(false); // ✅ Reset the flag on new submit
     setAttemptsLeft(null);
 
     try {
@@ -208,9 +213,9 @@ const AdminLogin = () => {
       // Failure — map status to message + attempt info
       // --------------------------------------------
 
-      // Non-admin account attempted the admin login
+      // ✅ Non-admin account attempted the admin login
       if (data?.notAdmin) {
-        setError('This account does not have admin access. Please use the regular login.');
+        setIsNotAdmin(true);
         return;
       }
 
@@ -236,7 +241,7 @@ const AdminLogin = () => {
       } else if (response.status === 403) {
         // 403 from admin-login means "not an admin" OR "banned/inactive/unverified admin"
         if (data?.notAdmin) {
-          setError('This account does not have admin access. Please use the regular login.');
+          setIsNotAdmin(true);
         } else {
           setError(serverMsg || 'Account not verified. Please check your email.');
         }
@@ -317,7 +322,7 @@ const AdminLogin = () => {
           </div>
 
           {/* ===== ERROR / STATUS ===== */}
-          {error && !isLocked && (
+          {error && !isLocked && !isNotAdmin && (
             <div className="admin-login-error" role="alert">
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                 <circle cx="12" cy="12" r="10" />
@@ -325,6 +330,23 @@ const AdminLogin = () => {
                 <line x1="12" y1="16" x2="12.01" y2="16" />
               </svg>
               {error}
+            </div>
+          )}
+
+          {/* ✅ NEW NON-ADMIN WARNING BANNER */}
+          {isNotAdmin && (
+            <div className="admin-login-error" role="alert" style={{ background: 'rgba(251, 191, 36, 0.1)', borderColor: 'rgba(251, 191, 36, 0.3)', color: '#fbbf24' }}>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
+                <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
+              </svg>
+              <div>
+                <strong style={{ display: 'block', marginBottom: 4 }}>Access Denied</strong>
+                This portal is for administrators only. Please use the standard login.
+                <a href="/login" style={{ display: 'block', marginTop: 6, color: '#fbbf24', fontWeight: 600, textDecoration: 'underline' }}>
+                  Go to Standard Login →
+                </a>
+              </div>
             </div>
           )}
 

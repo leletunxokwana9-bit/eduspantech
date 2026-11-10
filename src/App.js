@@ -1,4 +1,4 @@
-// src/App.js - COMPLETE WITH ADMIN ROUTES + ADMIN LOGIN LAYOUT + ADMIN ROUTE CHECK + TUTOR APPLICATION + TRACK APPLICATION + ADMIN PRICING + SPLASH SCREEN + VERIFY EMAIL STANDALONE
+// src/App.js - COMPLETE WITH TOUR GUIDE INTEGRATION
 import React, { Suspense, lazy, useState, useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route, useLocation } from 'react-router-dom';
 import Navbar from './components/Navbar';
@@ -40,6 +40,11 @@ import Notifications from './pages/Notifications';
 import ForgotPassword from './pages/ForgotPassword';
 import Team from './pages/Team';
 import Timetable from './pages/Timetable';
+
+// ============================================
+// ✅ TOUR GUIDE IMPORT
+// ============================================
+import TourGuide from './components/TourGuide';
 
 // ============================================
 // TUTOR APPLICATION (Public)
@@ -280,6 +285,9 @@ const AppContent = () => {
   return (
     <div className="app">
       {!hideNavigation && <Navbar />}
+
+      {/* 👇 THE TOUR GUIDE RUNS HERE (Only on standard user pages) */}
+      {!hideNavigation && <TourGuide />}
       
       <main className="app-main">
         <Suspense fallback={<PageLoader />}>

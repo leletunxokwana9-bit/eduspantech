@@ -1,7 +1,9 @@
+// src/pages/Dashboard.js
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { authService } from '../services/authService';
 import { API_BASE_URL } from '../services/api';
+import { useDynamicGreeting } from '../hooks/useDynamicGreeting'; // 👈 Import the hook
 import './Dashboard.css';
 
 const Dashboard = () => {
@@ -17,22 +19,21 @@ const Dashboard = () => {
     badgesEarned: 0
   });
 
+  // 1. Fetch the dynamic message from Supabase based on the user
+  const dynamicTagline = useDynamicGreeting(user, 'dashboard');
+
   useEffect(() => {
     const fetchUser = async () => {
       try {
         const userData = await authService.getCurrentUser();
         if (userData) {
           setUser(userData);
+          
           const hour = new Date().getHours();
-          if (hour < 12) {
-            setTimeOfDay('Good Morning');
-          } else if (hour < 17) {
-            setTimeOfDay('Good Afternoon');
-          } else if (hour < 21) {
-            setTimeOfDay('Good Evening');
-          } else {
-            setTimeOfDay('Good Night');
-          }
+          if (hour < 12) setTimeOfDay('Good Morning');
+          else if (hour < 17) setTimeOfDay('Good Afternoon');
+          else if (hour < 21) setTimeOfDay('Good Evening');
+          else setTimeOfDay('Good Night');
           
           await fetchRealData();
         } else {
@@ -54,11 +55,8 @@ const Dashboard = () => {
     try {
       const token = localStorage.getItem('accessToken');
       
-      // ✅ FIXED: Using API_BASE_URL without /v1
       const subjectsResponse = await fetch(`${API_BASE_URL}/content/subjects`, {
-        headers: {
-          'Authorization': `Bearer ${token}`
-        }
+        headers: { 'Authorization': `Bearer ${token}` }
       });
       
       if (subjectsResponse.ok) {
@@ -68,11 +66,8 @@ const Dashboard = () => {
         }
       }
 
-      // ✅ FIXED: Using API_BASE_URL without /v1
       const enrollResponse = await fetch(`${API_BASE_URL}/content/my/subjects`, {
-        headers: {
-          'Authorization': `Bearer ${token}`
-        }
+        headers: { 'Authorization': `Bearer ${token}` }
       });
       
       if (enrollResponse.ok) {
@@ -98,28 +93,17 @@ const Dashboard = () => {
   const firstName = user.name?.split(' ')[0] || 'Student';
   const isFirstTime = userStats.coursesEnrolled === 0;
   
-  const cohortDisplay = user.cohort === 'HighSchool' 
-    ? user.grade || 'High School Student' 
-    : 'University Student';
+  // Determine user role for the subtitle
+  let roleDisplay = 'Student';
+  if (user.is_admin) roleDisplay = 'Administrator';
+  else if (user.is_tutor || user.role === 'tutor') roleDisplay = 'Tutor';
+  else if (user.cohort === 'HighSchool') roleDisplay = user.grade ? `Grade ${user.grade} Student` : 'High School Student';
+  else if (user.cohort === 'UniversityFirstYear' || user.grade === 1 || user.grade === 2) roleDisplay = 'University Student';
 
   // Get REAL stats
   const coursesEnrolled = userStats.coursesEnrolled || 0;
   const hoursSpent = userStats.hoursSpent || 0;
   const badgesEarned = userStats.badgesEarned || 0;
-
-  // Get motivational quote
-  const getMotivationalQuote = () => {
-    const quotes = [
-      { text: "Mathematics is not about numbers, equations, computations, or algorithms: it is about understanding.", author: "William Paul Thurston" },
-      { text: "The only way to learn mathematics is to do mathematics.", author: "Paul Halmos" },
-      { text: "Without mathematics, there's nothing you can do. Everything around you is mathematics.", author: "Shakuntala Devi" },
-      { text: "Pure mathematics is, in its way, the poetry of logical ideas.", author: "Albert Einstein" },
-      { text: "The essence of mathematics is not to make simple things complicated, but to make complicated things simple.", author: "Stan Gudder" }
-    ];
-    return quotes[Math.floor(Math.random() * quotes.length)];
-  };
-
-  const quote = getMotivationalQuote();
 
   return (
     <div className="dashboard-container">
@@ -131,7 +115,7 @@ const Dashboard = () => {
             <span className="greeting-emoji">{isFirstTime ? ' 👋' : ' ✨'}</span>
           </h1>
           <p className="greeting-subtitle">
-            {cohortDisplay} • {user.country || 'South Africa'}
+            {roleDisplay} • {user.country || 'South Africa'}
           </p>
         </div>
         <div className="header-right">
@@ -142,20 +126,33 @@ const Dashboard = () => {
         </div>
       </div>
 
-      {/* Welcome Banner - Only for first time users */}
+      {/* Welcome Banner - Now shows dynamic taglines from Supabase */}
       {isFirstTime && (
         <div className="welcome-banner">
           <div className="welcome-banner-content">
             <div className="welcome-icon">🚀</div>
             <div className="welcome-text">
               <h3>Welcome to EduSpantech, {firstName}!</h3>
-              <p>Start your mathematics journey by exploring our subjects.</p>
+              {/* 👇 Here is the dynamic tagline */}
+              <p>{dynamicTagline}</p> 
             </div>
           </div>
         </div>
       )}
 
-      {/* Stats Grid - Shows REAL numbers from database */}
+      {/* If they are NOT first time, show the dynamic tagline as a subtle banner */}
+      {!isFirstTime && (
+        <div className="welcome-banner" style={{ background: 'rgba(79, 70, 229, 0.05)', borderColor: 'rgba(79, 70, 229, 0.1)' }}>
+          <div className="welcome-banner-content">
+            <div className="welcome-icon">✨</div>
+            <div className="welcome-text">
+              <p style={{ fontSize: '15px', color: '#94a3b8', margin: 0 }}>{dynamicTagline}</p>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Stats Grid */}
       <div className="stats-grid">
         <div className="stat-card">
           <div className="stat-icon-wrapper">
@@ -219,7 +216,7 @@ const Dashboard = () => {
         </button>
       </div>
 
-      {/* Available Subjects - REAL subjects from database */}
+      {/* Available Subjects */}
       <div className="popular-section">
         <div className="popular-header">
           <div className="popular-title-group">
@@ -235,7 +232,7 @@ const Dashboard = () => {
         
         <div className="popular-grid">
           {subjects && subjects.length > 0 ? (
-            subjects.map((subject, index) => (
+            subjects.map((subject) => (
               <div 
                 key={subject.id} 
                 className="popular-card"
@@ -261,12 +258,13 @@ const Dashboard = () => {
         </div>
       </div>
 
-      {/* Quote Section */}
+      {/* Dynamic Quote Section */}
       <div className="quote-section">
         <div className="quote-divider"></div>
         <blockquote className="quote-block">
-          <p className="quote-text">"{quote.text}"</p>
-          <footer className="quote-author">— {quote.author}</footer>
+          {/* Replaced the hardcoded math quotes with the dynamic tagline for a clean finish */}
+          <p className="quote-text">"{dynamicTagline}"</p>
+          <footer className="quote-author">— EduSpantech</footer>
         </blockquote>
       </div>
     </div>

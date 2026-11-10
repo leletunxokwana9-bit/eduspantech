@@ -173,6 +173,14 @@ const Login = () => {
       }
 
       localStorage.setItem('userRole', isTutor ? 'tutor' : 'student');
+
+      // ✅ TOUR LOGIC: Check if this is their first time logging in
+      const hasSeenTour = localStorage.getItem('hasSeenTour');
+      if (!hasSeenTour && !isTutor) {
+        // Only trigger the tour for students who haven't seen it
+        localStorage.setItem('triggerTour', 'true');
+      }
+
       navigate(isTutor ? '/tutor/dashboard' : '/dashboard');
     } catch (err) {
       console.error('Login error:', err);

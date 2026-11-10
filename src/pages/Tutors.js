@@ -1,4 +1,4 @@
-// src/pages/Tutors.js - REDESIGNED: shift sections, coverage timeline, standout tutor cards
+// src/pages/Tutors.js - REDESIGNED: shift sections, clean availability, standout tutor cards
 import React, { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { tutorService } from '../services/tutorService';
@@ -52,21 +52,6 @@ const formatShiftTime = (time) => {
   const parts = String(time).match(/\d{1,2}:\d{2}/g);
   if (parts && parts.length >= 2) return `${parts[0]} – ${parts[1]}`;
   return time;
-};
-
-// "21:00:00 - 04:00:00" -> [{start:21,end:24},{start:0,end:4}] (hours, 0-24)
-const getShiftSegments = (time) => {
-  const parts = String(time || '').match(/(\d{1,2}):(\d{2})/g);
-  if (!parts || parts.length < 2) return [];
-  const toHours = (p) => {
-    const [h, m] = p.split(':').map(Number);
-    return h + m / 60;
-  };
-  const start = toHours(parts[0]);
-  const end = toHours(parts[1]);
-  if (end > start) return [{ start, end }];
-  if (end === start) return [{ start: 0, end: 24 }];
-  return [{ start, end: 24 }, { start: 0, end }];
 };
 
 const getTierNumber = (tier) => {
@@ -200,7 +185,7 @@ const Tutors = () => {
   };
 
   // ============================================
-  // VIDEO THUMBNAIL (always visible at top of card)
+  // VIDEO THUMBNAIL
   // ============================================
   const renderVideoThumbnail = (tutor) => {
     if (!hasVideo(tutor)) {
@@ -259,7 +244,7 @@ const Tutors = () => {
   };
 
   // ============================================
-  // HANDLE TUTOR CARD CLICK - SHOW MODAL
+  // HANDLE TUTOR CARD CLICK
   // ============================================
   const handleTutorCardClick = (tutor) => {
     setViewingTutor(tutor);
@@ -271,9 +256,6 @@ const Tutors = () => {
     setShowFullProfile(true);
   };
 
-  // ============================================
-  // HANDLE BOOK FROM MODAL
-  // ============================================
   const handleBookFromModal = () => {
     if (!isAuthenticated) {
       setShowTutorModal(false);
@@ -293,9 +275,6 @@ const Tutors = () => {
     setShowBookingModal(true);
   };
 
-  // ============================================
-  // HANDLE BOOK SESSION
-  // ============================================
   const handleBookSession = (tutor) => {
     if (!isAuthenticated) {
       setSelectedTutor(tutor);
@@ -313,9 +292,6 @@ const Tutors = () => {
     setShowBookingModal(true);
   };
 
-  // ============================================
-  // HANDLE BOOKING SUBMIT
-  // ============================================
   const handleBookingSubmit = async (e) => {
     e.preventDefault();
     if (!booking.date) {
@@ -330,22 +306,12 @@ const Tutors = () => {
 
     try {
       setBookingLoading(true);
-
-      console.log('📤 Booking data:', {
-        tutorId: booking.tutorId,
-        date: booking.date,
-        duration: booking.duration,
-        topic: booking.topic
-      });
-
       const result = await sessionService.bookSession(
         booking.tutorId,
         booking.date,
         booking.duration,
         booking.topic
       );
-
-      console.log('📥 Booking result:', result);
 
       if (result.success) {
         setShowBookingModal(false);
@@ -360,7 +326,6 @@ const Tutors = () => {
         alert('❌ Failed to book session: ' + (result.error || 'Unknown error'));
       }
     } catch (error) {
-      console.error('❌ Booking error:', error);
       alert('❌ Failed to book session: ' + error.message);
     } finally {
       setBookingLoading(false);
@@ -405,9 +370,6 @@ const Tutors = () => {
             {videoTutor.intro_video_duration > 0 && (
               <span className="video-modal-duration">⏱️ {formatDuration(videoTutor.intro_video_duration)}</span>
             )}
-            {videoTutor.intro_video_views > 0 && (
-              <span className="video-modal-views">👁️ {videoTutor.intro_video_views} views</span>
-            )}
           </div>
         </div>
       </div>
@@ -435,14 +397,6 @@ const Tutors = () => {
               <span>Date</span>
               <strong>{new Date(booking.date).toLocaleString()}</strong>
             </div>
-            <div className="success-detail-item">
-              <span>Duration</span>
-              <strong>{booking.duration} minutes</strong>
-            </div>
-            <div className="success-detail-item">
-              <span>Topic</span>
-              <strong>{booking.topic}</strong>
-            </div>
           </div>
           <p className="success-modal-note">Redirecting to your sessions...</p>
         </div>
@@ -451,7 +405,7 @@ const Tutors = () => {
   };
 
   // ============================================
-  // TUTOR MODAL - FULL PROFILE
+  // TUTOR MODAL
   // ============================================
   const TutorModal = () => {
     if (!viewingTutor) return null;
@@ -549,21 +503,6 @@ const Tutors = () => {
                   <div className="profile-section">
                     <h3>⏰ Availability</h3>
                     <p>{SHIFT_LABELS[shiftName] || shiftName}</p>
-                    {viewingTutor.shiftTime && (
-                      <p className="shift-time">{viewingTutor.shiftTime}</p>
-                    )}
-                  </div>
-                )}
-                {viewingTutor.education && (
-                  <div className="profile-section">
-                    <h3>🎓 Education</h3>
-                    <p>{viewingTutor.education}</p>
-                  </div>
-                )}
-                {viewingTutor.yearsExperience > 0 && (
-                  <div className="profile-section">
-                    <h3>📅 Experience</h3>
-                    <p>{viewingTutor.yearsExperience} years</p>
                   </div>
                 )}
                 <button className="modal-btn primary full-profile-book" onClick={handleBookFromModal}>
@@ -595,9 +534,6 @@ const Tutors = () => {
             Cancel
           </button>
         </div>
-        <p className="login-prompt-register">
-          Don't have an account? <span onClick={() => navigate('/register')}>Register here</span>
-        </p>
       </div>
     </div>
   );
@@ -633,43 +569,7 @@ const Tutors = () => {
               <option value={120}>120 minutes</option>
             </select>
           </div>
-          <div className="form-group">
-            <label>📖 Topic</label>
-            <div className="topic-input-group">
-              <select
-                value={booking.topic}
-                onChange={(e) => setBooking({ ...booking, topic: e.target.value })}
-                className="topic-select"
-              >
-                <option value="Mathematics">📐 Mathematics</option>
-                <option value="Algebra">📐 Algebra</option>
-                <option value="Geometry">📐 Geometry</option>
-                <option value="Trigonometry">📐 Trigonometry</option>
-                <option value="Calculus">∫ Calculus</option>
-                <option value="Statistics">📊 Statistics</option>
-                <option value="Linear Algebra">📊 Linear Algebra</option>
-                <option value="Differential Equations">📈 Differential Equations</option>
-                <option value="Matrices">🔢 Matrices</option>
-                <option value="Functions">📈 Functions</option>
-                <option value="Financial Mathematics">💰 Financial Mathematics</option>
-                <option value="Other">📝 Other (type below)</option>
-              </select>
-            </div>
-            {booking.topic === 'Other' && (
-              <input
-                type="text"
-                placeholder="Enter your topic..."
-                value={booking.customTopic || ''}
-                onChange={(e) => setBooking({ ...booking, customTopic: e.target.value, topic: e.target.value })}
-                className="topic-custom-input"
-              />
-            )}
-          </div>
-          <button
-            type="submit"
-            className="btn-primary"
-            disabled={bookingLoading}
-          >
+          <button type="submit" className="btn-primary" disabled={bookingLoading}>
             {bookingLoading ? '⏳ Booking...' : '✅ Confirm Booking'}
           </button>
         </form>
@@ -685,11 +585,7 @@ const Tutors = () => {
     const videoAvailable = hasVideo(tutor);
 
     return (
-      <article
-        key={tutor.id}
-        className="tutor-card"
-        onClick={() => handleTutorCardClick(tutor)}
-      >
+      <article key={tutor.id} className="tutor-card" onClick={() => handleTutorCardClick(tutor)}>
         <div className="tutor-card-video-section">{renderVideoThumbnail(tutor)}</div>
 
         <div className="tutor-card-body">
@@ -758,7 +654,6 @@ const Tutors = () => {
     return <div className="page-error">Error: {error}</div>;
   }
 
-  const timelineShifts = (tutors || []).filter((s) => !isFlexibleShift(s));
   const tutorCountTotal = (tutors || []).reduce((acc, s) => acc + (s.tutors?.length || 0), 0);
 
   // ============================================
@@ -774,7 +669,7 @@ const Tutors = () => {
 
       <div className="tutors-page">
 
-        {/* ===== BECOME A TUTOR + TRACK APPLICATION BANNER ===== */}
+        {/* ===== BECOME A TUTOR BANNER ===== */}
         <section className="become-tutor-banner">
           <div className="btb-inner">
             <div className="btb-left">
@@ -793,11 +688,6 @@ const Tutors = () => {
                   📄 Track Application
                 </Link>
               </div>
-              <div className="btb-stats">
-                <span>💰 R250–600/hr</span>
-                <span>🌍 24/7 shifts</span>
-                <span>📄 No signup fee</span>
-              </div>
             </div>
           </div>
         </section>
@@ -813,38 +703,11 @@ const Tutors = () => {
           )}
         </div>
 
-        {/* ===== 24H COVERAGE TIMELINE ===== */}
-        {timelineShifts.length > 0 && (
-          <section className="coverage-timeline" aria-label="Shift coverage over 24 hours">
-            <h2>Who is online, hour by hour</h2>
-            <p>Pick the shift that matches your local time (UTC, 24h)</p>
-            {timelineShifts.map((shift, idx) => {
-              const color = getShiftColor(shift, idx);
-              return (
-                <div className="coverage-row" key={shift.id || shift.name}>
-                  <span className="coverage-label">{getShiftLabel(shift)}</span>
-                  <div className="coverage-track">
-                    {getShiftSegments(shift.time).map((seg, i) => (
-                      <i
-                        key={i}
-                        style={{
-                          left: `${(seg.start / 24) * 100}%`,
-                          width: `${((seg.end - seg.start) / 24) * 100}%`,
-                          background: color
-                        }}
-                      />
-                    ))}
-                  </div>
-                </div>
-              );
-            })}
-            <div className="coverage-ticks">
-              {[0, 3, 6, 9, 12, 15, 18, 21].map((h) => (
-                <span key={h}>{String(h).padStart(2, '0')}</span>
-              ))}
-            </div>
-          </section>
-        )}
+        {/* ===== CLEAN AVAILABILITY BANNER (Replaced confusing slider) ===== */}
+        <div className="availability-banner">
+          <h3>🌍 Global Coverage</h3>
+          <p>Tutors are strategically grouped by shift to ensure continuous, 24/7 academic support.</p>
+        </div>
 
         {/* ===== SHIFT SECTIONS ===== */}
         <div className="tutors-page-sections">
@@ -862,9 +725,6 @@ const Tutors = () => {
                     <span className="shift-dot" />
                     <h2>{getShiftLabel(shift)}</h2>
                     <span className="shift-time-pill">{formatShiftTime(shift.time)}</span>
-                    {shift.hubs && shift.hubs.length > 0 && (
-                      <span className="shift-hubs">{shift.hubs.join(' · ')}</span>
-                    )}
                     <span className="shift-count">
                       {list.length} {list.length === 1 ? 'tutor' : 'tutors'}
                     </span>
@@ -875,7 +735,6 @@ const Tutors = () => {
                   ) : (
                     <div className="tutors-page-empty">
                       <p>No tutors available for this shift.</p>
-                      <p className="empty-sub">Check back during shift hours.</p>
                     </div>
                   )}
                 </section>
@@ -884,7 +743,6 @@ const Tutors = () => {
           ) : (
             <div className="tutors-page-empty-state">
               <p>No tutors available at the moment.</p>
-              <p className="empty-sub">Please check back later.</p>
             </div>
           )}
         </div>

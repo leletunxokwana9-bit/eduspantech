@@ -446,3 +446,71 @@
     padding: 6px 12px;
   }
 }
+/* ===== LUCIDE ICON ALIGNMENT ===== */
+.help-header h1 {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.help-title-icon {
+  color: #818cf8;
+  flex-shrink: 0;
+}
+
+.help-search {
+  position: relative;
+}
+
+.help-search-icon {
+  margin-left: 16px;
+  color: var(--text-muted);
+  flex-shrink: 0;
+  pointer-events: none;
+}
+
+.help-search input {
+  padding-left: 12px;
+}
+
+.quick-link .quick-icon {
+  color: #818cf8;
+  transition: color 0.2s ease;
+}
+
+.quick-link:hover .quick-icon {
+  color: #a5b4fc;
+}
+
+.faq-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+}
+
+.help-no-results-icon {
+  color: var(--text-muted);
+  display: block;
+  margin: 0 auto 12px;
+}
+
+.help-contact-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+
+.help-response-time {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.legal-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}

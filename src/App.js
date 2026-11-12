@@ -15,8 +15,11 @@ import Tutors from './pages/Tutors';
 import Pricing from './pages/Pricing';
 import Resources from './pages/Resources';
 import ResourceDetail from './pages/ResourceDetail';
-import Terms from './pages/Terms';
-import Privacy from './pages/Privacy';
+
+// ✅ FIXED: Importing the actual export names
+import TermsOfService from './pages/Terms';
+import PrivacyPolicy from './pages/Privacy';
+
 import TutorSession from './pages/TutorSession';
 import Checkout from './pages/Checkout';
 import PaymentSuccess from './pages/PaymentSuccess';
@@ -33,7 +36,6 @@ import Practice from './pages/Practice';
 import VerifyEmail from './pages/VerifyEmail';
 import ChatWidget from './components/ChatWidget';
 import TutorDashboard from './pages/TutorDashboard';
-import AddTutor from './pages/Admin/AddTutor';
 import TutorStudents from './pages/TutorStudents';
 import TutorEarnings from './pages/TutorEarnings';
 import Notifications from './pages/Notifications';
@@ -47,7 +49,7 @@ import { supabase } from './services/supabaseClient';
 // ============================================
 import ParentLogin from './pages/ParentLogin';
 import ParentRegister from './pages/ParentRegister';
-import ParentDashboard from './pages/ParentDashboard'; // Restored
+import ParentDashboard from './pages/ParentDashboard';
 
 // ============================================
 // ✅ OUR MISSION PAGE IMPORT
@@ -63,14 +65,10 @@ import TourGuide from './components/TourGuide';
 // TUTOR APPLICATION (Public)
 // ============================================
 import BecomeATutor from './pages/BecomeATutor';
-
-// ============================================
-// ✅ TRACK APPLICATION (Public)
-// ============================================
 import TrackApplication from './pages/TrackApplication';
 
 // ============================================
-// ADMIN ROUTES - Direct imports (not lazy)
+// ADMIN ROUTES - Direct imports
 // ============================================
 import AdminLayout from './pages/Admin/AdminLayout';
 import AdminDashboard from './pages/Admin/AdminDashboard';
@@ -85,24 +83,16 @@ import AdminActivity from './pages/Admin/AdminActivity';
 import AdminLogin from './pages/Admin/AdminLogin';
 import AdminProfile from './pages/Admin/AdminProfile';
 import AdminPricing from './pages/Admin/AdminPricing';
-
-// ============================================
-// ADMIN LOGIN LAYOUT (No Navbar)
-// ============================================
 import AdminLoginLayout from './pages/Admin/AdminLoginLayout';
 
 // ============================================
-// PUBLIC SUBJECT CONTENT (Student view)
+// PUBLIC SUBJECT CONTENT
 // ============================================
 import SubjectContent from './pages/SubjectContent';
-
-// ============================================
-// ✅ SPLASH SCREEN
-// ============================================
 import SplashScreen from './components/SplashScreen';
 
 // ============================================
-// ERROR BOUNDARY COMPONENT
+// ERROR BOUNDARY
 // ============================================
 class ErrorBoundary extends React.Component {
   constructor(props) {
@@ -116,93 +106,43 @@ class ErrorBoundary extends React.Component {
 
   componentDidCatch(error, errorInfo) {
     console.error('❌ React Error Boundary caught an error:', error);
-    console.error('Error Info:', errorInfo);
     this.setState({ errorInfo });
   }
 
   render() {
     if (this.state.hasError) {
       return (
-        <div style={{
-          padding: '60px 20px',
-          textAlign: 'center',
-          minHeight: '100vh',
-          display: 'flex',
-          flexDirection: 'column',
-          alignItems: 'center',
-          justifyContent: 'center',
-          background: '#0a0e1a',
-          color: '#fff'
-        }}>
+        <div style={{ padding: '60px 20px', textAlign: 'center', minHeight: '100vh', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', background: '#0a0e1a', color: '#fff' }}>
           <h1 style={{ color: '#ef4444', fontSize: '28px' }}>⚠️ Something went wrong</h1>
-          <p style={{ color: '#94a3b8', marginTop: '12px', maxWidth: '500px' }}>
-            {this.state.error?.message || 'An unexpected error occurred'}
-          </p>
+          <p style={{ color: '#94a3b8', marginTop: '12px', maxWidth: '500px' }}>{this.state.error?.message || 'An unexpected error occurred'}</p>
           {this.state.errorInfo && (
-            <details style={{
-              marginTop: '20px',
-              color: '#94a3b8',
-              fontSize: '14px',
-              textAlign: 'left',
-              maxWidth: '600px',
-              background: '#1a1a2e',
-              padding: '16px',
-              borderRadius: '8px'
-            }}>
+            <details style={{ marginTop: '20px', color: '#94a3b8', fontSize: '14px', textAlign: 'left', maxWidth: '600px', background: '#1a1a2e', padding: '16px', borderRadius: '8px' }}>
               <summary>Technical Details</summary>
-              <pre style={{
-                marginTop: '12px',
-                fontSize: '12px',
-                overflow: 'auto',
-                maxHeight: '200px'
-              }}>
-                {this.state.errorInfo.componentStack}
-              </pre>
+              <pre style={{ marginTop: '12px', fontSize: '12px', overflow: 'auto', maxHeight: '200px' }}>{this.state.errorInfo.componentStack}</pre>
             </details>
           )}
-          <button
-            onClick={() => window.location.reload()}
-            style={{
-              marginTop: '24px',
-              padding: '12px 32px',
-              background: '#4f46e5',
-              color: 'white',
-              border: 'none',
-              borderRadius: '8px',
-              cursor: 'pointer',
-              fontSize: '16px',
-              transition: 'background 0.3s'
-            }}
-            onMouseEnter={(e) => e.target.style.background = '#6366f1'}
-            onMouseLeave={(e) => e.target.style.background = '#4f46e5'}
-          >
-            Refresh Page
-          </button>
+          <button onClick={() => window.location.reload()} style={{ marginTop: '24px', padding: '12px 32px', background: '#4f46e5', color: 'white', border: 'none', borderRadius: '8px', cursor: 'pointer', fontSize: '16px' }}>Refresh Page</button>
         </div>
       );
     }
-
     return this.props.children;
   }
 }
 
 // ============================================
-// BULLETPROOF LAZY LOAD
+// LAZY LOAD WITH ERROR HANDLING
 // ============================================
 const withLazyErrorHandling = (importFn, componentName) => {
   return lazy(() =>
     importFn()
       .then(module => {
-        console.log(`✅ ${componentName} loaded successfully`);
         if (module && module.default) return module;
         if (module && module[componentName]) return { default: module[componentName] };
         return { default: () => <div style={{ padding: '40px', color: 'white', background: '#0a0e1a' }}>Loading {componentName} failed...</div> };
       })
       .catch(err => {
         console.error(`❌ Failed to load ${componentName}:`, err);
-        return {
-          default: () => <div style={{ padding: '40px', color: 'red', background: '#0a0e1a' }}>Error loading {componentName}</div>
-        };
+        return { default: () => <div style={{ padding: '40px', color: 'red', background: '#0a0e1a' }}>Error loading {componentName}</div> };
       })
   );
 };
@@ -210,66 +150,32 @@ const withLazyErrorHandling = (importFn, componentName) => {
 // ============================================
 // LAZY LOADED COMPONENTS
 // ============================================
-const MyCourses = withLazyErrorHandling(
-  () => import('./pages/MyCourses'),
-  'MyCourses'
-);
-
-const MySessions = withLazyErrorHandling(
-  () => import('./pages/MySessions'),
-  'MySessions'
-);
+const MyCourses = withLazyErrorHandling(() => import('./pages/MyCourses'), 'MyCourses');
+const MySessions = withLazyErrorHandling(() => import('./pages/MySessions'), 'MySessions');
 
 // ============================================
-// LAZY LOAD FALLBACK COMPONENT
+// LAZY LOAD FALLBACK
 // ============================================
 const PageLoader = () => (
-  <div style={{
-    minHeight: '100vh',
-    display: 'flex',
-    flexDirection: 'column',
-    alignItems: 'center',
-    justifyContent: 'center',
-    background: '#0a0e1a',
-    color: '#94a3b8',
-    gap: '16px'
-  }}>
-    <div style={{
-      width: '40px',
-      height: '40px',
-      border: '3px solid rgba(79, 70, 229, 0.2)',
-      borderTopColor: '#4f46e5',
-      borderRadius: '50%',
-      animation: 'spin 0.8s linear infinite'
-    }}></div>
+  <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', background: '#0a0e1a', color: '#94a3b8', gap: '16px' }}>
+    <div style={{ width: '40px', height: '40px', border: '3px solid rgba(79, 70, 229, 0.2)', borderTopColor: '#4f46e5', borderRadius: '50%', animation: 'spin 0.8s linear infinite' }}></div>
     <p>Loading...</p>
-    <style>{`
-      @keyframes spin {
-        to { transform: rotate(360deg); }
-      }
-    `}</style>
+    <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
   </div>
 );
 
 // ============================================
-// ✅ STUDENT PROTECTED ROUTE
+// STUDENT PROTECTED ROUTE
 // ============================================
 const StudentRoute = ({ children }) => {
   const user = JSON.parse(localStorage.getItem('user'));
-  
-  if (!user) {
-    return <Navigate to="/login" replace />;
-  }
-
-  if (user.is_admin || user.is_super_admin || user.role === 'admin') {
-    return <Navigate to="/admin/dashboard" replace />;
-  }
-
+  if (!user) return <Navigate to="/login" replace />;
+  if (user.is_admin || user.is_super_admin || user.role === 'admin') return <Navigate to="/admin/dashboard" replace />;
   return children;
 };
 
 // ============================================
-// ✅ SESSION REMINDER LISTENER
+// SESSION REMINDER LISTENER
 // ============================================
 const SessionReminderListener = () => {
   const navigate = useNavigate();
@@ -277,26 +183,14 @@ const SessionReminderListener = () => {
 
   useEffect(() => {
     if (!user?.id) return;
-
-    const channel = supabase
-      .channel('public:session_alerts')
-      .on(
-        'postgres_changes',
-        { event: 'INSERT', schema: 'public', table: 'notifications', filter: `user_id=eq.${user.id}` },
-        (payload) => {
-          const notif = payload.new;
-
-          if (notif.type === 'session_reminder') {
-            const goToSession = window.confirm(`⏰ ${notif.title}\n\n${notif.message}\n\nClick OK to go to your sessions.`);
-            if (goToSession) navigate('/my-sessions');
-          } else if (notif.type === 'session_started') {
-            const goToSession = window.confirm(`🚀 ${notif.title}\n\n${notif.message}\n\nClick OK to join the session now.`);
-            if (goToSession) navigate('/my-sessions');
-          }
-        }
-      )
-      .subscribe();
-
+    const channel = supabase.channel('public:session_alerts').on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'notifications', filter: `user_id=eq.${user.id}` }, (payload) => {
+      const notif = payload.new;
+      if (notif.type === 'session_reminder') {
+        if (window.confirm(`⏰ ${notif.title}\n\n${notif.message}\n\nClick OK to go to your sessions.`)) navigate('/my-sessions');
+      } else if (notif.type === 'session_started') {
+        if (window.confirm(`🚀 ${notif.title}\n\n${notif.message}\n\nClick OK to join the session now.`)) navigate('/my-sessions');
+      }
+    }).subscribe();
     return () => supabase.removeChannel(channel);
   }, [user?.id, navigate]);
 
@@ -326,11 +220,9 @@ const AppContent = () => {
         <Suspense fallback={<PageLoader />}>
           <Routes>
             <Route path="/verify-email" element={<VerifyEmail />} />
-
             <Route element={<AdminLoginLayout />}>
               <Route path="/admin/login" element={<AdminLogin />} />
             </Route>
-
             <Route path="/admin" element={<AdminLayout />}>
               <Route index element={<AdminDashboard />} />
               <Route path="dashboard" element={<AdminDashboard />} />
@@ -349,7 +241,6 @@ const AppContent = () => {
 
             <Route path="/forgot-password" element={<ForgotPassword />} />
             <Route path="/login" element={<Login />} />
-            {/* ✅ PARENT ROUTES */}
             <Route path="/parent-login" element={<ParentLogin />} />
             <Route path="/parent-register" element={<ParentRegister />} />
             <Route path="/register" element={<Register />} />
@@ -368,8 +259,11 @@ const AppContent = () => {
             <Route path="/resources/videos/:id" element={<ResourceDetail />} />
             <Route path="/resources/practice/:id" element={<ResourceDetail />} />
             <Route path="/resources/guides/:id" element={<ResourceDetail />} />
-            <Route path="/terms" element={<Terms />} />
-            <Route path="/privacy" element={<Privacy />} />
+            
+            {/* ✅ FIXED: Using the actual component names */}
+            <Route path="/terms" element={<TermsOfService />} />
+            <Route path="/privacy" element={<PrivacyPolicy />} />
+            
             <Route path="/search" element={<SearchResults />} />
             <Route path="/subject-content/:subjectId" element={<SubjectContent />} />
             <Route path="/team" element={<Team />} />
@@ -387,7 +281,6 @@ const AppContent = () => {
             <Route path="/payment-success" element={<StudentRoute><PaymentSuccess /></StudentRoute>} />
             <Route path="/notifications" element={<StudentRoute><Notifications /></StudentRoute>} />
 
-            {/* ✅ PARENT DASHBOARD ROUTE */}
             <Route path="/parent/dashboard" element={<ParentDashboard />} />
 
             <Route path="/tutor/dashboard" element={<TutorDashboard />} />
@@ -411,16 +304,10 @@ const AppContent = () => {
 // MAIN APP COMPONENT
 // ============================================
 function App() {
-  console.log('🚀 App starting...');
-  console.log('📋 Environment:', process.env.NODE_ENV);
-
   const [isAppReady, setIsAppReady] = useState(false);
 
   useEffect(() => {
-    const timer = setTimeout(() => {
-      setIsAppReady(true);
-    }, 2000); 
-
+    const timer = setTimeout(() => setIsAppReady(true), 2000); 
     return () => clearTimeout(timer);
   }, []);
 

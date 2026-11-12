@@ -1,9 +1,7 @@
 // src/components/Navbar.js
 import React, { useState, useEffect, useRef, useCallback } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
-import {
-  Search, Globe, ChevronDown, Menu, X, User, LogOut, Settings, BookOpen, Award, Clock, HelpCircle, Home, Book, LayoutGrid, Users, DollarSign, Folder, BarChart2, TrendingUp, PieChart, CreditCard, FileText, Calendar, Target
-} from "lucide-react";
+import { Search, Globe, ChevronDown, Menu, X, User, LogOut, Settings, BookOpen, Award, Clock, HelpCircle, Home, Book, LayoutGrid, Users, DollarSign, Folder, BarChart2, TrendingUp, PieChart, CreditCard, FileText, Calendar } from "lucide-react";
 
 import { useHomeData } from "../hooks/useHomeData";
 import { useLanguage } from "../context/LanguageContext";
@@ -52,15 +50,12 @@ function Navbar() {
       const navElement = navLinksRef.current;
       const containerElement = containerRef.current;
 
-      // The space available for the nav links is the total container width 
-      // minus the Logo, the Actions (Search, Lang, Login, etc.), and a 60px safety buffer.
       const logoWidth = containerElement.firstElementChild ? containerElement.firstElementChild.offsetWidth : 200;
       const actionsWidth = containerElement.lastElementChild ? containerElement.lastElementChild.offsetWidth : 300;
       const totalWidth = containerElement.offsetWidth;
       
       const availableSpaceForLinks = totalWidth - logoWidth - actionsWidth - 60;
 
-      // If the natural width of the links is greater than the space we have, hide them
       if (navElement.scrollWidth > availableSpaceForLinks) {
         setShowDesktopLinks(false);
       } else {
@@ -69,7 +64,6 @@ function Navbar() {
     };
 
     const observer = new ResizeObserver(() => {
-      // Request animation frame ensures the DOM has fully painted before measuring
       requestAnimationFrame(checkOverflow);
     });
 
@@ -229,14 +223,14 @@ function Navbar() {
     { path: "/", label: "Home", icon: <Home size={18} /> }, { path: "/subjects", label: "Subjects", icon: <Book size={18} /> },
     { path: "/curriculum", label: "Curriculum", icon: <LayoutGrid size={18} /> }, { path: "/tutors", label: "Tutors", icon: <Users size={18} /> },
     { path: "/pricing", label: "Pricing", icon: <DollarSign size={18} /> }, { path: "/resources", label: "Resources", icon: <Folder size={18} /> },
-    { path: "/mission", label: "Our Mission", icon: <Target size={18} /> }
+    { path: "/mission", label: "Our Mission", icon: <Globe size={18} /> }
   ];
 
   const baseNavLinks = [
     { path: "/", label: "Home", icon: <Home size={18} /> }, { path: "/subjects", label: "Subjects", icon: <Book size={18} /> },
     { path: "/curriculum", label: "Curriculum", icon: <LayoutGrid size={18} /> }, { path: "/tutors", label: "Tutors", icon: <Users size={18} /> },
     { path: "/pricing", label: "Pricing", icon: <DollarSign size={18} /> }, { path: "/resources", label: "Resources", icon: <Folder size={18} /> },
-    { path: "/mission", label: "Our Mission", icon: <Target size={18} /> }
+    { path: "/mission", label: "Our Mission", icon: <Globe size={18} /> }
   ];
 
   let navLinks = baseNavLinks;

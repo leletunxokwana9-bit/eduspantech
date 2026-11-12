@@ -1,6 +1,6 @@
 // src/pages/MissionPage.js
 import React, { useEffect, useState } from "react";
-import { Target, CheckCircle2, GraduationCap, Smartphone, ShieldCheck, ArrowRight } from "lucide-react";
+import { Target, CheckCircle, GraduationCap, Smartphone, Shield, ArrowRight } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import "./MissionPage.css";
 
@@ -93,7 +93,7 @@ export default function MissionPage() {
                 const [boldPart, ...rest] = bullet.replace('• ', '').split(':');
                 return (
                   <li key={i}>
-                    <CheckCircle2 size={18} className="bullet-icon" />
+                    <CheckCircle size={18} className="bullet-icon" />
                     <span>
                       <strong>{boldPart}:</strong>{rest.join(':')}
                     </span>
@@ -195,7 +195,7 @@ export default function MissionPage() {
         {whyChoose && (
           <section className="mission-section why-choose-section">
             <div className="why-header">
-              <ShieldCheck size={28} className="why-icon" />
+              <Shield size={28} className="why-icon" />
               <h2>{whyChoose.title}</h2>
             </div>
             <div className="text-content">

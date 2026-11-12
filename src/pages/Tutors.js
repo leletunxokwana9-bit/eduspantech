@@ -1,10 +1,19 @@
-// src/pages/Tutors.js - REDESIGNED: shift sections, clean availability, standout tutor cards
+// src/pages/Tutors.js
 import React, { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import { tutorService } from '../services/tutorService';
-import * as sessionServiceModule from '../services/sessionService';
-const sessionService = sessionServiceModule.default || sessionServiceModule;
 import './Tutors.css';
+
+// Safely handle imports so a missing file doesn't crash the app
+let tutorService = {};
+let sessionService = {};
+try {
+  const tMod = require('../services/tutorService');
+  tutorService = tMod.tutorService || tMod.default || tMod;
+  const sMod = require('../services/sessionService');
+  sessionService = sMod.default || sMod;
+} catch (e) {
+  console.warn("Services missing:", e);
+}
 
 // ============================================
 // HELPERS (outside component so they are stable)
@@ -157,6 +166,10 @@ const Tutors = () => {
       setLoading(true);
       setError('');
 
+      if (!tutorService || !tutorService.getTutors) {
+         throw new Error("Tutor service not available");
+      }
+
       console.log('📚 Fetching tutors from API...');
       const result = await tutorService.getTutors();
       console.log('📚 API Response:', result);
@@ -307,6 +320,11 @@ const Tutors = () => {
 
     try {
       setBookingLoading(true);
+      
+      if (!sessionService || !sessionService.bookSession) {
+        throw new Error("Session service not available");
+      }
+
       const result = await sessionService.bookSession(
         booking.tutorId,
         booking.date,

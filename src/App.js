@@ -4,6 +4,7 @@ import { BrowserRouter as Router, Routes, Route, useLocation, useNavigate, Navig
 import Navbar from './components/Navbar';
 import Footer from './components/Footer';
 import Home from './pages/Home';
+import Login from './pages/Login';
 import Register from './pages/Register';
 import Dashboard from './pages/Dashboard';
 import Subjects from './pages/Subjects';
@@ -46,6 +47,7 @@ import { supabase } from './services/supabaseClient';
 // ============================================
 import ParentLogin from './pages/ParentLogin';
 import ParentRegister from './pages/ParentRegister';
+import ParentDashboard from './pages/ParentDashboard'; // Restored
 
 // ============================================
 // ✅ OUR MISSION PAGE IMPORT
@@ -185,54 +187,21 @@ class ErrorBoundary extends React.Component {
 }
 
 // ============================================
-// LAZY LOAD WITH ERROR HANDLING
+// BULLETPROOF LAZY LOAD
 // ============================================
 const withLazyErrorHandling = (importFn, componentName) => {
   return lazy(() =>
     importFn()
       .then(module => {
         console.log(`✅ ${componentName} loaded successfully`);
-        // ✅ BULLETPROOF FIX: Always return a valid component
         if (module && module.default) return module;
         if (module && module[componentName]) return { default: module[componentName] };
-        return { default: () => <div>Loading {componentName}...</div> };
+        return { default: () => <div style={{ padding: '40px', color: 'white', background: '#0a0e1a' }}>Loading {componentName} failed...</div> };
       })
       .catch(err => {
         console.error(`❌ Failed to load ${componentName}:`, err);
         return {
-          default: () => (
-            <div style={{
-              padding: '60px 20px',
-              textAlign: 'center',
-              color: '#ef4444',
-              minHeight: '100vh',
-              display: 'flex',
-              flexDirection: 'column',
-              alignItems: 'center',
-              justifyContent: 'center',
-              background: '#0a0e1a'
-            }}>
-              <h2>⚠️ Failed to load {componentName}</h2>
-              <p style={{ color: '#94a3b8', marginTop: '12px' }}>
-                {err.message || 'An error occurred loading this page'}
-              </p>
-              <button
-                onClick={() => window.location.reload()}
-                style={{
-                  marginTop: '24px',
-                  padding: '12px 32px',
-                  background: '#4f46e5',
-                  color: 'white',
-                  border: 'none',
-                  borderRadius: '8px',
-                  cursor: 'pointer',
-                  fontSize: '16px'
-                }}
-              >
-                Refresh Page
-              </button>
-            </div>
-          )
+          default: () => <div style={{ padding: '40px', color: 'red', background: '#0a0e1a' }}>Error loading {componentName}</div>
         };
       })
   );
@@ -241,11 +210,6 @@ const withLazyErrorHandling = (importFn, componentName) => {
 // ============================================
 // LAZY LOADED COMPONENTS
 // ============================================
-const Login = withLazyErrorHandling(
-  () => import('./pages/Login'),
-  'Login'
-);
-
 const MyCourses = withLazyErrorHandling(
   () => import('./pages/MyCourses'),
   'MyCourses'
@@ -254,11 +218,6 @@ const MyCourses = withLazyErrorHandling(
 const MySessions = withLazyErrorHandling(
   () => import('./pages/MySessions'),
   'MySessions'
-);
-
-const ParentDashboard = withLazyErrorHandling(
-  () => import('./pages/ParentDashboard'),
-  'ParentDashboard'
 );
 
 // ============================================
@@ -360,9 +319,7 @@ const AppContent = () => {
   return (
     <div className="app">
       {!hideNavigation && <SessionReminderListener />}
-      
       {!hideNavigation && <Navbar />}
-
       {!hideNavigation && <TourGuide />}
       
       <main className="app-main">
@@ -392,6 +349,7 @@ const AppContent = () => {
 
             <Route path="/forgot-password" element={<ForgotPassword />} />
             <Route path="/login" element={<Login />} />
+            {/* ✅ PARENT ROUTES */}
             <Route path="/parent-login" element={<ParentLogin />} />
             <Route path="/parent-register" element={<ParentRegister />} />
             <Route path="/register" element={<Register />} />
@@ -429,6 +387,7 @@ const AppContent = () => {
             <Route path="/payment-success" element={<StudentRoute><PaymentSuccess /></StudentRoute>} />
             <Route path="/notifications" element={<StudentRoute><Notifications /></StudentRoute>} />
 
+            {/* ✅ PARENT DASHBOARD ROUTE */}
             <Route path="/parent/dashboard" element={<ParentDashboard />} />
 
             <Route path="/tutor/dashboard" element={<TutorDashboard />} />

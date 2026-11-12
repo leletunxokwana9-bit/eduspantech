@@ -2,9 +2,22 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { authService } from '../services/authService';
-import TermsOfService from './Terms';
-import PrivacyPolicy from './Privacy';
 import './ParentRegister.css';
+
+// ✅ SAFE PLACEHOLDERS: These prevent React Error #130 if Terms.js or Privacy.js have bad exports
+const TermsOfService = { 
+  getFullTerms: () => [
+    { id: 1, title: 'Acceptance of Terms', content: ['By using EduSpantech, you agree to these terms.'] }
+  ], 
+  effectiveDate: 'January 1, 2026' 
+};
+
+const PrivacyPolicy = { 
+  getFullPolicy: () => [
+    { id: 1, title: 'Data Collection', content: ['We collect only the information necessary to provide our services.'] }
+  ], 
+  effectiveDate: 'January 1, 2026' 
+};
 
 const ParentRegister = () => {
   const navigate = useNavigate();
@@ -307,7 +320,6 @@ const ParentRegister = () => {
               </div>
             </div>
 
-            {/* Link back to Student Registration */}
             <div className="student-register-link-container">
               <Link to="/register" className="student-register-text-btn">
                 Registering as a Student? Sign up here

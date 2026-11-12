@@ -47,7 +47,6 @@ import { supabase } from './services/supabaseClient';
 // ============================================
 import ParentLogin from './pages/ParentLogin';
 import ParentRegister from './pages/ParentRegister';
-import ParentDashboard from './pages/ParentDashboard';
 
 // ============================================
 // ✅ OUR MISSION PAGE IMPORT
@@ -250,6 +249,12 @@ const MyCourses = withLazyErrorHandling(
 const MySessions = withLazyErrorHandling(
   () => import('./pages/MySessions'),
   'MySessions'
+);
+
+// ✅ LAZY LOAD PARENT DASHBOARD (Prevents it from crashing the login page)
+const ParentDashboard = withLazyErrorHandling(
+  () => import('./pages/ParentDashboard'),
+  'ParentDashboard'
 );
 
 // ============================================

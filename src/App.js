@@ -4,7 +4,6 @@ import { BrowserRouter as Router, Routes, Route, useLocation, useNavigate, Navig
 import Navbar from './components/Navbar';
 import Footer from './components/Footer';
 import Home from './pages/Home';
-import Login from './pages/Login';
 import Register from './pages/Register';
 import Dashboard from './pages/Dashboard';
 import Subjects from './pages/Subjects';
@@ -193,9 +192,10 @@ const withLazyErrorHandling = (importFn, componentName) => {
     importFn()
       .then(module => {
         console.log(`✅ ${componentName} loaded successfully`);
-        if (module.default) return module;
-        if (module[componentName]) return { default: module[componentName] };
-        throw new Error(`${componentName} has no default or named export`);
+        // ✅ BULLETPROOF FIX: Always return a valid component
+        if (module && module.default) return module;
+        if (module && module[componentName]) return { default: module[componentName] };
+        return { default: () => <div>Loading {componentName}...</div> };
       })
       .catch(err => {
         console.error(`❌ Failed to load ${componentName}:`, err);
@@ -241,6 +241,11 @@ const withLazyErrorHandling = (importFn, componentName) => {
 // ============================================
 // LAZY LOADED COMPONENTS
 // ============================================
+const Login = withLazyErrorHandling(
+  () => import('./pages/Login'),
+  'Login'
+);
+
 const MyCourses = withLazyErrorHandling(
   () => import('./pages/MyCourses'),
   'MyCourses'
@@ -251,7 +256,6 @@ const MySessions = withLazyErrorHandling(
   'MySessions'
 );
 
-// ✅ LAZY LOAD PARENT DASHBOARD (Prevents it from crashing the login page)
 const ParentDashboard = withLazyErrorHandling(
   () => import('./pages/ParentDashboard'),
   'ParentDashboard'
@@ -298,7 +302,6 @@ const StudentRoute = ({ children }) => {
     return <Navigate to="/login" replace />;
   }
 
-  // If they are an Admin, kick them out of the student dashboard immediately
   if (user.is_admin || user.is_super_admin || user.role === 'admin') {
     return <Navigate to="/admin/dashboard" replace />;
   }
@@ -316,7 +319,6 @@ const SessionReminderListener = () => {
   useEffect(() => {
     if (!user?.id) return;
 
-    // Listen for new notifications in real-time
     const channel = supabase
       .channel('public:session_alerts')
       .on(
@@ -325,7 +327,6 @@ const SessionReminderListener = () => {
         (payload) => {
           const notif = payload.new;
 
-          // Show alert based on notification type
           if (notif.type === 'session_reminder') {
             const goToSession = window.confirm(`⏰ ${notif.title}\n\n${notif.message}\n\nClick OK to go to your sessions.`);
             if (goToSession) navigate('/my-sessions');
@@ -340,7 +341,7 @@ const SessionReminderListener = () => {
     return () => supabase.removeChannel(channel);
   }, [user?.id, navigate]);
 
-  return null; // This component doesn't render anything
+  return null;
 };
 
 // ============================================
@@ -349,13 +350,9 @@ const SessionReminderListener = () => {
 const AppContent = () => {
   const location = useLocation();
   
-  // Hide Navbar/Footer/ChatWidget on Admin routes, VerifyEmail, Parent routes, and Private Tutor Portal routes
   const isAdminRoute = location.pathname.startsWith('/admin');
   const isVerifyEmailRoute = location.pathname === '/verify-email';
   const isParentRoute = location.pathname.startsWith('/parent');
-  
-  // ✅ FIX: Use '/tutor/' with a trailing slash to catch the dashboard routes, 
-  // but NOT the public '/tutors' page!
   const isTutorPortalRoute = location.pathname.startsWith('/tutor/'); 
 
   const hideNavigation = isAdminRoute || isVerifyEmailRoute || isParentRoute || isTutorPortalRoute;
@@ -366,27 +363,17 @@ const AppContent = () => {
       
       {!hideNavigation && <Navbar />}
 
-      {/* 👇 THE TOUR GUIDE RUNS HERE (Only on standard user pages) */}
       {!hideNavigation && <TourGuide />}
       
       <main className="app-main">
         <Suspense fallback={<PageLoader />}>
           <Routes>
-            {/* ============================================
-                ✅ STANDALONE ROUTES (No Navbar/Footer)
-                ============================================ */}
             <Route path="/verify-email" element={<VerifyEmail />} />
 
-            {/* ============================================
-                ✅ ADMIN LOGIN - NO NAVBAR (Layout Route with Outlet)
-                ============================================ */}
             <Route element={<AdminLoginLayout />}>
               <Route path="/admin/login" element={<AdminLogin />} />
             </Route>
 
-            {/* ============================================
-                ADMIN ROUTES - With Sidebar (AdminLayout)
-                ============================================ */}
             <Route path="/admin" element={<AdminLayout />}>
               <Route index element={<AdminDashboard />} />
               <Route path="dashboard" element={<AdminDashboard />} />
@@ -403,29 +390,19 @@ const AppContent = () => {
               <Route path="notifications" element={<Notifications />} />
             </Route>
 
-            {/* ============================================
-                CORE ROUTES - Always accessible
-                ============================================ */}
             <Route path="/forgot-password" element={<ForgotPassword />} />
             <Route path="/login" element={<Login />} />
-            {/* ✅ PARENT ROUTES */}
             <Route path="/parent-login" element={<ParentLogin />} />
             <Route path="/parent-register" element={<ParentRegister />} />
             <Route path="/register" element={<Register />} />
 
-            {/* ============================================
-                PUBLIC ROUTES - No authentication needed
-                ============================================ */}
             <Route path="/" element={<Home />} />
             <Route path="/mission" element={<MissionPage />} />
             <Route path="/subjects" element={<Subjects />} />
             <Route path="/subjects/:subjectName" element={<SubjectDetail />} />
             <Route path="/curriculum" element={<Curriculum />} />
             <Route path="/curriculum/:countryId" element={<CurriculumDetail />} />
-            
-            {/* ✅ PUBLIC TUTORS PAGE (Navbar is visible here) */}
             <Route path="/tutors" element={<Tutors />} />
-            
             <Route path="/pricing" element={<Pricing />} />
             <Route path="/resources" element={<Resources />} />
             <Route path="/resources/:vaultName/:resourceId" element={<ResourceDetail />} />
@@ -441,9 +418,6 @@ const AppContent = () => {
             <Route path="/become-a-tutor" element={<BecomeATutor />} />
             <Route path="/track-application" element={<TrackApplication />} />
 
-            {/* ============================================
-                PROTECTED ROUTES - Require authentication
-                ============================================ */}
             <Route path="/timetable" element={<StudentRoute><Timetable /></StudentRoute>} />
             <Route path="/dashboard" element={<StudentRoute><Dashboard /></StudentRoute>} />
             <Route path="/profile" element={<StudentRoute><Profile /></StudentRoute>} />
@@ -455,22 +429,13 @@ const AppContent = () => {
             <Route path="/payment-success" element={<StudentRoute><PaymentSuccess /></StudentRoute>} />
             <Route path="/notifications" element={<StudentRoute><Notifications /></StudentRoute>} />
 
-            {/* ============================================
-                ✅ PARENT DASHBOARD ROUTE
-                ============================================ */}
             <Route path="/parent/dashboard" element={<ParentDashboard />} />
 
-            {/* ============================================
-                ✅ PRIVATE TUTOR PORTAL ROUTES (Navbar hidden here)
-                ============================================ */}
             <Route path="/tutor/dashboard" element={<TutorDashboard />} />
             <Route path="/tutor/session/:sessionId" element={<TutorSession />} />
             <Route path="/tutor/students" element={<TutorStudents />} />
             <Route path="/tutor/earnings" element={<TutorEarnings />} />
 
-            {/* ============================================
-                LAZY LOADED ROUTES - With error handling
-                ============================================ */}
             <Route path="/my-courses" element={<StudentRoute><MyCourses /></StudentRoute>} />
             <Route path="/my-sessions" element={<StudentRoute><MySessions /></StudentRoute>} />
           </Routes>

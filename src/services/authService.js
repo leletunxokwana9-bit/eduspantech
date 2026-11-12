@@ -27,9 +27,6 @@ let meInFlight = null;
 const authService = {
   register: async (userData) => {
     try {
-      console.log('📤 Sending registration to:', `${API_BASE_URL}/auth/register`);
-      console.log('📤 Registration data:', userData);
-
       const response = await fetch(`${API_BASE_URL}/auth/register`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -37,23 +34,15 @@ const authService = {
       });
 
       const data = await response.json();
-      console.log('📥 Registration response:', data);
 
       if (!response.ok) {
-        if (response.status === 400) {
-          throw new Error(data.error || 'Invalid registration data. Please check your information.');
-        }
-        if (response.status === 409) {
-          throw new Error('An account with this email already exists. Please login instead.');
-        }
-        if (response.status === 500) {
-          throw new Error('Server error. Please try again later.');
-        }
+        if (response.status === 400) throw new Error(data.error || 'Invalid registration data.');
+        if (response.status === 409) throw new Error('An account with this email already exists.');
+        if (response.status === 500) throw new Error('Server error. Please try again later.');
         throw new Error(data.error || 'Registration failed');
       }
 
       if (data.success) {
-        console.log('✅ Registration successful! Verification email sent.');
         return {
           success: true,
           message: data.message || 'Registration successful! Please check your email for verification.',
@@ -68,10 +57,58 @@ const authService = {
     }
   },
 
+  // ✅ NEW FUNCTION SPECIFICALLY FOR PARENTS
+  loginParent: async (email, password) => {
+    try {
+      const response = await fetch(`${API_BASE_URL}/auth/login`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, password, role: 'parent' }), // Explicitly request parent role
+      });
+
+      let data = {};
+      try { data = await response.json(); } catch { /* non-JSON */ }
+
+      if (response.ok && data.accessToken) {
+        setTokens(data.accessToken, data.refreshToken);
+        if (data.user) localStorage.setItem('user', JSON.stringify(data.user));
+        return {
+          success: true,
+          user: data.user || null,
+          accessToken: data.accessToken,
+          refreshToken: data.refreshToken,
+        };
+      }
+
+      // Catch generic backend errors
+      if (response.status === 403) {
+        if (data.needsVerification) {
+          return {
+            success: false,
+            error: data.error || 'Please verify your email before logging in',
+            needsVerification: true,
+            email: data.email,
+          };
+        }
+        return { success: false, error: data.error || 'Access denied' };
+      }
+
+      if (response.status === 401) {
+        return {
+          success: false,
+          error: data.error || 'Invalid email or password',
+        };
+      }
+
+      return { success: false, error: data.error || 'Login failed' };
+    } catch (error) {
+      console.error('Parent Login error:', error);
+      return { success: false, error: error.message || 'Login failed. Please check your connection.' };
+    }
+  },
+
   login: async (email, password, totp) => {
     try {
-      console.log('📤 Sending login to:', `${API_BASE_URL}/auth/login`);
-
       const body = { email, password };
       if (totp) body.totp = totp;
 
@@ -158,17 +195,14 @@ const authService = {
 
   getCurrentUser: async () => {
     if (meInFlight) return meInFlight;
-
     meInFlight = (async () => {
       try {
         const token = getToken();
         if (!token) return null;
-
         let response = await fetch(`${API_BASE_URL}/auth/me`, {
           method: 'GET',
           headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
         });
-
         if (response.status === 401) {
           const refreshed = await authService.refreshToken();
           if (refreshed) {
@@ -179,12 +213,10 @@ const authService = {
             });
           }
         }
-
         if (!response.ok) {
           if (response.status === 401) clearTokens();
           return null;
         }
-
         const data = await response.json();
         const user = data.user || data;
         if (user) localStorage.setItem('user', JSON.stringify(user));
@@ -196,7 +228,6 @@ const authService = {
         meInFlight = null;
       }
     })();
-
     return meInFlight;
   },
 
@@ -223,14 +254,11 @@ const authService = {
     try {
       const token = getToken();
       if (!token) throw new Error('Not authenticated');
-      console.log('📤 Updating profile at:', `${API_BASE_URL}/auth/profile`);
-
       const response = await fetch(`${API_BASE_URL}/auth/profile`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
         body: JSON.stringify(userData),
       });
-
       if (response.status === 401) {
         const refreshed = await authService.refreshToken();
         if (refreshed) {
@@ -248,12 +276,10 @@ const authService = {
         }
         throw new Error('Session expired');
       }
-
       if (!response.ok) {
         const error = await response.json();
         throw new Error(error.error || 'Failed to update profile');
       }
-
       const data = await response.json();
       if (data.user) localStorage.setItem('user', JSON.stringify(data.user));
       return data;
@@ -267,13 +293,11 @@ const authService = {
     try {
       const token = getToken();
       if (!token) throw new Error('Not authenticated');
-
       const response = await fetch(`${API_BASE_URL}/auth/change-password`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
         body: JSON.stringify({ currentPassword, newPassword }),
       });
-
       if (response.status === 401) {
         const refreshed = await authService.refreshToken();
         if (refreshed) {
@@ -287,12 +311,10 @@ const authService = {
         }
         throw new Error('Session expired');
       }
-
       if (!response.ok) {
         const error = await response.json();
         throw new Error(error.error || 'Failed to change password');
       }
-
       return await response.json();
     } catch (error) {
       console.error('Change password error:', error);
@@ -304,17 +326,14 @@ const authService = {
     try {
       const token = getToken();
       if (!token) throw new Error('Not authenticated');
-
       const response = await fetch(`${API_BASE_URL}/auth/account`, {
         method: 'DELETE',
         headers: { Authorization: `Bearer ${token}` },
       });
-
       if (!response.ok) {
         const error = await response.json();
         throw new Error(error.error || 'Failed to delete account');
       }
-
       clearTokens();
       return await response.json();
     } catch (error) {
@@ -330,18 +349,15 @@ const authService = {
         clearTokens();
         return false;
       }
-
       const response = await fetch(`${API_BASE_URL}/auth/refresh`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ refreshToken }),
       });
-
       if (!response.ok) {
         clearTokens();
         return false;
       }
-
       const data = await response.json();
       if (data.accessToken) {
         setTokens(data.accessToken, data.refreshToken);
@@ -362,12 +378,10 @@ const authService = {
         method: 'GET',
         headers: { 'Content-Type': 'application/json' },
       });
-
       if (!response.ok) {
         const error = await response.json();
         throw new Error(error.error || 'Verification failed');
       }
-
       return await response.json();
     } catch (error) {
       console.error('Verify email error:', error);
@@ -377,19 +391,13 @@ const authService = {
 
   resendVerification: async (email) => {
     try {
-      console.log('📤 Resending verification to:', `${API_BASE_URL}/auth/resend-verification`);
-
       const response = await fetch(`${API_BASE_URL}/auth/resend-verification`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email }),
       });
-
       const data = await response.json();
-      console.log('📥 Resend verification response:', data);
-
       if (!response.ok) throw new Error(data.error || 'Failed to resend verification');
-
       return { success: true, message: data.message || 'Verification email resent successfully!' };
     } catch (error) {
       console.error('Resend verification error:', error);
@@ -404,12 +412,10 @@ const authService = {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email }),
       });
-
       if (!response.ok) {
         const error = await response.json();
         throw new Error(error.error || 'Auto-verify failed');
       }
-
       return await response.json();
     } catch (error) {
       console.error('Auto-verify error:', error);
@@ -441,18 +447,15 @@ const authService = {
     try {
       const token = getToken();
       if (!token) throw new Error('Not authenticated');
-
       const response = await fetch(`${API_BASE_URL}/auth/profile`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
         body: JSON.stringify(avatarData),
       });
-
       if (!response.ok) {
         const error = await response.json();
         throw new Error(error.error || 'Failed to update avatar');
       }
-
       const data = await response.json();
       if (data.user) localStorage.setItem('user', JSON.stringify(data.user));
       return data;

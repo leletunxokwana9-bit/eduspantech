@@ -540,31 +540,6 @@ const Login = () => {
                   autoComplete="new-password" 
                   disabled={loading || bannedInfo || inactive || lockedInfo}
                 />
-                {showSavedAccounts && savedAccounts.length > 0 && (
-                  <div className="saved-accounts-dropdown" ref={dropdownRef}>
-                    <div className="saved-accounts-header">Saved Accounts</div>
-                    {savedAccounts.map((account, idx) => (
-                      <div 
-                        key={idx} 
-                        className="saved-account-item" 
-                        onMouseDown={(e) => {
-                          e.preventDefault(); // Prevents input from losing focus
-                          handleSelectAccount(account);
-                        }}
-                        style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '12px', cursor: 'pointer', borderBottom: '1px solid rgba(255,255,255,0.05)' }}
-                      >
-                        <div style={{ width: '40px', height: '40px', minWidth: '40px', minHeight: '40px', borderRadius: '50%', overflow: 'hidden', backgroundColor: '#4f46e5', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                          {account.avatar ? <img src={account.avatar} alt={account.name} style={{ width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'center', display: 'block' }} onError={(e) => { e.target.style.display = 'none'; e.target.nextSibling.style.display = 'flex'; }} /> : null}
-                          <span style={{ display: account.avatar ? 'none' : 'flex', color: '#ffffff', fontSize: '16px', fontWeight: 'bold' }}>{(account.name || 'U').charAt(0).toUpperCase()}</span>
-                        </div>
-                        <div style={{ display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
-                          <span style={{ color: '#ffffff', fontWeight: 'bold', fontSize: '14px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{account.email}</span>
-                          <span style={{ color: '#a78bfa', fontSize: '12px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{account.name}</span>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                )}
               </div>
 
               <div className="form-group">
@@ -595,10 +570,10 @@ const Login = () => {
         </div>
       </div>
 
-      {/* ✅ BLOCKED ACCESS MODAL (SILENT FAIL) */}
+      {/* ✅ BLOCKED ACCESS MODAL */}
       {showBlockedModal && (
-        <div className="save-password-overlay">
-          <div className="save-password-modal" style={{ textAlign: 'center', padding: '40px 32px' }}>
+        <div className="custom-modal-overlay" onClick={() => setShowBlockedModal(false)}>
+          <div className="custom-modal-content" style={{ textAlign: 'center', padding: '40px 32px' }} onClick={(e) => e.stopPropagation()}>
             <div style={{ fontSize: '48px', marginBottom: '16px' }}>🚫</div>
             <h3 style={{ fontSize: '22px', fontWeight: 'bold', color: '#ffffff', marginBottom: '8px' }}>Invalid Credentials</h3>
             <p style={{ fontSize: '14px', color: '#94a3b8', marginBottom: '24px' }}>The email or password you entered is incorrect. Please try again.</p>
@@ -609,15 +584,15 @@ const Login = () => {
 
       {/* ✅ CUSTOM SAVE PASSWORD MODAL */}
       {showSavePrompt && (
-        <div className="save-password-overlay">
-          <div className="save-password-modal">
+        <div className="custom-modal-overlay" onClick={handleNeverSave}>
+          <div className="custom-modal-content" onClick={(e) => e.stopPropagation()}>
             <button className="modal-close-btn" onClick={handleNeverSave}>×</button>
-            <div className="save-password-header">
-              <div className="save-password-icons"><span className="key-icon">🔑</span></div>
+            <div className="custom-modal-header">
+              <div className="custom-modal-icon">🔑</div>
               <h3>Save login details?</h3>
+              <p>Save your email to log in faster next time on this device.</p>
             </div>
             <div className="save-password-body">
-              <p style={{ fontSize: '13px', color: 'rgba(255,255,255,0.7)', margin: 0 }}>Save your email to log in faster next time on this device.</p>
               <div className="input-row"><label>Username</label><div className="input-box"><span>{email}</span></div></div>
             </div>
             <div className="save-password-actions">
@@ -625,6 +600,47 @@ const Login = () => {
               <button className="btn-save" onClick={handleSavePassword}>Save</button>
             </div>
             <p className="save-password-footer">Your email will be saved locally on this device for faster login.</p>
+          </div>
+        </div>
+      )}
+
+      {/* ✅ CUSTOM SAVED ACCOUNTS MODAL */}
+      {showSavedAccounts && savedAccounts.length > 0 && (
+        <div className="custom-modal-overlay" onClick={() => setShowSavedAccounts(false)}>
+          <div className="custom-modal-content" onClick={(e) => e.stopPropagation()}>
+            <button className="modal-close-btn" onClick={() => setShowSavedAccounts(false)}>×</button>
+            <div className="custom-modal-header">
+              <div className="custom-modal-icon">👤</div>
+              <h3>Choose an account</h3>
+              <p>to continue to EduSpantech</p>
+            </div>
+            <div className="custom-modal-list">
+              {savedAccounts.map((account, idx) => (
+                <div
+                  key={idx}
+                  className="custom-modal-item"
+                  onClick={() => handleSelectAccount(account)}
+                >
+                  <div className="custom-modal-avatar">
+                    {account.avatar ? (
+                      <img src={account.avatar} alt={account.name} className="custom-modal-avatar-img" onError={(e) => { e.target.style.display = 'none'; e.target.nextSibling.style.display = 'flex'; }} />
+                    ) : null}
+                    <span className="custom-modal-avatar-letter" style={{ display: account.avatar ? 'none' : 'flex' }}>
+                      {(account.name || 'U').charAt(0).toUpperCase()}
+                    </span>
+                  </div>
+                  <div className="custom-modal-info">
+                    <span className="custom-modal-name">{account.name}</span>
+                    <span className="custom-modal-email">{account.email}</span>
+                  </div>
+                </div>
+              ))}
+            </div>
+            <div className="custom-modal-footer">
+              <button className="custom-modal-use-different" onClick={() => setShowSavedAccounts(false)}>
+                Use another account
+              </button>
+            </div>
           </div>
         </div>
       )}

@@ -2,7 +2,8 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { tutorService } from '../services/tutorService';
-import sessionService from '../services/sessionService';
+import * as sessionServiceModule from '../services/sessionService';
+const sessionService = sessionServiceModule.default || sessionServiceModule;
 import './Tutors.css';
 
 // ============================================
@@ -703,7 +704,7 @@ const Tutors = () => {
           )}
         </div>
 
-        {/* ===== CLEAN AVAILABILITY BANNER (Replaced confusing slider) ===== */}
+        {/* ===== CLEAN AVAILABILITY BANNER ===== */}
         <div className="availability-banner">
           <h3>🌍 Global Coverage</h3>
           <p>Tutors are strategically grouped by shift to ensure continuous, 24/7 academic support.</p>

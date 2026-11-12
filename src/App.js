@@ -1,6 +1,6 @@
-// src/App.js - COMPLETE WITH TOUR GUIDE INTEGRATION
+// src/App.js - COMPLETE WITH TOUR GUIDE INTEGRATION & ADMIN PROTECTION
 import React, { Suspense, lazy, useState, useEffect } from 'react';
-import { BrowserRouter as Router, Routes, Route, useLocation } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, useLocation, useNavigate, Navigate } from 'react-router-dom';
 import Navbar from './components/Navbar';
 import Footer from './components/Footer';
 import Home from './pages/Home';
@@ -40,6 +40,19 @@ import Notifications from './pages/Notifications';
 import ForgotPassword from './pages/ForgotPassword';
 import Team from './pages/Team';
 import Timetable from './pages/Timetable';
+import { supabase } from './services/supabaseClient'; 
+
+// ============================================
+// ✅ PARENT MODULE IMPORTS
+// ============================================
+import ParentLogin from './pages/ParentLogin';
+import ParentRegister from './pages/ParentRegister';
+import ParentDashboard from './pages/ParentDashboard';
+
+// ============================================
+// ✅ OUR MISSION PAGE IMPORT
+// ============================================
+import MissionPage from './pages/MissionPage';
 
 // ============================================
 // ✅ TOUR GUIDE IMPORT
@@ -271,19 +284,81 @@ const PageLoader = () => (
 );
 
 // ============================================
+// ✅ STUDENT PROTECTED ROUTE
+// ============================================
+const StudentRoute = ({ children }) => {
+  const user = JSON.parse(localStorage.getItem('user'));
+  
+  if (!user) {
+    return <Navigate to="/login" replace />;
+  }
+
+  // If they are an Admin, kick them out of the student dashboard immediately
+  if (user.is_admin || user.is_super_admin || user.role === 'admin') {
+    return <Navigate to="/admin/dashboard" replace />;
+  }
+
+  return children;
+};
+
+// ============================================
+// ✅ SESSION REMINDER LISTENER
+// ============================================
+const SessionReminderListener = () => {
+  const navigate = useNavigate();
+  const user = JSON.parse(localStorage.getItem('user'));
+
+  useEffect(() => {
+    if (!user?.id) return;
+
+    // Listen for new notifications in real-time
+    const channel = supabase
+      .channel('public:session_alerts')
+      .on(
+        'postgres_changes',
+        { event: 'INSERT', schema: 'public', table: 'notifications', filter: `user_id=eq.${user.id}` },
+        (payload) => {
+          const notif = payload.new;
+
+          // Show alert based on notification type
+          if (notif.type === 'session_reminder') {
+            const goToSession = window.confirm(`⏰ ${notif.title}\n\n${notif.message}\n\nClick OK to go to your sessions.`);
+            if (goToSession) navigate('/my-sessions');
+          } else if (notif.type === 'session_started') {
+            const goToSession = window.confirm(`🚀 ${notif.title}\n\n${notif.message}\n\nClick OK to join the session now.`);
+            if (goToSession) navigate('/my-sessions');
+          }
+        }
+      )
+      .subscribe();
+
+    return () => supabase.removeChannel(channel);
+  }, [user?.id, navigate]);
+
+  return null; // This component doesn't render anything
+};
+
+// ============================================
 // WRAPPER COMPONENT FOR CONDITIONAL LAYOUT RENDERING
 // ============================================
 const AppContent = () => {
   const location = useLocation();
   
-  // Hide Navbar/Footer/ChatWidget on Admin routes and VerifyEmail
+  // Hide Navbar/Footer/ChatWidget on Admin routes, VerifyEmail, Parent routes, and Private Tutor Portal routes
   const isAdminRoute = location.pathname.startsWith('/admin');
   const isVerifyEmailRoute = location.pathname === '/verify-email';
+  const isParentRoute = location.pathname.startsWith('/parent');
+  
+  // ✅ FIX: Use '/tutor/' with a trailing slash to catch the dashboard routes, 
+  // but NOT the public '/tutors' page!
+  const isTutorPortalRoute = location.pathname.startsWith('/tutor/'); 
 
-  const hideNavigation = isAdminRoute || isVerifyEmailRoute;
+  const hideNavigation = isAdminRoute || isVerifyEmailRoute || isParentRoute || isTutorPortalRoute;
 
   return (
     <div className="app">
+      {!hideNavigation && <SessionReminderListener />}
+      
       {!hideNavigation && <Navbar />}
 
       {/* 👇 THE TOUR GUIDE RUNS HERE (Only on standard user pages) */}
@@ -328,17 +403,24 @@ const AppContent = () => {
                 ============================================ */}
             <Route path="/forgot-password" element={<ForgotPassword />} />
             <Route path="/login" element={<Login />} />
+            {/* ✅ PARENT ROUTES */}
+            <Route path="/parent-login" element={<ParentLogin />} />
+            <Route path="/parent-register" element={<ParentRegister />} />
             <Route path="/register" element={<Register />} />
 
             {/* ============================================
                 PUBLIC ROUTES - No authentication needed
                 ============================================ */}
             <Route path="/" element={<Home />} />
+            <Route path="/mission" element={<MissionPage />} />
             <Route path="/subjects" element={<Subjects />} />
             <Route path="/subjects/:subjectName" element={<SubjectDetail />} />
             <Route path="/curriculum" element={<Curriculum />} />
             <Route path="/curriculum/:countryId" element={<CurriculumDetail />} />
+            
+            {/* ✅ PUBLIC TUTORS PAGE (Navbar is visible here) */}
             <Route path="/tutors" element={<Tutors />} />
+            
             <Route path="/pricing" element={<Pricing />} />
             <Route path="/resources" element={<Resources />} />
             <Route path="/resources/:vaultName/:resourceId" element={<ResourceDetail />} />
@@ -357,19 +439,24 @@ const AppContent = () => {
             {/* ============================================
                 PROTECTED ROUTES - Require authentication
                 ============================================ */}
-            <Route path="/timetable" element={<Timetable />} />
-            <Route path="/dashboard" element={<Dashboard />} />
-            <Route path="/profile" element={<Profile />} />
-            <Route path="/settings" element={<Settings />} />
-            <Route path="/help/*" element={<Help />} />
-            <Route path="/practice/:id" element={<Practice />} />
-            <Route path="/session/:sessionId" element={<TutorSession />} />
-            <Route path="/checkout" element={<Checkout />} />
-            <Route path="/payment-success" element={<PaymentSuccess />} />
-            <Route path="/notifications" element={<Notifications />} />
+            <Route path="/timetable" element={<StudentRoute><Timetable /></StudentRoute>} />
+            <Route path="/dashboard" element={<StudentRoute><Dashboard /></StudentRoute>} />
+            <Route path="/profile" element={<StudentRoute><Profile /></StudentRoute>} />
+            <Route path="/settings" element={<StudentRoute><Settings /></StudentRoute>} />
+            <Route path="/help/*" element={<StudentRoute><Help /></StudentRoute>} />
+            <Route path="/practice/:id" element={<StudentRoute><Practice /></StudentRoute>} />
+            <Route path="/session/:sessionId" element={<StudentRoute><TutorSession /></StudentRoute>} />
+            <Route path="/checkout" element={<StudentRoute><Checkout /></StudentRoute>} />
+            <Route path="/payment-success" element={<StudentRoute><PaymentSuccess /></StudentRoute>} />
+            <Route path="/notifications" element={<StudentRoute><Notifications /></StudentRoute>} />
 
             {/* ============================================
-                TUTOR ROUTES - Require tutor role
+                ✅ PARENT DASHBOARD ROUTE
+                ============================================ */}
+            <Route path="/parent/dashboard" element={<ParentDashboard />} />
+
+            {/* ============================================
+                ✅ PRIVATE TUTOR PORTAL ROUTES (Navbar hidden here)
                 ============================================ */}
             <Route path="/tutor/dashboard" element={<TutorDashboard />} />
             <Route path="/tutor/session/:sessionId" element={<TutorSession />} />
@@ -379,8 +466,8 @@ const AppContent = () => {
             {/* ============================================
                 LAZY LOADED ROUTES - With error handling
                 ============================================ */}
-            <Route path="/my-courses" element={<MyCourses />} />
-            <Route path="/my-sessions" element={<MySessions />} />
+            <Route path="/my-courses" element={<StudentRoute><MyCourses /></StudentRoute>} />
+            <Route path="/my-sessions" element={<StudentRoute><MySessions /></StudentRoute>} />
           </Routes>
         </Suspense>
       </main>

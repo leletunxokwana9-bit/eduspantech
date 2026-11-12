@@ -18,8 +18,8 @@ const Login = () => {
   const [roleError, setRoleError] = useState('');
   const [isCheckingSession, setIsCheckingSession] = useState(true);
 
-  // ✅ NEW STATE FOR ADMIN DETECTION
-  const [isAdminAccount, setIsAdminAccount] = useState(false);
+  // Modal State for Blocked Access
+  const [showBlockedModal, setShowBlockedModal] = useState(false);
 
   // Remember Me State & Custom Save Password Modal
   const [rememberMe, setRememberMe] = useState(false);
@@ -54,7 +54,19 @@ const Login = () => {
     );
   };
 
-  // ✅ BACKFILL LOGIC: Load saved accounts and fetch missing avatars
+  const checkIsAdmin = (userData) => {
+    if (!userData) return false;
+    let data = userData;
+    if (userData.user) data = userData.user;
+    return (
+      data.is_admin === true ||
+      data.is_super_admin === true ||
+      data.role === 'admin' ||
+      data.admin_role != null
+    );
+  };
+
+  // BACKFILL LOGIC
   useEffect(() => {
     const loadAndBackfillAccounts = async () => {
       const saved = localStorage.getItem('eduspantech_saved_accounts');
@@ -65,7 +77,7 @@ const Login = () => {
         let hasChanges = false;
 
         const updatedAccounts = await Promise.all(accounts.map(async (account) => {
-          if (account.avatar) return account; // Skip if they already have an avatar
+          if (account.avatar) return account;
 
           try {
             const API_URL = process.env.REACT_APP_API_URL || 'https://eduspantech-backend.onrender.com/api';
@@ -77,9 +89,7 @@ const Login = () => {
                 return { ...account, avatar: data.user.avatar };
               }
             }
-          } catch (err) {
-            console.error("Backfill failed for", account.email);
-          }
+          } catch (err) {}
           return account;
         }));
 
@@ -87,21 +97,19 @@ const Login = () => {
         if (hasChanges) {
           localStorage.setItem('eduspantech_saved_accounts', JSON.stringify(updatedAccounts));
         }
-      } catch (e) {
-        console.error("Failed to parse saved accounts", e);
-      }
+      } catch (e) {}
     };
 
     loadAndBackfillAccounts();
   }, []);
 
-  // Handle clicking outside to close the saved accounts dropdown
+  // ✅ FIXED CLICK OUTSIDE LOGIC
   useEffect(() => {
     const handleClickOutside = (event) => {
       if (
         dropdownRef.current && 
-        !dropdownRef.current.contains(event.target) &&
-        emailInputRef.current &&
+        !dropdownRef.current.contains(event.target) && 
+        emailInputRef.current && 
         !emailInputRef.current.contains(event.target)
       ) {
         setShowSavedAccounts(false);
@@ -120,6 +128,17 @@ const Login = () => {
           const user = await authService.getCurrentUser();
           if (user && user.name) {
             const isTutor = checkIsTutor(user);
+            const isAdmin = checkIsAdmin(user);
+            
+            if (isAdmin) {
+              localStorage.removeItem('accessToken');
+              localStorage.removeItem('refreshToken');
+              localStorage.removeItem('user');
+              localStorage.removeItem('userRole');
+              setIsCheckingSession(false);
+              return;
+            }
+
             const confirmSwitch = window.confirm(
               `You are currently logged in as "${user.name}".\n\nDo you want to switch accounts?`
             );
@@ -163,7 +182,7 @@ const Login = () => {
     setInactive(false);
     setLockedInfo(null);
     setAttemptsLeft(null);
-    setIsAdminAccount(false); // ✅ Reset admin flag
+    setShowBlockedModal(false); 
     setShowSavedAccounts(false); 
 
     try {
@@ -192,12 +211,14 @@ const Login = () => {
           setLoading(false);
           return;
         }
-        // ✅ CATCH THE ADMIN ATTEMPT
+        
         if (response?.notStudent) {
-          setIsAdminAccount(true);
+          setError('Invalid Credentials');
+          setAttemptsLeft(2);
           setLoading(false);
           return;
         }
+
         if (typeof response?.attemptsLeft === 'number') {
           setAttemptsLeft(response.attemptsLeft);
           setError(response.error || `Invalid email or password. ${response.attemptsLeft} attempt${response.attemptsLeft === 1 ? '' : 's'} remaining.`);
@@ -210,6 +231,17 @@ const Login = () => {
       }
 
       const userData = response.user;
+      
+      if (checkIsAdmin(userData)) {
+        setShowBlockedModal(true);
+        localStorage.removeItem('accessToken');
+        localStorage.removeItem('refreshToken');
+        localStorage.removeItem('user');
+        localStorage.removeItem('userRole');
+        setLoading(false);
+        return;
+      }
+
       const isTutor = checkIsTutor(userData);
 
       if (loginRole === 'student' && isTutor) {
@@ -261,28 +293,17 @@ const Login = () => {
 
   const completeLogin = (userData, isTutor) => {
     localStorage.setItem('userRole', isTutor ? 'tutor' : 'student');
-
-    // TOUR LOGIC: Check if this is their first time logging in
     const hasSeenTour = localStorage.getItem('hasSeenTour');
     if (!hasSeenTour && !isTutor) {
       localStorage.setItem('triggerTour', 'true');
     }
-
     navigate(isTutor ? '/tutor/dashboard' : '/dashboard');
   };
 
-  // Save account to custom dropdown memory
   const saveAccountForAutofill = (emailToSave, nameToSave, avatarUrl) => {
-    const newAccount = { 
-      email: emailToSave, 
-      name: nameToSave || 'Student',
-      avatar: avatarUrl || null // ✅ Save the avatar URL
-    };
-    
-    // Remove duplicates and keep max 5
+    const newAccount = { email: emailToSave, name: nameToSave || 'Student', avatar: avatarUrl || null };
     const existing = savedAccounts.filter(a => a.email !== emailToSave);
     const updated = [newAccount, ...existing].slice(0, 5); 
-    
     setSavedAccounts(updated);
     localStorage.setItem('eduspantech_saved_accounts', JSON.stringify(updated));
   };
@@ -291,7 +312,6 @@ const Login = () => {
     localStorage.setItem('saved_email', email);
     setShowSavePrompt(false);
     if (pendingUserData) {
-      // ✅ Pass the user's avatar to the save function
       saveAccountForAutofill(
         email, 
         pendingUserData.userData?.name || pendingUserData.userData?.user?.name,
@@ -312,8 +332,9 @@ const Login = () => {
   const handleSelectAccount = (account) => {
     setEmail(account.email);
     setShowSavedAccounts(false);
-    // Focus on password field next
-    document.querySelector('input[type="password"]')?.focus();
+    setTimeout(() => {
+      document.querySelector('input[type="password"]')?.focus();
+    }, 50);
   };
 
   const handleResendVerification = async () => {
@@ -340,7 +361,7 @@ const Login = () => {
     setBannedInfo(null);
     setInactive(false);
     setLockedInfo(null);
-    setIsAdminAccount(false);
+    setShowBlockedModal(false);
   };
 
   if (isCheckingSession) {
@@ -348,34 +369,14 @@ const Login = () => {
       <div className="login-wrapper">
         <div className="login-bg">
           <div className="math-symbols">
-            <span className="math-symbol">∫</span>
-            <span className="math-symbol">∑</span>
-            <span className="math-symbol">π</span>
-            <span className="math-symbol">√</span>
-            <span className="math-symbol">∞</span>
-            <span className="math-symbol">∂</span>
-            <span className="math-symbol">Δ</span>
-            <span className="math-symbol">θ</span>
+            <span className="math-symbol">∫</span><span className="math-symbol">∑</span><span className="math-symbol">π</span><span className="math-symbol">√</span><span className="math-symbol">∞</span><span className="math-symbol">∂</span><span className="math-symbol">Δ</span><span className="math-symbol">θ</span>
           </div>
-          <div className="gradient-orb orb-1"></div>
-          <div className="gradient-orb orb-2"></div>
-          <div className="gradient-orb orb-3"></div>
+          <div className="gradient-orb orb-1"></div><div className="gradient-orb orb-2"></div><div className="gradient-orb orb-3"></div>
         </div>
         <div className="login-container">
           <div className="login-right" style={{ maxWidth: '500px', margin: '0 auto' }}>
             <div className="login-card" style={{ textAlign: 'center', padding: '60px 40px' }}>
-              <div
-                className="loading-spinner"
-                style={{
-                  width: '40px',
-                  height: '40px',
-                  border: '3px solid rgba(79,70,229,0.1)',
-                  borderTopColor: '#4f46e5',
-                  borderRadius: '50%',
-                  animation: 'spin 0.8s linear infinite',
-                  margin: '0 auto 16px',
-                }}
-              ></div>
+              <div className="loading-spinner" style={{ width: '40px', height: '40px', border: '3px solid rgba(79,70,229,0.1)', borderTopColor: '#4f46e5', borderRadius: '50%', animation: 'spin 0.8s linear infinite', margin: '0 auto 16px' }}></div>
               <p style={{ color: '#94a3b8' }}>Checking your session...</p>
               <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
             </div>
@@ -387,20 +388,34 @@ const Login = () => {
 
   return (
     <div className="login-wrapper">
+      <style>{`
+        .parent-login-link-container {
+          text-align: center;
+          margin-top: 12px;
+          margin-bottom: 24px;
+        }
+        .parent-login-text-btn {
+          background: none;
+          border: none;
+          color: #a78bfa;
+          font-size: 14px;
+          font-weight: 500;
+          cursor: pointer;
+          text-decoration: underline;
+          text-underline-offset: 4px;
+          transition: color 0.2s ease;
+          font-family: inherit;
+        }
+        .parent-login-text-btn:hover {
+          color: #ffffff;
+        }
+      `}</style>
+
       <div className="login-bg">
         <div className="math-symbols">
-          <span className="math-symbol">∫</span>
-          <span className="math-symbol">∑</span>
-          <span className="math-symbol">π</span>
-          <span className="math-symbol">√</span>
-          <span className="math-symbol">∞</span>
-          <span className="math-symbol">∂</span>
-          <span className="math-symbol">Δ</span>
-          <span className="math-symbol">θ</span>
+          <span className="math-symbol">∫</span><span className="math-symbol">∑</span><span className="math-symbol">π</span><span className="math-symbol">√</span><span className="math-symbol">∞</span><span className="math-symbol">∂</span><span className="math-symbol">Δ</span><span className="math-symbol">θ</span>
         </div>
-        <div className="gradient-orb orb-1"></div>
-        <div className="gradient-orb orb-2"></div>
-        <div className="gradient-orb orb-3"></div>
+        <div className="gradient-orb orb-1"></div><div className="gradient-orb orb-2"></div><div className="gradient-orb orb-3"></div>
       </div>
 
       <div className="login-container">
@@ -411,28 +426,18 @@ const Login = () => {
               <span className="logo-text">EduSpantech</span>
             </div>
             <h1 className="brand-headline">
-              Education for the<br />
-              <span className="highlight">love of your life</span>
+              Education for the<br /><span className="highlight">love of your life</span>
             </h1>
             <p className="brand-description">
               From Grade 8 to 2nd-Year Tertiary — world-class mathematics tutoring,
               powered by a 24/7 global infrastructure across 9 AWS regions.
             </p>
             <div className="brand-stats">
-              <div className="stat">
-                <span className="stat-number">9</span>
-                <span className="stat-label">Global Regions</span>
-              </div>
+              <div className="stat"><span className="stat-number">9</span><span className="stat-label">Global Regions</span></div>
               <div className="stat-divider"></div>
-              <div className="stat">
-                <span className="stat-number">24/7</span>
-                <span className="stat-label">Tutor Availability</span>
-              </div>
+              <div className="stat"><span className="stat-number">24/7</span><span className="stat-label">Tutor Availability</span></div>
               <div className="stat-divider"></div>
-              <div className="stat">
-                <span className="stat-number">12</span>
-                <span className="stat-label">Expert Tutors</span>
-              </div>
+              <div className="stat"><span className="stat-number">12</span><span className="stat-label">Expert Tutors</span></div>
             </div>
           </div>
         </div>
@@ -445,28 +450,21 @@ const Login = () => {
             </div>
 
             <div className="role-tabs">
-              <button
-                className={`role-tab ${loginRole === 'student' ? 'active' : ''}`}
-                onClick={() => handleRoleChange('student')}
-              >
-                <span className="role-icon">👨‍🎓</span>
-                Student
+              <button className={`role-tab ${loginRole === 'student' ? 'active' : ''}`} onClick={() => handleRoleChange('student')}>
+                <span className="role-icon">👨‍🎓</span> Student
               </button>
-              <button
-                className={`role-tab ${loginRole === 'tutor' ? 'active' : ''}`}
-                onClick={() => handleRoleChange('tutor')}
-              >
-                <span className="role-icon">👨‍🏫</span>
-                Tutor
+              <button className={`role-tab ${loginRole === 'tutor' ? 'active' : ''}`} onClick={() => handleRoleChange('tutor')}>
+                <span className="role-icon">👨‍🏫</span> Tutor
               </button>
             </div>
 
-            {roleError && (
-              <div className="login-role-error">
-                <span className="error-icon">⚠️</span>
-                {roleError}
-              </div>
-            )}
+            <div className="parent-login-link-container">
+              <Link to="/parent-login" className="parent-login-text-btn">
+                Parent/Guardian? Login here
+              </Link>
+            </div>
+
+            {roleError && (<div className="login-role-error"><span className="error-icon">⚠️</span>{roleError}</div>)}
 
             {bannedInfo && (
               <div className="login-banned-notice">
@@ -474,10 +472,7 @@ const Login = () => {
                 <div className="banned-content">
                   <p><strong>Account suspended</strong></p>
                   {bannedInfo.message && <p>{bannedInfo.message}</p>}
-                  <p className="banned-help">
-                    If you believe this is a mistake, contact{' '}
-                    <a href="mailto:support@eduspantech.com">support@eduspantech.com</a>
-                  </p>
+                  <p className="banned-help">If you believe this is a mistake, contact <a href="mailto:support@eduspantech.com">support@eduspantech.com</a></p>
                 </div>
               </div>
             )}
@@ -488,9 +483,7 @@ const Login = () => {
                 <div className="inactive-content">
                   <p><strong>Account inactive</strong></p>
                   <p>Your account has been deactivated. You cannot sign in at this time.</p>
-                  <p className="inactive-help">
-                    Contact <a href="mailto:support@eduspantech.com">support@eduspantech.com</a> for assistance.
-                  </p>
+                  <p className="inactive-help">Contact <a href="mailto:support@eduspantech.com">support@eduspantech.com</a> for assistance.</p>
                 </div>
               </div>
             )}
@@ -500,11 +493,7 @@ const Login = () => {
                 <div className="locked-icon">🔒</div>
                 <div className="locked-content">
                   <p><strong>Too many failed attempts</strong></p>
-                  <p>
-                    {lockedInfo.message} Please wait{' '}
-                    <strong>{Math.ceil((lockedInfo.retryAfter || 0) / 60)} minute(s)</strong>{' '}
-                    before trying again.
-                  </p>
+                  <p>{lockedInfo.message} Please wait <strong>{Math.ceil((lockedInfo.retryAfter || 0) / 60)} minute(s)</strong> before trying again.</p>
                 </div>
               </div>
             )}
@@ -516,133 +505,61 @@ const Login = () => {
                   <p><strong>Verify your email address</strong></p>
                   <p>We sent a verification link to <strong>{unverifiedEmail}</strong></p>
                   <div className="verification-actions">
-                    <button onClick={handleResendVerification} disabled={loading} className="resend-btn">
-                      {loading ? 'Sending...' : 'Resend verification email'}
-                    </button>
-                    {resendSuccess && (
-                      <span className="resend-success">✓ Email sent! Check your inbox.</span>
-                    )}
+                    <button onClick={handleResendVerification} disabled={loading} className="resend-btn">{loading ? 'Sending...' : 'Resend verification email'}</button>
+                    {resendSuccess && (<span className="resend-success">✓ Email sent! Check your inbox.</span>)}
                   </div>
-                  <p className="verification-help">
-                    <span>💡</span> Check your spam folder if you don't see the email.
-                  </p>
+                  <p className="verification-help"><span>💡</span> Check your spam folder if you don't see the email.</p>
                 </div>
               </div>
             )}
 
-            {/* ✅ CUSTOM ADMIN WARNING */}
-            {isAdminAccount && (
-              <div className="login-banned-notice" style={{ borderColor: 'rgba(251, 191, 36, 0.3)', background: 'rgba(251, 191, 36, 0.1)' }}>
-                <div className="banned-icon" style={{ color: '#fbbf24' }}>🛡️</div>
-                <div className="banned-content">
-                  <p style={{ color: '#fbbf24' }}><strong>Admin Account Detected</strong></p>
-                  <p style={{ color: 'rgba(255,255,255,0.8)' }}>Admin accounts cannot log in here. Please use the secure Admin Portal.</p>
-                  <p className="banned-help">
-                    <a href="/admin/login" style={{ color: '#fbbf24', fontWeight: 'bold' }}>Go to Admin Login →</a>
-                  </p>
-                </div>
-              </div>
-            )}
-
-            {error && !needsVerification && !roleError && !bannedInfo && !inactive && !lockedInfo && !isAdminAccount && (
+            {error && !needsVerification && !roleError && !bannedInfo && !inactive && !lockedInfo && (
               <div className="login-error">
-                <span className="error-icon">✕</span>
-                {error}
-                {attemptsLeft !== null && attemptsLeft > 0 && (
-                  <span className="attempts-left">
-                    {' '}({attemptsLeft} attempt{attemptsLeft === 1 ? '' : 's'} left)
-                  </span>
-                )}
+                <span className="error-icon">✕</span>{error}
+                {attemptsLeft !== null && attemptsLeft > 0 && (<span className="attempts-left"> ({attemptsLeft} attempt{attemptsLeft === 1 ? '' : 's'} left)</span>)}
               </div>
             )}
 
             <form onSubmit={handleSubmit} className="login-form">
-              {/* ✅ CUSTOM EMAIL INPUT WITH SAVED ACCOUNTS DROPDOWN */}
+              
               <div className="form-group relative">
                 <label>Email Address</label>
                 <input
-                  ref={emailInputRef}
-                  type="email"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value.trim())}
-                  onFocus={() => setShowSavedAccounts(true)}
-                  placeholder="name@email.com"
-                  required
-                  autoComplete="off" // Disables the ugly native browser dropdown
+                  ref={emailInputRef} 
+                  type="email" 
+                  value={email} 
+                  onChange={(e) => setEmail(e.target.value.trim())} 
+                  onClick={() => {
+                    if (savedAccounts.length > 0) setShowSavedAccounts(true);
+                  }}
+                  onFocus={() => {
+                    if (savedAccounts.length > 0) setShowSavedAccounts(true);
+                  }} 
+                  placeholder="name@email.com" 
+                  required 
+                  autoComplete="new-password" 
                   disabled={loading || bannedInfo || inactive || lockedInfo}
                 />
-
-                {/* ✅ Custom Saved Accounts Popup */}
                 {showSavedAccounts && savedAccounts.length > 0 && (
                   <div className="saved-accounts-dropdown" ref={dropdownRef}>
                     <div className="saved-accounts-header">Saved Accounts</div>
                     {savedAccounts.map((account, idx) => (
                       <div 
                         key={idx} 
-                        className="saved-account-item"
-                        onClick={() => handleSelectAccount(account)}
-                        style={{
-                          display: 'flex',
-                          alignItems: 'center',
-                          gap: '12px',
-                          padding: '12px',
-                          cursor: 'pointer',
-                          borderBottom: '1px solid rgba(255,255,255,0.05)'
+                        className="saved-account-item" 
+                        onMouseDown={(e) => {
+                          e.preventDefault(); // Prevents input from losing focus
+                          handleSelectAccount(account);
                         }}
+                        style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '12px', cursor: 'pointer', borderBottom: '1px solid rgba(255,255,255,0.05)' }}
                       >
-                        {/* ✅ FORCED 40x40 AVATAR CONTAINER */}
-                        <div 
-                          style={{
-                            width: '40px',
-                            height: '40px',
-                            minWidth: '40px',
-                            minHeight: '40px',
-                            borderRadius: '50%',
-                            overflow: 'hidden',
-                            backgroundColor: '#4f46e5',
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            flexShrink: 0
-                          }}
-                        >
-                          {account.avatar ? (
-                            <img 
-                              src={account.avatar} 
-                              alt={account.name} 
-                              style={{
-                                width: '100%',
-                                height: '100%',
-                                objectFit: 'cover',
-                                objectPosition: 'center',
-                                display: 'block'
-                              }}
-                              onError={(e) => {
-                                e.target.style.display = 'none';
-                                e.target.nextSibling.style.display = 'flex';
-                              }}
-                            />
-                          ) : null}
-                          <span 
-                            style={{ 
-                              display: account.avatar ? 'none' : 'flex',
-                              color: '#ffffff',
-                              fontSize: '16px',
-                              fontWeight: 'bold'
-                            }}
-                          >
-                            {(account.name || 'U').charAt(0).toUpperCase()}
-                          </span>
+                        <div style={{ width: '40px', height: '40px', minWidth: '40px', minHeight: '40px', borderRadius: '50%', overflow: 'hidden', backgroundColor: '#4f46e5', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                          {account.avatar ? <img src={account.avatar} alt={account.name} style={{ width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'center', display: 'block' }} onError={(e) => { e.target.style.display = 'none'; e.target.nextSibling.style.display = 'flex'; }} /> : null}
+                          <span style={{ display: account.avatar ? 'none' : 'flex', color: '#ffffff', fontSize: '16px', fontWeight: 'bold' }}>{(account.name || 'U').charAt(0).toUpperCase()}</span>
                         </div>
-
-                        {/* TEXT INFO */}
                         <div style={{ display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
-                          <span style={{ color: '#ffffff', fontWeight: 'bold', fontSize: '14px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                            {account.email}
-                          </span>
-                          <span style={{ color: '#a78bfa', fontSize: '12px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                            {account.name}
-                          </span>
+                          <span style={{ color: '#ffffff', fontWeight: 'bold', fontSize: '14px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{account.email}</span>
+                          <span style={{ color: '#a78bfa', fontSize: '12px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{account.name}</span>
                         </div>
                       </div>
                     ))}
@@ -653,105 +570,61 @@ const Login = () => {
               <div className="form-group">
                 <label>Password</label>
                 <div className="password-field">
-                  <input
-                    type={showPassword ? 'text' : 'password'}
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    placeholder="Enter your password"
-                    required
-                    autoComplete="current-password"
-                    disabled={loading || bannedInfo || inactive || lockedInfo}
-                  />
-                  <button
-                    type="button"
-                    className="toggle-password"
-                    onClick={() => setShowPassword(!showPassword)}
-                    disabled={loading || bannedInfo || inactive || lockedInfo}
-                  >
-                    {showPassword ? '🙈' : '👁️'}
-                  </button>
+                  <input type={showPassword ? 'text' : 'password'} value={password} onChange={(e) => setPassword(e.target.value)} placeholder="Enter your password" required autoComplete="current-password" disabled={loading || bannedInfo || inactive || lockedInfo} />
+                  <button type="button" className="toggle-password" onClick={() => setShowPassword(!showPassword)} disabled={loading || bannedInfo || inactive || lockedInfo}>{showPassword ? '🙈' : '👁️'}</button>
                 </div>
               </div>
 
               <div className="form-options">
                 <label className="remember-me">
-                  <input 
-                    type="checkbox" 
-                    checked={rememberMe}
-                    onChange={(e) => setRememberMe(e.target.checked)}
-                  />
-                  <span className="checkmark"></span>
-                  Remember me
+                  <input type="checkbox" checked={rememberMe} onChange={(e) => setRememberMe(e.target.checked)} />
+                  <span className="checkmark"></span> Remember me
                 </label>
-                <Link to="/forgot-password" className="forgot-link">
-                  Forgot password?
-                </Link>
+                <Link to="/forgot-password" className="forgot-link">Forgot password?</Link>
               </div>
 
-              <button
-                type="submit"
-                disabled={loading || !!bannedInfo || inactive || !!lockedInfo}
-                className="login-button"
-              >
-                {loading ? (
-                  <>
-                    <span className="spinner"></span>
-                    Signing in...
-                  </>
-                ) : lockedInfo ? (
-                  '🔒 Temporarily locked'
-                ) : bannedInfo ? (
-                  '🚫 Account suspended'
-                ) : inactive ? (
-                  '⏸️ Account inactive'
-                ) : (
-                  loginRole === 'tutor' ? 'Sign in as Tutor →' : 'Sign In →'
-                )}
+              <button type="submit" disabled={loading || !!bannedInfo || inactive || !!lockedInfo} className="login-button">
+                {loading ? (<><span className="spinner"></span>Signing in...</>) : lockedInfo ? ('🔒 Temporarily locked') : bannedInfo ? ('🚫 Account suspended') : inactive ? ('⏸️ Account inactive') : (loginRole === 'tutor' ? 'Sign in as Tutor →' : 'Sign In →')}
               </button>
             </form>
 
             <div className="login-footer">
-              <p>
-                Don't have an account? <Link to="/register">Get started</Link>
-              </p>
+              <p>Don't have an account? <Link to="/register">Get started</Link></p>
             </div>
           </div>
         </div>
       </div>
+
+      {/* ✅ BLOCKED ACCESS MODAL (SILENT FAIL) */}
+      {showBlockedModal && (
+        <div className="save-password-overlay">
+          <div className="save-password-modal" style={{ textAlign: 'center', padding: '40px 32px' }}>
+            <div style={{ fontSize: '48px', marginBottom: '16px' }}>🚫</div>
+            <h3 style={{ fontSize: '22px', fontWeight: 'bold', color: '#ffffff', marginBottom: '8px' }}>Invalid Credentials</h3>
+            <p style={{ fontSize: '14px', color: '#94a3b8', marginBottom: '24px' }}>The email or password you entered is incorrect. Please try again.</p>
+            <button className="btn-save" onClick={() => setShowBlockedModal(false)} style={{ width: '100%', padding: '12px', fontSize: '15px' }}>Try Again</button>
+          </div>
+        </div>
+      )}
 
       {/* ✅ CUSTOM SAVE PASSWORD MODAL */}
       {showSavePrompt && (
         <div className="save-password-overlay">
           <div className="save-password-modal">
             <button className="modal-close-btn" onClick={handleNeverSave}>×</button>
-            
             <div className="save-password-header">
-              <div className="save-password-icons">
-                <span className="key-icon">🔑</span>
-              </div>
+              <div className="save-password-icons"><span className="key-icon">🔑</span></div>
               <h3>Save login details?</h3>
             </div>
-
             <div className="save-password-body">
-              <p style={{ fontSize: '13px', color: 'rgba(255,255,255,0.7)', margin: 0 }}>
-                Save your email to log in faster next time on this device.
-              </p>
-              <div className="input-row">
-                <label>Username</label>
-                <div className="input-box">
-                  <span>{email}</span>
-                </div>
-              </div>
+              <p style={{ fontSize: '13px', color: 'rgba(255,255,255,0.7)', margin: 0 }}>Save your email to log in faster next time on this device.</p>
+              <div className="input-row"><label>Username</label><div className="input-box"><span>{email}</span></div></div>
             </div>
-
             <div className="save-password-actions">
               <button className="btn-never" onClick={handleNeverSave}>Never</button>
               <button className="btn-save" onClick={handleSavePassword}>Save</button>
             </div>
-            
-            <p className="save-password-footer">
-              Your email will be saved locally on this device for faster login.
-            </p>
+            <p className="save-password-footer">Your email will be saved locally on this device for faster login.</p>
           </div>
         </div>
       )}

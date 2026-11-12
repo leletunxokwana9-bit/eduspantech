@@ -11,7 +11,8 @@ import './ParentDashboard.css';
 import './Tutors.css'; // ✅ Reuse tutor modal styles
 
 // ============================================
-// TUTOR HELPERS (ported verbatim from Tutors.js)
+// TUTOR HELPERS (ported verbatim from Tutors.js
+// so the SAME modal renders identically)
 // ============================================
 const getInitials = (name) => {
   if (!name) return 'T';
@@ -44,6 +45,7 @@ const SHIFT_LABELS = {
   AMERICAS: 'Americas'
 };
 
+// Avatar: real photo if available, otherwise initials
 const TutorAvatar = ({ tutor }) => {
   const [failed, setFailed] = useState(false);
   if (isImageSrc(tutor.avatar) && !failed) {
@@ -522,10 +524,7 @@ const ParentDashboard = () => {
                   <div style={{ textAlign: 'center', padding: '30px 20px', color: '#94a3b8' }}>
                     <Calendar size={40} style={{ margin: '0 auto 12px', color: '#4f46e5' }} />
                     <p style={{ margin: 0, fontSize: '14px' }}>No upcoming sessions scheduled</p>
-                    {/* ✅ Personalized message with child's first name */}
-                    <p style={{ margin: '4px 0 0', fontSize: '12px', opacity: 0.7 }}>
-                      Book a session for {activeChild?.name?.split(' ')[0] || 'your child'}
-                    </p>
+                    <p style={{ margin: '4px 0 0', fontSize: '12px', opacity: 0.7 }}>Book a session to get started</p>
                   </div>
                 ) : (
                   <div className="schedule-list">

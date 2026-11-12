@@ -3,6 +3,76 @@
    DARK THEME - MATCHES HOME PAGE
    ============================================ */
 
+/* ===== CHAT GREETING BUBBLE (OUTSIDE) ===== */
+.chat-greeting-bubble {
+    position: fixed !important;
+    bottom: 100px !important;
+    right: 24px !important;
+    /* Use CSS variables to match your app theme */
+    background: var(--bg-secondary, #141b2d) !important;
+    color: var(--text-primary, #ffffff) !important;
+    border: 1px solid var(--border-color, rgba(255, 255, 255, 0.1)) !important;
+    padding: 14px 32px 14px 16px;
+    border-radius: 12px;
+    box-shadow: 0 8px 30px rgba(0, 0, 0, 0.4);
+    z-index: 999998 !important;
+    max-width: 280px;
+    cursor: pointer;
+    animation: slideInGreeting 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    transition: transform 0.2s, border-color 0.2s;
+}
+
+.chat-greeting-bubble:hover {
+    transform: translateY(-2px);
+    border-color: var(--border-hover, rgba(255, 255, 255, 0.2)) !important;
+}
+
+.chat-greeting-bubble p {
+    margin: 0;
+    font-size: 13px;
+    line-height: 1.5;
+    font-weight: 500;
+    color: var(--text-primary, #ffffff) !important;
+}
+
+/* The little arrow pointing to the chat bubble */
+.chat-greeting-bubble::after {
+    content: '';
+    position: absolute;
+    bottom: -8px;
+    right: 32px;
+    width: 0;
+    height: 0;
+    border-left: 8px solid transparent;
+    border-right: 8px solid transparent;
+    border-top: 8px solid var(--bg-secondary, #141b2d) !important;
+}
+
+.chat-greeting-close {
+    position: absolute;
+    top: 6px;
+    right: 6px;
+    background: none;
+    border: none;
+    color: var(--text-muted, rgba(255, 255, 255, 0.5)) !important;
+    font-size: 12px;
+    cursor: pointer;
+    padding: 4px;
+    line-height: 1;
+    border-radius: 50%;
+    transition: background 0.2s, color 0.2s;
+}
+
+.chat-greeting-close:hover {
+    background: var(--bg-card, rgba(255, 255, 255, 0.08)) !important;
+    color: var(--text-primary, #ffffff) !important;
+}
+
+@keyframes slideInGreeting {
+    from { opacity: 0; transform: translateX(20px) scale(0.9); }
+    to { opacity: 1; transform: translateX(0) scale(1); }
+}
+
 /* ===== CHAT BUBBLE - FIXED POSITION ===== */
 .chat-bubble {
     position: fixed !important;
@@ -117,14 +187,13 @@
     color: rgba(255, 255, 255, 0.6) !important;
 }
 
-/* ===== HEADER ACTIONS - ONLY MINIMIZE ===== */
+/* ===== HEADER ACTIONS - MINIMIZE & CLOSE ===== */
 .chat-header-actions {
     display: flex;
     align-items: center;
-    gap: 6px;
+    gap: 12px;
 }
 
-/* MINIMIZE BUTTON ONLY - NO CLOSE BUTTON */
 .chat-minimize {
     background: none;
     border: none;
@@ -142,9 +211,21 @@
     opacity: 1;
 }
 
-/* CLOSE BUTTON - HIDDEN (REMOVED) */
 .chat-close {
-    display: none !important;
+    background: none;
+    border: none;
+    color: rgba(255, 255, 255, 0.6) !important;
+    font-size: 18px;
+    font-weight: 400;
+    cursor: pointer;
+    padding: 0 4px;
+    transition: opacity 0.2s;
+    line-height: 1;
+}
+
+.chat-close:hover {
+    color: #ef4444 !important;
+    opacity: 1;
 }
 
 /* ===== CONSENT ===== */
@@ -378,6 +459,12 @@
         right: 16px !important;
     }
 
+    .chat-greeting-bubble {
+        bottom: 84px !important;
+        right: 16px !important;
+        max-width: 220px;
+    }
+
     .chat-header {
         padding: 14px 16px;
     }
@@ -395,14 +482,33 @@
         padding: 5px 10px;
     }
 
-    .chat-minimize {
-        font-size: 20px;
+    .chat-minimize, .chat-close {
+        font-size: 18px;
     }
 }
 
 /* ============================================
    LIGHT THEME OVERRIDES
    ============================================ */
+[data-theme="light"] .chat-greeting-bubble {
+    background: #ffffff !important;
+    border-color: rgba(0, 0, 0, 0.08) !important;
+    box-shadow: 0 8px 30px rgba(0, 0, 0, 0.1);
+}
+[data-theme="light"] .chat-greeting-bubble p {
+    color: #0f172a !important;
+}
+[data-theme="light"] .chat-greeting-bubble::after {
+    border-top-color: #ffffff !important;
+}
+[data-theme="light"] .chat-greeting-close {
+    color: rgba(0, 0, 0, 0.4) !important;
+}
+[data-theme="light"] .chat-greeting-close:hover {
+    background: rgba(0, 0, 0, 0.05) !important;
+    color: #0f172a !important;
+}
+
 [data-theme="light"] .chat-panel {
     background: #ffffff !important;
     border-color: rgba(0, 0, 0, 0.06) !important;
@@ -420,12 +526,16 @@
     color: rgba(0, 0, 0, 0.4) !important;
 }
 
-[data-theme="light"] .chat-minimize {
+[data-theme="light"] .chat-minimize, [data-theme="light"] .chat-close {
     color: rgba(0, 0, 0, 0.4) !important;
 }
 
 [data-theme="light"] .chat-minimize:hover {
     color: #0f172a !important;
+}
+
+[data-theme="light"] .chat-close:hover {
+    color: #ef4444 !important;
 }
 
 [data-theme="light"] .chat-messages {

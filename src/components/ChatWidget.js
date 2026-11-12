@@ -1,5 +1,5 @@
 // src/components/ChatWidget.js
-import React, { useState, useRef, useEffect, useCallback } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { API_BASE_URL } from '../services/api';
 import './ChatWidget.css';
 
@@ -7,7 +7,7 @@ const ChatWidget = () => {
     // ===== CONFIG =====
     const API_URL = `${API_BASE_URL}/chat`;
     const SITE_URL = 'https://www.eduspantech.com';
-    const WELCOME_MESSAGE = "Hi! 👋 I'm your EduSpanTech learning assistant. I can help you find courses, assess your skills, or navigate the site. What would you like to explore?";
+    const WELCOME_MESSAGE = "Hi! 👋 I'm your EduSpanTech Guide. How can I help you today?";
 
     // ===== STATE =====
     const [isOpen, setIsOpen] = useState(false);
@@ -19,11 +19,13 @@ const ChatWidget = () => {
     const [isTyping, setIsTyping] = useState(false);
     const [consentGiven, setConsentGiven] = useState(false);
     const [chatId] = useState(() => `chat-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`);
+    
+    // ✅ NEW: State for the outside greeting bubble
+    const [showGreeting, setShowGreeting] = useState(false);
 
     // ===== REFS =====
     const messagesEndRef = useRef(null);
     const inputRef = useRef(null);
-    const chatContainerRef = useRef(null);
 
     // ============================================
     // NAVIGATION CONFIG
@@ -250,6 +252,7 @@ const ChatWidget = () => {
     // ============================================
     const toggleChat = () => {
         setIsOpen(!isOpen);
+        setShowGreeting(false); // ✅ Hide greeting when opening chat
         if (!isOpen) {
             setTimeout(() => {
                 inputRef.current?.focus();
@@ -259,7 +262,14 @@ const ChatWidget = () => {
     };
 
     // ============================================
-    // KEYBOARD SHORTCUT
+    // CLOSE CHAT
+    // ============================================
+    const closeChat = () => {
+        setIsOpen(false);
+    };
+
+    // ============================================
+    // KEYBOARD SHORTCUT & GREETING TIMER
     // ============================================
     useEffect(() => {
         const handleKeyDown = (e) => {
@@ -272,7 +282,18 @@ const ChatWidget = () => {
             }
         };
         window.addEventListener('keydown', handleKeyDown);
-        return () => window.removeEventListener('keydown', handleKeyDown);
+        
+        // ✅ Show greeting bubble after 3 seconds if chat is closed
+        const timer = setTimeout(() => {
+            if (!isOpen) {
+                setShowGreeting(true);
+            }
+        }, 3000);
+
+        return () => {
+            window.removeEventListener('keydown', handleKeyDown);
+            clearTimeout(timer);
+        };
     }, [isOpen]);
 
     // ============================================
@@ -307,6 +328,20 @@ const ChatWidget = () => {
     // ============================================
     return (
         <div className="chat-widget-container">
+            {/* ✅ NEW: Outside Greeting Bubble */}
+            {showGreeting && !isOpen && (
+                <div className="chat-greeting-bubble" onClick={toggleChat}>
+                    <p>Hi there! 👋 Need help navigating the site or finding a tutor?</p>
+                    <button 
+                        className="chat-greeting-close" 
+                        onClick={(e) => { e.stopPropagation(); setShowGreeting(false); }}
+                        aria-label="Dismiss greeting"
+                    >
+                        ✕
+                    </button>
+                </div>
+            )}
+
             {/* Chat Bubble - Floating Button */}
             <button
                 className="chat-bubble"
@@ -334,8 +369,17 @@ const ChatWidget = () => {
                                 className="chat-minimize"
                                 onClick={toggleChat}
                                 aria-label="Minimize"
+                                title="Minimize"
                             >
                                 ─
+                            </button>
+                            <button
+                                className="chat-close"
+                                onClick={closeChat}
+                                aria-label="Close chat"
+                                title="Close chat"
+                            >
+                                ✕
                             </button>
                         </div>
                     </div>

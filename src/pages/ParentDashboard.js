@@ -1,15 +1,15 @@
 // src/pages/ParentDashboard.js
+// src/pages/ParentDashboard.js
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { authService } from '../services/authService';
 import { API_BASE_URL } from '../services/api';
 import { 
   Users, Calendar, Clock, BookOpen, TrendingUp, CheckCircle, AlertCircle,
-  MessageSquare, ChevronDown, FileText, Video, Camera, LogOut, Upload, Trash2, X, Image as ImageIcon
+  MessageSquare, ChevronDown, FileText, Video, Camera, LogOut, Upload, Trash2, X
 } from 'lucide-react';
 import './ParentDashboard.css';
 import './Tutors.css'; // ✅ Reuse tutor modal styles
-
 // ============================================
 // TUTOR HELPERS (ported verbatim from Tutors.js
 // so the SAME modal renders identically)

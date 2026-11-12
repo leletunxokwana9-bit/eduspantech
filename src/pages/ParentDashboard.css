@@ -36,13 +36,13 @@
 }
 
 /* ============================================
-   HEADER & AVATAR (WITH BREATHING SPACE)
+   HEADER & AVATAR
    ============================================ */
 .parent-dashboard-header {
   background: #141b2d;
   padding: 24px 32px;
   border-bottom: 1px solid rgba(255, 255, 255, 0.05);
-  margin-bottom: 32px; /* ✅ BREATHING SPACE BELOW HEADER */
+  margin-bottom: 32px;
 }
 
 .parent-header-content {
@@ -61,7 +61,6 @@
   gap: 20px;
 }
 
-/* ✅ PERFECT CIRCLE AVATAR */
 .parent-avatar-container {
   width: 64px;
   height: 64px;
@@ -185,13 +184,13 @@
 }
 
 /* ============================================
-   CHILD SELECTOR SECTION (WITH EXTRA TOP PADDING)
+   CHILD SELECTOR SECTION
    ============================================ */
 .child-selector-section {
   max-width: 1200px;
   margin: 0 auto 32px;
   padding: 0 32px;
-  padding-top: 8px; /* ✅ EXTRA PUSH DOWN */
+  padding-top: 8px;
 }
 
 .child-selector-header {
@@ -547,12 +546,6 @@
   margin: 0 0 4px 0;
 }
 
-.schedule-details p {
-  font-size: 13px;
-  color: #94a3b8;
-  margin: 0 0 6px 0;
-}
-
 .schedule-time {
   display: flex;
   align-items: center;
@@ -810,6 +803,7 @@
     grid-template-columns: 1fr;
   }
 }
+
 /* ============================================
    LINK CHILD MODAL
    ============================================ */
@@ -951,4 +945,213 @@
 @keyframes slideUp {
   from { opacity: 0; transform: translateY(20px) scale(0.95); }
   to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+/* ============================================
+   TUTOR NAME LINK
+   ============================================ */
+.schedule-details .tutor-name-link {
+  display: inline-block;
+  color: #a78bfa;
+  font-size: 13px;
+  font-weight: 600;
+  text-decoration: underline;
+  text-decoration-color: rgba(167, 139, 250, 0.5);
+  text-underline-offset: 3px;
+  cursor: pointer;
+  margin: 0 0 6px 0;
+  background: none;
+  border: none;
+  padding: 0;
+  transition: color 0.2s ease, text-decoration-color 0.2s ease;
+}
+
+.schedule-details .tutor-name-link:hover {
+  color: #c4b5fd;
+  text-decoration-color: #c4b5fd;
+}
+
+.schedule-details .tutor-name-link:focus-visible {
+  outline: 2px solid #a5b4fc;
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+/* ============================================
+   PHOTO MANAGEMENT MODAL
+   ============================================ */
+.photo-modal {
+  max-width: 480px;
+  padding: 0;
+}
+
+.photo-modal .modal-header {
+  padding: 20px 24px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.photo-modal .modal-header h3 {
+  font-size: 18px;
+  font-weight: 700;
+  color: #ffffff;
+  margin: 0;
+}
+
+.photo-modal .modal-header button {
+  background: none;
+  border: none;
+  color: #94a3b8;
+  font-size: 20px;
+  cursor: pointer;
+}
+
+.photo-modal-body {
+  padding: 30px 24px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 20px;
+}
+
+.photo-preview-container {
+  width: 180px;
+  height: 180px;
+  border-radius: 50%;
+  overflow: hidden;
+  border: 4px solid #4f46e5;
+  box-shadow: 0 0 0 4px rgba(79, 70, 229, 0.2);
+  background: #1e293b;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.3s ease;
+}
+
+.photo-large-view {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.photo-large-initial {
+  font-size: 64px;
+  font-weight: 800;
+  color: white;
+  background: linear-gradient(135deg, #4f46e5, #7c3aed);
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.photo-uploading-status {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  color: #a78bfa;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.photo-modal-actions {
+  padding: 0 24px 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.photo-action-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 14px;
+  border-radius: 12px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  border: none;
+  width: 100%;
+}
+
+.photo-action-btn.view {
+  background: rgba(79, 70, 229, 0.1);
+  color: #a78bfa;
+  border: 1px solid rgba(79, 70, 229, 0.2);
+}
+
+.photo-action-btn.view:hover {
+  background: rgba(79, 70, 229, 0.2);
+}
+
+.photo-action-btn.change,
+.photo-action-btn.upload {
+  background: #4f46e5;
+  color: white;
+}
+
+.photo-action-btn.change:hover,
+.photo-action-btn.upload:hover {
+  background: #4338ca;
+}
+
+.photo-action-btn.capture {
+  background: rgba(255, 255, 255, 0.05);
+  color: #ffffff;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.photo-action-btn.capture:hover {
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.photo-action-btn.remove {
+  background: rgba(239, 68, 68, 0.1);
+  color: #ef4444;
+  border: 1px solid rgba(239, 68, 68, 0.2);
+}
+
+.photo-action-btn.remove:hover {
+  background: rgba(239, 68, 68, 0.2);
+}
+
+/* View Full Photo Modal */
+.view-photo-container {
+  position: relative;
+  max-width: 90vw;
+  max-height: 90vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.view-photo-full {
+  max-width: 100%;
+  max-height: 85vh;
+  border-radius: 12px;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.6);
+}
+
+.view-photo-close {
+  position: absolute;
+  top: -40px;
+  right: 0;
+  background: rgba(0, 0, 0, 0.5);
+  border: none;
+  color: white;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.view-photo-close:hover {
+  background: rgba(0, 0, 0, 0.8);
 }

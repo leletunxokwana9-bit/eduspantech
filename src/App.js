@@ -15,11 +15,6 @@ import Tutors from './pages/Tutors';
 import Pricing from './pages/Pricing';
 import Resources from './pages/Resources';
 import ResourceDetail from './pages/ResourceDetail';
-
-// ✅ FIXED: Importing the actual export names
-import TermsOfService from './pages/Terms';
-import PrivacyPolicy from './pages/Privacy';
-
 import TutorSession from './pages/TutorSession';
 import Checkout from './pages/Checkout';
 import PaymentSuccess from './pages/PaymentSuccess';
@@ -153,6 +148,10 @@ const withLazyErrorHandling = (importFn, componentName) => {
 const MyCourses = withLazyErrorHandling(() => import('./pages/MyCourses'), 'MyCourses');
 const MySessions = withLazyErrorHandling(() => import('./pages/MySessions'), 'MySessions');
 
+// ✅ Lazy load Terms and Privacy to prevent crash
+const TermsOfService = withLazyErrorHandling(() => import('./pages/Terms'), 'Terms');
+const PrivacyPolicy = withLazyErrorHandling(() => import('./pages/Privacy'), 'Privacy');
+
 // ============================================
 // LAZY LOAD FALLBACK
 // ============================================
@@ -260,7 +259,6 @@ const AppContent = () => {
             <Route path="/resources/practice/:id" element={<ResourceDetail />} />
             <Route path="/resources/guides/:id" element={<ResourceDetail />} />
             
-            {/* ✅ FIXED: Using the actual component names */}
             <Route path="/terms" element={<TermsOfService />} />
             <Route path="/privacy" element={<PrivacyPolicy />} />
             

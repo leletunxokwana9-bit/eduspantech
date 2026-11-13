@@ -1,4 +1,4 @@
-// src/App.js - COMPLETE RESTORED
+// src/App.js - COMPLETE WITH TOUR GUIDE INTEGRATION & ADMIN PROTECTION
 import React, { Suspense, lazy, useState, useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route, useLocation, useNavigate, Navigate } from 'react-router-dom';
 import Navbar from './components/Navbar';
@@ -95,6 +95,11 @@ import AdminLoginLayout from './pages/Admin/AdminLoginLayout';
 // PUBLIC SUBJECT CONTENT (Student view)
 // ============================================
 import SubjectContent from './pages/SubjectContent';
+
+// ============================================
+// ✅ SPLASH SCREEN
+// ============================================
+import SplashScreen from './components/SplashScreen';
 
 // ============================================
 // ERROR BOUNDARY COMPONENT
@@ -288,6 +293,7 @@ const StudentRoute = ({ children }) => {
     return <Navigate to="/login" replace />;
   }
 
+  // If they are an Admin, kick them out of the student dashboard immediately
   if (user.is_admin || user.is_super_admin || user.role === 'admin') {
     return <Navigate to="/admin/dashboard" replace />;
   }
@@ -305,6 +311,7 @@ const SessionReminderListener = () => {
   useEffect(() => {
     if (!user?.id) return;
 
+    // Listen for new notifications in real-time
     const channel = supabase
       .channel('public:session_alerts')
       .on(
@@ -313,6 +320,7 @@ const SessionReminderListener = () => {
         (payload) => {
           const notif = payload.new;
 
+          // Show alert based on notification type
           if (notif.type === 'session_reminder') {
             const goToSession = window.confirm(`⏰ ${notif.title}\n\n${notif.message}\n\nClick OK to go to your sessions.`);
             if (goToSession) navigate('/my-sessions');
@@ -327,18 +335,22 @@ const SessionReminderListener = () => {
     return () => supabase.removeChannel(channel);
   }, [user?.id, navigate]);
 
-  return null;
+  return null; // This component doesn't render anything
 };
 
 // ============================================
-// WRAPPER COMPONENT
+// WRAPPER COMPONENT FOR CONDITIONAL LAYOUT RENDERING
 // ============================================
 const AppContent = () => {
   const location = useLocation();
   
+  // Hide Navbar/Footer/ChatWidget on Admin routes, VerifyEmail, Parent routes, and Private Tutor Portal routes
   const isAdminRoute = location.pathname.startsWith('/admin');
   const isVerifyEmailRoute = location.pathname === '/verify-email';
   const isParentRoute = location.pathname.startsWith('/parent');
+  
+  // ✅ FIX: Use '/tutor/' with a trailing slash to catch the dashboard routes, 
+  // but NOT the public '/tutors' page!
   const isTutorPortalRoute = location.pathname.startsWith('/tutor/'); 
 
   const hideNavigation = isAdminRoute || isVerifyEmailRoute || isParentRoute || isTutorPortalRoute;
@@ -346,18 +358,30 @@ const AppContent = () => {
   return (
     <div className="app">
       {!hideNavigation && <SessionReminderListener />}
+      
       {!hideNavigation && <Navbar />}
+
+      {/* 👇 THE TOUR GUIDE RUNS HERE (Only on standard user pages) */}
       {!hideNavigation && <TourGuide />}
       
       <main className="app-main">
         <Suspense fallback={<PageLoader />}>
           <Routes>
+            {/* ============================================
+                ✅ STANDALONE ROUTES (No Navbar/Footer)
+                ============================================ */}
             <Route path="/verify-email" element={<VerifyEmail />} />
 
+            {/* ============================================
+                ✅ ADMIN LOGIN - NO NAVBAR (Layout Route with Outlet)
+                ============================================ */}
             <Route element={<AdminLoginLayout />}>
               <Route path="/admin/login" element={<AdminLogin />} />
             </Route>
 
+            {/* ============================================
+                ADMIN ROUTES - With Sidebar (AdminLayout)
+                ============================================ */}
             <Route path="/admin" element={<AdminLayout />}>
               <Route index element={<AdminDashboard />} />
               <Route path="dashboard" element={<AdminDashboard />} />
@@ -374,21 +398,29 @@ const AppContent = () => {
               <Route path="notifications" element={<Notifications />} />
             </Route>
 
+            {/* ============================================
+                CORE ROUTES - Always accessible
+                ============================================ */}
             <Route path="/forgot-password" element={<ForgotPassword />} />
             <Route path="/login" element={<Login />} />
-            
             {/* ✅ PARENT ROUTES */}
             <Route path="/parent-login" element={<ParentLogin />} />
             <Route path="/parent-register" element={<ParentRegister />} />
             <Route path="/register" element={<Register />} />
 
+            {/* ============================================
+                PUBLIC ROUTES - No authentication needed
+                ============================================ */}
             <Route path="/" element={<Home />} />
             <Route path="/mission" element={<MissionPage />} />
             <Route path="/subjects" element={<Subjects />} />
             <Route path="/subjects/:subjectName" element={<SubjectDetail />} />
             <Route path="/curriculum" element={<Curriculum />} />
             <Route path="/curriculum/:countryId" element={<CurriculumDetail />} />
+            
+            {/* ✅ PUBLIC TUTORS PAGE (Navbar is visible here) */}
             <Route path="/tutors" element={<Tutors />} />
+            
             <Route path="/pricing" element={<Pricing />} />
             <Route path="/resources" element={<Resources />} />
             <Route path="/resources/:vaultName/:resourceId" element={<ResourceDetail />} />
@@ -404,6 +436,9 @@ const AppContent = () => {
             <Route path="/become-a-tutor" element={<BecomeATutor />} />
             <Route path="/track-application" element={<TrackApplication />} />
 
+            {/* ============================================
+                PROTECTED ROUTES - Require authentication
+                ============================================ */}
             <Route path="/timetable" element={<StudentRoute><Timetable /></StudentRoute>} />
             <Route path="/dashboard" element={<StudentRoute><Dashboard /></StudentRoute>} />
             <Route path="/profile" element={<StudentRoute><Profile /></StudentRoute>} />
@@ -415,14 +450,22 @@ const AppContent = () => {
             <Route path="/payment-success" element={<StudentRoute><PaymentSuccess /></StudentRoute>} />
             <Route path="/notifications" element={<StudentRoute><Notifications /></StudentRoute>} />
 
-            {/* ✅ PARENT DASHBOARD */}
+            {/* ============================================
+                ✅ PARENT DASHBOARD ROUTE
+                ============================================ */}
             <Route path="/parent/dashboard" element={<ParentDashboard />} />
 
+            {/* ============================================
+                ✅ PRIVATE TUTOR PORTAL ROUTES (Navbar hidden here)
+                ============================================ */}
             <Route path="/tutor/dashboard" element={<TutorDashboard />} />
             <Route path="/tutor/session/:sessionId" element={<TutorSession />} />
             <Route path="/tutor/students" element={<TutorStudents />} />
             <Route path="/tutor/earnings" element={<TutorEarnings />} />
 
+            {/* ============================================
+                LAZY LOADED ROUTES - With error handling
+                ============================================ */}
             <Route path="/my-courses" element={<StudentRoute><MyCourses /></StudentRoute>} />
             <Route path="/my-sessions" element={<StudentRoute><MySessions /></StudentRoute>} />
           </Routes>
@@ -439,6 +482,19 @@ const AppContent = () => {
 // MAIN APP COMPONENT
 // ============================================
 function App() {
+  console.log('🚀 App starting...');
+  console.log('📋 Environment:', process.env.NODE_ENV);
+
+  const [isAppReady, setIsAppReady] = useState(false);
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setIsAppReady(true);
+    }, 2000); 
+
+    return () => clearTimeout(timer);
+  }, []);
+
   return (
     <ErrorBoundary>
       <Router>
@@ -446,7 +502,7 @@ function App() {
           <ThemeProvider>
             <LanguageProvider>
               <SessionSettingsProvider>
-                {/* ✅ REMOVED SplashScreen to fix the React Error #130 crash */}
+                <SplashScreen isReady={isAppReady} />
                 <AppContent />
               </SessionSettingsProvider>
             </LanguageProvider>

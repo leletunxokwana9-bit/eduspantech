@@ -167,6 +167,9 @@ const ParentDashboard = () => {
   const [linkSuccess, setLinkSuccess] = useState('');
   const [linkLoading, setLinkLoading] = useState(false);
 
+  // Report Modal
+  const [showReportModal, setShowReportModal] = useState(false);
+
   // Tutor modal
   const [viewingTutor, setViewingTutor] = useState(null);
   const [showTutorModal, setShowTutorModal] = useState(false);
@@ -804,17 +807,30 @@ const ParentDashboard = () => {
                 </div>
               </div>
               <div className="card-body">
-                <div className="report-item">
-                  <div className="report-icon"><BookOpen size={20} /></div>
-                  <div className="report-details">
-                    <h4>{activeChild.recentReport || 'No reports yet'}</h4>
-                    <p>Issued recently</p>
+                {activeChild.recentReport ? (
+                  <div className="report-item">
+                    <div className="report-icon"><BookOpen size={20} /></div>
+                    <div className="report-details">
+                      <h4>{activeChild.recentReport}</h4>
+                      <p>Issued recently</p>
+                    </div>
+                    <div className="report-grade">
+                      <span className="grade-badge">{activeChild.recentReportGrade || 'N/A'}</span>
+                      <button 
+                        className="btn-link-sm" 
+                        onClick={() => setShowReportModal(true)}
+                      >
+                        View
+                      </button>
+                    </div>
                   </div>
-                  <div className="report-grade">
-                    <span className="grade-badge">{activeChild.recentReportGrade || 'N/A'}</span>
-                    <button className="btn-link-sm">View</button>
+                ) : (
+                  <div style={{ textAlign: 'center', padding: '30px 20px', color: '#94a3b8' }}>
+                    <FileText size={40} style={{ margin: '0 auto 12px', color: '#4f46e5' }} />
+                    <p style={{ margin: 0, fontSize: '14px' }}>No reports yet</p>
+                    <p style={{ margin: '4px 0 0', fontSize: '12px', opacity: 0.7 }}>Reports will appear here after the first term assessment.</p>
                   </div>
-                </div>
+                )}
               </div>
             </div>
           </div>
@@ -865,6 +881,45 @@ const ParentDashboard = () => {
           <Users size={64} style={{ margin: '0 auto 20px', color: '#4f46e5' }} />
           <h3 style={{ fontSize: '20px', color: '#ffffff', marginBottom: '8px' }}>No Children Linked Yet</h3>
           <p>Link your child's student account to start monitoring their progress.</p>
+        </div>
+      )}
+
+      {/* Report Modal */}
+      {showReportModal && activeChild?.recentReport && (
+        <div className="modal-overlay" onClick={() => setShowReportModal(false)}>
+          <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header">
+              <h3>Academic Report</h3>
+              <button onClick={() => setShowReportModal(false)}>✕</button>
+            </div>
+            <div className="modal-body">
+              <div style={{ marginBottom: '20px' }}>
+                <h4 style={{ fontSize: '18px', margin: '0 0 4px 0' }}>{activeChild.recentReport}</h4>
+                <p style={{ fontSize: '13px', color: '#94a3b8', margin: 0 }}>Issued recently</p>
+              </div>
+              
+              <div style={{ display: 'flex', gap: '16px', marginBottom: '20px' }}>
+                <div style={{ flex: 1, background: 'rgba(255,255,255,0.02)', padding: '16px', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.05)' }}>
+                  <span style={{ display: 'block', fontSize: '12px', color: '#94a3b8', marginBottom: '4px' }}>Final Grade</span>
+                  <span style={{ fontSize: '24px', fontWeight: '700', color: '#34d399' }}>{activeChild.recentReportGrade || 'N/A'}</span>
+                </div>
+                <div style={{ flex: 1, background: 'rgba(255,255,255,0.02)', padding: '16px', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.05)' }}>
+                  <span style={{ display: 'block', fontSize: '12px', color: '#94a3b8', marginBottom: '4px' }}>Attendance</span>
+                  <span style={{ fontSize: '24px', fontWeight: '700', color: '#60a5fa' }}>{activeChild.attendance || 'N/A'}</span>
+                </div>
+              </div>
+
+              <div>
+                <label style={{ display: 'block', fontSize: '13px', fontWeight: '600', color: '#e2e8f0', marginBottom: '8px' }}>Tutor Feedback</label>
+                <div style={{ background: 'rgba(255,255,255,0.02)', padding: '16px', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.05)', fontSize: '14px', color: '#cbd5e1', lineHeight: '1.6' }}>
+                  "{activeChild.recentReportFeedback || 'Great effort this term!'}"
+                </div>
+              </div>
+            </div>
+            <div className="modal-footer">
+              <button className="btn-primary" onClick={() => setShowReportModal(false)}>Close Report</button>
+            </div>
+          </div>
         </div>
       )}
 

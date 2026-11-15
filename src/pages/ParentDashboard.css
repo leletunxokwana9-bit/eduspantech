@@ -1578,3 +1578,56 @@
   margin: 0;
   padding: 8px 0;
 }
+/* ============================================
+   UNLINK CHILD
+   ============================================ */
+.btn-unlink-child {
+  background: transparent;
+  border: none;
+  color: #94a3b8;
+  cursor: pointer;
+  padding: 6px;
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-left: 4px;
+  transition: all 0.2s;
+  flex-shrink: 0;
+}
+
+.btn-unlink-child:hover {
+  background: rgba(239, 68, 68, 0.15);
+  color: #ef4444;
+}
+
+/* Make sure the check icon and trash icon align nicely */
+.child-dropdown-item {
+  padding-right: 8px;
+}
+
+.child-dropdown-item .check-icon {
+  margin-left: auto;
+}
+
+/* Red destructive button */
+.btn-danger {
+  background: #ef4444;
+  color: white;
+  border: none;
+  padding: 10px 20px;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.btn-danger:hover:not(:disabled) {
+  background: #dc2626;
+}
+
+.btn-danger:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}

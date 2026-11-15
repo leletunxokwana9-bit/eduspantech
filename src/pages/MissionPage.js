@@ -11,9 +11,9 @@ export default function MissionPage() {
 
   // Simulating fetching from the SQL database
   useEffect(() => {
-    // In a real app, this would be: 
+    // In a real app, this would be:
     // fetch('/api/mission').then(res => res.json()).then(data => setContent(data));
-    
+
     const mockDatabaseData = [
       {
         section_identifier: 'intro',
@@ -126,7 +126,7 @@ export default function MissionPage() {
       {/* Header */}
       <header className="mission-header">
         <div className="mission-badge">
-          <Target size={16} /> Our Mission & Vision
+          <Target size={16} /> Our Mission &amp; Vision
         </div>
         <h1>Bridging the Gap to <span className="highlight-text">Academic Success</span></h1>
         <p className="mission-subtitle">
@@ -150,7 +150,7 @@ export default function MissionPage() {
           <section className="mission-section pipeline-section">
             <h2>{pipeline.title}</h2>
             <p className="pipeline-sub">{pipeline.content}</p>
-            
+
             <div className="phase-grid">
               {phases.map((phase, idx) => (
                 <div key={idx} className="phase-card">

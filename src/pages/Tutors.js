@@ -1,6 +1,7 @@
 // src/pages/Tutors.js
 import React, { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
+import RatingStars from '../components/RatingStars';
 import './Tutors.css';
 
 // Safely handle imports so a missing file doesn't crash the app
@@ -102,6 +103,23 @@ const hasVideo = (tutor) => !!(tutor.intro_video_url && tutor.intro_video_thumbn
 
 const isImageSrc = (src) =>
   !!src && (src.startsWith('data:image') || src.startsWith('http://') || src.startsWith('https://'));
+
+// ✅ Rating helpers — read every field name the API might return
+const getRatingValue = (tutor) => {
+  const raw =
+    tutor.rating_avg ?? tutor.ratingAvg ??
+    tutor.tutor_rating ?? tutor.avg_rating ?? 0;
+  const n = Number(raw);
+  return isNaN(n) ? 0 : n;
+};
+
+const getRatingCount = (tutor) => {
+  const raw =
+    tutor.rating_count ?? tutor.ratingCount ??
+    tutor.tutor_rating_count ?? 0;
+  const n = Number(raw);
+  return isNaN(n) ? 0 : n;
+};
 
 // Avatar: real photo if available, otherwise initials
 const TutorAvatar = ({ tutor }) => {
@@ -320,7 +338,7 @@ const Tutors = () => {
 
     try {
       setBookingLoading(true);
-      
+
       if (!sessionService || !sessionService.bookSession) {
         throw new Error("Session service not available");
       }
@@ -424,7 +442,7 @@ const Tutors = () => {
   };
 
   // ============================================
-  // TUTOR MODAL
+  // TUTOR MODAL (with ratings)
   // ============================================
   const TutorModal = () => {
     if (!viewingTutor) return null;
@@ -440,6 +458,8 @@ const Tutors = () => {
     };
 
     const shiftName = getShiftName(viewingTutor.shiftId);
+    const ratingValue = getRatingValue(viewingTutor);
+    const ratingCount = getRatingCount(viewingTutor);
 
     return (
       <div className="tutor-modal-overlay" onClick={() => setShowTutorModal(false)}>
@@ -455,6 +475,21 @@ const Tutors = () => {
               {viewingTutor.tier && (
                 <span className="tutor-modal-tier">{getTierLabel(viewingTutor.tier)}</span>
               )}
+
+              {/* ⭐ Rating line */}
+              <div className="tutor-rating-line">
+                {ratingCount > 0 ? (
+                  <>
+                    <RatingStars value={ratingValue} size={16} showValue />
+                    <span className="tutor-rating-count">
+                      {ratingCount} review{ratingCount > 1 ? 's' : ''}
+                    </span>
+                  </>
+                ) : (
+                  <span className="tutor-rating-line muted">⭐ New tutor — be the first to review</span>
+                )}
+              </div>
+
               {viewingTutor.subjects && viewingTutor.subjects.length > 0 && (
                 <div className="tutor-modal-subjects">
                   {viewingTutor.subjects.map((subject, idx) => (
@@ -524,6 +559,73 @@ const Tutors = () => {
                     <p>{SHIFT_LABELS[shiftName] || shiftName}</p>
                   </div>
                 )}
+
+                {/* ⭐ Ratings & Reviews */}
+                <div className="profile-section">
+                  <h3>⭐ Ratings & Reviews</h3>
+                  {ratingCount > 0 ? (
+                    <>
+                      <div className="rating-summary">
+                        <div className="rating-big">
+                          <span className="rating-big-value">
+                            {ratingValue.toFixed(1)}
+                          </span>
+                          <RatingStars value={ratingValue} size={18} />
+                          <span className="rating-big-count">
+                            {ratingCount} review{ratingCount > 1 ? 's' : ''}
+                          </span>
+                        </div>
+
+                        {viewingTutor.ratingDistribution && (
+                          <div className="rating-distribution">
+                            {[5, 4, 3, 2, 1].map((star) => {
+                              const count = Number(viewingTutor.ratingDistribution[String(star)]) || 0;
+                              const pct = ratingCount ? (count / ratingCount) * 100 : 0;
+                              return (
+                                <div key={star} className="dist-row">
+                                  <span className="dist-label">{star}★</span>
+                                  <div className="dist-bar">
+                                    <div className="dist-fill" style={{ width: `${pct}%` }} />
+                                  </div>
+                                  <span className="dist-count">{count}</span>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        )}
+                      </div>
+
+                      {(viewingTutor.recentReviews || []).length > 0 && (
+                        <div className="recent-reviews">
+                          {viewingTutor.recentReviews.slice(0, 3).map((r) => (
+                            <div key={r.id} className="review-card">
+                              <div className="review-header">
+                                <RatingStars value={r.rating} size={13} />
+                                <span className="review-author">{r.reviewerLabel || 'Learner'}</span>
+                                <span className="review-date">
+                                  {r.createdAt
+                                    ? new Date(r.createdAt).toLocaleDateString('en-US', {
+                                        month: 'short', day: 'numeric', year: 'numeric'
+                                      })
+                                    : ''}
+                                </span>
+                              </div>
+                              {r.comment && <p className="review-comment">{r.comment}</p>}
+                              {r.tutorReply && (
+                                <div className="tutor-reply">
+                                  <strong>Tutor replied:</strong> {r.tutorReply}
+                                </div>
+                              )}
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </>
+                  ) : (
+                    <p className="no-reviews">No reviews yet — this tutor is new to EduSpantech.</p>
+                  )}
+                </div>
+
                 <button className="modal-btn primary full-profile-book" onClick={handleBookFromModal}>
                   📚 Book Session
                 </button>
@@ -602,6 +704,8 @@ const Tutors = () => {
   const renderTutorCard = (tutor) => {
     const tierNum = getTierNumber(tutor.tier);
     const videoAvailable = hasVideo(tutor);
+    const ratingValue = getRatingValue(tutor);
+    const ratingCount = getRatingCount(tutor);
 
     return (
       <article key={tutor.id} className="tutor-card" onClick={() => handleTutorCardClick(tutor)}>
@@ -618,6 +722,20 @@ const Tutors = () => {
                 <span className={`tier-badge tier-${tierNum || 'x'}`}>{getTierLabel(tutor.tier)}</span>
               )}
             </div>
+          </div>
+
+          {/* ⭐ Rating line */}
+          <div className="tutor-card-rating">
+            {ratingCount > 0 ? (
+              <>
+                <RatingStars value={ratingValue} size={13} />
+                <span className="tutor-card-rating-text">
+                  {ratingValue.toFixed(1)} · {ratingCount} review{ratingCount > 1 ? 's' : ''}
+                </span>
+              </>
+            ) : (
+              <span className="tutor-card-rating-text muted">⭐ New tutor</span>
+            )}
           </div>
 
           {tutor.subjects && tutor.subjects.length > 0 && (

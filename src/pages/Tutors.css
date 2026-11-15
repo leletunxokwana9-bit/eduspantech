@@ -1,3 +1,4 @@
+
 /* Tutors.css - REDESIGN: shift sections, clean availability, standout tutor cards */
 
 /* ============================================
@@ -1285,6 +1286,108 @@
 }
 
 /* ============================================
+   TUTOR RATINGS
+   ============================================ */
+.tutor-card-rating {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 2px 0 4px;
+}
+.tutor-card-rating-text { font-size: 12px; color: #94a3b8; font-weight: 500; }
+.tutor-card-rating-text.muted { font-style: italic; }
+
+.tutor-rating-line {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 4px 0 10px;
+  justify-content: center;
+  flex-wrap: wrap;
+}
+.tutor-rating-line.muted { color: #94a3b8; font-size: 13px; font-style: italic; }
+.tutor-rating-count { font-size: 13px; color: #94a3b8; font-weight: 500; }
+
+.rating-summary {
+  display: flex;
+  gap: 20px;
+  align-items: center;
+  padding: 14px;
+  background: rgba(255, 255, 255, 0.03);
+  border-radius: 12px;
+  margin-bottom: 12px;
+  flex-wrap: wrap;
+}
+.rating-big {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  min-width: 100px;
+}
+.rating-big-value { font-size: 32px; font-weight: 800; color: #fff; line-height: 1; }
+.rating-big-count { font-size: 12px; color: #94a3b8; }
+
+.rating-distribution {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 180px;
+}
+.dist-row { display: flex; align-items: center; gap: 8px; font-size: 12px; color: #cbd5e1; }
+.dist-label { width: 26px; text-align: right; }
+.dist-bar {
+  flex: 1;
+  height: 6px;
+  background: rgba(255, 255, 255, 0.06);
+  border-radius: 3px;
+  overflow: hidden;
+}
+.dist-fill { height: 100%; background: #fbbf24; border-radius: 3px; transition: width 0.3s; }
+.dist-count { width: 26px; text-align: right; color: #94a3b8; }
+
+.recent-reviews {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 8px;
+}
+.review-card {
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 10px;
+  padding: 12px 14px;
+}
+.review-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-bottom: 6px;
+}
+.review-author { font-size: 12px; font-weight: 600; color: #c4b5fd; }
+.review-date { font-size: 11px; color: #64748b; margin-left: auto; }
+.review-comment {
+  font-size: 13px;
+  color: #cbd5e1;
+  line-height: 1.5;
+  margin: 4px 0 0;
+}
+.tutor-reply {
+  margin-top: 8px;
+  padding: 8px 10px;
+  background: rgba(79, 70, 229, 0.08);
+  border-left: 2px solid #7c3aed;
+  border-radius: 6px;
+  font-size: 12px;
+  color: #cbd5e1;
+  line-height: 1.4;
+}
+.tutor-reply strong { color: #a78bfa; }
+.no-reviews { font-size: 13px; color: #94a3b8; font-style: italic; margin: 0; }
+
+/* ============================================
    LIGHT THEME
    ============================================ */
 [data-theme="light"] .tutors-page-wrapper { background: #f8fafc; }
@@ -1397,6 +1500,20 @@
 [data-theme="light"] .success-modal-details { background: rgba(0, 0, 0, 0.03); }
 [data-theme="light"] .success-detail-item span,
 [data-theme="light"] .success-modal-note { color: rgba(0, 0, 0, 0.55) !important; }
+
+[data-theme="light"] .tutor-card-rating-text { color: #64748b; }
+[data-theme="light"] .tutor-rating-count { color: #64748b; }
+[data-theme="light"] .rating-big-value { color: #0f172a; }
+[data-theme="light"] .rating-big-count { color: #64748b; }
+[data-theme="light"] .dist-row { color: #334155; }
+[data-theme="light"] .dist-bar { background: rgba(0, 0, 0, 0.08); }
+[data-theme="light"] .rating-summary { background: rgba(0, 0, 0, 0.03); }
+[data-theme="light"] .review-card { background: rgba(0, 0, 0, 0.02); border-color: rgba(0, 0, 0, 0.08); }
+[data-theme="light"] .review-comment { color: #334155; }
+[data-theme="light"] .review-author { color: #4338ca; }
+[data-theme="light"] .review-date { color: #64748b; }
+[data-theme="light"] .tutor-reply { background: rgba(79, 70, 229, 0.06); color: #334155; }
+[data-theme="light"] .no-reviews { color: #64748b; }
 
 /* ============================================
    RESPONSIVE

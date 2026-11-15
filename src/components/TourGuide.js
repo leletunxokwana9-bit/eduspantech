@@ -40,7 +40,7 @@ const TourGuide = () => {
           side: 'top', align: 'center',
           onNextClick: () => {
             // Smooth transition to Subjects page
-            driverObj.destroy();
+            if (driverObj) driverObj.destroy();
             navigate('/subjects');
           }
         }
@@ -73,7 +73,7 @@ const TourGuide = () => {
           side: 'top', align: 'center',
           onNextClick: () => {
             // Smooth transition to Tutors page
-            driverObj.destroy();
+            if (driverObj) driverObj.destroy();
             navigate('/tutors');
           }
         }
@@ -114,7 +114,7 @@ const TourGuide = () => {
           side: 'bottom', align: 'center',
           onNextClick: () => {
             // Smooth transition to Pricing page
-            driverObj.destroy();
+            if (driverObj) driverObj.destroy();
             navigate('/pricing');
           }
         }
@@ -146,11 +146,15 @@ const TourGuide = () => {
           description: 'This is what most students choose. Click "Get Started" to subscribe via Paystack.',
           side: 'left', align: 'center',
           onNextClick: () => {
-            // End the tour
-            driverObj.destroy();
+            // ✅ FIX: Save state BEFORE destroying, and trigger the finish logic
             localStorage.setItem('hasSeenTour', 'true');
             localStorage.removeItem('triggerTour');
-            alert("Tour complete! You're ready to conquer your studies.");
+            if (driverObj) driverObj.destroy();
+            
+            // Use a small timeout to ensure the DOM clears before the alert
+            setTimeout(() => {
+              alert("Tour complete! You're ready to conquer your studies.");
+            }, 100);
           }
         }
       }
@@ -180,15 +184,16 @@ const TourGuide = () => {
         const obj = driver({
           showProgress: true,
           animate: true,
-          allowClose: false,
-          overlayColor: 'rgba(10, 14, 26, 0.85)', // Matches your dark theme
+          allowClose: true, // ✅ FIX: Allow closing via ESC or clicking overlay
+          overlayColor: 'rgba(10, 14, 26, 0.85)', 
           nextBtnText: 'Next →',
           prevBtnText: '← Back',
           doneBtnText: 'Finish Tour',
           steps: currentSteps,
           onDestroyStarted: () => {
-            // If they click the 'X' button or hit ESC, we stop the tour completely
+            // ✅ FIX: Ensure state is saved if they skip/close the tour early
             localStorage.setItem('hasSeenTour', 'true');
+            localStorage.removeItem('triggerTour');
             obj.destroy();
           }
         });

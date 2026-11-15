@@ -1,0 +1,22 @@
+.rating-stars { display: inline-flex; align-items: center; gap: 2px; line-height: 1; }
+.rating-stars .star { color: #334155; }
+.rating-stars .star.full { color: #fbbf24; }
+.rating-stars .star.half {
+  background: linear-gradient(90deg, #fbbf24 50%, #334155 50%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  color: transparent;
+}
+.rating-stars .rating-value {
+  margin-left: 6px;
+  font-size: 0.85em;
+  font-weight: 700;
+  color: #ffffff;
+}
+.rating-stars .rating-count {
+  margin-left: 4px;
+  font-size: 0.8em;
+  color: #94a3b8;
+  font-weight: 500;
+}

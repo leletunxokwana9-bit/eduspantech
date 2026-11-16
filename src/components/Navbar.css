@@ -29,8 +29,6 @@
   justify-content: space-between;
   gap: 8px;
   min-width: 0;
-  /* ✅ ENABLE CONTAINER QUERIES */
-  container-type: inline-size; 
 }
 
 /* ============================================================
@@ -41,7 +39,7 @@
   align-items: center;
   gap: 10px;
   text-decoration: none;
-  flex-shrink: 0; /* 👈 PREVENTS LOGO FROM SHRINKING */
+  flex-shrink: 0;
   min-width: 0;
 }
 
@@ -101,6 +99,7 @@
   flex: 1;
   min-width: 0;
   justify-content: center; 
+  overflow: hidden; /* ✅ Prevents items from spilling out */
 }
 
 .navbar-links a {
@@ -159,7 +158,7 @@
   display: flex;
   align-items: center;
   gap: 8px;
-  flex-shrink: 0; /* 👈 CRITICAL: PREVENTS BUTTONS FROM OVERLAPPING */
+  flex-shrink: 0;
 }
 
 /* ============================================================
@@ -258,9 +257,6 @@
 .mobile-menu { display: none; width: 40px; height: 40px; border: none; background: rgba(255, 255, 255, 0.05); color: var(--text-primary, #ffffff); font-size: 22px; border-radius: 10px; cursor: pointer; transition: all 0.2s ease; align-items: center; justify-content: center; flex-shrink: 0; }
 .mobile-menu:hover { background: rgba(255, 255, 255, 0.1); }
 
-/* ✅ FORCE SHOW BURGER ON DESKTOP WHEN LINKS OVERFLOW */
-.mobile-menu.force-show { display: flex; }
-
 /* ============================================================
    MOBILE MENU OVERLAY
    ============================================================ */
@@ -308,11 +304,9 @@
 .mobile-logout:hover { background: rgba(239, 68, 68, 0.2); }
 
 /* ============================================================
-   CONTAINER QUERIES (FIX FOR HP DISPLAY SCALING)
+   FLEXIBLE SPACE FIX (Replaces JavaScript ResizeObserver)
    ============================================================ */
-/* If the physical width of the navbar drops below 1150px (due to HP scaling), 
-   hide the links and show the hamburger! */
-@container (max-width: 1150px) {
+@media (max-width: 1150px) {
   .navbar-links { display: none !important; }
   .mobile-menu { display: flex !important; }
   .user-name { display: none; }

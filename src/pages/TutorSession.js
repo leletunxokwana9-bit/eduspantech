@@ -179,8 +179,6 @@ const TutorSession = () => {
   // ============================================
   useEffect(() => {
     if (!isConnected || !roleLoaded) return;
-    
-    // ✅ FIX: Only the Tutor initiates the offer to prevent the "Glare" collision
     if (userRole !== 'tutor') return;
 
     const target = participants.find(p => p.role !== userRole);
@@ -678,10 +676,10 @@ const TutorSession = () => {
     <div className="session-container dark">
       {showRatingModal && <RatingModal />}
 
-      {/* ✅ TOP RIGHT JOIN/LEAVE POPUP */}
+      {/* ✅ TOP RIGHT JOIN/LEAVE POPUP (No Emojis) */}
       {activePopup && (
         <div className={`session-popup ${activePopup.type}`}>
-          {activePopup.type === 'join' ? '👤' : '🚪'} {activePopup.name} {activePopup.type === 'join' ? 'joined the session' : 'left the session'}
+          {activePopup.name} {activePopup.type === 'join' ? 'joined the session' : 'left the session'}
         </div>
       )}
 

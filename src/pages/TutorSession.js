@@ -262,7 +262,6 @@ const TutorSession = () => {
   const canvasRef = useRef(null);
   const ctxRef = useRef(null);
   const messagesEndRef = useRef(null);
-  const chatMessagesRef = useRef(null);
   const chatInputRef = useRef(null);
   const emojiPickerRef = useRef(null);
   const timerRef = useRef(null);
@@ -472,14 +471,7 @@ const TutorSession = () => {
     timerRef.current = setInterval(() => setTimeElapsed(prev => prev + 1), 1000);
     return () => clearInterval(timerRef.current);
   }, []);
-  
-  // ✅ FIXED: Only scroll chat when messages change AND user is already at the bottom
-  useEffect(() => {
-    if (messagesEndRef.current) {
-      messagesEndRef.current.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-    }
-  }, [messages, typingUsers]);
-
+  useEffect(() => { messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' }); }, [messages, typingUsers]);
   useEffect(() => { chatInputRef.current?.focus(); }, []);
   useEffect(() => {
     const handleClickOutside = (event) => {
@@ -745,7 +737,7 @@ const TutorSession = () => {
                 {isMobile && <button className="close-chat-btn" onClick={() => setShowChat(false)}>✕</button>}
               </div>
 
-              <div className="chat-messages" ref={chatMessagesRef}>
+              <div className="chat-messages">
                 {messages.map((msg) => {
                   const isMe = msg.sender_id === userId;
                   
@@ -791,7 +783,7 @@ const TutorSession = () => {
                   </div>
                 )}
 
-                <div ref={messagesEndRef} style={{ height: '10px' }} />
+                <div ref={messagesEndRef} />
               </div>
 
               <form onSubmit={sendMessage} className="chat-input-area">

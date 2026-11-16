@@ -262,6 +262,7 @@ const TutorSession = () => {
   const canvasRef = useRef(null);
   const ctxRef = useRef(null);
   const messagesEndRef = useRef(null);
+  const chatMessagesRef = useRef(null);
   const chatInputRef = useRef(null);
   const emojiPickerRef = useRef(null);
   const timerRef = useRef(null);
@@ -471,7 +472,14 @@ const TutorSession = () => {
     timerRef.current = setInterval(() => setTimeElapsed(prev => prev + 1), 1000);
     return () => clearInterval(timerRef.current);
   }, []);
-  useEffect(() => { messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' }); }, [messages, typingUsers]);
+  
+  // ✅ FIXED: Only scroll chat when messages change AND user is already at the bottom
+  useEffect(() => {
+    if (messagesEndRef.current) {
+      messagesEndRef.current.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    }
+  }, [messages, typingUsers]);
+
   useEffect(() => { chatInputRef.current?.focus(); }, []);
   useEffect(() => {
     const handleClickOutside = (event) => {
@@ -579,7 +587,6 @@ const TutorSession = () => {
 
   const insertEmoji = (emoji) => { setNewMessage(prev => prev + emoji); setShowEmojiPicker(false); chatInputRef.current?.focus(); };
 
-  // ✅ CLEAN END SESSION LOGIC (NO FLICKERING MODALS)
   const endSession = async () => {
     if (sessionEnded) return;
     const duration = Math.floor((Date.now() - sessionStats.startTime) / 1000);
@@ -600,7 +607,6 @@ const TutorSession = () => {
       }
     } catch (error) { console.error('Error ending session:', error); }
 
-    // ✅ REDIRECT BASED ON ROLE
     if (userRole === 'tutor') {
       navigate('/tutor/dashboard');
     } else {
@@ -617,7 +623,6 @@ const TutorSession = () => {
   return (
     <div className="session-container dark">
       
-      {/* ✅ TOP RIGHT JOIN/LEAVE POPUP (No Emojis) */}
       {activePopup && (
         <div className={`session-popup ${activePopup.type}`}>
           {activePopup.name} {activePopup.type === 'join' ? 'joined the session' : 'left the session'}
@@ -740,7 +745,7 @@ const TutorSession = () => {
                 {isMobile && <button className="close-chat-btn" onClick={() => setShowChat(false)}>✕</button>}
               </div>
 
-              <div className="chat-messages">
+              <div className="chat-messages" ref={chatMessagesRef}>
                 {messages.map((msg) => {
                   const isMe = msg.sender_id === userId;
                   
@@ -786,7 +791,7 @@ const TutorSession = () => {
                   </div>
                 )}
 
-                <div ref={messagesEndRef} style={{ height: '80px' }} />
+                <div ref={messagesEndRef} style={{ height: '10px' }} />
               </div>
 
               <form onSubmit={sendMessage} className="chat-input-area">

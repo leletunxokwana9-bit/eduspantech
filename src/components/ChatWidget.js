@@ -1,5 +1,6 @@
 // src/components/ChatWidget.js
 import React, { useState, useRef, useEffect } from 'react';
+import { useLocation } from 'react-router-dom'; // ✅ Added to detect session route
 import { API_BASE_URL } from '../services/api';
 import './ChatWidget.css';
 
@@ -26,6 +27,7 @@ const ChatWidget = () => {
     // ===== REFS =====
     const messagesEndRef = useRef(null);
     const inputRef = useRef(null);
+    const location = useLocation(); // ✅ Hook to check current URL
 
     // ============================================
     // NAVIGATION CONFIG
@@ -283,16 +285,19 @@ const ChatWidget = () => {
         };
         window.addEventListener('keydown', handleKeyDown);
         
-        // ✅ Show greeting bubble after 3 seconds if chat is closed
-        const timer = setTimeout(() => {
-            if (!isOpen) {
-                setShowGreeting(true);
-            }
+        // ✅ Show greeting bubble after 3 seconds, hide after 5 seconds
+        const showTimer = setTimeout(() => {
+            if (!isOpen) setShowGreeting(true);
         }, 3000);
+
+        const hideTimer = setTimeout(() => {
+            setShowGreeting(false);
+        }, 8000); // 3s to show + 5s visible = 8s total
 
         return () => {
             window.removeEventListener('keydown', handleKeyDown);
-            clearTimeout(timer);
+            clearTimeout(showTimer);
+            clearTimeout(hideTimer);
         };
     }, [isOpen]);
 
@@ -322,6 +327,13 @@ const ChatWidget = () => {
         // Log widget load
         console.log(`✅ ChatWidget [${chatId}] loaded`);
     }, []);
+
+    // ✅ HIDE WIDGET IF IN TUTOR SESSION
+    const isTutorSession = location.pathname.includes('/session/');
+
+    if (isTutorSession) {
+        return null; // Do not render the widget at all
+    }
 
     // ============================================
     // RENDER

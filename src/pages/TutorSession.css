@@ -1935,3 +1935,38 @@
 .chat-messages {
   padding-bottom: 20px; /* Adds breathing room at the bottom */
 }
+/* Fix to prevent the chat input and emoji picker from disappearing */
+.chat-container {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0; /* ✅ CRITICAL: Forces flexbox to respect the boundaries */
+  overflow: hidden;
+}
+
+.chat-messages {
+  flex: 1;
+  overflow-y: auto;
+  min-height: 0; /* ✅ CRITICAL: Allows the messages to scroll without pushing the input down */
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.chat-input-area {
+  flex-shrink: 0; /* ✅ CRITICAL: Keeps the input pinned to the bottom */
+  position: relative;
+  z-index: 10;
+}
+
+/* Emoji Picker positioning */
+.emoji-picker {
+  position: absolute;
+  bottom: 100%; /* Appears right above the input field */
+  left: 10px;
+  z-index: 100;
+  background: var(--bg-secondary, #1e293b);
+  border-radius: 12px;
+  box-shadow: 0 -5px 20px rgba(0,0,0,0.3);
+}

@@ -271,18 +271,44 @@ const useWebRTC = (sessionId, role, userId) => {
       else if (state === 'connecting') setConnectionStatus('connecting');
     };
 
+    // ✅ FIXED: Strict Echo Prevention
     pc.ontrack = (event) => {
-      remoteStreams.current[targetUserId] = event.streams[0];
-      if (!audioElements.current[targetUserId]) {
-        const audio = new Audio();
-        audio.autoplay = true;
-        audio.srcObject = event.streams[0];
-        audio.play().catch(e => console.log('Audio play error:', e));
-        audioElements.current[targetUserId] = audio;
+      console.log(`🎧 Received remote track from ${targetUserId}:`, event.track.kind);
+
+      // 1. Block playback of our own local microphone track
+      if (localStream.current) {
+        const localTrackIds = localStream.current.getTracks().map(t => t.id);
+        if (localTrackIds.includes(event.track.id)) {
+          console.warn('⚠️ Blocked attempt to play local microphone track (echo prevention)');
+          return;
+        }
       }
-      window.dispatchEvent(new CustomEvent('remote-audio', {
-        detail: { userId: targetUserId, stream: event.streams[0] }
-      }));
+
+      // 2. Only play the remote stream
+      if (event.streams && event.streams[0]) {
+        remoteStreams.current[targetUserId] = event.streams[0];
+        
+        if (!audioElements.current[targetUserId]) {
+          const audio = new Audio();
+          audio.autoplay = true;
+          audio.srcObject = event.streams[0];
+          
+          audio.play().catch(e => {
+            console.warn('🔇 Autoplay blocked. Waiting for user interaction...', e);
+            const enableAudio = () => {
+              audio.play();
+              document.removeEventListener('click', enableAudio);
+            };
+            document.addEventListener('click', enableAudio);
+          });
+          
+          audioElements.current[targetUserId] = audio;
+        }
+        
+        window.dispatchEvent(new CustomEvent('remote-audio', {
+          detail: { userId: targetUserId, stream: event.streams[0] }
+        }));
+      }
     };
 
     pc.onicecandidate = (event) => {

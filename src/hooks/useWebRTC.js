@@ -60,7 +60,6 @@ const useWebRTC = (sessionId, role, userId) => {
         window.dispatchEvent(new CustomEvent('student-left', { detail: data }));
         break;
 
-      // ✅ FIX: ignore signaling messages echoed back to the sender
       case 'offer':
         if (data.fromUserId === userId) break;
         console.log('📞 Received offer from:', data.fromUserId);

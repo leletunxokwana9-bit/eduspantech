@@ -28,10 +28,6 @@ function Navbar() {
   const [isAdmin, setIsAdmin] = useState(false);
   const [logoError, setLogoError] = useState(false);
 
-  const [showDesktopLinks, setShowDesktopLinks] = useState(true);
-  const navLinksRef = useRef(null);
-  const containerRef = useRef(null);
-
   const location = useLocation();
   const navigate = useNavigate();
 
@@ -43,41 +39,6 @@ function Navbar() {
   const { data, loading } = useHomeData();
   const { currentLanguage, changeLanguage, t, languages } = useLanguage();
   const { playClick } = useSound();
-
-  // ✅ PERFECT OVERFLOW CHECK
-  useEffect(() => {
-    const checkOverflow = () => {
-      if (!navLinksRef.current || !containerRef.current) return;
-
-      const navElement = navLinksRef.current;
-      const containerElement = containerRef.current;
-
-      // The space available for the nav links is the total container width 
-      // minus the Logo, the Actions (Search, Lang, Login, etc.), and a 60px safety buffer.
-      const logoWidth = containerElement.firstElementChild ? containerElement.firstElementChild.offsetWidth : 200;
-      const actionsWidth = containerElement.lastElementChild ? containerElement.lastElementChild.offsetWidth : 300;
-      const totalWidth = containerElement.offsetWidth;
-      
-      const availableSpaceForLinks = totalWidth - logoWidth - actionsWidth - 60;
-
-      // If the natural width of the links is greater than the space we have, hide them
-      if (navElement.scrollWidth > availableSpaceForLinks) {
-        setShowDesktopLinks(false);
-      } else {
-        setShowDesktopLinks(true);
-      }
-    };
-
-    const observer = new ResizeObserver(() => {
-      // Request animation frame ensures the DOM has fully painted before measuring
-      requestAnimationFrame(checkOverflow);
-    });
-
-    if (containerRef.current) observer.observe(containerRef.current);
-    checkOverflow();
-
-    return () => observer.disconnect();
-  }, []);
 
   useEffect(() => {
     const lock = isMenuOpen || isSearchOpen;
@@ -265,7 +226,7 @@ function Navbar() {
   return (
     <>
       <header className={`navbar ${isAdmin ? "admin-navbar" : ""}`} ref={menuRef}>
-        <div className="navbar-container" ref={containerRef}>
+        <div className="navbar-container">
           
           <Link to={isAdmin ? "/admin/dashboard" : "/"} className="logo" onClick={closeMenu}>
             {renderLogo()}
@@ -276,16 +237,14 @@ function Navbar() {
             {isAdmin && <span className="admin-badge">ADMIN</span>}
           </Link>
 
-          {showDesktopLinks && (
-            <nav className="navbar-links" ref={navLinksRef}>
-              {navLinks.map((link) => (
-                <Link key={link.path} to={link.path} className={`${isActive(link.path) ? "active" : ""} ${isAdmin ? "admin-nav-link" : isTutor ? "tutor-nav-link" : "student-nav-link"}`} onClick={() => playClick()}>
-                  {link.icon && <span className="nav-icon">{link.icon}</span>}
-                  {link.label}
-                </Link>
-              ))}
-            </nav>
-          )}
+          <nav className="navbar-links">
+            {navLinks.map((link) => (
+              <Link key={link.path} to={link.path} className={`${isActive(link.path) ? "active" : ""} ${isAdmin ? "admin-nav-link" : isTutor ? "tutor-nav-link" : "student-nav-link"}`} onClick={() => playClick()}>
+                {link.icon && <span className="nav-icon">{link.icon}</span>}
+                {link.label}
+              </Link>
+            ))}
+          </nav>
 
           <div className="navbar-actions">
             {showSearch && <button type="button" className="search-icon-button" aria-label="Open search" onClick={openSearch}><Search size={20} /></button>}
@@ -382,7 +341,7 @@ function Navbar() {
               </div>
             )}
 
-            <button className={`mobile-menu ${!showDesktopLinks ? "force-show" : ""}`} onClick={toggleMenu} aria-label="Toggle menu" aria-expanded={isMenuOpen}>
+            <button className="mobile-menu" onClick={toggleMenu} aria-label="Toggle menu" aria-expanded={isMenuOpen}>
               {isMenuOpen ? <X size={24} /> : <Menu size={24} />}
             </button>
           </div>

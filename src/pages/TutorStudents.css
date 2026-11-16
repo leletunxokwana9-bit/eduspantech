@@ -1922,3 +1922,54 @@
   border: 1px solid rgba(245, 158, 11, 0.2);
   font-weight: 600;
 }
+/* =========================================
+   TOP RIGHT JOIN/LEAVE POPUPS
+   ========================================= */
+.session-popup {
+  position: fixed;
+  top: 80px;
+  right: 20px;
+  background: var(--bg-secondary, #1e293b);
+  border: 1px solid var(--border-color, #334155);
+  padding: 12px 20px;
+  border-radius: 8px;
+  box-shadow: 0 10px 30px rgba(0,0,0,0.4);
+  font-size: 14px;
+  color: var(--text-primary, #fff);
+  z-index: 9999;
+  animation: slideInRight 0.3s ease-out;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.session-popup.leave {
+  color: var(--accent-danger, #ef4444);
+}
+@keyframes slideInRight {
+  from { transform: translateX(100%); opacity: 0; }
+  to { transform: translateX(0); opacity: 1; }
+}
+
+/* =========================================
+   FULLSCREEN WHITEBOARD MODE
+   ========================================= */
+.session-grid.fullscreen-mode .session-main {
+  padding: 0;
+  border-radius: 0;
+}
+.session-grid.fullscreen-mode .whiteboard-area {
+  padding: 0;
+}
+.session-grid.fullscreen-mode .whiteboard-header {
+  border-radius: 0;
+  border-left: none;
+  border-right: none;
+  border-top: none;
+}
+.session-grid.fullscreen-mode .whiteboard-wrapper {
+  border-radius: 0;
+  border: none;
+}
+.session-grid.fullscreen-mode .floating-tutor-card {
+  display: none;
+}

@@ -256,12 +256,8 @@ const TutorSession = () => {
   const [timeElapsed, setTimeElapsed] = useState(0);
   const [showSettings, setShowSettings] = useState(false);
   const [isMuted, setIsMuted] = useState(false);
-  const [showRatingModal, setShowRatingModal] = useState(false);
-  const [ratingData, setRatingData] = useState({ overall: 0, communication: 0, knowledge: 0, teaching: 0, punctuality: 0, review: '' });
-  const [ratingSubmitted, setRatingSubmitted] = useState(false);
-  const [ratingLoading, setRatingLoading] = useState(false);
+  
   const [sessionEnded, setSessionEnded] = useState(false);
-  const [hoveredStar, setHoveredStar] = useState(0);
   const [sessionStats, setSessionStats] = useState({ whiteboardActions: 0, messagesSent: 0, handRaises: 0, startTime: Date.now() });
 
   const canvasRef = useRef(null);
@@ -584,89 +580,36 @@ const TutorSession = () => {
 
   const insertEmoji = (emoji) => { setNewMessage(prev => prev + emoji); setShowEmojiPicker(false); chatInputRef.current?.focus(); };
 
-  const handleRatingChange = (category, value) => setRatingData(prev => ({ ...prev, [category]: value }));
-  const handleReviewChange = (e) => setRatingData(prev => ({ ...prev, review: e.target.value }));
-
-  const submitRating = async () => {
-    if (ratingData.overall === 0) { alert('Please rate the overall experience'); return; }
-    setRatingLoading(true);
-    try {
-      const token = localStorage.getItem('accessToken');
-      const API_URL = process.env.REACT_APP_API_URL || 'https://eduspantech-backend.onrender.com/api';
-      const response = await fetch(`${API_URL}/ratings`, {
-        method: 'POST',
-        headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
-        body: JSON.stringify({ sessionId, tutorId: tutor?.id || 'unknown', rating: ratingData.overall, review: ratingData.review, communication: ratingData.communication || 0, knowledge: ratingData.knowledge || 0, teaching: ratingData.teaching || 0, punctuality: ratingData.punctuality || 0 })
-      });
-      if (response.ok) { setRatingSubmitted(true); setRatingLoading(false); setTimeout(() => { setShowRatingModal(false); navigate('/dashboard'); }, 2000); }
-      else { const error = await response.json(); alert('Failed to submit rating: ' + (error.message || 'Please try again')); setRatingLoading(false); }
-    } catch (error) { console.error('Rating submission error:', error); alert('Failed to submit rating. Please try again.'); setRatingLoading(false); }
-  };
-
-  const renderStars = (rating, category) => {
-    const stars = []; const hover = category === 'overall' ? hoveredStar : 0;
-    const value = category === 'overall' ? (hover || rating) : rating;
-    for (let i = 1; i <= 5; i++) {
-      stars.push(<span key={i} className={`star ${i <= value ? 'filled' : ''}`} onMouseEnter={() => category === 'overall' && setHoveredStar(i)} onMouseLeave={() => category === 'overall' && setHoveredStar(0)} onClick={() => handleRatingChange(category, i)} style={{ cursor: 'pointer', fontSize: '28px', color: i <= value ? '#f59e0b' : '#4b5563', transition: 'color 0.2s ease' }}>★</span>);
-    }
-    return stars;
-  };
-
-  const skipRating = () => { setShowRatingModal(false); navigate('/dashboard'); };
-
+  // ✅ CLEAN END SESSION LOGIC (NO FLICKERING MODALS)
   const endSession = async () => {
     if (sessionEnded) return;
     const duration = Math.floor((Date.now() - sessionStats.startTime) / 1000);
     setSessionStats(prev => ({ ...prev, duration }));
-    setSessionEnded(true); setShowRatingModal(true);
+    setSessionEnded(true);
+    
     leaveWebRTCSession();
+    
     try {
       const token = localStorage.getItem('accessToken');
       if (sessionId && sessionId !== 'temp_session') {
         const API_URL = process.env.REACT_APP_API_URL || 'https://eduspantech-backend.onrender.com/api';
-        const response = await fetch(`${API_URL}/sessions/end`, {
+        await fetch(`${API_URL}/sessions/end`, {
           method: 'POST',
           headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
           body: JSON.stringify({ sessionId, duration })
         });
-        if (response.ok) console.log('✅ Session ended successfully');
       }
     } catch (error) { console.error('Error ending session:', error); }
+
+    // ✅ REDIRECT BASED ON ROLE
+    if (userRole === 'tutor') {
+      navigate('/tutor/dashboard');
+    } else {
+      navigate('/my-sessions');
+    }
   };
 
   const handleLeaveWaitingRoom = () => { leaveWebRTCSession(); navigate('/my-sessions'); };
-
-  const RatingModal = () => {
-    if (!showRatingModal) return null;
-    return (
-      <div className="rating-modal-overlay">
-        <div className="rating-modal">
-          <div className="rating-modal-header"><h2>⭐ Rate Your Session</h2><p>How was your session with {tutor?.name}?</p></div>
-          <div className="rating-modal-body">
-            {!ratingSubmitted ? (
-              <>
-                <div className="rating-category"><label>Overall Experience</label><div className="stars-container">{renderStars(ratingData.overall, 'overall')}<span className="rating-label">{ratingData.overall > 0 ? `${ratingData.overall}.0` : 'Select'}</span></div></div>
-                <div className="rating-category"><label>💬 Communication</label><div className="stars-container">{renderStars(ratingData.communication, 'communication')}</div></div>
-                <div className="rating-category"><label>📚 Subject Knowledge</label><div className="stars-container">{renderStars(ratingData.knowledge, 'knowledge')}</div></div>
-                <div className="rating-category"><label>📖 Teaching Style</label><div className="stars-container">{renderStars(ratingData.teaching, 'teaching')}</div></div>
-                <div className="rating-category"><label>⏰ Punctuality</label><div className="stars-container">{renderStars(ratingData.punctuality, 'punctuality')}</div></div>
-                <div className="rating-review"><label>Write a Review (Optional)</label><textarea placeholder="Share your experience with this tutor..." value={ratingData.review} onChange={handleReviewChange} rows="3" /></div>
-              </>
-            ) : (
-              <div className="rating-success"><div className="success-icon">✅</div><h3>Thank You for Your Rating!</h3><p>Your feedback helps other students find the right tutor.</p></div>
-            )}
-          </div>
-          <div className="rating-modal-footer">
-            {!ratingSubmitted ? (
-              <><button className="btn-skip" onClick={skipRating} disabled={ratingLoading}>Skip</button><button className="btn-submit-rating" onClick={submitRating} disabled={ratingLoading || ratingData.overall === 0}>{ratingLoading ? 'Submitting...' : 'Submit Rating'}</button></>
-            ) : (
-              <button className="btn-done" onClick={() => navigate('/dashboard')}>Go to Dashboard</button>
-            )}
-          </div>
-        </div>
-      </div>
-    );
-  };
 
   if (!roleLoaded) return <div className="session-loading"><div className="loading-spinner"></div><p>Loading session...</p></div>;
   if (!tutor) return <div className="session-loading"><h2>⏳ Loading session...</h2><button onClick={() => navigate('/tutors')}>Back to Tutors</button></div>;
@@ -674,8 +617,7 @@ const TutorSession = () => {
 
   return (
     <div className="session-container dark">
-      {showRatingModal && <RatingModal />}
-
+      
       {/* ✅ TOP RIGHT JOIN/LEAVE POPUP (No Emojis) */}
       {activePopup && (
         <div className={`session-popup ${activePopup.type}`}>

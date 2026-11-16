@@ -1755,3 +1755,93 @@
     font-size: 24px;
   }
 }
+
+/* =========================================
+   WHATSAPP-STYLE CHAT UI (NEW)
+   ========================================= */
+
+.chat-messages {
+  flex: 1;
+  padding: 16px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  background-color: #0f172a;
+}
+
+/* System Messages */
+.system-message {
+  text-align: center;
+  font-size: 11px;
+  color: #94a3b8;
+  margin: 8px 0;
+  background: rgba(255, 255, 255, 0.05);
+  padding: 4px 12px;
+  border-radius: 12px;
+  align-self: center;
+}
+
+/* Message Wrappers */
+.msg-wrapper {
+  display: flex;
+  flex-direction: column;
+  max-width: 85%;
+}
+
+.msg-wrapper.outgoing {
+  align-self: flex-end;
+  align-items: flex-end;
+}
+
+.msg-wrapper.incoming {
+  align-self: flex-start;
+  align-items: flex-start;
+}
+
+/* Sender Name (Group Chat) */
+.sender-name {
+  font-size: 11px;
+  color: #94a3b8;
+  margin-bottom: 4px;
+  margin-left: 4px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.color-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+}
+
+/* Chat Bubbles */
+.bubble {
+  padding: 10px 14px;
+  border-radius: 12px;
+  font-size: 14px;
+  line-height: 1.4;
+  word-wrap: break-word;
+  color: white;
+}
+
+/* Incoming Bubble (Grey) */
+.msg-wrapper.incoming .bubble {
+  background-color: #334155;
+  border-bottom-left-radius: 2px;
+}
+
+/* Outgoing Bubble (Purple) */
+.msg-wrapper.outgoing .bubble {
+  background-color: #8b5cf6;
+  border-bottom-right-radius: 2px;
+}
+
+/* Timestamp */
+.time {
+  font-size: 10px;
+  color: #94a3b8;
+  margin-top: 4px;
+  margin-right: 4px;
+}

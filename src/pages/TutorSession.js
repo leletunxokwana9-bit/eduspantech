@@ -169,7 +169,6 @@ const TutorSession = () => {
 
   const [showWaitingScreen, setShowWaitingScreen] = useState(false);
   const [sessionReady, setSessionReady] = useState(false);
-  const prevParticipantsRef = useRef([]);
 
   useEffect(() => {
     if (!roleLoaded) return;
@@ -190,48 +189,7 @@ const TutorSession = () => {
   }, [userRole]);
 
   // ============================================
-  // JOIN / LEAVE NOTIFICATIONS
-  // ============================================
-  useEffect(() => {
-    if (!sessionReady || !userId) return;
-    
-    // Check for new joins or leaves
-    const currentIds = participants.map(p => p.userId);
-    const prevIds = prevParticipantsRef.current.map(p => p.userId);
-
-    // Someone joined
-    participants.forEach(p => {
-      if (!prevIds.includes(p.userId) && p.userId !== userId) {
-        supabase.from('messages').insert([{
-          session_id: sessionId,
-          sender_id: 'system',
-          sender_name: 'System',
-          sender_role: 'system',
-          message: `${p.name || 'A participant'} joined the session`,
-          type: 'system'
-        }]);
-      }
-    });
-
-    // Someone left
-    prevParticipantsRef.current.forEach(p => {
-      if (!currentIds.includes(p.userId) && p.userId !== userId) {
-        supabase.from('messages').insert([{
-          session_id: sessionId,
-          sender_id: 'system',
-          sender_name: 'System',
-          sender_role: 'system',
-          message: `${p.name || 'A participant'} left the session`,
-          type: 'system'
-        }]);
-      }
-    });
-
-    prevParticipantsRef.current = participants;
-  }, [participants, sessionId, userId, sessionReady]);
-
-  // ============================================
-  // TRIGGER WEBRTC OFFER WHEN OTHER PEER IS PRESENT
+  // ✅ TRIGGER WEBRTC OFFER WHEN OTHER PEER IS PRESENT
   // ============================================
   useEffect(() => {
     if (!isConnected || !roleLoaded) return;
@@ -257,10 +215,10 @@ const TutorSession = () => {
   // ============================================
   const [messages, setMessages] = useState([]);
   const [newMessage, setNewMessage] = useState('');
-  const [typingUsers, setTypingUsers] = useState([]); 
+  const [typingUsers, setTypingUsers] = useState([]); // Added for Supabase Realtime Typing
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
   const [isHandRaised, setIsHandRaised] = useState(false);
-  const [handRaiseNotification, setHandRaiseNotification] = useState(null); 
+  const [handRaiseNotification, setHandRaiseNotification] = useState(null); // Added for Tutor Popup
   const [showChat, setShowChat] = useState(false);
   const [isMobile, setIsMobile] = useState(window.innerWidth <= 768);
   const [timeElapsed, setTimeElapsed] = useState(0);
@@ -281,9 +239,9 @@ const TutorSession = () => {
   const emojiPickerRef = useRef(null);
   const timerRef = useRef(null);
   const drawingDataRef = useRef([]);
-  const typingTimeoutRef = useRef(null); 
-  const channelRef = useRef(null); // ✅ Added to prevent re-subscribing
+  const typingTimeoutRef = useRef(null); // Added for typing delay
 
+  // ✅ ADDED: Helper for Group Chat color dots
   const getSenderColor = (name) => {
     const colors = ['#ef4444', '#10b981', '#3b82f6', '#f59e0b', '#8b5cf6', '#ec4899'];
     const hash = (name || '').split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
@@ -384,6 +342,7 @@ const TutorSession = () => {
   const stopDrawing = () => {
     if (isDrawing && userRole === 'tutor') {
       const currentDrawingData = drawingDataRef.current;
+      console.log('📤 Broadcasting whiteboard data:', currentDrawingData.length, 'paths');
       broadcastWhiteboardUpdate('draw', currentDrawingData);
     }
     setIsDrawing(false); setLastPos(null);
@@ -413,11 +372,13 @@ const TutorSession = () => {
   useEffect(() => {
     const handleWhiteboardUpdate = (event) => {
       const { action, data } = event.detail || {};
+      console.log('📥 whiteboard-update:', action, Array.isArray(data) ? data.length : 'non-array');
       if (Array.isArray(data)) { setDrawingData(data); setTimeout(() => redrawCanvas(), 20); }
       else if (action === 'clear') { setDrawingData([]); setTimeout(() => redrawCanvas(), 20); }
     };
     const handleWhiteboardSync = (event) => {
       const { data } = event.detail || {};
+      console.log('🔄 whiteboard-sync:', Array.isArray(data) ? data.length : 'non-array');
       if (Array.isArray(data)) { setDrawingData(data); setTimeout(() => redrawCanvas(), 20); }
     };
     const handleClearWhiteboard = () => { setDrawingData([]); setTimeout(() => redrawCanvas(), 20); };
@@ -450,11 +411,7 @@ const TutorSession = () => {
     const channel = supabase.channel(`chat-${sessionId}`)
       .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'messages', filter: `session_id=eq.${sessionId}` }, (payload) => {
         const newMsg = payload.new;
-        
-        setMessages(prev => {
-          if (prev.find(m => m.id === newMsg.id)) return prev;
-          return [...prev, newMsg];
-        });
+        setMessages(prev => [...prev, newMsg]);
         
         if (newMsg.sender_id !== userId && newMsg.type !== 'system') {
           SoundGenerator.generateMessageSound();
@@ -468,17 +425,13 @@ const TutorSession = () => {
       })
       .on('broadcast', { event: 'typing' }, (payload) => {
         if (payload.payload.userId !== userId) {
-          setTypingUsers([payload.payload.name]);
-        }
-      })
-      .on('broadcast', { event: 'stopped_typing' }, (payload) => {
-        if (payload.payload.userId !== userId) {
-          setTypingUsers([]);
+          setTypingUsers(prev => {
+            if (!prev.includes(payload.payload.name)) return [...prev, payload.payload.name];
+            return prev;
+          });
         }
       })
       .subscribe();
-
-    channelRef.current = channel;
 
     return () => supabase.removeChannel(channel);
   }, [sessionId, userId, userRole]);
@@ -534,19 +487,8 @@ const TutorSession = () => {
     setShowEmojiPicker(false);
     setSessionStats(prev => ({ ...prev, messagesSent: prev.messagesSent + 1 }));
 
-    // Stop typing indicator immediately
-    setTypingUsers([]);
-    if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
-    if (channelRef.current) {
-      channelRef.current.send({
-        type: 'broadcast',
-        event: 'stopped_typing',
-        payload: { userId: userId }
-      });
-    }
-
-    // Save to Supabase
-    const { error } = await supabase.from('messages').insert([{
+    // Send to Supabase (Replaces sendChatMessage)
+    await supabase.from('messages').insert([{
       session_id: sessionId,
       sender_id: userId,
       sender_name: userName || 'You',
@@ -554,32 +496,22 @@ const TutorSession = () => {
       message: messageText,
       type: 'text'
     }]);
-
-    if (error) console.error("Supabase Insert Error:", error);
   };
 
   const handleTyping = (e) => {
     setNewMessage(e.target.value);
     
-    if (channelRef.current) {
-      channelRef.current.send({
-        type: 'broadcast',
-        event: 'typing',
-        payload: { name: userName || 'You', userId: userId }
-      });
-    }
+    // Broadcast typing status via Supabase
+    supabase.channel(`chat-${sessionId}`).send({
+      type: 'broadcast',
+      event: 'typing',
+      payload: { name: userName || 'You', userId: userId }
+    });
 
-    // Debounce typing stop
     if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
     typingTimeoutRef.current = setTimeout(() => {
-      if (channelRef.current) {
-        channelRef.current.send({
-          type: 'broadcast',
-          event: 'stopped_typing',
-          payload: { userId: userId }
-        });
-      }
-    }, 1500);
+      // Optional: Implement stopped typing event here
+    }, 2000);
   };
 
   const toggleRaiseHand = async () => {
@@ -590,6 +522,7 @@ const TutorSession = () => {
       SoundGenerator.generateRaiseHandSound(); 
       setSessionStats(prev => ({ ...prev, handRaises: prev.handRaises + 1 })); 
       
+      // Save to Supabase so the tutor gets the real-time popup
       await supabase.from('messages').insert([{
         session_id: sessionId,
         sender_id: userId,
@@ -695,6 +628,7 @@ const TutorSession = () => {
     <div className="session-container dark">
       {showRatingModal && <RatingModal />}
 
+      {/* ✅ ADDED: HAND RAISE POPUP FOR TUTOR */}
       {handRaiseNotification && (
         <div className="hand-raise-popup">
           ✋ {handRaiseNotification}
@@ -803,8 +737,10 @@ const TutorSession = () => {
               {isMobile && <button className="close-chat-btn" onClick={() => setShowChat(false)}>✕</button>}
             </div>
 
+            {/* ✅ NEW WHATSAPP-STYLE CHAT MESSAGES */}
             <div className="chat-messages">
               {messages.map((msg) => {
+                // Determine if it's us or someone else
                 const isMe = msg.sender_id === userId;
                 
                 if (msg.type === 'system') {
@@ -825,6 +761,7 @@ const TutorSession = () => {
 
                 return (
                   <div key={msg.id} className={`msg-wrapper ${isMe ? 'outgoing' : 'incoming'}`}>
+                    {/* Show name and color dot ONLY for incoming messages in a group (more than 2 people) */}
                     {!isMe && participants.length > 2 && (
                       <div className="sender-name">
                         <span className="color-dot" style={{ background: getSenderColor(msg.sender_name) }}></span>
@@ -843,13 +780,14 @@ const TutorSession = () => {
                 );
               })}
               
+              {/* TYPING INDICATOR */}
               {typingUsers.length > 0 && (
                 <div className="typing-indicator">
                   {typingUsers.join(', ')} is typing<span className="typing-dots"><span>.</span><span>.</span><span>.</span></span>
                 </div>
               )}
 
-              <div ref={messagesEndRef} style={{ height: '80px' }} />
+              <div ref={messagesEndRef} />
             </div>
 
             <form onSubmit={sendMessage} className="chat-input-area">
@@ -865,7 +803,7 @@ const TutorSession = () => {
                 ref={chatInputRef} 
                 type="text" 
                 value={newMessage} 
-                onChange={handleTyping} 
+                onChange={handleTyping} // ✅ Uses the new typing handler
                 onKeyDown={(e) => {
                   if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(e); }
                 }} 

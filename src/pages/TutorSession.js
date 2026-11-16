@@ -239,6 +239,13 @@ const TutorSession = () => {
   const timerRef = useRef(null);
   const drawingDataRef = useRef([]);
 
+  // ✅ ADDED: Helper for Group Chat color dots
+  const getSenderColor = (name) => {
+    const colors = ['#ef4444', '#10b981', '#3b82f6', '#f59e0b', '#8b5cf6', '#ec4899'];
+    const hash = (name || '').split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
+    return colors[Math.abs(hash) % colors.length];
+  };
+
   // ============================================
   // CANVAS SETUP
   // ============================================
@@ -384,26 +391,41 @@ const TutorSession = () => {
   }, [redrawCanvas]);
 
   // ============================================
-  // CHAT MESSAGE HANDLERS
+  // CHAT MESSAGE HANDLERS (UPDATED FOR 1ON1 & GROUP)
   // ============================================
   useEffect(() => {
     const handleChatMessage = (event) => {
       const data = event.detail;
       const msg = {
         id: data.id || Date.now(),
-        sender: data.sender || (data.userId === userId ? userRole : 'tutor'),
-        name: data.name || 'Tutor',
+        senderId: data.userId,
+        sender: data.sender || (data.userId === userId ? userRole : 'other'),
+        name: data.name || 'User',
         message: data.message,
         time: data.time || new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
         type: data.type || 'text'
       };
+      
       setMessages(prev => [...prev, msg]);
-      if (msg.sender !== userRole) SoundGenerator.generateMessageSound();
+      
+      if (msg.senderId !== userId && msg.type !== 'system') {
+        SoundGenerator.generateMessageSound();
+      }
     };
+
     const handleChatHistory = (event) => {
       const history = event.detail || [];
-      setMessages(history.map(m => ({ id: m.id, sender: m.sender, name: m.name, message: m.message, time: m.time, type: m.type || 'text' })));
+      setMessages(history.map(m => ({ 
+        id: m.id, 
+        senderId: m.userId, 
+        sender: m.userId === userId ? userRole : 'other', 
+        name: m.name, 
+        message: m.message, 
+        time: m.time, 
+        type: m.type || 'text' 
+      })));
     };
+    
     window.addEventListener('chat-message', handleChatMessage);
     window.addEventListener('chat-history', handleChatHistory);
     return () => {
@@ -666,22 +688,37 @@ const TutorSession = () => {
               {isMobile && <button className="close-chat-btn" onClick={() => setShowChat(false)}>✕</button>}
             </div>
 
+            {/* ✅ NEW WHATSAPP-STYLE CHAT MESSAGES */}
             <div className="chat-messages">
-              {messages.map((msg) => (
-                <div key={msg.id} className={`chat-message ${msg.sender}`}>
-                  {msg.type === 'system' ? (
-                    <div className="system-message">{msg.message}</div>
-                  ) : (
-                    <>
-                      <div className="message-avatar">{msg.sender === 'tutor' ? renderTutorAvatar(tutor) : <span className="message-avatar-emoji">👤</span>}</div>
-                      <div className="message-bubble">
-                        <div className="message-header"><strong>{msg.name}</strong><span>{msg.time}</span></div>
-                        <p>{msg.message}</p>
+              {messages.map((msg) => {
+                const isMe = msg.senderId === userId || msg.sender === userRole;
+                
+                if (msg.type === 'system') {
+                  return (
+                    <div key={msg.id} className="system-message">
+                      {msg.message}
+                    </div>
+                  );
+                }
+
+                return (
+                  <div key={msg.id} className={`msg-wrapper ${isMe ? 'outgoing' : 'incoming'}`}>
+                    {/* Show name and color dot ONLY for incoming messages in a group (more than 2 people) */}
+                    {!isMe && participants.length > 2 && (
+                      <div className="sender-name">
+                        <span className="color-dot" style={{ background: getSenderColor(msg.name) }}></span>
+                        {msg.name}
                       </div>
-                    </>
-                  )}
-                </div>
-              ))}
+                    )}
+                    
+                    <div className="bubble">
+                      {msg.message}
+                    </div>
+                    
+                    <div className="time">{msg.time}</div>
+                  </div>
+                );
+              })}
               {isTyping && <div className="typing-indicator">{renderTutorAvatar(tutor)}<span className="typing-dots"><span>.</span><span>.</span><span>.</span></span></div>}
               <div ref={messagesEndRef} />
             </div>

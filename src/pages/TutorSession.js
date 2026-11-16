@@ -84,16 +84,12 @@ const TutorSession = () => {
   // ============================================
   useEffect(() => {
     const checkRole = async () => {
-      console.log('🔍 Checking user role...');
       let token = localStorage.getItem('accessToken');
-
       if (!token) {
-        console.log('⚠️ No token found, defaulting to student');
         setUserRole('student'); setUserId(`user-${Date.now()}`);
         setUserName('You'); setIsTutorUser(false); setRoleLoaded(true);
         return;
       }
-
       try {
         const API_URL = process.env.REACT_APP_API_URL || 'https://eduspantech-backend.onrender.com/api';
         let response = await fetch(`${API_URL}/auth/me`, {
@@ -101,7 +97,6 @@ const TutorSession = () => {
         });
 
         if (response.status === 401) {
-          console.log('🔄 Token expired, attempting refresh...');
           const refreshToken = localStorage.getItem('refreshToken');
           if (refreshToken) {
             const refreshRes = await fetch(`${API_URL}/auth/refresh`, {
@@ -129,12 +124,8 @@ const TutorSession = () => {
           setUserRole(isTutor ? 'tutor' : 'student');
           setUserId(id); setUserName(name);
           setIsTutorUser(isTutor); setRoleLoaded(true);
-          console.log('👤 User role determined (Backend):', isTutor ? 'TUTOR' : 'STUDENT');
-        } else {
-          throw new Error('Backend rejected token');
-        }
+        } else { throw new Error('Backend rejected token'); }
       } catch (error) {
-        console.warn('⚠️ Backend auth failed, falling back to Supabase...', error);
         try {
           const { data: { session } } = await supabase.auth.getSession();
           if (session?.user) {
@@ -144,10 +135,9 @@ const TutorSession = () => {
               setUserRole(isTutor ? 'tutor' : 'student');
               setUserId(profile.id); setUserName(profile.name || 'You');
               setIsTutorUser(isTutor);
-              console.log('👤 User role determined (Supabase Fallback):', isTutor ? 'TUTOR' : 'STUDENT');
             }
           }
-        } catch (supaErr) { console.error('Supabase fallback also failed:', supaErr); }
+        } catch (supaErr) {}
         setRoleLoaded(true);
       }
     };
@@ -169,6 +159,10 @@ const TutorSession = () => {
 
   const [showWaitingScreen, setShowWaitingScreen] = useState(false);
   const [sessionReady, setSessionReady] = useState(false);
+  const [isFullscreen, setIsFullscreen] = useState(false);
+  const [activePopup, setActivePopup] = useState(null);
+  
+  const prevParticipantsRef = useRef([]);
 
   useEffect(() => {
     if (!roleLoaded) return;
@@ -180,25 +174,65 @@ const TutorSession = () => {
     }
   }, [roleLoaded, userRole, participants, tutorJoined]);
 
-  useEffect(() => {
-    const handleTutorJoined = () => {
-      if (userRole === 'student') { setShowWaitingScreen(false); setSessionReady(true); }
-    };
-    window.addEventListener('tutor-joined', handleTutorJoined);
-    return () => window.removeEventListener('tutor-joined', handleTutorJoined);
-  }, [userRole]);
-
   // ============================================
-  // ✅ TRIGGER WEBRTC OFFER WHEN OTHER PEER IS PRESENT
+  // TRIGGER WEBRTC OFFER (Only Tutor initiates)
   // ============================================
   useEffect(() => {
     if (!isConnected || !roleLoaded) return;
+    
+    // ✅ FIX: Only the Tutor initiates the offer to prevent the "Glare" collision
+    if (userRole !== 'tutor') return;
+
     const target = participants.find(p => p.role !== userRole);
     if (!target) return;
     window.dispatchEvent(new CustomEvent('request-offer', {
       detail: { targetUserId: target.userId }
     }));
   }, [isConnected, roleLoaded, participants, userRole]);
+
+  // ============================================
+  // JOIN / LEAVE POPUPS & SYSTEM MESSAGES
+  // ============================================
+  useEffect(() => {
+    if (!sessionReady || !userId) return;
+    
+    const currentIds = participants.map(p => p.userId);
+    const prevIds = prevParticipantsRef.current.map(p => p.userId);
+
+    participants.forEach(p => {
+      if (!prevIds.includes(p.userId) && p.userId !== userId) {
+        setActivePopup({ type: 'join', name: p.name || 'A participant' });
+        setTimeout(() => setActivePopup(null), 4000);
+
+        supabase.from('messages').insert([{
+          session_id: sessionId,
+          sender_id: 'system',
+          sender_name: 'System',
+          sender_role: 'system',
+          message: `${p.name || 'A participant'} joined the session`,
+          type: 'system'
+        }]);
+      }
+    });
+
+    prevParticipantsRef.current.forEach(p => {
+      if (!currentIds.includes(p.userId) && p.userId !== userId) {
+        setActivePopup({ type: 'leave', name: p.name || 'A participant' });
+        setTimeout(() => setActivePopup(null), 4000);
+
+        supabase.from('messages').insert([{
+          session_id: sessionId,
+          sender_id: 'system',
+          sender_name: 'System',
+          sender_role: 'system',
+          message: `${p.name || 'A participant'} left the session`,
+          type: 'system'
+        }]);
+      }
+    });
+
+    prevParticipantsRef.current = participants;
+  }, [participants, sessionId, userId, sessionReady]);
 
   // ============================================
   // WHITEBOARD STATE
@@ -215,10 +249,10 @@ const TutorSession = () => {
   // ============================================
   const [messages, setMessages] = useState([]);
   const [newMessage, setNewMessage] = useState('');
-  const [typingUsers, setTypingUsers] = useState([]); // Added for Supabase Realtime Typing
+  const [typingUsers, setTypingUsers] = useState([]); 
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
   const [isHandRaised, setIsHandRaised] = useState(false);
-  const [handRaiseNotification, setHandRaiseNotification] = useState(null); // Added for Tutor Popup
+  const [handRaiseNotification, setHandRaiseNotification] = useState(null); 
   const [showChat, setShowChat] = useState(false);
   const [isMobile, setIsMobile] = useState(window.innerWidth <= 768);
   const [timeElapsed, setTimeElapsed] = useState(0);
@@ -239,9 +273,9 @@ const TutorSession = () => {
   const emojiPickerRef = useRef(null);
   const timerRef = useRef(null);
   const drawingDataRef = useRef([]);
-  const typingTimeoutRef = useRef(null); // Added for typing delay
+  const typingTimeoutRef = useRef(null); 
+  const channelRef = useRef(null);
 
-  // ✅ ADDED: Helper for Group Chat color dots
   const getSenderColor = (name) => {
     const colors = ['#ef4444', '#10b981', '#3b82f6', '#f59e0b', '#8b5cf6', '#ec4899'];
     const hash = (name || '').split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
@@ -283,7 +317,7 @@ const TutorSession = () => {
       };
     }, 100);
     return () => clearTimeout(timer);
-  }, [strokeWidth, selectedColor, sessionReady, userRole]);
+  }, [strokeWidth, selectedColor, sessionReady, userRole, isFullscreen]);
 
   const redrawCanvas = useCallback(() => {
     const ctx = ctxRef.current; const canvas = canvasRef.current;
@@ -341,9 +375,7 @@ const TutorSession = () => {
 
   const stopDrawing = () => {
     if (isDrawing && userRole === 'tutor') {
-      const currentDrawingData = drawingDataRef.current;
-      console.log('📤 Broadcasting whiteboard data:', currentDrawingData.length, 'paths');
-      broadcastWhiteboardUpdate('draw', currentDrawingData);
+      broadcastWhiteboardUpdate('draw', drawingDataRef.current);
     }
     setIsDrawing(false); setLastPos(null);
   };
@@ -372,13 +404,11 @@ const TutorSession = () => {
   useEffect(() => {
     const handleWhiteboardUpdate = (event) => {
       const { action, data } = event.detail || {};
-      console.log('📥 whiteboard-update:', action, Array.isArray(data) ? data.length : 'non-array');
       if (Array.isArray(data)) { setDrawingData(data); setTimeout(() => redrawCanvas(), 20); }
       else if (action === 'clear') { setDrawingData([]); setTimeout(() => redrawCanvas(), 20); }
     };
     const handleWhiteboardSync = (event) => {
       const { data } = event.detail || {};
-      console.log('🔄 whiteboard-sync:', Array.isArray(data) ? data.length : 'non-array');
       if (Array.isArray(data)) { setDrawingData(data); setTimeout(() => redrawCanvas(), 20); }
     };
     const handleClearWhiteboard = () => { setDrawingData([]); setTimeout(() => redrawCanvas(), 20); };
@@ -411,12 +441,13 @@ const TutorSession = () => {
     const channel = supabase.channel(`chat-${sessionId}`)
       .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'messages', filter: `session_id=eq.${sessionId}` }, (payload) => {
         const newMsg = payload.new;
-        setMessages(prev => [...prev, newMsg]);
-        
+        setMessages(prev => {
+          if (prev.find(m => m.id === newMsg.id)) return prev;
+          return [...prev, newMsg];
+        });
         if (newMsg.sender_id !== userId && newMsg.type !== 'system') {
           SoundGenerator.generateMessageSound();
         }
-        
         if (newMsg.type === 'raise_hand' && userRole === 'tutor') {
           SoundGenerator.generateRaiseHandSound();
           setHandRaiseNotification(`${newMsg.sender_name} raised their hand!`);
@@ -425,13 +456,17 @@ const TutorSession = () => {
       })
       .on('broadcast', { event: 'typing' }, (payload) => {
         if (payload.payload.userId !== userId) {
-          setTypingUsers(prev => {
-            if (!prev.includes(payload.payload.name)) return [...prev, payload.payload.name];
-            return prev;
-          });
+          setTypingUsers([payload.payload.name]);
+        }
+      })
+      .on('broadcast', { event: 'stopped_typing' }, (payload) => {
+        if (payload.payload.userId !== userId) {
+          setTypingUsers([]);
         }
       })
       .subscribe();
+
+    channelRef.current = channel;
 
     return () => supabase.removeChannel(channel);
   }, [sessionId, userId, userRole]);
@@ -487,7 +522,16 @@ const TutorSession = () => {
     setShowEmojiPicker(false);
     setSessionStats(prev => ({ ...prev, messagesSent: prev.messagesSent + 1 }));
 
-    // Send to Supabase (Replaces sendChatMessage)
+    setTypingUsers([]);
+    if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
+    if (channelRef.current) {
+      channelRef.current.send({
+        type: 'broadcast',
+        event: 'stopped_typing',
+        payload: { userId: userId }
+      });
+    }
+
     await supabase.from('messages').insert([{
       session_id: sessionId,
       sender_id: userId,
@@ -501,17 +545,24 @@ const TutorSession = () => {
   const handleTyping = (e) => {
     setNewMessage(e.target.value);
     
-    // Broadcast typing status via Supabase
-    supabase.channel(`chat-${sessionId}`).send({
-      type: 'broadcast',
-      event: 'typing',
-      payload: { name: userName || 'You', userId: userId }
-    });
+    if (channelRef.current) {
+      channelRef.current.send({
+        type: 'broadcast',
+        event: 'typing',
+        payload: { name: userName || 'You', userId: userId }
+      });
+    }
 
     if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
     typingTimeoutRef.current = setTimeout(() => {
-      // Optional: Implement stopped typing event here
-    }, 2000);
+      if (channelRef.current) {
+        channelRef.current.send({
+          type: 'broadcast',
+          event: 'stopped_typing',
+          payload: { userId: userId }
+        });
+      }
+    }, 1500);
   };
 
   const toggleRaiseHand = async () => {
@@ -522,7 +573,6 @@ const TutorSession = () => {
       SoundGenerator.generateRaiseHandSound(); 
       setSessionStats(prev => ({ ...prev, handRaises: prev.handRaises + 1 })); 
       
-      // Save to Supabase so the tutor gets the real-time popup
       await supabase.from('messages').insert([{
         session_id: sessionId,
         sender_id: userId,
@@ -628,7 +678,13 @@ const TutorSession = () => {
     <div className="session-container dark">
       {showRatingModal && <RatingModal />}
 
-      {/* ✅ ADDED: HAND RAISE POPUP FOR TUTOR */}
+      {/* ✅ TOP RIGHT JOIN/LEAVE POPUP */}
+      {activePopup && (
+        <div className={`session-popup ${activePopup.type}`}>
+          {activePopup.type === 'join' ? '👤' : '🚪'} {activePopup.name} {activePopup.type === 'join' ? 'joined the session' : 'left the session'}
+        </div>
+      )}
+
       {handRaiseNotification && (
         <div className="hand-raise-popup">
           ✋ {handRaiseNotification}
@@ -662,7 +718,7 @@ const TutorSession = () => {
         </div>
       </header>
 
-      <div className={`session-grid ${showChat ? 'chat-open' : ''}`}>
+      <div className={`session-grid ${showChat ? 'chat-open' : ''} ${isFullscreen ? 'fullscreen-mode' : ''}`}>
         <div className="session-main" style={{ position: 'relative' }}>
           <div className="floating-tutor-card">
             <div className="tutor-avatar-small">{renderTutorAvatar(tutor)}<span className="tutor-status-dot-small"></span></div>
@@ -676,7 +732,7 @@ const TutorSession = () => {
             </div>
           </div>
 
-          <div className="video-free-overlay"><span>🎧 Audio Only</span><span className="video-free-sub">Real-time Voice + Whiteboard</span></div>
+          {!isFullscreen && <div className="video-free-overlay"><span>🎧 Audio Only</span><span className="video-free-sub">Real-time Voice + Whiteboard</span></div>}
 
           <div className="whiteboard-area" style={{ height: '100%' }}>
             <div className="whiteboard-header">
@@ -693,8 +749,15 @@ const TutorSession = () => {
                     <button className="tool-btn" onClick={undo} title="Undo">↩️</button>
                     <button className="tool-btn" onClick={redo} title="Redo">↪️</button>
                     <button className="tool-btn clear" onClick={clearWhiteboard} title="Clear">🗑️</button>
+                    <button className="tool-btn" onClick={() => setIsFullscreen(!isFullscreen)} title="Toggle Fullscreen">
+                      {isFullscreen ? '🗗' : '⛶'}
+                    </button>
                   </>
-                ) : (<span style={{ fontSize: '12px', color: 'var(--text-muted)' }}>👀 View Only</span>)}
+                ) : (
+                  <button className="tool-btn" onClick={() => setIsFullscreen(!isFullscreen)} title="Toggle Fullscreen">
+                    {isFullscreen ? '🗗' : '⛶'}
+                  </button>
+                )}
               </div>
             </div>
             <div className="whiteboard-wrapper">
@@ -709,111 +772,109 @@ const TutorSession = () => {
           </div>
         </div>
 
-        <div className={`session-sidebar ${isMobile ? 'mobile-sidebar' : ''} ${showChat ? 'mobile-open' : ''}`}>
-          <div className="participants-list">
-            <h4>👥 Participants</h4>
-            {participants.length === 0 ? (
-              <div className="participant-item">
-                <span className="status-dot online"></span>
-                <span>{userName || 'You'}</span>
-                <span className="role-badge">{userRole === 'tutor' ? 'Tutor' : 'Student'}</span>
-              </div>
-            ) : (
-              participants.map(p => (
-                <div key={p.userId} className="participant-item">
+        {!isFullscreen && (
+          <div className={`session-sidebar ${isMobile ? 'mobile-sidebar' : ''} ${showChat ? 'mobile-open' : ''}`}>
+            <div className="participants-list">
+              <h4>👥 Participants</h4>
+              {participants.length === 0 ? (
+                <div className="participant-item">
                   <span className="status-dot online"></span>
-                  <span>{p.name || (p.userId ? p.userId.slice(0, 8) : 'User')}</span>
-                  <span className="role-badge">{p.role === 'tutor' ? 'Tutor' : 'Student'}</span>
-                  {!p.audioEnabled && <span>🔇</span>}
+                  <span>{userName || 'You'}</span>
+                  <span className="role-badge">{userRole === 'tutor' ? 'Tutor' : 'Student'}</span>
                 </div>
-              ))
-            )}
-          </div>
-
-          <div className="chat-container">
-            <div className="chat-header">
-              <h4>💬 Live Chat</h4>
-              <span className="chat-count">{messages.length} messages</span>
-              {isMobile && <button className="close-chat-btn" onClick={() => setShowChat(false)}>✕</button>}
+              ) : (
+                participants.map(p => (
+                  <div key={p.userId} className="participant-item">
+                    <span className="status-dot online"></span>
+                    <span>{p.name || (p.userId ? p.userId.slice(0, 8) : 'User')}</span>
+                    <span className="role-badge">{p.role === 'tutor' ? 'Tutor' : 'Student'}</span>
+                    {!p.audioEnabled && <span>🔇</span>}
+                  </div>
+                ))
+              )}
             </div>
 
-            {/* ✅ NEW WHATSAPP-STYLE CHAT MESSAGES */}
-            <div className="chat-messages">
-              {messages.map((msg) => {
-                // Determine if it's us or someone else
-                const isMe = msg.sender_id === userId;
-                
-                if (msg.type === 'system') {
-                  return (
-                    <div key={msg.id} className="system-message">
-                      {msg.message}
-                    </div>
-                  );
-                }
-                
-                if (msg.type === 'raise_hand') {
-                  return (
-                    <div key={msg.id} className="system-message hand-raise-msg">
-                      ✋ {msg.message}
-                    </div>
-                  );
-                }
+            <div className="chat-container">
+              <div className="chat-header">
+                <h4>💬 Live Chat</h4>
+                <span className="chat-count">{messages.length} messages</span>
+                {isMobile && <button className="close-chat-btn" onClick={() => setShowChat(false)}>✕</button>}
+              </div>
 
-                return (
-                  <div key={msg.id} className={`msg-wrapper ${isMe ? 'outgoing' : 'incoming'}`}>
-                    {/* Show name and color dot ONLY for incoming messages in a group (more than 2 people) */}
-                    {!isMe && participants.length > 2 && (
-                      <div className="sender-name">
-                        <span className="color-dot" style={{ background: getSenderColor(msg.sender_name) }}></span>
-                        {msg.sender_name}
+              <div className="chat-messages">
+                {messages.map((msg) => {
+                  const isMe = msg.sender_id === userId;
+                  
+                  if (msg.type === 'system') {
+                    return (
+                      <div key={msg.id} className="system-message">
+                        {msg.message}
                       </div>
-                    )}
-                    
-                    <div className="bubble">
-                      {msg.message}
+                    );
+                  }
+                  
+                  if (msg.type === 'raise_hand') {
+                    return (
+                      <div key={msg.id} className="system-message hand-raise-msg">
+                        ✋ {msg.message}
+                      </div>
+                    );
+                  }
+
+                  return (
+                    <div key={msg.id} className={`msg-wrapper ${isMe ? 'outgoing' : 'incoming'}`}>
+                      {!isMe && participants.length > 2 && (
+                        <div className="sender-name">
+                          <span className="color-dot" style={{ background: getSenderColor(msg.sender_name) }}></span>
+                          {msg.sender_name}
+                        </div>
+                      )}
+                      
+                      <div className="bubble">
+                        {msg.message}
+                      </div>
+                      
+                      <div className="time">
+                        {new Date(msg.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                      </div>
                     </div>
-                    
-                    <div className="time">
-                      {new Date(msg.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                  );
+                })}
+                
+                {typingUsers.length > 0 && (
+                  <div className="typing-indicator">
+                    {typingUsers.join(', ')} is typing<span className="typing-dots"><span>.</span><span>.</span><span>.</span></span>
+                  </div>
+                )}
+
+                <div ref={messagesEndRef} style={{ height: '80px' }} />
+              </div>
+
+              <form onSubmit={sendMessage} className="chat-input-area">
+                <button type="button" className="emoji-btn" onClick={() => setShowEmojiPicker(!showEmojiPicker)}>😊</button>
+                {showEmojiPicker && (
+                  <div className="emoji-picker" ref={emojiPickerRef}>
+                    <div className="emoji-grid">
+                      {EMOJIS.map((emoji) => <button key={emoji} onClick={() => insertEmoji(emoji)} type="button" className="emoji-item">{emoji}</button>)}
                     </div>
                   </div>
-                );
-              })}
-              
-              {/* TYPING INDICATOR */}
-              {typingUsers.length > 0 && (
-                <div className="typing-indicator">
-                  {typingUsers.join(', ')} is typing<span className="typing-dots"><span>.</span><span>.</span><span>.</span></span>
-                </div>
-              )}
-
-              <div ref={messagesEndRef} />
+                )}
+                <input 
+                  ref={chatInputRef} 
+                  type="text" 
+                  value={newMessage} 
+                  onChange={handleTyping} 
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(e); }
+                  }} 
+                  placeholder="Type your message..." 
+                  className="chat-input" 
+                />
+                <button type="submit" className="send-btn" disabled={!newMessage.trim()}>Send</button>
+              </form>
             </div>
-
-            <form onSubmit={sendMessage} className="chat-input-area">
-              <button type="button" className="emoji-btn" onClick={() => setShowEmojiPicker(!showEmojiPicker)}>😊</button>
-              {showEmojiPicker && (
-                <div className="emoji-picker" ref={emojiPickerRef}>
-                  <div className="emoji-grid">
-                    {EMOJIS.map((emoji) => <button key={emoji} onClick={() => insertEmoji(emoji)} type="button" className="emoji-item">{emoji}</button>)}
-                  </div>
-                </div>
-              )}
-              <input 
-                ref={chatInputRef} 
-                type="text" 
-                value={newMessage} 
-                onChange={handleTyping} // ✅ Uses the new typing handler
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(e); }
-                }} 
-                placeholder="Type your message..." 
-                className="chat-input" 
-              />
-              <button type="submit" className="send-btn" disabled={!newMessage.trim()}>Send</button>
-            </form>
           </div>
-        </div>
+        )}
       </div>
 
       {showSettings && <div className="settings-modal">Settings Modal</div>}

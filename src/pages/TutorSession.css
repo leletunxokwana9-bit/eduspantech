@@ -1917,3 +1917,21 @@
   border: 1px solid rgba(245, 158, 11, 0.2);
   font-weight: 600;
 }
+/* Zoom-style Join/Leave Notifications */
+.system-message {
+  align-self: center;
+  background: rgba(255, 255, 255, 0.05);
+  color: #94a3b8;
+  font-size: 11px;
+  padding: 4px 16px;
+  border-radius: 12px;
+  margin: 8px 0;
+  text-align: center;
+  font-weight: 500;
+  animation: fadeIn 0.3s ease;
+}
+
+/* Prevent the send button from overlapping with the Chat Widget */
+.chat-messages {
+  padding-bottom: 20px; /* Adds breathing room at the bottom */
+}

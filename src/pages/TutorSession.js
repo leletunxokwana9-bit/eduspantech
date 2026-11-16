@@ -256,7 +256,6 @@ const TutorSession = () => {
   const [timeElapsed, setTimeElapsed] = useState(0);
   const [showSettings, setShowSettings] = useState(false);
   const [isMuted, setIsMuted] = useState(false);
-  
   const [sessionEnded, setSessionEnded] = useState(false);
   const [sessionStats, setSessionStats] = useState({ whiteboardActions: 0, messagesSent: 0, handRaises: 0, startTime: Date.now() });
 

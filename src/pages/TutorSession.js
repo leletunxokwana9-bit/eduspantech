@@ -471,7 +471,15 @@ const TutorSession = () => {
     timerRef.current = setInterval(() => setTimeElapsed(prev => prev + 1), 1000);
     return () => clearInterval(timerRef.current);
   }, []);
-  useEffect(() => { messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' }); }, [messages, typingUsers]);
+  
+  // ✅ Scroll only the inner chat box, NOT the page
+  useEffect(() => {
+    const chatBox = document.querySelector('.chat-messages');
+    if (chatBox) {
+      chatBox.scrollTop = chatBox.scrollHeight;
+    }
+  }, [messages, typingUsers]);
+
   useEffect(() => { chatInputRef.current?.focus(); }, []);
   useEffect(() => {
     const handleClickOutside = (event) => {

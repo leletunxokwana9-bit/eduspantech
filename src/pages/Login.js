@@ -598,20 +598,7 @@ const Login = () => {
 
         <section className="login-left">
 
-          <div className="brand-content">
-
-            <div className="brand-logo">
-              <span className="logo-symbol">∑</span>
-
-              <div className="brand-logo-text">
-                <span className="logo-text">
-                  Edu<span>Spantech</span>
-                </span>
-
-                <small>Education for the love of your life ❤️</small>
-              </div>
-            </div>
-
+          
             <div className="hero-copy">
               <h1 className="brand-headline">
                 Learn. Practice.

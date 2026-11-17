@@ -56,53 +56,14 @@ const NotificationDropdown = ({
   };
 
   // --------------------------------------------------
-  // AVATAR HELPERS
+  // DYNAMIC PROFILE AVATARS
   // --------------------------------------------------
 
-  const getNotificationPerson = (notification) => {
-    return (
-      notification.sender ||
-      notification.actor ||
-      notification.user ||
-      notification.tutor ||
-      notification.student ||
-      notification.created_by ||
-      {}
-    );
-  };
-
-  const getAvatarUrl = (notification) => {
-    const person = getNotificationPerson(notification);
-
-    return (
-      notification.avatar_url ||
-      notification.profile_image ||
-      notification.profile_picture ||
-      notification.sender_avatar ||
-      notification.actor_avatar ||
-      notification.user_avatar ||
-      person.avatar_url ||
-      person.profile_image ||
-      person.profile_picture ||
-      person.profile_url ||
-      person.image_url ||
-      person.avatar ||
-      null
-    );
-  };
-
   const getPersonName = (notification) => {
-    const person = getNotificationPerson(notification);
-
     return (
-      notification.sender_name ||
       notification.actor_name ||
-      notification.user_name ||
-      notification.student_name ||
-      notification.tutor_name ||
-      person.name ||
-      person.full_name ||
-      person.first_name ||
+      notification.metadata?.tutor_name ||
+      notification.metadata?.student_name ||
       'EduSpantech'
     );
   };
@@ -119,34 +80,41 @@ const NotificationDropdown = ({
   };
 
   const renderNotificationAvatar = (notification) => {
-    const avatarUrl = getAvatarUrl(notification);
+    const avatarUrl = notification.image_url;
     const personName = getPersonName(notification);
 
-    if (avatarUrl) {
+    if (!notification.actor_id) {
       return (
-        <div className="notification-avatar">
-          <img
-            src={avatarUrl}
-            alt={personName}
-            onError={(event) => {
-              event.currentTarget.style.display = 'none';
-              event.currentTarget.nextSibling.style.display = 'flex';
-            }}
-          />
-
-          <div
-            className="notification-avatar-fallback"
-            style={{ display: 'none' }}
-          >
-            {getInitials(personName)}
-          </div>
+        <div className="notification-avatar notification-system-avatar">
+          {getNotificationIcon(notification.type)}
         </div>
       );
     }
 
     return (
-      <div className="notification-avatar notification-avatar-fallback">
-        {getInitials(personName)}
+      <div className="notification-avatar">
+        {avatarUrl && (
+          <img
+            src={avatarUrl}
+            alt={personName}
+            onError={(event) => {
+              event.currentTarget.style.display = 'none';
+              const fallback = event.currentTarget.parentElement
+                .querySelector('.notification-avatar-fallback');
+
+              if (fallback) {
+                fallback.style.display = 'flex';
+              }
+            }}
+          />
+        )}
+
+        <div
+          className="notification-avatar-fallback"
+          style={{ display: avatarUrl ? 'none' : 'flex' }}
+        >
+          {getInitials(personName)}
+        </div>
       </div>
     );
   };
@@ -205,33 +173,22 @@ const NotificationDropdown = ({
       session_reminder: '📅',
       session_started: '🟢',
       booking_confirmed: '✅',
+      session_accepted: '✅',
+      session_booked: '📚',
       session_cancelled: '❌',
       new_rating: '⭐',
       new_message: '💬',
       subscription_alert: '🔔',
+      payment_received: '💳',
       progress_update: '📈',
       system_update: '🚀',
+      system: '🔔',
+      new_tutor: '🎓',
+      warning: '⚠️',
       session_completed: '🎯'
     };
 
     return icons[type] || '📌';
-  };
-
-  const getNotificationColor = (type) => {
-    const colors = {
-      session_reminder: '#4f46e5',
-      session_started: '#22c55e',
-      booking_confirmed: '#22c55e',
-      session_cancelled: '#ef4444',
-      new_rating: '#f59e0b',
-      new_message: '#8b5cf6',
-      subscription_alert: '#f59e0b',
-      progress_update: '#06b6d4',
-      system_update: '#6366f1',
-      session_completed: '#22c55e'
-    };
-
-    return colors[type] || '#6b7280';
   };
 
   const formatTime = (dateString) => {
@@ -269,6 +226,7 @@ const NotificationDropdown = ({
       <div className="dropdown-header">
         <div>
           <h3>Notifications</h3>
+
           {unreadCount > 0 && (
             <span className="notification-unread-count">
               {unreadCount} unread
@@ -326,7 +284,6 @@ const NotificationDropdown = ({
                 }}
               >
 
-                {/* PERSON'S PROFILE AVATAR */}
                 {renderNotificationAvatar(notification)}
 
                 <div className="notification-content">
@@ -360,7 +317,7 @@ const NotificationDropdown = ({
           <button
             className="view-all-btn"
             onClick={() => {
-              onClose();
+              if (onClose) onClose();
               window.location.href = '/notifications';
             }}
           >

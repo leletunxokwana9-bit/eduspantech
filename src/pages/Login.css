@@ -1658,7 +1658,7 @@
   overflow: hidden;
 }
 
-/* The image wrapper sits behind the existing brand content */
+/* Image wrapper sits behind the existing brand content */
 .login-hero-image {
   position: absolute;
   inset: 0;
@@ -1679,7 +1679,7 @@
   z-index: 0;
 }
 
-/* Separate white fade overlay */
+/* Dark navy overlay keeps white text readable while showing the image */
 .hero-image-overlay {
   position: absolute;
   inset: 0;
@@ -1688,14 +1688,14 @@
   background:
     linear-gradient(
       90deg,
-      rgba(255, 255, 255, 0.96) 0%,
-      rgba(255, 255, 255, 0.84) 30%,
-      rgba(255, 255, 255, 0.48) 65%,
-      rgba(255, 255, 255, 0.12) 100%
+      rgba(10, 15, 35, 0.82) 0%,
+      rgba(10, 15, 35, 0.62) 42%,
+      rgba(10, 15, 35, 0.25) 75%,
+      rgba(10, 15, 35, 0.08) 100%
     ),
     linear-gradient(
       0deg,
-      rgba(255, 255, 255, 0.72) 0%,
+      rgba(10, 15, 35, 0.48) 0%,
       transparent 55%
     );
 }
@@ -1706,16 +1706,33 @@
   z-index: 2;
 }
 
+/* Hero text contrast */
+.login-left .brand-content {
+  position: relative;
+  z-index: 2;
+}
+
+.login-left .brand-headline,
+.login-left .stat-number {
+  color: #ffffff;
+}
+
+.login-left .brand-description {
+  color: rgba(255, 255, 255, 0.88);
+}
+
+.login-left .stat-label {
+  color: rgba(255, 255, 255, 0.72);
+}
+
+.login-left .stat-divider {
+  background: rgba(255, 255, 255, 0.3);
+}
+
 /* ============================================
    ROLE TABS — FINAL OVERLAP FIX
 ============================================ */
 
-/*
-  Three columns on desktop:
-  Student | Tutor | Parent/Guardian
-
-  The Parent/Guardian option gets extra width.
-*/
 .role-tabs {
   display: grid;
   grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) minmax(0, 1.55fr);
@@ -1777,7 +1794,6 @@
   box-shadow: 0 4px 15px rgba(79, 70, 229, 0.3);
 }
 
-/* Parent/Guardian is a link, so keep its link behaviour clean */
 .role-tab.parent-role-tab {
   flex: initial;
   min-width: 0;

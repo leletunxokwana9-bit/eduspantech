@@ -41,30 +41,193 @@ const SoundGenerator = {
       g.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.3);
       o.start(audioCtx.currentTime); o.stop(audioCtx.currentTime + 0.3);
     } catch (e) {}
+  },
+  // ✅ Soft, gentle two-tone beep for the waiting room (Zoom/Meet style)
+  playWaitingBeep: () => {
+    try {
+      const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+      if (audioCtx.state === 'suspended') audioCtx.resume();
+
+      const osc1 = audioCtx.createOscillator();
+      const gain1 = audioCtx.createGain();
+      osc1.connect(gain1); gain1.connect(audioCtx.destination);
+      osc1.type = 'sine';
+      osc1.frequency.setValueAtTime(587.33, audioCtx.currentTime); // D5
+      gain1.gain.setValueAtTime(0, audioCtx.currentTime);
+      gain1.gain.linearRampToValueAtTime(0.05, audioCtx.currentTime + 0.06);
+      gain1.gain.setValueAtTime(0.05, audioCtx.currentTime + 0.16);
+      gain1.gain.linearRampToValueAtTime(0, audioCtx.currentTime + 0.26);
+      osc1.start(audioCtx.currentTime);
+      osc1.stop(audioCtx.currentTime + 0.26);
+
+      setTimeout(() => {
+        try {
+          const ctx2 = new (window.AudioContext || window.webkitAudioContext)();
+          if (ctx2.state === 'suspended') ctx2.resume();
+          const osc2 = ctx2.createOscillator();
+          const gain2 = ctx2.createGain();
+          osc2.connect(gain2); gain2.connect(ctx2.destination);
+          osc2.type = 'sine';
+          osc2.frequency.setValueAtTime(783.99, ctx2.currentTime); // G5
+          gain2.gain.setValueAtTime(0, ctx2.currentTime);
+          gain2.gain.linearRampToValueAtTime(0.035, ctx2.currentTime + 0.05);
+          gain2.gain.setValueAtTime(0.035, ctx2.currentTime + 0.12);
+          gain2.gain.linearRampToValueAtTime(0, ctx2.currentTime + 0.2);
+          osc2.start(ctx2.currentTime);
+          osc2.stop(ctx2.currentTime + 0.2);
+        } catch (e) {}
+      }, 180);
+    } catch (e) {}
   }
 };
 
 const EMOJIS = ['😀','😁','😂','🤣','😃','😄','😅','😆','😉','😊','😋','😎','😍','🥰','😘','😗','😙','😚','🙂','🤗','🤩','🤔','🤨','😐','😑','😶','🙄','😏','😣','😥','😮','🤐','😯','😪','😫','😴','😌','😛','😜','😝','🤤','😒','😓','😔','😕','🙃','🤑','😲','☹️','🙁','😖','😞','😟','😤','😢','😭','😦','😧','😨','😩','🤯','😬','😰','😱','🥵','🥶','😳','🤪','😵','😡','😠','🤬','👍','👎','👊','✊','🤛','🤜','👏','🙌','👐','🤲','🤝','🙏','✌️','🤟','🤘','👌','🤌','🤞','🖕','🖐️','✋','👋','🤙','💪','🦾','🖖','👆','👇','👉','👈','🙋','🙇','💁','🙅','🙆','🙎','🙍','❤️','🧡','💛','💚','💙','💜','🖤','🤍','🤎','💔','❤️‍🔥','❤️‍🩹','💕','💞','💓','💗','💖','💘','💝','💟','📚','📖','📕','📗','📘','📙','📓','📒','📃','📜','📄','📰','📑','🔖','🏷️','💰','💵','💴','💶','💷','🪙','💳','🧾','💎','⚖️','🪝','🔧','🔩','⚙️','🗜️','⚗️','🧪','🧫','🧬','🔬','🔭','📡','💉','🩸','💊','🩹','🩺','🧴','🧵','🧶','🪡','🧥','🥼','🦺','👔','👕','👖','🧣','🧤','🧦','👗','👘','🥻','🩱','🩲','🩳','👙','👚','👛','👜','👝','🎒','👞','👟','🥾','🥿','👠','👡','🩰','👢','👑','👒','🎩','🎓','🧢','⛑️','📿','💄','💍'];
 
-const WaitingForTutor = ({ onLeave }) => (
-  <div className="waiting-for-tutor">
-    <div className="waiting-content">
-      <div className="waiting-animation">
-        <div className="pulse-ring"></div>
-        <div className="pulse-ring delay-1"></div>
-        <div className="pulse-ring delay-2"></div>
-        <span className="waiting-emoji">⏳</span>
+// ============================================
+// ✅ PROFESSIONAL WAITING ROOM (Zoom/Meet style)
+// ============================================
+const WaitingForTutor = ({ onLeave, tutorName, sessionTopic }) => {
+  const [dotCount, setDotCount] = useState(1);
+  const [elapsedSeconds, setElapsedSeconds] = useState(0);
+  const [isMuted, setIsMuted] = useState(false);
+  const beepIntervalRef = useRef(null);
+  const dotIntervalRef = useRef(null);
+  const timerIntervalRef = useRef(null);
+
+  // Animated dots for "Waiting for tutor..."
+  useEffect(() => {
+    dotIntervalRef.current = setInterval(() => {
+      setDotCount(prev => (prev % 3) + 1);
+    }, 500);
+    return () => clearInterval(dotIntervalRef.current);
+  }, []);
+
+  // Elapsed time counter
+  useEffect(() => {
+    timerIntervalRef.current = setInterval(() => {
+      setElapsedSeconds(prev => prev + 1);
+    }, 1000);
+    return () => clearInterval(timerIntervalRef.current);
+  }, []);
+
+  // Soft periodic beeping (every 3 seconds) - like a call waiting
+  useEffect(() => {
+    if (isMuted) return;
+
+    const initialDelay = setTimeout(() => {
+      SoundGenerator.playWaitingBeep();
+    }, 1000);
+
+    beepIntervalRef.current = setInterval(() => {
+      SoundGenerator.playWaitingBeep();
+    }, 3000);
+
+    return () => {
+      clearTimeout(initialDelay);
+      clearInterval(beepIntervalRef.current);
+    };
+  }, [isMuted]);
+
+  const formatElapsed = (seconds) => {
+    const mins = Math.floor(seconds / 60);
+    const secs = seconds % 60;
+    return `${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
+  };
+
+  return (
+    <div className="waiting-room">
+      {/* Animated background orbs */}
+      <div className="waiting-bg">
+        <div className="waiting-orb orb-a"></div>
+        <div className="waiting-orb orb-b"></div>
+        <div className="waiting-orb orb-c"></div>
       </div>
-      <h2>Waiting for Tutor...</h2>
-      <p>Your tutor will join the session shortly. Please stay connected.</p>
-      <div className="waiting-status">
-        <span className="status-dot pulsating"></span>
-        <span>Connecting to session...</span>
+
+      <div className="waiting-card">
+        {/* Top bar with session info */}
+        <div className="waiting-topbar">
+          <div className="waiting-session-info">
+            <span className="waiting-live-badge">
+              <span className="live-dot"></span>
+              Live Session
+            </span>
+            {sessionTopic && (
+              <span className="waiting-topic">📖 {sessionTopic}</span>
+            )}
+          </div>
+          <button
+            className={`waiting-mute-btn ${isMuted ? 'muted' : ''}`}
+            onClick={() => setIsMuted(!isMuted)}
+            title={isMuted ? 'Unmute waiting sound' : 'Mute waiting sound'}
+          >
+            {isMuted ? '🔇' : '🔔'}
+          </button>
+        </div>
+
+        {/* Main content */}
+        <div className="waiting-main">
+          <div className="waiting-avatar-container">
+            <div className="waiting-ring ring-1"></div>
+            <div className="waiting-ring ring-2"></div>
+            <div className="waiting-ring ring-3"></div>
+            <div className="waiting-avatar">
+              <span className="waiting-avatar-emoji">⏳</span>
+            </div>
+            <div className="waiting-pulse-dot"></div>
+          </div>
+
+          <h1 className="waiting-title">
+            Waiting for tutor{'.'.repeat(dotCount)}
+          </h1>
+
+          {tutorName && (
+            <p className="waiting-tutor-name">
+              <span className="tutor-name-label">Tutor:</span>
+              <strong>{tutorName}</strong>
+            </p>
+          )}
+
+          <p className="waiting-description">
+            Your tutor will join the session shortly.
+            <br />
+            Please stay connected — you'll be notified the moment they arrive.
+          </p>
+
+          <div className="waiting-status-pill">
+            <span className="status-pulse"></span>
+            <span>Connecting to session</span>
+            <span className="waiting-timer">{formatElapsed(elapsedSeconds)}</span>
+          </div>
+
+          <div className="waiting-tips">
+            <div className="waiting-tip">
+              <span className="tip-icon">🎧</span>
+              <span>Check your audio is on</span>
+            </div>
+            <div className="waiting-tip">
+              <span className="tip-icon">📶</span>
+              <span>Keep this tab open</span>
+            </div>
+            <div className="waiting-tip">
+              <span className="tip-icon">💬</span>
+              <span>Chat will be available once they join</span>
+            </div>
+          </div>
+        </div>
+
+        {/* Footer actions */}
+        <div className="waiting-footer">
+          <button className="waiting-leave-btn" onClick={onLeave}>
+            Leave Waiting Room
+          </button>
+          <p className="waiting-footer-note">
+            You won't be charged until the session starts
+          </p>
+        </div>
       </div>
-      <button className="leave-waiting-btn" onClick={onLeave}>Leave Waiting Room</button>
     </div>
-  </div>
-);
+  );
+};
 
 const TutorSession = () => {
   const navigate = useNavigate();
@@ -161,7 +324,7 @@ const TutorSession = () => {
   const [sessionReady, setSessionReady] = useState(false);
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [activePopup, setActivePopup] = useState(null);
-  
+
   const prevParticipantsRef = useRef([]);
 
   useEffect(() => {
@@ -193,7 +356,7 @@ const TutorSession = () => {
   // ============================================
   useEffect(() => {
     if (!sessionReady || !userId) return;
-    
+
     const currentIds = participants.map(p => p.userId);
     const prevIds = prevParticipantsRef.current.map(p => p.userId);
 
@@ -247,10 +410,10 @@ const TutorSession = () => {
   // ============================================
   const [messages, setMessages] = useState([]);
   const [newMessage, setNewMessage] = useState('');
-  const [typingUsers, setTypingUsers] = useState([]); 
+  const [typingUsers, setTypingUsers] = useState([]);
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
   const [isHandRaised, setIsHandRaised] = useState(false);
-  const [handRaiseNotification, setHandRaiseNotification] = useState(null); 
+  const [handRaiseNotification, setHandRaiseNotification] = useState(null);
   const [showChat, setShowChat] = useState(false);
   const [isMobile, setIsMobile] = useState(window.innerWidth <= 768);
   const [timeElapsed, setTimeElapsed] = useState(0);
@@ -266,7 +429,7 @@ const TutorSession = () => {
   const emojiPickerRef = useRef(null);
   const timerRef = useRef(null);
   const drawingDataRef = useRef([]);
-  const typingTimeoutRef = useRef(null); 
+  const typingTimeoutRef = useRef(null);
   const channelRef = useRef(null);
 
   const getSenderColor = (name) => {
@@ -471,7 +634,7 @@ const TutorSession = () => {
     timerRef.current = setInterval(() => setTimeElapsed(prev => prev + 1), 1000);
     return () => clearInterval(timerRef.current);
   }, []);
-  
+
   // ✅ Scroll only the inner chat box, NOT the page
   useEffect(() => {
     const chatBox = document.querySelector('.chat-messages');
@@ -519,7 +682,7 @@ const TutorSession = () => {
     if (!newMessage.trim()) return;
 
     const messageText = newMessage;
-    setNewMessage(''); 
+    setNewMessage('');
     setShowEmojiPicker(false);
     setSessionStats(prev => ({ ...prev, messagesSent: prev.messagesSent + 1 }));
 
@@ -545,7 +708,7 @@ const TutorSession = () => {
 
   const handleTyping = (e) => {
     setNewMessage(e.target.value);
-    
+
     if (channelRef.current) {
       channelRef.current.send({
         type: 'broadcast',
@@ -569,11 +732,11 @@ const TutorSession = () => {
   const toggleRaiseHand = async () => {
     const newState = !isHandRaised;
     setIsHandRaised(newState);
-    
-    if (newState) { 
-      SoundGenerator.generateRaiseHandSound(); 
-      setSessionStats(prev => ({ ...prev, handRaises: prev.handRaises + 1 })); 
-      
+
+    if (newState) {
+      SoundGenerator.generateRaiseHandSound();
+      setSessionStats(prev => ({ ...prev, handRaises: prev.handRaises + 1 }));
+
       await supabase.from('messages').insert([{
         session_id: sessionId,
         sender_id: userId,
@@ -592,9 +755,9 @@ const TutorSession = () => {
     const duration = Math.floor((Date.now() - sessionStats.startTime) / 1000);
     setSessionStats(prev => ({ ...prev, duration }));
     setSessionEnded(true);
-    
+
     leaveWebRTCSession();
-    
+
     try {
       const token = localStorage.getItem('accessToken');
       if (sessionId && sessionId !== 'temp_session') {
@@ -618,11 +781,19 @@ const TutorSession = () => {
 
   if (!roleLoaded) return <div className="session-loading"><div className="loading-spinner"></div><p>Loading session...</p></div>;
   if (!tutor) return <div className="session-loading"><h2>⏳ Loading session...</h2><button onClick={() => navigate('/tutors')}>Back to Tutors</button></div>;
-  if (showWaitingScreen && userRole === 'student') return <WaitingForTutor onLeave={handleLeaveWaitingRoom} />;
+  if (showWaitingScreen && userRole === 'student') {
+    return (
+      <WaitingForTutor
+        onLeave={handleLeaveWaitingRoom}
+        tutorName={tutor?.name}
+        sessionTopic={tutor?.topic || tutor?.subjects?.[0] || 'Tutoring Session'}
+      />
+    );
+  }
 
   return (
     <div className="session-container dark">
-      
+
       {activePopup && (
         <div className={`session-popup ${activePopup.type}`}>
           {activePopup.name} {activePopup.type === 'join' ? 'joined the session' : 'left the session'}
@@ -748,7 +919,7 @@ const TutorSession = () => {
               <div className="chat-messages">
                 {messages.map((msg) => {
                   const isMe = msg.sender_id === userId;
-                  
+
                   if (msg.type === 'system') {
                     return (
                       <div key={msg.id} className="system-message">
@@ -756,7 +927,7 @@ const TutorSession = () => {
                       </div>
                     );
                   }
-                  
+
                   if (msg.type === 'raise_hand') {
                     return (
                       <div key={msg.id} className="system-message hand-raise-msg">
@@ -773,18 +944,18 @@ const TutorSession = () => {
                           {msg.sender_name}
                         </div>
                       )}
-                      
+
                       <div className="bubble">
                         {msg.message}
                       </div>
-                      
+
                       <div className="time">
                         {new Date(msg.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                       </div>
                     </div>
                   );
                 })}
-                
+
                 {typingUsers.length > 0 && (
                   <div className="typing-indicator">
                     {typingUsers.join(', ')} is typing<span className="typing-dots"><span>.</span><span>.</span><span>.</span></span>
@@ -803,16 +974,16 @@ const TutorSession = () => {
                     </div>
                   </div>
                 )}
-                <input 
-                  ref={chatInputRef} 
-                  type="text" 
-                  value={newMessage} 
-                  onChange={handleTyping} 
+                <input
+                  ref={chatInputRef}
+                  type="text"
+                  value={newMessage}
+                  onChange={handleTyping}
                   onKeyDown={(e) => {
                     if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(e); }
-                  }} 
-                  placeholder="Type your message..." 
-                  className="chat-input" 
+                  }}
+                  placeholder="Type your message..."
+                  className="chat-input"
                 />
                 <button type="submit" className="send-btn" disabled={!newMessage.trim()}>Send</button>
               </form>

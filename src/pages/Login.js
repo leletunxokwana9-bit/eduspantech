@@ -598,67 +598,64 @@ const Login = () => {
 
         <section className="login-left">
 
-          
-            <div className="hero-copy">
-              <h1 className="brand-headline">
-                Learn. Practice.
-                <span className="highlight"> Excel.</span>
-              </h1>
+          <div className="hero-copy">
+            <h1 className="brand-headline">
+              Learn. Practice.
+              <span className="highlight"> Excel.</span>
+            </h1>
 
-              <p className="brand-description">
-                Get expert online tutoring, revision resources and
-                personalised learning — anytime, anywhere.
-              </p>
+            <p className="brand-description">
+              Get expert online tutoring, revision resources and
+              personalised learning — anytime, anywhere.
+            </p>
+          </div>
+
+          <div className="brand-features">
+
+            <div className="brand-feature">
+              <span className="feature-icon">▶</span>
+              <span>Live &amp; On-Demand Lessons</span>
             </div>
 
-            <div className="brand-features">
-
-              <div className="brand-feature">
-                <span className="feature-icon">▶</span>
-                <span>Live &amp; On-Demand Lessons</span>
-              </div>
-
-              <div className="brand-feature">
-                <span className="feature-icon">▥</span>
-                <span>Track Your Progress</span>
-              </div>
-
-              <div className="brand-feature">
-                <span className="feature-icon">♟</span>
-                <span>Learn with Expert Tutors</span>
-              </div>
-
-              <div className="brand-feature">
-                <span className="feature-icon">✓</span>
-                <span>Prepare for Exams with Confidence</span>
-              </div>
-
+            <div className="brand-feature">
+              <span className="feature-icon">▥</span>
+              <span>Track Your Progress</span>
             </div>
 
-            <div className="brand-stats">
+            <div className="brand-feature">
+              <span className="feature-icon">♟</span>
+              <span>Learn with Expert Tutors</span>
+            </div>
 
-              <div className="stat">
-                <span className="stat-icon">🎓</span>
-                <span className="stat-number">50K+</span>
-                <span className="stat-label">Students</span>
-              </div>
+            <div className="brand-feature">
+              <span className="feature-icon">✓</span>
+              <span>Prepare for Exams with Confidence</span>
+            </div>
 
-              <div className="stat-divider" />
+          </div>
 
-              <div className="stat">
-                <span className="stat-icon">★</span>
-                <span className="stat-number">4.9/5</span>
-                <span className="stat-label">Satisfaction Rate</span>
-              </div>
+          <div className="brand-stats">
 
-              <div className="stat-divider" />
+            <div className="stat">
+              <span className="stat-icon">🎓</span>
+              <span className="stat-number">50K+</span>
+              <span className="stat-label">Students</span>
+            </div>
 
-              <div className="stat">
-                <span className="stat-icon">♜</span>
-                <span className="stat-number">26</span>
-                <span className="stat-label">SA Universities</span>
-              </div>
+            <div className="stat-divider" />
 
+            <div className="stat">
+              <span className="stat-icon">★</span>
+              <span className="stat-number">4.9/5</span>
+              <span className="stat-label">Satisfaction Rate</span>
+            </div>
+
+            <div className="stat-divider" />
+
+            <div className="stat">
+              <span className="stat-icon">♜</span>
+              <span className="stat-number">26</span>
+              <span className="stat-label">SA Universities</span>
             </div>
 
           </div>

@@ -707,7 +707,15 @@ const AppContent = () => {
             />
 
             {/* ============================================
-                SESSION RECORDINGS
+                PARENT SESSION RECORDINGS
+                ============================================ */}
+            <Route
+              path="/parent/session-recordings"
+              element={<SessionRecordings />}
+            />
+
+            {/* ============================================
+                STUDENT SESSION RECORDINGS
                 ============================================ */}
             <Route
               path="/session-recordings"

@@ -1865,3 +1865,30 @@
     font-size: 11px;
   }
 }
+/* Feature list alignment */
+.hero-features {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.hero-feature {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  text-align: left;
+}
+
+.hero-feature-icon {
+  width: 24px;
+  min-width: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 1;
+}
+
+.hero-feature-text {
+  margin: 0;
+  line-height: 1.5;
+}

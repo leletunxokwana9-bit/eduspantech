@@ -46,6 +46,80 @@ const Login = () => {
   const [heroImage, setHeroImage] = useState(null);
   const [heroImageLoading, setHeroImageLoading] = useState(true);
 
+  // Live student count
+  const [studentCount, setStudentCount] = useState(null);
+
+  // ============================================
+  // FORMAT LIVE STUDENT COUNT
+  // ============================================
+
+  const formatStudentCount = (count) => {
+    if (count === null || count === undefined) {
+      return '—';
+    }
+
+    const number = Number(count);
+
+    if (!Number.isFinite(number) || number < 0) {
+      return '—';
+    }
+
+    if (number >= 1000000) {
+      return `${(number / 1000000).toFixed(1).replace(/\.0$/, '')}M+`;
+    }
+
+    if (number >= 1000) {
+      return `${Math.floor(number / 1000)}K+`;
+    }
+
+    return number.toLocaleString();
+  };
+
+  // ============================================
+  // LOAD LIVE STUDENT COUNT
+  // ============================================
+
+  useEffect(() => {
+    let isMounted = true;
+
+    const loadStudentCount = async () => {
+      try {
+        const response = await fetch(
+          `${API_URL}/stats/student-count`,
+          {
+            method: 'GET',
+            headers: {
+              Accept: 'application/json'
+            },
+            cache: 'no-store'
+          }
+        );
+
+        if (!response.ok) {
+          throw new Error('Unable to load student count');
+        }
+
+        const data = await response.json();
+
+        if (
+          isMounted &&
+          data.success &&
+          Number.isFinite(Number(data.totalStudents))
+        ) {
+          setStudentCount(Number(data.totalStudents));
+        }
+      } catch (err) {
+        console.error('Live student count error:', err);
+      }
+    };
+
+    loadStudentCount();
+
+    return () => {
+      isMounted = false;
+    };
+  }, []);
+
   // ============================================
   // LOAD ACTIVE LOGIN HERO IMAGE
   // ============================================
@@ -592,9 +666,7 @@ const Login = () => {
 
       <div className="login-container login-container-new">
 
-        {/* =====================================
-            LEFT HERO SECTION
-        ====================================== */}
+        {/* LEFT HERO SECTION */}
 
         <section className="login-left">
 
@@ -610,35 +682,58 @@ const Login = () => {
             </p>
           </div>
 
+          {/* ALIGNED FEATURES */}
+
           <div className="brand-features">
 
             <div className="brand-feature">
               <span className="feature-icon">▶</span>
-              <span>Live &amp; On-Demand Lessons</span>
+              <span className="feature-text">
+                Live &amp; On-Demand Lessons
+              </span>
             </div>
 
             <div className="brand-feature">
               <span className="feature-icon">▥</span>
-              <span>Track Your Progress</span>
+              <span className="feature-text">
+                Track Your Progress
+              </span>
             </div>
 
             <div className="brand-feature">
               <span className="feature-icon">♟</span>
-              <span>Learn with Expert Tutors</span>
+              <span className="feature-text">
+                Learn with Expert Tutors
+              </span>
             </div>
 
             <div className="brand-feature">
               <span className="feature-icon">✓</span>
-              <span>Prepare for Exams with Confidence</span>
+              <span className="feature-text">
+                Prepare for Exams with Confidence
+              </span>
             </div>
 
           </div>
+
+          {/* LIVE STUDENT STATISTICS */}
 
           <div className="brand-stats">
 
             <div className="stat">
               <span className="stat-icon">🎓</span>
-              <span className="stat-number">50K+</span>
+
+              <span
+                className="stat-number"
+                title={
+                  studentCount !== null
+                    ? `${studentCount.toLocaleString()} registered students`
+                    : 'Loading student count'
+                }
+              >
+                {formatStudentCount(studentCount)}
+              </span>
+
               <span className="stat-label">Students</span>
             </div>
 
@@ -678,9 +773,7 @@ const Login = () => {
 
         </section>
 
-        {/* =====================================
-            RIGHT LOGIN SECTION
-        ====================================== */}
+        {/* RIGHT LOGIN SECTION */}
 
         <section className="login-right">
 
@@ -722,8 +815,6 @@ const Login = () => {
               </Link>
 
             </div>
-
-            {/* ROLE ERROR */}
 
             {roleError && (
               <div className="login-role-error">
@@ -1034,9 +1125,7 @@ const Login = () => {
 
       </div>
 
-      {/* =====================================
-          BLOCKED ACCESS MODAL
-      ====================================== */}
+      {/* BLOCKED ACCESS MODAL */}
 
       {showBlockedModal && (
         <div className="save-password-overlay">
@@ -1063,9 +1152,7 @@ const Login = () => {
         </div>
       )}
 
-      {/* =====================================
-          SAVE LOGIN DETAILS MODAL
-      ====================================== */}
+      {/* SAVE LOGIN DETAILS MODAL */}
 
       {showSavePrompt && (
         <div className="save-password-overlay">

@@ -1,3 +1,4 @@
+
 // src/pages/ParentDashboard.js
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
@@ -10,6 +11,44 @@ import {
 import RatingStars from '../components/RatingStars';
 import './ParentDashboard.css';
 import './Tutors.css';
+
+// ============================================
+// ACADEMIC LEVEL HELPER
+// ============================================
+const getAcademicLevel = (student) => {
+  if (!student) return 'N/A';
+
+  const cohort = String(student.cohort || '').trim();
+  const grade = Number(student.grade);
+
+  if (cohort === 'HighSchool') {
+    return grade >= 8 && grade <= 12 ? `Grade ${grade}` : 'High School';
+  }
+
+  if (cohort === 'UniversityFirstYear') {
+    return 'University 1st Year';
+  }
+
+  if (cohort === 'UniversitySecondYear') {
+    return 'University 2nd Year';
+  }
+
+  // Fallback for university records that use the generic label.
+  if (cohort === 'University') {
+    if (grade === 1) return 'University 1st Year';
+    if (grade === 2) return 'University 2nd Year';
+    return 'University';
+  }
+
+  // Support older or differently formatted records.
+  if (cohort.toLowerCase().includes('university')) {
+    if (grade === 1) return 'University 1st Year';
+    if (grade === 2) return 'University 2nd Year';
+    return 'University';
+  }
+
+  return cohort || (Number.isFinite(grade) ? `Grade ${grade}` : 'N/A');
+};
 
 // ============================================
 // TUTOR HELPERS
@@ -95,20 +134,20 @@ const deriveOutcome = (session) => {
     return 'attended';
   }
   if (raw === 'ongoing' || raw === 'active') return 'ongoing';
-  
+
   return 'upcoming';
 };
 
 const OUTCOME_META = {
-  attended:          { label: 'Attended',            tone: 'success', icon: '✅' },
-  late:              { label: 'Attended (late)',     tone: 'warn',    icon: '⏰' },
-  'missed-student':  { label: 'Missed · Student',    tone: 'danger',  icon: '❌' },
-  'missed-tutor':    { label: 'Missed · Tutor',      tone: 'danger',  icon: '🚫' },
-  'cancelled-parent':{ label: 'Cancelled · You',     tone: 'muted',   icon: '🔁' },
-  'cancelled-tutor': { label: 'Cancelled · Tutor',   tone: 'muted',   icon: '🔁' },
-  rescheduled:       { label: 'Rescheduled',         tone: 'warn',    icon: '🕓' },
-  upcoming:          { label: 'Upcoming',            tone: 'info',    icon: '📅' },
-  ongoing:           { label: 'In progress',         tone: 'info',    icon: '🟢' }
+  attended:           { label: 'Attended',            tone: 'success', icon: '✅' },
+  late:               { label: 'Attended (late)',     tone: 'warn',    icon: '⏰' },
+  'missed-student':   { label: 'Missed · Student',    tone: 'danger',  icon: '❌' },
+  'missed-tutor':     { label: 'Missed · Tutor',      tone: 'danger',  icon: '🚫' },
+  'cancelled-parent': { label: 'Cancelled · You',     tone: 'muted',   icon: '🔁' },
+  'cancelled-tutor':  { label: 'Cancelled · Tutor',   tone: 'muted',   icon: '🔁' },
+  rescheduled:        { label: 'Rescheduled',         tone: 'warn',    icon: '🕓' },
+  upcoming:           { label: 'Upcoming',            tone: 'info',    icon: '📅' },
+  ongoing:            { label: 'In progress',         tone: 'info',    icon: '🟢' }
 };
 
 const isPastOutcome = (o) =>
@@ -236,6 +275,9 @@ const ParentDashboard = () => {
         if (data.children && data.children.length > 0) {
           setChildren(data.children);
           setActiveChildId(data.children[0].id);
+        } else {
+          setChildren([]);
+          setActiveChildId(null);
         }
       }
     } catch (err) {
@@ -262,7 +304,7 @@ const ParentDashboard = () => {
         const enriched = list.map((s) => {
           const start = s.date ? new Date(s.date) : null;
           let status = (s.status || 'upcoming').toLowerCase();
-          
+
           if (status !== 'cancelled' && status !== 'completed' && status !== 'ended') {
             if (start && !isNaN(start.getTime())) {
               if (now < start) {
@@ -274,10 +316,10 @@ const ParentDashboard = () => {
           }
 
           if (status === 'ended') status = 'completed';
-          
+
           return { ...s, status };
         });
-        
+
         setSessions(enriched);
       } else {
         setSessions([]);
@@ -327,28 +369,38 @@ const ParentDashboard = () => {
       const reader = new FileReader();
       reader.readAsDataURL(file);
       reader.onload = async () => {
-        const base64Image = reader.result;
-        const token = localStorage.getItem('accessToken');
-        const response = await fetch(`${API_BASE_URL}/auth/profile`, {
-          method: 'PUT',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${token}`
-          },
-          body: JSON.stringify({ avatar: base64Image })
-        });
-        if (response.ok) {
-          const data = await response.json();
-          if (data.success) {
-            setAvatarUrl(base64Image);
-            const storedUser = JSON.parse(localStorage.getItem('user') || '{}');
-            storedUser.avatar = base64Image;
-            localStorage.setItem('user', JSON.stringify(storedUser));
+        try {
+          const base64Image = reader.result;
+          const token = localStorage.getItem('accessToken');
+          const response = await fetch(`${API_BASE_URL}/auth/profile`, {
+            method: 'PUT',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${token}`
+            },
+            body: JSON.stringify({ avatar: base64Image })
+          });
+          if (response.ok) {
+            const data = await response.json();
+            if (data.success) {
+              setAvatarUrl(base64Image);
+              const storedUser = JSON.parse(localStorage.getItem('user') || '{}');
+              storedUser.avatar = base64Image;
+              localStorage.setItem('user', JSON.stringify(storedUser));
+            }
+          } else {
+            const errorData = await response.json();
+            setPhotoError(errorData.error || '❌ Failed to upload photo');
           }
-        } else {
-          const errorData = await response.json();
-          setPhotoError(errorData.error || '❌ Failed to upload photo');
+        } catch (error) {
+          console.error('❌ Photo upload error:', error);
+          setPhotoError('❌ Error uploading photo');
+        } finally {
+          setPhotoUploading(false);
         }
+      };
+      reader.onerror = () => {
+        setPhotoError('❌ Failed to read image file');
         setPhotoUploading(false);
       };
     } catch (error) {
@@ -419,7 +471,7 @@ const ParentDashboard = () => {
     }
   };
 
-  // ✅ Unlink child handler
+  // ============ UNLINK CHILD HANDLER ============
   const handleUnlinkChild = async () => {
     if (!childToRemove) return;
     setUnlinkLoading(true);
@@ -434,11 +486,11 @@ const ParentDashboard = () => {
       if (res.ok) {
         const updatedChildren = children.filter(c => c.id !== childToRemove.id);
         setChildren(updatedChildren);
-        
+
         if (activeChildId === childToRemove.id) {
           setActiveChildId(updatedChildren.length > 0 ? updatedChildren[0].id : null);
         }
-        
+
         setChildToRemove(null);
       } else {
         const data = await res.json();
@@ -596,7 +648,9 @@ const ParentDashboard = () => {
                   </div>
                   <div className="child-btn-info">
                     <span className="child-btn-name">{activeChild?.name || 'N/A'}</span>
-                    <span className="child-btn-grade">{activeChild?.grade || 'N/A'}</span>
+                    <span className="child-btn-grade">
+                      {getAcademicLevel(activeChild)}
+                    </span>
                   </div>
                   <ChevronDown size={18} className={`dropdown-icon ${showChildDropdown ? 'open' : ''}`} />
                 </button>
@@ -623,13 +677,15 @@ const ParentDashboard = () => {
                         </div>
                         <div className="child-item-details">
                           <span className="child-item-name">{child.name}</span>
-                          <span className="child-item-grade">{child.grade}</span>
+                          <span className="child-item-grade">
+                            {getAcademicLevel(child)}
+                          </span>
                         </div>
-                        
+
                         {child.id === activeChildId && <CheckCircle size={16} className="check-icon" />}
-                        
-                        {/* ✅ Unlink Child Button */}
-                        <button 
+
+                        {/* Unlink Child Button */}
+                        <button
                           className="btn-unlink-child"
                           title="Unlink this child"
                           onClick={(e) => {
@@ -750,8 +806,8 @@ const ParentDashboard = () => {
                           <span className="day">{session.day || '--'}</span>
                           <span className="month">{session.month || '---'}</span>
                           <span className="year">
-                            {session.date 
-                              ? new Date(session.date).getFullYear() 
+                            {session.date
+                              ? new Date(session.date).getFullYear()
                               : new Date().getFullYear()}
                           </span>
                         </div>
@@ -774,11 +830,11 @@ const ParentDashboard = () => {
                           >
                             With {session.tutorName || session.tutor?.name || 'Tutor'}
                           </span>
-                          
+
                           <div className="schedule-time">
                             <Clock size={14} /> {session.timeRange || 'TBD'}
                           </div>
-                          
+
                           {session.tutorNote && (
                             <p className="session-note">💬 {session.tutorNote}</p>
                           )}
@@ -816,8 +872,8 @@ const ParentDashboard = () => {
                     </div>
                     <div className="report-grade">
                       <span className="grade-badge">{activeChild.recentReportGrade || 'N/A'}</span>
-                      <button 
-                        className="btn-link-sm" 
+                      <button
+                        className="btn-link-sm"
                         onClick={() => setShowReportModal(true)}
                       >
                         View
@@ -897,7 +953,7 @@ const ParentDashboard = () => {
                 <h4 style={{ fontSize: '18px', margin: '0 0 4px 0' }}>{activeChild.recentReport}</h4>
                 <p style={{ fontSize: '13px', color: '#94a3b8', margin: 0 }}>Issued recently</p>
               </div>
-              
+
               <div style={{ display: 'flex', gap: '16px', marginBottom: '20px' }}>
                 <div style={{ flex: 1, background: 'rgba(255,255,255,0.02)', padding: '16px', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.05)' }}>
                   <span style={{ display: 'block', fontSize: '12px', color: '#94a3b8', marginBottom: '4px' }}>Final Grade</span>
@@ -976,9 +1032,9 @@ const ParentDashboard = () => {
             </div>
             <div className="modal-footer">
               <button type="button" onClick={() => setChildToRemove(null)}>Cancel</button>
-              <button 
-                type="button" 
-                className="btn-danger" 
+              <button
+                type="button"
+                className="btn-danger"
                 onClick={handleUnlinkChild}
                 disabled={unlinkLoading}
               >
@@ -1056,9 +1112,7 @@ const ParentDashboard = () => {
         </div>
       )}
 
-      {/* ============================================
-          TUTOR PROFILE MODAL — with ratings & reviews
-          ============================================ */}
+      {/* TUTOR PROFILE MODAL */}
       {showTutorModal && viewingTutor && (() => {
         const ratingValue = getRatingValue(viewingTutor);
         const ratingCount = getRatingCount(viewingTutor);
@@ -1068,7 +1122,6 @@ const ParentDashboard = () => {
               <button className="tutor-modal-close" onClick={handleCloseTutorModal} aria-label="Close">×</button>
 
               {!showFullProfile ? (
-                /* ───── Compact view ───── */
                 <div className="tutor-modal-content">
                   <div className="tutor-modal-avatar">
                     <TutorAvatar tutor={viewingTutor} />
@@ -1078,7 +1131,6 @@ const ParentDashboard = () => {
                     <span className="tutor-modal-tier">{getTierLabel(viewingTutor.tier)}</span>
                   )}
 
-                  {/* ⭐ Rating line */}
                   <div className="tutor-rating-line">
                     {ratingCount > 0 ? (
                       <>
@@ -1112,7 +1164,6 @@ const ParentDashboard = () => {
                   </div>
                 </div>
               ) : (
-                /* ───── Full profile view ───── */
                 <div className="tutor-modal-full-profile">
                   <button className="back-btn" onClick={() => setShowFullProfile(false)}>
                     ← Back
@@ -1155,7 +1206,6 @@ const ParentDashboard = () => {
                       </div>
                     )}
 
-                    {/* ⭐ Ratings & Reviews */}
                     <div className="profile-section">
                       <h3>⭐ Ratings & Reviews</h3>
 

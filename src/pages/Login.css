@@ -1601,3 +1601,67 @@
 .parent-login-text-btn:hover {
   color: #ffffff;
 }
+
+/* ============================================
+   EDUSPANTECH — DYNAMIC LOGIN HERO IMAGE
+   Image is loaded from the active Supabase record.
+   The fade overlay remains separate from the image.
+============================================ */
+
+/* Left panel becomes the image container */
+.login-left {
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+}
+
+/* Image layer */
+.login-hero-image {
+  position: absolute;
+  inset: 0;
+  z-index: -2;
+  overflow: hidden;
+  background: var(--bg-primary);
+}
+
+.hero-student-image {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center;
+}
+
+/* Separate white fade overlay */
+.hero-image-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  pointer-events: none;
+  background:
+    linear-gradient(
+      90deg,
+      rgba(255, 255, 255, 0.96) 0%,
+      rgba(255, 255, 255, 0.84) 30%,
+      rgba(255, 255, 255, 0.48) 65%,
+      rgba(255, 255, 255, 0.12) 100%
+    ),
+    linear-gradient(
+      0deg,
+      rgba(255, 255, 255, 0.72) 0%,
+      transparent 55%
+    );
+}
+
+/* Keep existing login content above the image */
+.login-left > *:not(.login-hero-image) {
+  position: relative;
+  z-index: 2;
+}
+
+/* Mobile and tablet retain the existing layout */
+@media (max-width: 1024px) {
+  .login-left {
+    overflow: hidden;
+  }
+}

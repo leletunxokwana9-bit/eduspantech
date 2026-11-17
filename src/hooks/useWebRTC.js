@@ -17,6 +17,7 @@ const useWebRTC = (sessionId, role, userId) => {
   const maxReconnectAttempts = 5;
   const audioElements = useRef({});
   const socketRef = useRef(null);
+  const pendingCandidates = useRef({}); // per-peer queue for early ICE
 
   const WS_URL =
     process.env.REACT_APP_WS_URL ||
@@ -168,8 +169,8 @@ const useWebRTC = (sessionId, role, userId) => {
         const data = JSON.parse(event.data);
         console.log('📨 Received message:', data.type);
         handleWebSocketMessage(data);
-      } catch (error) {
-        console.error('❌ Failed to parse WebSocket message:', error);
+      } catch (err) {
+        console.error('❌ Failed to parse WebSocket message:', err);
       }
     };
 
@@ -189,8 +190,8 @@ const useWebRTC = (sessionId, role, userId) => {
       }
     };
 
-    socket.onerror = (error) => {
-      console.error('❌ WebSocket error:', error);
+    socket.onerror = (err) => {
+      console.error('❌ WebSocket error:', err);
       setError('WebSocket connection error');
     };
 
@@ -243,13 +244,24 @@ const useWebRTC = (sessionId, role, userId) => {
       localStream.current = stream;
       setIsAudioEnabled(true);
       console.log('🎤 Audio initialized');
-    } catch (error) {
-      console.warn('⚠️ No microphone available, continuing without audio:', error.message);
+    } catch (err) {
+      console.warn('⚠️ No microphone available, continuing without audio:', err.message);
       setError('Microphone not available. Voice features disabled.');
     }
   }, []);
 
+  // ✅ Reuse an existing live PC instead of overwriting it
   const createPeerConnection = useCallback(async (targetUserId) => {
+    const existing = peerConnections.current[targetUserId];
+    if (existing && existing.connectionState !== 'closed' && existing.connectionState !== 'failed') {
+      console.log('♻️ Reusing existing peer connection for', targetUserId);
+      return existing;
+    }
+    if (existing) {
+      try { existing.close(); } catch (e) {}
+      delete peerConnections.current[targetUserId];
+    }
+
     const pc = new RTCPeerConnection({
       iceServers: [
         { urls: 'stun:stun.l.google.com:19302' },
@@ -270,11 +282,10 @@ const useWebRTC = (sessionId, role, userId) => {
       else if (state === 'connecting') setConnectionStatus('connecting');
     };
 
-    // ✅ FIXED: Strict Echo Prevention
+    // ✅ Echo prevention + idempotent audio element
     pc.ontrack = (event) => {
       console.log(`🎧 Received remote track from ${targetUserId}:`, event.track.kind);
 
-      // 1. Block playback of our own local microphone track
       if (localStream.current) {
         const localTrackIds = localStream.current.getTracks().map(t => t.id);
         if (localTrackIds.includes(event.track.id)) {
@@ -283,27 +294,29 @@ const useWebRTC = (sessionId, role, userId) => {
         }
       }
 
-      // 2. Only play the remote stream
       if (event.streams && event.streams[0]) {
         remoteStreams.current[targetUserId] = event.streams[0];
-        
+
         if (!audioElements.current[targetUserId]) {
           const audio = new Audio();
           audio.autoplay = true;
+          audio.playsInline = true;
           audio.srcObject = event.streams[0];
-          
-          audio.play().catch(e => {
-            console.warn('🔇 Autoplay blocked. Waiting for user interaction...', e);
+
+          audio.play().catch(() => {
+            console.warn('🔇 Autoplay blocked. Waiting for user interaction...');
             const enableAudio = () => {
-              audio.play();
+              audio.play().catch(() => {});
               document.removeEventListener('click', enableAudio);
             };
             document.addEventListener('click', enableAudio);
           });
-          
+
           audioElements.current[targetUserId] = audio;
+        } else {
+          audioElements.current[targetUserId].srcObject = event.streams[0];
         }
-        
+
         window.dispatchEvent(new CustomEvent('remote-audio', {
           detail: { userId: targetUserId, stream: event.streams[0] }
         }));
@@ -322,14 +335,21 @@ const useWebRTC = (sessionId, role, userId) => {
     };
 
     peerConnections.current[targetUserId] = pc;
+
+    // flush any early ICE candidates
+    const queued = pendingCandidates.current[targetUserId] || [];
+    queued.forEach(async (c) => {
+      try { await pc.addIceCandidate(new RTCIceCandidate(c)); } catch (e) {}
+    });
+    pendingCandidates.current[targetUserId] = [];
+
     return pc;
   }, [sessionId]);
 
   const handleOffer = useCallback(async (data) => {
     const { fromUserId, offer } = data;
     try {
-      let pc = peerConnections.current[fromUserId];
-      if (!pc) pc = await createPeerConnection(fromUserId);
+      const pc = await createPeerConnection(fromUserId);
       await pc.setRemoteDescription(new RTCSessionDescription(offer));
       const answer = await pc.createAnswer();
       await pc.setLocalDescription(answer);
@@ -341,8 +361,8 @@ const useWebRTC = (sessionId, role, userId) => {
           roomId: sessionId
         }));
       }
-    } catch (error) {
-      console.error('Error handling offer:', error);
+    } catch (err) {
+      console.error('Error handling offer:', err);
     }
   }, [createPeerConnection, sessionId]);
 
@@ -351,8 +371,8 @@ const useWebRTC = (sessionId, role, userId) => {
     try {
       const pc = peerConnections.current[fromUserId];
       if (pc) await pc.setRemoteDescription(new RTCSessionDescription(answer));
-    } catch (error) {
-      console.error('Error handling answer:', error);
+    } catch (err) {
+      console.error('Error handling answer:', err);
     }
   }, []);
 
@@ -360,19 +380,56 @@ const useWebRTC = (sessionId, role, userId) => {
     const { fromUserId, candidate } = data;
     try {
       const pc = peerConnections.current[fromUserId];
-      if (pc) await pc.addIceCandidate(new RTCIceCandidate(candidate));
-    } catch (error) {
-      console.error('Error handling ICE candidate:', error);
+      if (pc && pc.remoteDescription && pc.remoteDescription.type) {
+        await pc.addIceCandidate(new RTCIceCandidate(candidate));
+      } else {
+        // queue until remote description exists
+        if (!pendingCandidates.current[fromUserId]) pendingCandidates.current[fromUserId] = [];
+        pendingCandidates.current[fromUserId].push(candidate);
+      }
+    } catch (err) {
+      console.error('Error handling ICE candidate:', err);
     }
   }, []);
 
+  // ✅ Tutor initiates whenever a remote peer is present and no live PC exists.
+  //    This replaces the fragile one-shot "request-offer" window event.
+  useEffect(() => {
+    if (!isConnected || role !== 'tutor' || !userId) return;
+
+    const targets = (participants || []).filter(p => p.userId && p.userId !== userId);
+    targets.forEach(async (p) => {
+      const existing = peerConnections.current[p.userId];
+      if (existing && existing.connectionState !== 'closed' && existing.connectionState !== 'failed') return;
+
+      try {
+        console.log('📞 Creating offer for:', p.userId);
+        const pc = await createPeerConnection(p.userId);
+        const offer = await pc.createOffer();
+        await pc.setLocalDescription(offer);
+        if (socketRef.current?.readyState === WebSocket.OPEN) {
+          socketRef.current.send(JSON.stringify({
+            type: 'offer',
+            targetUserId: p.userId,
+            offer: pc.localDescription,
+            roomId: sessionId
+          }));
+        }
+      } catch (err) {
+        console.error('Offer creation failed:', err);
+      }
+    });
+  }, [isConnected, role, userId, participants, createPeerConnection, sessionId]);
+
+  // Keep the window-event listener as an optional manual trigger (harmless)
   useEffect(() => {
     const handleRequestOffer = async (e) => {
       const { targetUserId } = e.detail || {};
       if (!targetUserId) return;
-      if (peerConnections.current[targetUserId]) return;
+      const existing = peerConnections.current[targetUserId];
+      if (existing && existing.connectionState !== 'closed' && existing.connectionState !== 'failed') return;
       try {
-        console.log('📞 Creating offer for:', targetUserId);
+        console.log('📞 [manual] Creating offer for:', targetUserId);
         const pc = await createPeerConnection(targetUserId);
         const offer = await pc.createOffer();
         await pc.setLocalDescription(offer);

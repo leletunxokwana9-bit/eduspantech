@@ -1,3 +1,4 @@
+
 // src/pages/ParentDashboard.js
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
@@ -95,20 +96,20 @@ const deriveOutcome = (session) => {
     return 'attended';
   }
   if (raw === 'ongoing' || raw === 'active') return 'ongoing';
-  
+
   return 'upcoming';
 };
 
 const OUTCOME_META = {
-  attended:          { label: 'Attended',            tone: 'success', icon: '✅' },
-  late:              { label: 'Attended (late)',     tone: 'warn',    icon: '⏰' },
-  'missed-student':  { label: 'Missed · Student',    tone: 'danger',  icon: '❌' },
-  'missed-tutor':    { label: 'Missed · Tutor',      tone: 'danger',  icon: '🚫' },
-  'cancelled-parent':{ label: 'Cancelled · You',     tone: 'muted',   icon: '🔁' },
-  'cancelled-tutor': { label: 'Cancelled · Tutor',   tone: 'muted',   icon: '🔁' },
-  rescheduled:       { label: 'Rescheduled',         tone: 'warn',    icon: '🕓' },
-  upcoming:          { label: 'Upcoming',            tone: 'info',    icon: '📅' },
-  ongoing:           { label: 'In progress',         tone: 'info',    icon: '🟢' }
+  attended:           { label: 'Attended',         tone: 'success', icon: '✅' },
+  late:               { label: 'Attended (late)',  tone: 'warn',    icon: '⏰' },
+  'missed-student':   { label: 'Missed · Student', tone: 'danger',  icon: '❌' },
+  'missed-tutor':     { label: 'Missed · Tutor',   tone: 'danger',  icon: '🚫' },
+  'cancelled-parent': { label: 'Cancelled · You',  tone: 'muted',   icon: '🔁' },
+  'cancelled-tutor':  { label: 'Cancelled · Tutor', tone: 'muted',   icon: '🔁' },
+  rescheduled:        { label: 'Rescheduled',      tone: 'warn',    icon: '🕓' },
+  upcoming:           { label: 'Upcoming',          tone: 'info',    icon: '📅' },
+  ongoing:            { label: 'In progress',      tone: 'info',    icon: '🟢' }
 };
 
 const isPastOutcome = (o) =>
@@ -262,7 +263,7 @@ const ParentDashboard = () => {
         const enriched = list.map((s) => {
           const start = s.date ? new Date(s.date) : null;
           let status = (s.status || 'upcoming').toLowerCase();
-          
+
           if (status !== 'cancelled' && status !== 'completed' && status !== 'ended') {
             if (start && !isNaN(start.getTime())) {
               if (now < start) {
@@ -274,10 +275,10 @@ const ParentDashboard = () => {
           }
 
           if (status === 'ended') status = 'completed';
-          
+
           return { ...s, status };
         });
-        
+
         setSessions(enriched);
       } else {
         setSessions([]);
@@ -419,7 +420,7 @@ const ParentDashboard = () => {
     }
   };
 
-  // ✅ Unlink child handler
+  // Unlink child handler
   const handleUnlinkChild = async () => {
     if (!childToRemove) return;
     setUnlinkLoading(true);
@@ -434,11 +435,11 @@ const ParentDashboard = () => {
       if (res.ok) {
         const updatedChildren = children.filter(c => c.id !== childToRemove.id);
         setChildren(updatedChildren);
-        
+
         if (activeChildId === childToRemove.id) {
           setActiveChildId(updatedChildren.length > 0 ? updatedChildren[0].id : null);
         }
-        
+
         setChildToRemove(null);
       } else {
         const data = await res.json();
@@ -625,11 +626,10 @@ const ParentDashboard = () => {
                           <span className="child-item-name">{child.name}</span>
                           <span className="child-item-grade">{child.grade}</span>
                         </div>
-                        
+
                         {child.id === activeChildId && <CheckCircle size={16} className="check-icon" />}
-                        
-                        {/* ✅ Unlink Child Button */}
-                        <button 
+
+                        <button
                           className="btn-unlink-child"
                           title="Unlink this child"
                           onClick={(e) => {
@@ -750,8 +750,8 @@ const ParentDashboard = () => {
                           <span className="day">{session.day || '--'}</span>
                           <span className="month">{session.month || '---'}</span>
                           <span className="year">
-                            {session.date 
-                              ? new Date(session.date).getFullYear() 
+                            {session.date
+                              ? new Date(session.date).getFullYear()
                               : new Date().getFullYear()}
                           </span>
                         </div>
@@ -774,11 +774,11 @@ const ParentDashboard = () => {
                           >
                             With {session.tutorName || session.tutor?.name || 'Tutor'}
                           </span>
-                          
+
                           <div className="schedule-time">
                             <Clock size={14} /> {session.timeRange || 'TBD'}
                           </div>
-                          
+
                           {session.tutorNote && (
                             <p className="session-note">💬 {session.tutorNote}</p>
                           )}
@@ -816,8 +816,8 @@ const ParentDashboard = () => {
                     </div>
                     <div className="report-grade">
                       <span className="grade-badge">{activeChild.recentReportGrade || 'N/A'}</span>
-                      <button 
-                        className="btn-link-sm" 
+                      <button
+                        className="btn-link-sm"
                         onClick={() => setShowReportModal(true)}
                       >
                         View
@@ -869,9 +869,18 @@ const ParentDashboard = () => {
                 </div>
               </div>
               <div className="card-body action-buttons">
-                <button className="btn-action"><MessageSquare size={18} /> Message Tutor</button>
-                <button className="btn-action"><FileText size={18} /> Update Billing Details</button>
-                <button className="btn-action"><Video size={18} /> View Session Recordings</button>
+                <button className="btn-action">
+                  <MessageSquare size={18} /> Message Tutor
+                </button>
+                <button className="btn-action">
+                  <FileText size={18} /> Update Billing Details
+                </button>
+                <button
+                  className="btn-action"
+                  onClick={() => navigate('/parent/session-recordings')}
+                >
+                  <Video size={18} /> View Session Recordings
+                </button>
               </div>
             </div>
           </div>
@@ -897,7 +906,7 @@ const ParentDashboard = () => {
                 <h4 style={{ fontSize: '18px', margin: '0 0 4px 0' }}>{activeChild.recentReport}</h4>
                 <p style={{ fontSize: '13px', color: '#94a3b8', margin: 0 }}>Issued recently</p>
               </div>
-              
+
               <div style={{ display: 'flex', gap: '16px', marginBottom: '20px' }}>
                 <div style={{ flex: 1, background: 'rgba(255,255,255,0.02)', padding: '16px', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.05)' }}>
                   <span style={{ display: 'block', fontSize: '12px', color: '#94a3b8', marginBottom: '4px' }}>Final Grade</span>
@@ -976,9 +985,9 @@ const ParentDashboard = () => {
             </div>
             <div className="modal-footer">
               <button type="button" onClick={() => setChildToRemove(null)}>Cancel</button>
-              <button 
-                type="button" 
-                className="btn-danger" 
+              <button
+                type="button"
+                className="btn-danger"
                 onClick={handleUnlinkChild}
                 disabled={unlinkLoading}
               >
@@ -1068,7 +1077,6 @@ const ParentDashboard = () => {
               <button className="tutor-modal-close" onClick={handleCloseTutorModal} aria-label="Close">×</button>
 
               {!showFullProfile ? (
-                /* ───── Compact view ───── */
                 <div className="tutor-modal-content">
                   <div className="tutor-modal-avatar">
                     <TutorAvatar tutor={viewingTutor} />
@@ -1078,7 +1086,6 @@ const ParentDashboard = () => {
                     <span className="tutor-modal-tier">{getTierLabel(viewingTutor.tier)}</span>
                   )}
 
-                  {/* ⭐ Rating line */}
                   <div className="tutor-rating-line">
                     {ratingCount > 0 ? (
                       <>
@@ -1112,7 +1119,6 @@ const ParentDashboard = () => {
                   </div>
                 </div>
               ) : (
-                /* ───── Full profile view ───── */
                 <div className="tutor-modal-full-profile">
                   <button className="back-btn" onClick={() => setShowFullProfile(false)}>
                     ← Back
@@ -1155,7 +1161,6 @@ const ParentDashboard = () => {
                       </div>
                     )}
 
-                    {/* ⭐ Ratings & Reviews */}
                     <div className="profile-section">
                       <h3>⭐ Ratings & Reviews</h3>
 

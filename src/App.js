@@ -1,6 +1,16 @@
-// src/App.js - COMPLETE WITH TOUR GUIDE INTEGRATION & ADMIN PROTECTION
+
+// src/App.js - COMPLETE WITH TOUR GUIDE, ADMIN PROTECTION & SESSION RECORDINGS
+
 import React, { Suspense, lazy, useState, useEffect } from 'react';
-import { BrowserRouter as Router, Routes, Route, useLocation, useNavigate, Navigate } from 'react-router-dom';
+import {
+  BrowserRouter as Router,
+  Routes,
+  Route,
+  useLocation,
+  useNavigate,
+  Navigate
+} from 'react-router-dom';
+
 import Navbar from './components/Navbar';
 import Footer from './components/Footer';
 import Home from './pages/Home';
@@ -21,17 +31,21 @@ import TutorSession from './pages/TutorSession';
 import Checkout from './pages/Checkout';
 import PaymentSuccess from './pages/PaymentSuccess';
 import SearchResults from './pages/SearchResults';
+
 import { LanguageProvider } from './context/LanguageContext';
 import { SessionSettingsProvider } from './context/SessionSettingsContext';
 import { ThemeProvider } from './context/ThemeContext';
 import { SoundProvider } from './context/SoundContext';
+
 import './App.css';
+
 import Profile from './pages/Profile';
 import Settings from './pages/Settings';
 import Help from './pages/Help';
 import Practice from './pages/Practice';
 import VerifyEmail from './pages/VerifyEmail';
 import ChatWidget from './components/ChatWidget';
+
 import TutorDashboard from './pages/TutorDashboard';
 import AddTutor from './pages/Admin/AddTutor';
 import TutorStudents from './pages/TutorStudents';
@@ -40,22 +54,28 @@ import Notifications from './pages/Notifications';
 import ForgotPassword from './pages/ForgotPassword';
 import Team from './pages/Team';
 import Timetable from './pages/Timetable';
-import { supabase } from './services/supabaseClient'; 
+
+import { supabase } from './services/supabaseClient';
 
 // ============================================
-// ✅ PARENT MODULE IMPORTS
+// PARENT MODULE IMPORTS
 // ============================================
 import ParentLogin from './pages/ParentLogin';
 import ParentRegister from './pages/ParentRegister';
 import ParentDashboard from './pages/ParentDashboard';
 
 // ============================================
-// ✅ OUR MISSION PAGE IMPORT
+// SESSION RECORDINGS IMPORT
+// ============================================
+import SessionRecordings from './pages/SessionRecordings';
+
+// ============================================
+// OUR MISSION PAGE IMPORT
 // ============================================
 import MissionPage from './pages/MissionPage';
 
 // ============================================
-// ✅ TOUR GUIDE IMPORT
+// TOUR GUIDE IMPORT
 // ============================================
 import TourGuide from './components/TourGuide';
 
@@ -65,12 +85,12 @@ import TourGuide from './components/TourGuide';
 import BecomeATutor from './pages/BecomeATutor';
 
 // ============================================
-// ✅ TRACK APPLICATION (Public)
+// TRACK APPLICATION (Public)
 // ============================================
 import TrackApplication from './pages/TrackApplication';
 
 // ============================================
-// ADMIN ROUTES - Direct imports (not lazy)
+// ADMIN ROUTES - Direct imports
 // ============================================
 import AdminLayout from './pages/Admin/AdminLayout';
 import AdminDashboard from './pages/Admin/AdminDashboard';
@@ -87,17 +107,17 @@ import AdminProfile from './pages/Admin/AdminProfile';
 import AdminPricing from './pages/Admin/AdminPricing';
 
 // ============================================
-// ADMIN LOGIN LAYOUT (No Navbar)
+// ADMIN LOGIN LAYOUT
 // ============================================
 import AdminLoginLayout from './pages/Admin/AdminLoginLayout';
 
 // ============================================
-// PUBLIC SUBJECT CONTENT (Student view)
+// PUBLIC SUBJECT CONTENT
 // ============================================
 import SubjectContent from './pages/SubjectContent';
 
 // ============================================
-// ✅ SPLASH SCREEN
+// SPLASH SCREEN
 // ============================================
 import SplashScreen from './components/SplashScreen';
 
@@ -107,59 +127,85 @@ import SplashScreen from './components/SplashScreen';
 class ErrorBoundary extends React.Component {
   constructor(props) {
     super(props);
-    this.state = { hasError: false, error: null, errorInfo: null };
+    this.state = {
+      hasError: false,
+      error: null,
+      errorInfo: null
+    };
   }
 
   static getDerivedStateFromError(error) {
-    return { hasError: true, error };
+    return {
+      hasError: true,
+      error
+    };
   }
 
   componentDidCatch(error, errorInfo) {
     console.error('❌ React Error Boundary caught an error:', error);
     console.error('Error Info:', errorInfo);
+
     this.setState({ errorInfo });
   }
 
   render() {
     if (this.state.hasError) {
       return (
-        <div style={{
-          padding: '60px 20px',
-          textAlign: 'center',
-          minHeight: '100vh',
-          display: 'flex',
-          flexDirection: 'column',
-          alignItems: 'center',
-          justifyContent: 'center',
-          background: '#0a0e1a',
-          color: '#fff'
-        }}>
-          <h1 style={{ color: '#ef4444', fontSize: '28px' }}>⚠️ Something went wrong</h1>
-          <p style={{ color: '#94a3b8', marginTop: '12px', maxWidth: '500px' }}>
+        <div
+          style={{
+            padding: '60px 20px',
+            textAlign: 'center',
+            minHeight: '100vh',
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            justifyContent: 'center',
+            background: '#0a0e1a',
+            color: '#fff'
+          }}
+        >
+          <h1 style={{ color: '#ef4444', fontSize: '28px' }}>
+            ⚠️ Something went wrong
+          </h1>
+
+          <p
+            style={{
+              color: '#94a3b8',
+              marginTop: '12px',
+              maxWidth: '500px'
+            }}
+          >
             {this.state.error?.message || 'An unexpected error occurred'}
           </p>
+
           {this.state.errorInfo && (
-            <details style={{
-              marginTop: '20px',
-              color: '#94a3b8',
-              fontSize: '14px',
-              textAlign: 'left',
-              maxWidth: '600px',
-              background: '#1a1a2e',
-              padding: '16px',
-              borderRadius: '8px'
-            }}>
+            <details
+              style={{
+                marginTop: '20px',
+                color: '#94a3b8',
+                fontSize: '14px',
+                textAlign: 'left',
+                maxWidth: '600px',
+                background: '#1a1a2e',
+                padding: '16px',
+                borderRadius: '8px'
+              }}
+            >
               <summary>Technical Details</summary>
-              <pre style={{
-                marginTop: '12px',
-                fontSize: '12px',
-                overflow: 'auto',
-                maxHeight: '200px'
-              }}>
+
+              <pre
+                style={{
+                  marginTop: '12px',
+                  fontSize: '12px',
+                  overflow: 'auto',
+                  maxHeight: '200px'
+                }}
+              >
                 {this.state.errorInfo.componentStack}
               </pre>
             </details>
           )}
+
           <button
             onClick={() => window.location.reload()}
             style={{
@@ -173,8 +219,12 @@ class ErrorBoundary extends React.Component {
               fontSize: '16px',
               transition: 'background 0.3s'
             }}
-            onMouseEnter={(e) => e.target.style.background = '#6366f1'}
-            onMouseLeave={(e) => e.target.style.background = '#4f46e5'}
+            onMouseEnter={(e) =>
+              (e.target.style.background = '#6366f1')
+            }
+            onMouseLeave={(e) =>
+              (e.target.style.background = '#4f46e5')
+            }
           >
             Refresh Page
           </button>
@@ -192,31 +242,43 @@ class ErrorBoundary extends React.Component {
 const withLazyErrorHandling = (importFn, componentName) => {
   return lazy(() =>
     importFn()
-      .then(module => {
+      .then((module) => {
         console.log(`✅ ${componentName} loaded successfully`);
+
         if (module.default) return module;
-        if (module[componentName]) return { default: module[componentName] };
-        throw new Error(`${componentName} has no default or named export`);
+
+        if (module[componentName]) {
+          return { default: module[componentName] };
+        }
+
+        throw new Error(
+          `${componentName} has no default or named export`
+        );
       })
-      .catch(err => {
+      .catch((err) => {
         console.error(`❌ Failed to load ${componentName}:`, err);
+
         return {
           default: () => (
-            <div style={{
-              padding: '60px 20px',
-              textAlign: 'center',
-              color: '#ef4444',
-              minHeight: '100vh',
-              display: 'flex',
-              flexDirection: 'column',
-              alignItems: 'center',
-              justifyContent: 'center',
-              background: '#0a0e1a'
-            }}>
+            <div
+              style={{
+                padding: '60px 20px',
+                textAlign: 'center',
+                color: '#ef4444',
+                minHeight: '100vh',
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'center',
+                justifyContent: 'center',
+                background: '#0a0e1a'
+              }}
+            >
               <h2>⚠️ Failed to load {componentName}</h2>
+
               <p style={{ color: '#94a3b8', marginTop: '12px' }}>
                 {err.message || 'An error occurred loading this page'}
               </p>
+
               <button
                 onClick={() => window.location.reload()}
                 style={{
@@ -256,45 +318,58 @@ const MySessions = withLazyErrorHandling(
 // LAZY LOAD FALLBACK COMPONENT
 // ============================================
 const PageLoader = () => (
-  <div style={{
-    minHeight: '100vh',
-    display: 'flex',
-    flexDirection: 'column',
-    alignItems: 'center',
-    justifyContent: 'center',
-    background: '#0a0e1a',
-    color: '#94a3b8',
-    gap: '16px'
-  }}>
-    <div style={{
-      width: '40px',
-      height: '40px',
-      border: '3px solid rgba(79, 70, 229, 0.2)',
-      borderTopColor: '#4f46e5',
-      borderRadius: '50%',
-      animation: 'spin 0.8s linear infinite'
-    }}></div>
+  <div
+    style={{
+      minHeight: '100vh',
+      display: 'flex',
+      flexDirection: 'column',
+      alignItems: 'center',
+      justifyContent: 'center',
+      background: '#0a0e1a',
+      color: '#94a3b8',
+      gap: '16px'
+    }}
+  >
+    <div
+      style={{
+        width: '40px',
+        height: '40px',
+        border: '3px solid rgba(79, 70, 229, 0.2)',
+        borderTopColor: '#4f46e5',
+        borderRadius: '50%',
+        animation: 'spin 0.8s linear infinite'
+      }}
+    />
+
     <p>Loading...</p>
-    <style>{`
-      @keyframes spin {
-        to { transform: rotate(360deg); }
-      }
-    `}</style>
+
+    <style>
+      {`
+        @keyframes spin {
+          to {
+            transform: rotate(360deg);
+          }
+        }
+      `}
+    </style>
   </div>
 );
 
 // ============================================
-// ✅ STUDENT PROTECTED ROUTE
+// STUDENT PROTECTED ROUTE
 // ============================================
 const StudentRoute = ({ children }) => {
   const user = JSON.parse(localStorage.getItem('user'));
-  
+
   if (!user) {
     return <Navigate to="/login" replace />;
   }
 
-  // If they are an Admin, kick them out of the student dashboard immediately
-  if (user.is_admin || user.is_super_admin || user.role === 'admin') {
+  if (
+    user.is_admin ||
+    user.is_super_admin ||
+    user.role === 'admin'
+  ) {
     return <Navigate to="/admin/dashboard" replace />;
   }
 
@@ -302,7 +377,7 @@ const StudentRoute = ({ children }) => {
 };
 
 // ============================================
-// ✅ SESSION REMINDER LISTENER
+// SESSION REMINDER LISTENER
 // ============================================
 const SessionReminderListener = () => {
   const navigate = useNavigate();
@@ -311,22 +386,35 @@ const SessionReminderListener = () => {
   useEffect(() => {
     if (!user?.id) return;
 
-    // Listen for new notifications in real-time
     const channel = supabase
       .channel('public:session_alerts')
       .on(
         'postgres_changes',
-        { event: 'INSERT', schema: 'public', table: 'notifications', filter: `user_id=eq.${user.id}` },
+        {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'notifications',
+          filter: `user_id=eq.${user.id}`
+        },
         (payload) => {
           const notif = payload.new;
 
-          // Show alert based on notification type
           if (notif.type === 'session_reminder') {
-            const goToSession = window.confirm(`⏰ ${notif.title}\n\n${notif.message}\n\nClick OK to go to your sessions.`);
-            if (goToSession) navigate('/my-sessions');
+            const goToSession = window.confirm(
+              `⏰ ${notif.title}\n\n${notif.message}\n\nClick OK to go to your sessions.`
+            );
+
+            if (goToSession) {
+              navigate('/my-sessions');
+            }
           } else if (notif.type === 'session_started') {
-            const goToSession = window.confirm(`🚀 ${notif.title}\n\n${notif.message}\n\nClick OK to join the session now.`);
-            if (goToSession) navigate('/my-sessions');
+            const goToSession = window.confirm(
+              `🚀 ${notif.title}\n\n${notif.message}\n\nClick OK to join the session now.`
+            );
+
+            if (goToSession) {
+              navigate('/my-sessions');
+            }
           }
         }
       )
@@ -335,143 +423,349 @@ const SessionReminderListener = () => {
     return () => supabase.removeChannel(channel);
   }, [user?.id, navigate]);
 
-  return null; // This component doesn't render anything
+  return null;
 };
 
 // ============================================
-// WRAPPER COMPONENT FOR CONDITIONAL LAYOUT RENDERING
+// WRAPPER COMPONENT FOR CONDITIONAL LAYOUT
 // ============================================
 const AppContent = () => {
   const location = useLocation();
-  
-  // Hide Navbar/Footer/ChatWidget on Admin routes, VerifyEmail, Parent routes, and Private Tutor Portal routes
-  const isAdminRoute = location.pathname.startsWith('/admin');
-  const isVerifyEmailRoute = location.pathname === '/verify-email';
-  const isParentRoute = location.pathname.startsWith('/parent');
-  
-  // ✅ FIX: Use '/tutor/' with a trailing slash to catch the dashboard routes, 
-  // but NOT the public '/tutors' page!
-  const isTutorPortalRoute = location.pathname.startsWith('/tutor/'); 
 
-  const hideNavigation = isAdminRoute || isVerifyEmailRoute || isParentRoute || isTutorPortalRoute;
+  const isAdminRoute = location.pathname.startsWith('/admin');
+  const isVerifyEmailRoute =
+    location.pathname === '/verify-email';
+
+  const isParentRoute =
+    location.pathname.startsWith('/parent') ||
+    location.pathname.startsWith('/session-recordings');
+
+  const isTutorPortalRoute =
+    location.pathname.startsWith('/tutor/');
+
+  const hideNavigation =
+    isAdminRoute ||
+    isVerifyEmailRoute ||
+    isParentRoute ||
+    isTutorPortalRoute;
 
   return (
     <div className="app">
       {!hideNavigation && <SessionReminderListener />}
-      
+
       {!hideNavigation && <Navbar />}
 
-      {/* 👇 THE TOUR GUIDE RUNS HERE (Only on standard user pages) */}
       {!hideNavigation && <TourGuide />}
-      
+
       <main className="app-main">
         <Suspense fallback={<PageLoader />}>
           <Routes>
-            {/* ============================================
-                ✅ STANDALONE ROUTES (No Navbar/Footer)
-                ============================================ */}
-            <Route path="/verify-email" element={<VerifyEmail />} />
 
             {/* ============================================
-                ✅ ADMIN LOGIN - NO NAVBAR (Layout Route with Outlet)
+                STANDALONE ROUTES (NO NAVBAR/FOOTER)
+                ============================================ */}
+            <Route
+              path="/verify-email"
+              element={<VerifyEmail />}
+            />
+
+            {/* ============================================
+                ADMIN LOGIN
                 ============================================ */}
             <Route element={<AdminLoginLayout />}>
-              <Route path="/admin/login" element={<AdminLogin />} />
+              <Route
+                path="/admin/login"
+                element={<AdminLogin />}
+              />
             </Route>
 
             {/* ============================================
-                ADMIN ROUTES - With Sidebar (AdminLayout)
+                ADMIN ROUTES
                 ============================================ */}
             <Route path="/admin" element={<AdminLayout />}>
               <Route index element={<AdminDashboard />} />
-              <Route path="dashboard" element={<AdminDashboard />} />
+
+              <Route
+                path="dashboard"
+                element={<AdminDashboard />}
+              />
+
               <Route path="users" element={<AdminUsers />} />
               <Route path="tutors" element={<AdminTutors />} />
               <Route path="content" element={<AdminContent />} />
-              <Route path="content/:subjectId" element={<AdminSubjectContent />} />
+
+              <Route
+                path="content/:subjectId"
+                element={<AdminSubjectContent />}
+              />
+
               <Route path="payments" element={<AdminPayments />} />
               <Route path="pricing" element={<AdminPricing />} />
               <Route path="analytics" element={<AdminAnalytics />} />
               <Route path="settings" element={<AdminSettings />} />
               <Route path="activity" element={<AdminActivity />} />
               <Route path="profile" element={<AdminProfile />} />
-              <Route path="notifications" element={<Notifications />} />
+
+              <Route
+                path="notifications"
+                element={<Notifications />}
+              />
             </Route>
 
             {/* ============================================
-                CORE ROUTES - Always accessible
+                CORE ROUTES
                 ============================================ */}
-            <Route path="/forgot-password" element={<ForgotPassword />} />
+            <Route
+              path="/forgot-password"
+              element={<ForgotPassword />}
+            />
+
             <Route path="/login" element={<Login />} />
-            {/* ✅ PARENT ROUTES */}
-            <Route path="/parent-login" element={<ParentLogin />} />
-            <Route path="/parent-register" element={<ParentRegister />} />
+
+            {/* PARENT ROUTES */}
+            <Route
+              path="/parent-login"
+              element={<ParentLogin />}
+            />
+
+            <Route
+              path="/parent-register"
+              element={<ParentRegister />}
+            />
+
             <Route path="/register" element={<Register />} />
 
             {/* ============================================
-                PUBLIC ROUTES - No authentication needed
+                PUBLIC ROUTES
                 ============================================ */}
             <Route path="/" element={<Home />} />
             <Route path="/mission" element={<MissionPage />} />
+
             <Route path="/subjects" element={<Subjects />} />
-            <Route path="/subjects/:subjectName" element={<SubjectDetail />} />
+
+            <Route
+              path="/subjects/:subjectName"
+              element={<SubjectDetail />}
+            />
+
             <Route path="/curriculum" element={<Curriculum />} />
-            <Route path="/curriculum/:countryId" element={<CurriculumDetail />} />
-            
-            {/* ✅ PUBLIC TUTORS PAGE (Navbar is visible here) */}
+
+            <Route
+              path="/curriculum/:countryId"
+              element={<CurriculumDetail />}
+            />
+
             <Route path="/tutors" element={<Tutors />} />
-            
             <Route path="/pricing" element={<Pricing />} />
             <Route path="/resources" element={<Resources />} />
-            <Route path="/resources/:vaultName/:resourceId" element={<ResourceDetail />} />
-            <Route path="/resources/:vaultName" element={<ResourceDetail />} />
-            <Route path="/resources/videos/:id" element={<ResourceDetail />} />
-            <Route path="/resources/practice/:id" element={<ResourceDetail />} />
-            <Route path="/resources/guides/:id" element={<ResourceDetail />} />
+
+            <Route
+              path="/resources/:vaultName/:resourceId"
+              element={<ResourceDetail />}
+            />
+
+            <Route
+              path="/resources/:vaultName"
+              element={<ResourceDetail />}
+            />
+
+            <Route
+              path="/resources/videos/:id"
+              element={<ResourceDetail />}
+            />
+
+            <Route
+              path="/resources/practice/:id"
+              element={<ResourceDetail />}
+            />
+
+            <Route
+              path="/resources/guides/:id"
+              element={<ResourceDetail />}
+            />
+
             <Route path="/terms" element={<Terms />} />
             <Route path="/privacy" element={<Privacy />} />
             <Route path="/search" element={<SearchResults />} />
-            <Route path="/subject-content/:subjectId" element={<SubjectContent />} />
+
+            <Route
+              path="/subject-content/:subjectId"
+              element={<SubjectContent />}
+            />
+
             <Route path="/team" element={<Team />} />
-            <Route path="/become-a-tutor" element={<BecomeATutor />} />
-            <Route path="/track-application" element={<TrackApplication />} />
+
+            <Route
+              path="/become-a-tutor"
+              element={<BecomeATutor />}
+            />
+
+            <Route
+              path="/track-application"
+              element={<TrackApplication />}
+            />
 
             {/* ============================================
-                PROTECTED ROUTES - Require authentication
+                PROTECTED ROUTES
                 ============================================ */}
-            <Route path="/timetable" element={<StudentRoute><Timetable /></StudentRoute>} />
-            <Route path="/dashboard" element={<StudentRoute><Dashboard /></StudentRoute>} />
-            <Route path="/profile" element={<StudentRoute><Profile /></StudentRoute>} />
-            <Route path="/settings" element={<StudentRoute><Settings /></StudentRoute>} />
-            <Route path="/help/*" element={<StudentRoute><Help /></StudentRoute>} />
-            <Route path="/practice/:id" element={<StudentRoute><Practice /></StudentRoute>} />
-            <Route path="/session/:sessionId" element={<StudentRoute><TutorSession /></StudentRoute>} />
-            <Route path="/checkout" element={<StudentRoute><Checkout /></StudentRoute>} />
-            <Route path="/payment-success" element={<StudentRoute><PaymentSuccess /></StudentRoute>} />
-            <Route path="/notifications" element={<StudentRoute><Notifications /></StudentRoute>} />
+            <Route
+              path="/timetable"
+              element={
+                <StudentRoute>
+                  <Timetable />
+                </StudentRoute>
+              }
+            />
+
+            <Route
+              path="/dashboard"
+              element={
+                <StudentRoute>
+                  <Dashboard />
+                </StudentRoute>
+              }
+            />
+
+            <Route
+              path="/profile"
+              element={
+                <StudentRoute>
+                  <Profile />
+                </StudentRoute>
+              }
+            />
+
+            <Route
+              path="/settings"
+              element={
+                <StudentRoute>
+                  <Settings />
+                </StudentRoute>
+              }
+            />
+
+            <Route
+              path="/help/*"
+              element={
+                <StudentRoute>
+                  <Help />
+                </StudentRoute>
+              }
+            />
+
+            <Route
+              path="/practice/:id"
+              element={
+                <StudentRoute>
+                  <Practice />
+                </StudentRoute>
+              }
+            />
+
+            <Route
+              path="/session/:sessionId"
+              element={
+                <StudentRoute>
+                  <TutorSession />
+                </StudentRoute>
+              }
+            />
+
+            <Route
+              path="/checkout"
+              element={
+                <StudentRoute>
+                  <Checkout />
+                </StudentRoute>
+              }
+            />
+
+            <Route
+              path="/payment-success"
+              element={
+                <StudentRoute>
+                  <PaymentSuccess />
+                </StudentRoute>
+              }
+            />
+
+            <Route
+              path="/notifications"
+              element={
+                <StudentRoute>
+                  <Notifications />
+                </StudentRoute>
+              }
+            />
 
             {/* ============================================
-                ✅ PARENT DASHBOARD ROUTE
+                PARENT DASHBOARD
                 ============================================ */}
-            <Route path="/parent/dashboard" element={<ParentDashboard />} />
+            <Route
+              path="/parent/dashboard"
+              element={<ParentDashboard />}
+            />
 
             {/* ============================================
-                ✅ PRIVATE TUTOR PORTAL ROUTES (Navbar hidden here)
+                SESSION RECORDINGS
                 ============================================ */}
-            <Route path="/tutor/dashboard" element={<TutorDashboard />} />
-            <Route path="/tutor/session/:sessionId" element={<TutorSession />} />
-            <Route path="/tutor/students" element={<TutorStudents />} />
-            <Route path="/tutor/earnings" element={<TutorEarnings />} />
+            <Route
+              path="/session-recordings"
+              element={
+                <StudentRoute>
+                  <SessionRecordings />
+                </StudentRoute>
+              }
+            />
 
             {/* ============================================
-                LAZY LOADED ROUTES - With error handling
+                PRIVATE TUTOR PORTAL ROUTES
                 ============================================ */}
-            <Route path="/my-courses" element={<StudentRoute><MyCourses /></StudentRoute>} />
-            <Route path="/my-sessions" element={<StudentRoute><MySessions /></StudentRoute>} />
+            <Route
+              path="/tutor/dashboard"
+              element={<TutorDashboard />}
+            />
+
+            <Route
+              path="/tutor/session/:sessionId"
+              element={<TutorSession />}
+            />
+
+            <Route
+              path="/tutor/students"
+              element={<TutorStudents />}
+            />
+
+            <Route
+              path="/tutor/earnings"
+              element={<TutorEarnings />}
+            />
+
+            {/* ============================================
+                LAZY LOADED ROUTES
+                ============================================ */}
+            <Route
+              path="/my-courses"
+              element={
+                <StudentRoute>
+                  <MyCourses />
+                </StudentRoute>
+              }
+            />
+
+            <Route
+              path="/my-sessions"
+              element={
+                <StudentRoute>
+                  <MySessions />
+                </StudentRoute>
+              }
+            />
+
           </Routes>
         </Suspense>
       </main>
-      
+
       {!hideNavigation && <Footer />}
       {!hideNavigation && <ChatWidget />}
     </div>
@@ -490,7 +784,7 @@ function App() {
   useEffect(() => {
     const timer = setTimeout(() => {
       setIsAppReady(true);
-    }, 2000); 
+    }, 2000);
 
     return () => clearTimeout(timer);
   }, []);

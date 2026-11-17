@@ -1,9 +1,14 @@
 
+/* ============================================
+   EDUSPANTECH - SESSION RECORDINGS
+   Premium Dark Theme
+   ============================================ */
+
 .recordings-page {
   min-height: 100vh;
-  background: #ffffff;
+  background: #0a0e1a;
   padding: 32px 40px 60px;
-  color: #17243a;
+  color: #f1f5f9;
 }
 
 .recordings-container {
@@ -11,24 +16,33 @@
   margin: 0 auto;
 }
 
+/* ============================================
+   BREADCRUMB
+   ============================================ */
+
 .recordings-breadcrumb {
   display: flex;
   align-items: center;
   gap: 10px;
   margin-bottom: 32px;
-  color: #8993a4;
+  color: #64748b;
   font-size: 13px;
 }
 
 .recordings-breadcrumb a {
-  color: #2463eb;
+  color: #818cf8;
   text-decoration: none;
   font-weight: 500;
 }
 
 .recordings-breadcrumb a:hover {
+  color: #a5b4fc;
   text-decoration: underline;
 }
+
+/* ============================================
+   PAGE HEADING
+   ============================================ */
 
 .recordings-heading {
   display: flex;
@@ -39,7 +53,7 @@
 }
 
 .recordings-eyebrow {
-  color: #2563eb;
+  color: #818cf8;
   font-size: 11px;
   font-weight: 700;
   letter-spacing: 1.3px;
@@ -47,7 +61,7 @@
 
 .recordings-heading h1 {
   margin: 9px 0 8px;
-  color: #17243a;
+  color: #f8fafc;
   font-size: 32px;
   font-weight: 700;
   letter-spacing: -0.8px;
@@ -56,20 +70,24 @@
 .recordings-heading p {
   margin: 0;
   max-width: 620px;
-  color: #788397;
+  color: #94a3b8;
   font-size: 14px;
   line-height: 1.7;
 }
+
+/* ============================================
+   REFRESH BUTTON
+   ============================================ */
 
 .recordings-refresh {
   display: flex;
   align-items: center;
   gap: 8px;
   padding: 11px 17px;
-  background: #ffffff;
-  border: 1px solid #e3e8f0;
+  background: #151c2c;
+  border: 1px solid #293449;
   border-radius: 8px;
-  color: #344258;
+  color: #cbd5e1;
   font-size: 13px;
   font-weight: 600;
   cursor: pointer;
@@ -77,8 +95,9 @@
 }
 
 .recordings-refresh:hover {
-  border-color: #2563eb;
-  color: #2563eb;
+  background: #1c2540;
+  border-color: #6366f1;
+  color: #a5b4fc;
 }
 
 .recordings-refresh:disabled {
@@ -89,6 +108,10 @@
 .recordings-refresh span {
   font-size: 18px;
 }
+
+/* ============================================
+   STATISTICS
+   ============================================ */
 
 .recordings-stats {
   display: grid;
@@ -102,9 +125,15 @@
   align-items: center;
   gap: 15px;
   padding: 21px;
-  border: 1px solid #e9edf3;
+  border: 1px solid #263147;
   border-radius: 10px;
-  background: #ffffff;
+  background: #111827;
+  transition: border-color 0.2s, background 0.2s;
+}
+
+.recording-stat:hover {
+  border-color: #3b4660;
+  background: #151e30;
 }
 
 .recording-stat-icon {
@@ -118,32 +147,36 @@
 }
 
 .recording-stat-icon.blue {
-  background: #edf4ff;
-  color: #2563eb;
+  background: rgba(99, 102, 241, 0.15);
+  color: #818cf8;
 }
 
 .recording-stat-icon.green {
-  background: #eaf8f0;
-  color: #19945b;
+  background: rgba(16, 185, 129, 0.13);
+  color: #34d399;
 }
 
 .recording-stat-icon.orange {
-  background: #fff5e9;
-  color: #d98222;
+  background: rgba(245, 158, 11, 0.13);
+  color: #fbbf24;
 }
 
 .recording-stat span {
   display: block;
   margin-bottom: 5px;
-  color: #8993a4;
+  color: #94a3b8;
   font-size: 12px;
 }
 
 .recording-stat strong {
-  color: #17243a;
+  color: #f8fafc;
   font-size: 23px;
   font-weight: 700;
 }
+
+/* ============================================
+   TOOLBAR
+   ============================================ */
 
 .recordings-toolbar {
   display: flex;
@@ -152,7 +185,7 @@
   flex-wrap: wrap;
   gap: 15px;
   padding-bottom: 23px;
-  border-bottom: 1px solid #edf0f4;
+  border-bottom: 1px solid #263147;
 }
 
 .recordings-search {
@@ -162,13 +195,19 @@
   align-items: center;
   gap: 10px;
   padding: 0 14px;
-  border: 1px solid #e3e8f0;
+  border: 1px solid #293449;
   border-radius: 8px;
-  background: #ffffff;
+  background: #111827;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.recordings-search:focus-within {
+  border-color: #6366f1;
+  box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.12);
 }
 
 .recordings-search span {
-  color: #8993a4;
+  color: #64748b;
   font-size: 22px;
 }
 
@@ -177,14 +216,14 @@
   height: 43px;
   border: none;
   outline: none;
-  color: #17243a;
+  color: #f1f5f9;
   background: transparent;
   font-family: inherit;
   font-size: 13px;
 }
 
 .recordings-search input::placeholder {
-  color: #a0a8b5;
+  color: #64748b;
 }
 
 .recordings-filters {
@@ -195,10 +234,10 @@
 
 .recordings-filters button {
   padding: 10px 15px;
-  border: 1px solid #e7ebf1;
+  border: 1px solid #293449;
   border-radius: 7px;
-  background: #ffffff;
-  color: #657187;
+  background: #111827;
+  color: #94a3b8;
   font-size: 12px;
   font-weight: 600;
   cursor: pointer;
@@ -206,15 +245,19 @@
 }
 
 .recordings-filters button:hover {
-  border-color: #2563eb;
-  color: #2563eb;
+  border-color: #6366f1;
+  color: #a5b4fc;
 }
 
 .recordings-filters button.active {
-  background: #edf4ff;
-  border-color: #cbdcff;
-  color: #2563eb;
+  background: rgba(99, 102, 241, 0.15);
+  border-color: #6366f1;
+  color: #a5b4fc;
 }
+
+/* ============================================
+   SECTION HEADING
+   ============================================ */
 
 .recordings-section-heading {
   display: flex;
@@ -225,15 +268,19 @@
 
 .recordings-section-heading h2 {
   margin: 0 0 5px;
-  color: #17243a;
+  color: #f1f5f9;
   font-size: 18px;
   font-weight: 700;
 }
 
 .recordings-section-heading span {
-  color: #929bad;
+  color: #64748b;
   font-size: 12px;
 }
+
+/* ============================================
+   RECORDINGS GRID
+   ============================================ */
 
 .recordings-grid {
   display: grid;
@@ -243,17 +290,21 @@
 
 .recording-card {
   overflow: hidden;
-  border: 1px solid #e8edf3;
+  border: 1px solid #263147;
   border-radius: 11px;
-  background: #ffffff;
+  background: #111827;
   transition: border-color 0.2s, box-shadow 0.2s, transform 0.2s;
 }
 
 .recording-card:hover {
-  border-color: #d3deef;
-  box-shadow: 0 8px 25px rgba(20, 39, 75, 0.07);
+  border-color: #4f46e5;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.25);
   transform: translateY(-2px);
 }
+
+/* ============================================
+   RECORDING THUMBNAIL
+   ============================================ */
 
 .recording-thumbnail {
   position: relative;
@@ -262,16 +313,16 @@
   align-items: center;
   justify-content: center;
   overflow: hidden;
-  background: #edf3fb;
+  background: #151e30;
 }
 
 .recording-thumbnail-pattern {
   position: absolute;
   inset: 0;
-  opacity: 0.55;
+  opacity: 0.65;
   background-image:
-    linear-gradient(rgba(37, 99, 235, 0.06) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(37, 99, 235, 0.06) 1px, transparent 1px);
+    linear-gradient(rgba(129, 140, 248, 0.08) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(129, 140, 248, 0.08) 1px, transparent 1px);
   background-size: 25px 25px;
 }
 
@@ -284,10 +335,16 @@
   justify-content: center;
   padding-left: 3px;
   border-radius: 50%;
-  background: #2563eb;
+  background: #4f46e5;
   color: #ffffff;
   font-size: 17px;
-  box-shadow: 0 4px 15px rgba(37, 99, 235, 0.22);
+  box-shadow: 0 4px 20px rgba(79, 70, 229, 0.35);
+  transition: 0.2s;
+}
+
+.recording-card:hover .recording-play-icon {
+  background: #6366f1;
+  transform: scale(1.08);
 }
 
 .recording-thumbnail-label {
@@ -295,7 +352,7 @@
   left: 15px;
   top: 14px;
   z-index: 1;
-  color: #55709a;
+  color: #a5b4fc;
   font-size: 10px;
   font-weight: 700;
   letter-spacing: 1px;
@@ -308,10 +365,14 @@
   z-index: 1;
   padding: 5px 8px;
   border-radius: 5px;
-  background: rgba(23, 36, 58, 0.85);
-  color: #ffffff;
+  background: rgba(10, 14, 26, 0.9);
+  color: #f8fafc;
   font-size: 11px;
 }
+
+/* ============================================
+   RECORDING CARD CONTENT
+   ============================================ */
 
 .recording-card-content {
   padding: 17px;
@@ -335,29 +396,29 @@
 }
 
 .recording-status.available {
-  background: #eaf8f0;
-  color: #168452;
+  background: rgba(16, 185, 129, 0.13);
+  color: #34d399;
 }
 
 .recording-status.processing {
-  background: #fff5e9;
-  color: #c47a20;
+  background: rgba(245, 158, 11, 0.13);
+  color: #fbbf24;
 }
 
 .recording-status.unavailable {
-  background: #f1f3f6;
-  color: #758094;
+  background: #252f40;
+  color: #94a3b8;
 }
 
 .recording-date {
-  color: #929bad;
+  color: #64748b;
   font-size: 11px;
 }
 
 .recording-card-content h3 {
   min-height: 44px;
   margin: 0 0 10px;
-  color: #17243a;
+  color: #f1f5f9;
   font-size: 16px;
   font-weight: 700;
   line-height: 1.4;
@@ -365,14 +426,18 @@
 
 .recording-tutor {
   margin: 0 0 17px;
-  color: #778397;
+  color: #94a3b8;
   font-size: 12px;
 }
 
 .recording-tutor span {
   margin-right: 5px;
-  color: #2563eb;
+  color: #818cf8;
 }
+
+/* ============================================
+   CARD FOOTER
+   ============================================ */
 
 .recording-card-footer {
   display: flex;
@@ -380,11 +445,11 @@
   justify-content: space-between;
   gap: 10px;
   padding-top: 14px;
-  border-top: 1px solid #edf0f4;
+  border-top: 1px solid #263147;
 }
 
 .recording-length {
-  color: #8993a4;
+  color: #64748b;
   font-size: 11px;
   white-space: nowrap;
 }
@@ -396,23 +461,28 @@
   padding: 9px 12px;
   border: none;
   border-radius: 6px;
-  background: #2563eb;
+  background: #4f46e5;
   color: #ffffff;
   font-size: 11px;
   font-weight: 600;
   cursor: pointer;
-  transition: background 0.2s;
+  transition: background 0.2s, transform 0.2s;
 }
 
 .recording-watch-button:hover:not(:disabled) {
-  background: #1d4ed8;
+  background: #6366f1;
+  transform: translateY(-1px);
 }
 
 .recording-watch-button:disabled {
-  background: #e9edf3;
-  color: #98a1b0;
+  background: #293449;
+  color: #64748b;
   cursor: not-allowed;
 }
+
+/* ============================================
+   LOADING AND EMPTY STATES
+   ============================================ */
 
 .recordings-state,
 .recordings-empty {
@@ -427,15 +497,15 @@
 
 .recordings-state p,
 .recordings-empty p {
-  color: #8993a4;
+  color: #94a3b8;
   font-size: 13px;
   line-height: 1.7;
 }
 
 .recordings-empty {
-  border: 1px dashed #dce3ed;
+  border: 1px dashed #354158;
   border-radius: 10px;
-  background: #fbfcfe;
+  background: #111827;
 }
 
 .recordings-empty-icon,
@@ -447,15 +517,15 @@
   justify-content: center;
   margin-bottom: 14px;
   border-radius: 50%;
-  background: #edf4ff;
-  color: #2563eb;
+  background: rgba(99, 102, 241, 0.15);
+  color: #818cf8;
   font-size: 20px;
 }
 
 .recordings-empty h3,
 .recordings-error h3 {
   margin: 0;
-  color: #17243a;
+  color: #f1f5f9;
   font-size: 17px;
 }
 
@@ -468,22 +538,32 @@
   padding: 10px 17px;
   border: none;
   border-radius: 7px;
-  background: #2563eb;
+  background: #4f46e5;
   color: #ffffff;
   font-size: 12px;
   font-weight: 600;
   cursor: pointer;
+  transition: background 0.2s;
+}
+
+.recordings-clear:hover,
+.recordings-error button:hover {
+  background: #6366f1;
 }
 
 .recordings-error button {
   margin-top: 10px;
 }
 
+/* ============================================
+   LOADING SPINNER
+   ============================================ */
+
 .recordings-spinner {
   width: 30px;
   height: 30px;
-  border: 3px solid #e5edfa;
-  border-top-color: #2563eb;
+  border: 3px solid #293449;
+  border-top-color: #818cf8;
   border-radius: 50%;
   animation: recordings-spin 0.8s linear infinite;
 }
@@ -494,15 +574,19 @@
   }
 }
 
+/* ============================================
+   HELP INFORMATION
+   ============================================ */
+
 .recordings-help {
   display: flex;
   align-items: flex-start;
   gap: 13px;
   margin-top: 35px;
   padding: 18px;
-  border: 1px solid #e8edf3;
+  border: 1px solid #263147;
   border-radius: 9px;
-  background: #fbfcfe;
+  background: #111827;
 }
 
 .recordings-help-icon {
@@ -513,23 +597,27 @@
   align-items: center;
   justify-content: center;
   border-radius: 50%;
-  background: #edf4ff;
-  color: #2563eb;
+  background: rgba(99, 102, 241, 0.15);
+  color: #818cf8;
   font-size: 12px;
   font-weight: 700;
 }
 
 .recordings-help strong {
-  color: #344258;
+  color: #e2e8f0;
   font-size: 12px;
 }
 
 .recordings-help p {
   margin: 5px 0 0;
-  color: #8993a4;
+  color: #94a3b8;
   font-size: 12px;
   line-height: 1.6;
 }
+
+/* ============================================
+   VIDEO MODAL
+   ============================================ */
 
 .recording-modal-overlay {
   position: fixed;
@@ -539,16 +627,19 @@
   align-items: center;
   justify-content: center;
   padding: 20px;
-  background: rgba(15, 23, 42, 0.72);
+  background: rgba(2, 6, 23, 0.88);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
 }
 
 .recording-modal {
   width: 100%;
   max-width: 900px;
   overflow: hidden;
+  border: 1px solid #354158;
   border-radius: 12px;
-  background: #ffffff;
-  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.2);
+  background: #111827;
+  box-shadow: 0 25px 80px rgba(0, 0, 0, 0.55);
 }
 
 .recording-modal-header {
@@ -557,10 +648,11 @@
   justify-content: space-between;
   gap: 15px;
   padding: 20px 24px;
+  border-bottom: 1px solid #263147;
 }
 
 .recording-modal-header span {
-  color: #2563eb;
+  color: #818cf8;
   font-size: 10px;
   font-weight: 700;
   letter-spacing: 1px;
@@ -568,26 +660,32 @@
 
 .recording-modal-header h2 {
   margin: 5px 0 0;
-  color: #17243a;
+  color: #f8fafc;
   font-size: 18px;
 }
 
 .recording-modal-close {
   width: 35px;
   height: 35px;
-  border: none;
+  border: 1px solid #354158;
   border-radius: 7px;
-  background: #f1f4f8;
-  color: #344258;
+  background: #1e293b;
+  color: #cbd5e1;
   font-size: 23px;
   cursor: pointer;
+  transition: 0.2s;
+}
+
+.recording-modal-close:hover {
+  background: #334155;
+  color: #ffffff;
 }
 
 .recording-video {
   display: block;
   width: 100%;
   max-height: 65vh;
-  background: #101827;
+  background: #020617;
 }
 
 .recording-modal-details {
@@ -595,9 +693,13 @@
   justify-content: space-between;
   gap: 15px;
   padding: 16px 24px;
-  color: #778397;
+  color: #94a3b8;
   font-size: 12px;
 }
+
+/* ============================================
+   RESPONSIVE DESIGN
+   ============================================ */
 
 @media (max-width: 1000px) {
   .recordings-grid {
@@ -649,4 +751,22 @@
   .recording-modal-details {
     flex-direction: column;
   }
+
+  .recording-modal-header {
+    padding: 16px;
+  }
+}
+
+/* ============================================
+   ACCESSIBILITY
+   ============================================ */
+
+.recordings-page button:focus-visible,
+.recordings-page a:focus-visible {
+  outline: 2px solid #818cf8;
+  outline-offset: 3px;
+}
+
+.recordings-page button:disabled {
+  opacity: 0.55;
 }

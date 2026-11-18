@@ -38,62 +38,84 @@ const isTrue = (value) =>
 
 const getRoleUser = (userData) => {
   if (!userData) return null;
-  return userData.user || userData;
+
+  // Support common API response structures.
+  if (userData.user) return userData.user;
+  if (userData.data?.user) return userData.data.user;
+  if (userData.data && typeof userData.data === "object") {
+    return userData.data;
+  }
+
+  return userData;
 };
 
-// Tutor detection prioritises the actual user data returned by
-// the backend. The saved userRole is only a fallback when the
-// backend has not supplied any role information.
-const checkIsTutor = (userData) => {
-  const data = getRoleUser(userData);
+const getStoredUser = () => {
+  try {
+    const serviceUser = authService.getStoredUser();
 
-  const storedTutorRole =
-    normalizeRole(localStorage.getItem("userRole")) === "tutor";
+    if (serviceUser) return getRoleUser(serviceUser);
 
-  if (!data) return storedTutorRole;
+    const localUser = localStorage.getItem("user");
 
-  const role = normalizeRole(data.role);
-  const userType = normalizeRole(data.userType);
-  const type = normalizeRole(data.type);
-
-  const roleList = Array.isArray(data.roles) ? data.roles : [];
-
-  const hasTutorIndicator =
-    isTrue(data.is_tutor) ||
-    ["tutor", "instructor"].includes(role) ||
-    userType === "tutor" ||
-    type === "tutor" ||
-    roleList.some((item) => normalizeRole(item) === "tutor");
-
-  if (hasTutorIndicator) return true;
-
-  // Do not allow an old localStorage tutor role to override
-  // an explicit student or admin role returned by the backend.
-  const hasBackendRoleInformation =
-    data.is_tutor !== undefined && data.is_tutor !== null ||
-    data.role !== undefined && data.role !== null ||
-    data.userType !== undefined && data.userType !== null ||
-    data.type !== undefined && data.type !== null ||
-    roleList.length > 0;
-
-  if (hasBackendRoleInformation) return false;
-
-  return storedTutorRole;
+    return localUser ? getRoleUser(JSON.parse(localUser)) : null;
+  } catch (error) {
+    console.error("Navbar: Unable to read stored user:", error);
+    return null;
+  }
 };
 
+// Admin detection always takes priority over tutor detection.
 const checkIsAdmin = (userData) => {
   const data = getRoleUser(userData);
 
   if (!data) return false;
 
+  const role = normalizeRole(data.role);
+  const adminRole = normalizeRole(data.admin_role);
+
   return (
     isTrue(data.is_admin) ||
     isTrue(data.is_super_admin) ||
-    ["admin", "super_admin", "superadmin"].includes(
-      normalizeRole(data.role)
-    ) ||
-    Boolean(normalizeRole(data.admin_role))
+    ["admin", "super_admin", "superadmin"].includes(role) ||
+    Boolean(adminRole)
   );
+};
+
+// Tutor detection checks both the authenticated user and the
+// saved role. This prevents a stale or incomplete API response
+// from incorrectly changing a confirmed tutor account to student.
+const checkIsTutor = (userData) => {
+  const data = getRoleUser(userData);
+
+  const storedRole = normalizeRole(
+    localStorage.getItem("userRole")
+  );
+
+  if (!data) {
+    return storedRole === "tutor";
+  }
+
+  const role = normalizeRole(data.role);
+  const userType = normalizeRole(data.userType);
+  const type = normalizeRole(data.type);
+
+  const roleList = Array.isArray(data.roles)
+    ? data.roles.map(normalizeRole)
+    : [];
+
+  const backendTutor =
+    isTrue(data.is_tutor) ||
+    ["tutor", "instructor"].includes(role) ||
+    userType === "tutor" ||
+    type === "tutor" ||
+    roleList.includes("tutor") ||
+    roleList.includes("instructor");
+
+  if (backendTutor) return true;
+
+  // The stored role is a fallback when the API response
+  // does not positively identify the account as an admin.
+  return storedRole === "tutor";
 };
 
 // ======================================================
@@ -120,25 +142,34 @@ function Navbar() {
   const [searchResults, setSearchResults] = useState([]);
   const [showSuggestions, setShowSuggestions] = useState(false);
 
-  const [user, setUser] = useState(() => authService.getStoredUser());
+  const [user, setUser] = useState(() => getStoredUser());
 
   const [isAuthenticated, setIsAuthenticated] = useState(() =>
     hasAuthToken()
   );
 
-  const [isTutor, setIsTutor] = useState(() =>
-    hasAuthToken() && checkIsTutor(authService.getStoredUser())
-  );
+  const [isTutor, setIsTutor] = useState(() => {
+    const storedUser = getStoredUser();
 
-  const [isAdmin, setIsAdmin] = useState(() =>
-    hasAuthToken() && checkIsAdmin(authService.getStoredUser())
-  );
+    return (
+      hasAuthToken() &&
+      checkIsTutor(storedUser)
+    );
+  });
+
+  const [isAdmin, setIsAdmin] = useState(() => {
+    const storedUser = getStoredUser();
+
+    return (
+      hasAuthToken() &&
+      checkIsAdmin(storedUser)
+    );
+  });
 
   const [authRefresh, setAuthRefresh] = useState(0);
   const [logoError, setLogoError] = useState(false);
 
-  // Homepage data is ONLY used for search suggestions.
-  // Its loading state must never control navbar rendering.
+  // Homepage data is only used for search suggestions.
   const { data } = useHomeData();
 
   const { currentLanguage, changeLanguage, t, languages } = useLanguage();
@@ -157,13 +188,25 @@ function Navbar() {
       return;
     }
 
-    const admin = checkIsAdmin(userData);
-    const tutor = !admin && checkIsTutor(userData);
+    const data = getRoleUser(userData);
 
-    setUser(getRoleUser(userData));
+    const admin = checkIsAdmin(data);
+    const tutor = !admin && checkIsTutor(data);
+
+    setUser(data);
     setIsAuthenticated(true);
     setIsAdmin(admin);
     setIsTutor(tutor);
+
+    console.log("EduSpantech Navbar authentication:", {
+      authenticated: true,
+      user: data?.name,
+      role: data?.role,
+      storedRole: localStorage.getItem("userRole"),
+      isTutor: tutor,
+      isAdmin: admin,
+      navigation: admin ? "admin" : tutor ? "tutor" : "student"
+    });
   }, []);
 
   const preserveExistingSession = useCallback(() => {
@@ -175,22 +218,27 @@ function Navbar() {
       return;
     }
 
-    const storedUser = authService.getStoredUser();
+    const storedUser = getStoredUser();
 
     setIsAuthenticated(true);
 
     if (storedUser) {
       applyAuthenticatedUser(storedUser);
     } else {
+      const storedRole = normalizeRole(
+        localStorage.getItem("userRole")
+      );
+
       setUser(null);
       setIsAdmin(false);
-      setIsTutor(
-        normalizeRole(localStorage.getItem("userRole")) === "tutor"
-      );
+      setIsTutor(storedRole === "tutor");
     }
   }, [applyAuthenticatedUser]);
 
-  // Resolve the authenticated user from the authentication endpoint.
+  // ======================================================
+  // AUTHENTICATION CHECK
+  // ======================================================
+
   useEffect(() => {
     let cancelled = false;
 
@@ -207,6 +255,7 @@ function Navbar() {
         return;
       }
 
+      // Avoid unnecessary repeated requests for the same token.
       if (lastCheckedTokenRef.current === token) {
         return;
       }
@@ -231,7 +280,11 @@ function Navbar() {
       } catch (error) {
         if (cancelled) return;
 
-        console.error("Navbar authentication check failed:", error);
+        console.error(
+          "Navbar authentication check failed:",
+          error
+        );
+
         preserveExistingSession();
       }
     };
@@ -256,18 +309,20 @@ function Navbar() {
     const handleLogin = () => {
       lastCheckedTokenRef.current = null;
 
-      const storedUser = authService.getStoredUser();
+      const storedUser = getStoredUser();
 
       if (hasAuthToken()) {
         if (storedUser) {
           applyAuthenticatedUser(storedUser);
         } else {
+          const storedRole = normalizeRole(
+            localStorage.getItem("userRole")
+          );
+
           setUser(null);
           setIsAdmin(false);
           setIsAuthenticated(true);
-          setIsTutor(
-            normalizeRole(localStorage.getItem("userRole")) === "tutor"
-          );
+          setIsTutor(storedRole === "tutor");
         }
 
         setAuthRefresh((value) => value + 1);
@@ -279,41 +334,44 @@ function Navbar() {
     const handleLogout = () => {
       lastCheckedTokenRef.current = null;
 
-      localStorage.removeItem("userRole");
-
       applyAuthenticatedUser(null);
+
       setIsUserDropdownOpen(false);
       setIsMenuOpen(false);
     };
 
     const handleStorageChange = (event) => {
-      if (
-        event.key === "accessToken" ||
-        event.key === "token" ||
-        event.key === "authToken" ||
-        event.key === "user" ||
-        event.key === "userRole"
-      ) {
-        lastCheckedTokenRef.current = null;
+      const relevantKeys = [
+        "accessToken",
+        "token",
+        "authToken",
+        "user",
+        "userRole"
+      ];
 
-        if (!hasAuthToken()) {
-          applyAuthenticatedUser(null);
+      if (!relevantKeys.includes(event.key)) return;
+
+      lastCheckedTokenRef.current = null;
+
+      if (!hasAuthToken()) {
+        applyAuthenticatedUser(null);
+      } else {
+        const storedUser = getStoredUser();
+
+        if (storedUser) {
+          applyAuthenticatedUser(storedUser);
         } else {
-          const storedUser = authService.getStoredUser();
+          const storedRole = normalizeRole(
+            localStorage.getItem("userRole")
+          );
 
-          if (storedUser) {
-            applyAuthenticatedUser(storedUser);
-          } else {
-            setUser(null);
-            setIsAdmin(false);
-            setIsAuthenticated(true);
-            setIsTutor(
-              normalizeRole(localStorage.getItem("userRole")) === "tutor"
-            );
-          }
-
-          setAuthRefresh((value) => value + 1);
+          setUser(null);
+          setIsAdmin(false);
+          setIsAuthenticated(true);
+          setIsTutor(storedRole === "tutor");
         }
+
+        setAuthRefresh((value) => value + 1);
       }
     };
 
@@ -334,8 +392,6 @@ function Navbar() {
 
   const handleLogout = () => {
     lastCheckedTokenRef.current = null;
-
-    localStorage.removeItem("userRole");
 
     setIsAuthenticated(false);
     setUser(null);
@@ -414,6 +470,7 @@ function Navbar() {
 
     if (lock) {
       const previousOverflow = document.body.style.overflow;
+
       document.body.style.overflow = "hidden";
 
       return () => {
@@ -663,17 +720,39 @@ function Navbar() {
     { path: "/mission", label: "Our Mission", icon: <Target size={18} /> }
   ];
 
+  // ======================================================
+  // RESOLVE NAVIGATION ROLE
+  // ======================================================
+
+  // Use the latest stored user as a secondary source.
+  // This also handles cases where the API user object is incomplete.
+  const storedUser = getStoredUser();
+
+  const resolvedAdmin =
+    isAdmin ||
+    checkIsAdmin(user) ||
+    checkIsAdmin(storedUser);
+
+  const resolvedTutor =
+    !resolvedAdmin &&
+    (
+      isTutor ||
+      checkIsTutor(user) ||
+      checkIsTutor(storedUser) ||
+      normalizeRole(localStorage.getItem("userRole")) === "tutor"
+    );
+
   let navLinks = baseNavLinks;
 
-  if (isAdmin) {
+  if (resolvedAdmin) {
     navLinks = adminNavLinks;
-  } else if (isTutor) {
+  } else if (resolvedTutor) {
     navLinks = tutorNavLinks;
   } else if (isAuthenticated) {
     navLinks = studentNavLinks;
   }
 
-  const showSearch = !isAdmin;
+  const showSearch = !resolvedAdmin;
 
   const isActive = (path) => location.pathname === path;
 
@@ -730,13 +809,15 @@ function Navbar() {
   return (
     <>
       <header
-        className={`navbar ${isAdmin ? "admin-navbar" : ""}`}
+        className={`navbar ${resolvedAdmin ? "admin-navbar" : ""} ${
+          resolvedTutor ? "tutor-navbar" : ""
+        }`}
         ref={menuRef}
       >
         <div className="navbar-container">
 
           <Link
-            to={isAdmin ? "/admin/dashboard" : "/"}
+            to={resolvedAdmin ? "/admin/dashboard" : "/"}
             className="logo"
             onClick={closeMenu}
           >
@@ -745,13 +826,15 @@ function Navbar() {
             <div className="logo-content">
               <span className="logo-title">EduSpantech</span>
               <span className="logo-subtitle">
-                {isAdmin
+                {resolvedAdmin
                   ? "Admin Panel"
                   : t("app.subtitle") || "Global Education Platform"}
               </span>
             </div>
 
-            {isAdmin && <span className="admin-badge">ADMIN</span>}
+            {resolvedAdmin && (
+              <span className="admin-badge">ADMIN</span>
+            )}
           </Link>
 
           <nav className="navbar-links">
@@ -760,9 +843,9 @@ function Navbar() {
                 key={link.path}
                 to={link.path}
                 className={`${isActive(link.path) ? "active" : ""} ${
-                  isAdmin
+                  resolvedAdmin
                     ? "admin-nav-link"
-                    : isTutor
+                    : resolvedTutor
                       ? "tutor-nav-link"
                       : "student-nav-link"
                 }`}
@@ -797,9 +880,11 @@ function Navbar() {
                 onClick={toggleLanguage}
               >
                 <Globe size={18} />
+
                 <span className="language-code-label">
                   {currentLanguage.toUpperCase()}
                 </span>
+
                 <ChevronDown
                   size={14}
                   className={`language-arrow ${isLanguageOpen ? "open" : ""}`}
@@ -818,6 +903,7 @@ function Navbar() {
                     <span className="lang-flag">{lang.flag}</span>
                     <span className="lang-name">{lang.nativeName}</span>
                     <span className="lang-code">{lang.code.toUpperCase()}</span>
+
                     {currentLanguage === lang.code && (
                       <span className="lang-check">✓</span>
                     )}
@@ -842,9 +928,9 @@ function Navbar() {
                   className={`user-dropdown-toggle ${
                     isUserDropdownOpen ? "open" : ""
                   } ${
-                    isAdmin
+                    resolvedAdmin
                       ? "admin-dropdown"
-                      : isTutor
+                      : resolvedTutor
                         ? "tutor-dropdown"
                         : "student-dropdown"
                   }`}
@@ -855,9 +941,9 @@ function Navbar() {
                   <div
                     className="user-avatar-circle"
                     style={{
-                      background: isAdmin
+                      background: resolvedAdmin
                         ? "linear-gradient(135deg, #f59e0b, #d97706)"
-                        : isTutor
+                        : resolvedTutor
                           ? "linear-gradient(135deg, #059669, #10b981)"
                           : "linear-gradient(135deg, #4f46e5, #7c3aed)"
                     }}
@@ -874,7 +960,7 @@ function Navbar() {
                       </span>
                     )}
 
-                    {isAdmin && (
+                    {resolvedAdmin && (
                       <span className="admin-badge-avatar" title="Admin">
                         👑
                       </span>
@@ -896,9 +982,9 @@ function Navbar() {
                       <div
                         className="dropdown-avatar"
                         style={{
-                          background: isAdmin
+                          background: resolvedAdmin
                             ? "linear-gradient(135deg, #f59e0b, #d97706)"
-                            : isTutor
+                            : resolvedTutor
                               ? "linear-gradient(135deg, #059669, #10b981)"
                               : "linear-gradient(135deg, #4f46e5, #7c3aed)"
                         }}
@@ -925,11 +1011,11 @@ function Navbar() {
                           {user?.email || ""}
                         </span>
 
-                        {isAdmin ? (
+                        {resolvedAdmin ? (
                           <span className="dropdown-user-tier admin-tier">
                             👑 Admin
                           </span>
-                        ) : isTutor ? (
+                        ) : resolvedTutor ? (
                           <span className="dropdown-user-tier tutor-tier">
                             👨‍🏫 Tutor Account
                           </span>
@@ -942,8 +1028,11 @@ function Navbar() {
                     </div>
                   </div>
 
-                  {isAdmin && (
+                  {/* ADMIN ACCOUNT MENU */}
+
+                  {resolvedAdmin && (
                     <div className="dropdown-items admin-dropdown-items">
+
                       <Link to="/admin/dashboard" className="dropdown-item" onClick={() => { closeUserDropdown(); playClick(); }}>
                         <PieChart size={18} className="dropdown-icon" />
                         <span>Dashboard</span>
@@ -998,8 +1087,11 @@ function Navbar() {
                     </div>
                   )}
 
-                  {!isAdmin && !isTutor && (
+                  {/* STUDENT ACCOUNT MENU */}
+
+                  {!resolvedAdmin && !resolvedTutor && (
                     <div className="dropdown-items">
+
                       <Link to="/profile" className="dropdown-item" onClick={() => { closeUserDropdown(); playClick(); }}>
                         <User size={18} className="dropdown-icon" />
                         <span>Profile</span>
@@ -1039,8 +1131,11 @@ function Navbar() {
                     </div>
                   )}
 
-                  {!isAdmin && isTutor && (
+                  {/* TUTOR ACCOUNT MENU */}
+
+                  {!resolvedAdmin && resolvedTutor && (
                     <div className="dropdown-items tutor-dropdown-items">
+
                       <Link to="/profile" className="dropdown-item" onClick={() => { closeUserDropdown(); playClick(); }}>
                         <User size={18} className="dropdown-icon" />
                         <span>My Profile</span>
@@ -1105,7 +1200,10 @@ function Navbar() {
         </div>
       </header>
 
-      {/* SEARCH OVERLAY */}
+      {/* ==================================================
+          SEARCH OVERLAY
+      ================================================== */}
+
       {isSearchOpen && (
         <div
           className="search-overlay"
@@ -1113,10 +1211,14 @@ function Navbar() {
           aria-modal="true"
           aria-label="Search"
         >
-          <div className="search-overlay-backdrop" onClick={closeSearch} />
+          <div
+            className="search-overlay-backdrop"
+            onClick={closeSearch}
+          />
 
           <div className="search-overlay-panel">
             <div className="search-overlay-header">
+
               <form onSubmit={handleSearch} className="search-overlay-form">
                 <Search size={20} className="search-overlay-icon" />
 
@@ -1202,7 +1304,10 @@ function Navbar() {
         </div>
       )}
 
-      {/* MOBILE MENU BACKDROP */}
+      {/* ==================================================
+          MOBILE MENU BACKDROP
+      ================================================== */}
+
       {isMenuOpen && (
         <div
           className="mobile-menu-backdrop"
@@ -1211,7 +1316,10 @@ function Navbar() {
         />
       )}
 
-      {/* MOBILE MENU */}
+      {/* ==================================================
+          MOBILE MENU
+      ================================================== */}
+
       <div
         className={`mobile-menu-overlay ${isMenuOpen ? "open" : ""}`}
         role="dialog"
@@ -1219,11 +1327,12 @@ function Navbar() {
         aria-hidden={!isMenuOpen}
       >
         <div className="mobile-menu-sheet">
+
           <div className="mobile-menu-header">
             <span className="mobile-menu-title">
-              {isAdmin
+              {resolvedAdmin
                 ? "Admin Menu"
-                : isTutor
+                : resolvedTutor
                   ? "Tutor Menu"
                   : "Menu"}
             </span>
@@ -1249,7 +1358,9 @@ function Navbar() {
                 }}
               >
                 {link.icon && (
-                  <span className="mobile-nav-icon">{link.icon}</span>
+                  <span className="mobile-nav-icon">
+                    {link.icon}
+                  </span>
                 )}
                 {link.label}
               </Link>
@@ -1258,7 +1369,9 @@ function Navbar() {
 
           <div className="mobile-divider"></div>
 
-          {isAuthenticated && !isAdmin && !isTutor && (
+          {/* STUDENT MOBILE TOOLS */}
+
+          {isAuthenticated && !resolvedAdmin && !resolvedTutor && (
             <div className="mobile-section">
               <div className="mobile-section-label">Account</div>
 
@@ -1288,7 +1401,9 @@ function Navbar() {
             </div>
           )}
 
-          {isAuthenticated && !isAdmin && isTutor && (
+          {/* TUTOR MOBILE TOOLS */}
+
+          {isAuthenticated && !resolvedAdmin && resolvedTutor && (
             <div className="mobile-section">
               <div className="mobile-section-label">Tutor Tools</div>
 
@@ -1318,7 +1433,9 @@ function Navbar() {
             </div>
           )}
 
-          {isAdmin && (
+          {/* ADMIN MOBILE TOOLS */}
+
+          {resolvedAdmin && (
             <div className="mobile-section">
               <div className="mobile-section-label">Admin</div>
 
@@ -1358,6 +1475,8 @@ function Navbar() {
 
           <div className="mobile-divider"></div>
 
+          {/* MOBILE LANGUAGE SELECTOR */}
+
           <div className="mobile-section">
             <div className="mobile-section-label">🌐 Language</div>
 
@@ -1381,6 +1500,8 @@ function Navbar() {
           </div>
 
           <div className="mobile-divider"></div>
+
+          {/* MOBILE AUTHENTICATION */}
 
           <div className="mobile-section">
             {isAuthenticated ? (

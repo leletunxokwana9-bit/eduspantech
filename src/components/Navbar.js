@@ -2,10 +2,31 @@
 import React, { useState, useEffect, useRef, useCallback } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import {
-  Search, Globe, ChevronDown, Menu, X, User, LogOut, Settings,
-  BookOpen, Award, Clock, HelpCircle, Home, Book, LayoutGrid,
-  Users, DollarSign, Folder, BarChart2, TrendingUp, PieChart,
-  CreditCard, FileText, Calendar, Target
+  Search,
+  Globe,
+  ChevronDown,
+  Menu,
+  X,
+  User,
+  LogOut,
+  Settings,
+  BookOpen,
+  Award,
+  Clock,
+  HelpCircle,
+  Home,
+  Book,
+  LayoutGrid,
+  Users,
+  DollarSign,
+  Folder,
+  BarChart2,
+  TrendingUp,
+  PieChart,
+  CreditCard,
+  FileText,
+  Calendar,
+  Target
 } from "lucide-react";
 
 import { useHomeData } from "../hooks/useHomeData";
@@ -38,52 +59,13 @@ const isTrue = (value) =>
 
 const getRoleUser = (userData) => {
   if (!userData) return null;
-
-  // Support common API response structures.
-  if (userData.user) return userData.user;
-  if (userData.data?.user) return userData.data.user;
-  if (userData.data && typeof userData.data === "object") {
-    return userData.data;
-  }
-
-  return userData;
+  return userData.user || userData;
 };
 
-const getStoredUser = () => {
-  try {
-    const serviceUser = authService.getStoredUser();
+// ======================================================
+// TUTOR DETECTION
+// ======================================================
 
-    if (serviceUser) return getRoleUser(serviceUser);
-
-    const localUser = localStorage.getItem("user");
-
-    return localUser ? getRoleUser(JSON.parse(localUser)) : null;
-  } catch (error) {
-    console.error("Navbar: Unable to read stored user:", error);
-    return null;
-  }
-};
-
-// Admin detection always takes priority over tutor detection.
-const checkIsAdmin = (userData) => {
-  const data = getRoleUser(userData);
-
-  if (!data) return false;
-
-  const role = normalizeRole(data.role);
-  const adminRole = normalizeRole(data.admin_role);
-
-  return (
-    isTrue(data.is_admin) ||
-    isTrue(data.is_super_admin) ||
-    ["admin", "super_admin", "superadmin"].includes(role) ||
-    Boolean(adminRole)
-  );
-};
-
-// Tutor detection checks both the authenticated user and the
-// saved role. This prevents a stale or incomplete API response
-// from incorrectly changing a confirmed tutor account to student.
 const checkIsTutor = (userData) => {
   const data = getRoleUser(userData);
 
@@ -91,8 +73,10 @@ const checkIsTutor = (userData) => {
     localStorage.getItem("userRole")
   );
 
+  const storedTutorRole = storedRole === "tutor";
+
   if (!data) {
-    return storedRole === "tutor";
+    return storedTutorRole;
   }
 
   const role = normalizeRole(data.role);
@@ -100,22 +84,58 @@ const checkIsTutor = (userData) => {
   const type = normalizeRole(data.type);
 
   const roleList = Array.isArray(data.roles)
-    ? data.roles.map(normalizeRole)
+    ? data.roles.map((item) => normalizeRole(item))
     : [];
 
-  const backendTutor =
+  const backendIdentifiesTutor =
     isTrue(data.is_tutor) ||
-    ["tutor", "instructor"].includes(role) ||
+    role === "tutor" ||
+    role === "instructor" ||
     userType === "tutor" ||
     type === "tutor" ||
     roleList.includes("tutor") ||
     roleList.includes("instructor");
 
-  if (backendTutor) return true;
+  if (backendIdentifiesTutor) {
+    return true;
+  }
 
-  // The stored role is a fallback when the API response
-  // does not positively identify the account as an admin.
-  return storedRole === "tutor";
+  const backendIdentifiesAdmin =
+    isTrue(data.is_admin) ||
+    isTrue(data.is_super_admin) ||
+    ["admin", "super_admin", "superadmin"].includes(role) ||
+    Boolean(normalizeRole(data.admin_role));
+
+  if (backendIdentifiesAdmin) {
+    return false;
+  }
+
+  // Preserve the role established during login when the
+  // backend returns an incomplete user profile.
+  if (storedTutorRole) {
+    return true;
+  }
+
+  return false;
+};
+
+// ======================================================
+// ADMIN DETECTION
+// ======================================================
+
+const checkIsAdmin = (userData) => {
+  const data = getRoleUser(userData);
+
+  if (!data) return false;
+
+  return (
+    isTrue(data.is_admin) ||
+    isTrue(data.is_super_admin) ||
+    ["admin", "super_admin", "superadmin"].includes(
+      normalizeRole(data.role)
+    ) ||
+    Boolean(normalizeRole(data.admin_role))
+  );
 };
 
 // ======================================================
@@ -133,6 +153,10 @@ function Navbar() {
 
   const lastCheckedTokenRef = useRef(null);
 
+  // ------------------------------------------------------
+  // UI STATE
+  // ------------------------------------------------------
+
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [isLanguageOpen, setIsLanguageOpen] = useState(false);
@@ -142,41 +166,48 @@ function Navbar() {
   const [searchResults, setSearchResults] = useState([]);
   const [showSuggestions, setShowSuggestions] = useState(false);
 
-  const [user, setUser] = useState(() => getStoredUser());
+  // ------------------------------------------------------
+  // AUTHENTICATION STATE
+  // ------------------------------------------------------
+
+  const [user, setUser] = useState(() =>
+    authService.getStoredUser()
+  );
 
   const [isAuthenticated, setIsAuthenticated] = useState(() =>
     hasAuthToken()
   );
 
-  const [isTutor, setIsTutor] = useState(() => {
-    const storedUser = getStoredUser();
+  const [isTutor, setIsTutor] = useState(() =>
+    hasAuthToken() &&
+    checkIsTutor(authService.getStoredUser())
+  );
 
-    return (
-      hasAuthToken() &&
-      checkIsTutor(storedUser)
-    );
-  });
-
-  const [isAdmin, setIsAdmin] = useState(() => {
-    const storedUser = getStoredUser();
-
-    return (
-      hasAuthToken() &&
-      checkIsAdmin(storedUser)
-    );
-  });
+  const [isAdmin, setIsAdmin] = useState(() =>
+    hasAuthToken() &&
+    checkIsAdmin(authService.getStoredUser())
+  );
 
   const [authRefresh, setAuthRefresh] = useState(0);
   const [logoError, setLogoError] = useState(false);
 
-  // Homepage data is only used for search suggestions.
+  // ------------------------------------------------------
+  // CONTEXTS
+  // ------------------------------------------------------
+
   const { data } = useHomeData();
 
-  const { currentLanguage, changeLanguage, t, languages } = useLanguage();
+  const {
+    currentLanguage,
+    changeLanguage,
+    t,
+    languages
+  } = useLanguage();
+
   const { playClick } = useSound();
 
   // ======================================================
-  // AUTHENTICATION STATE
+  // APPLY AUTHENTICATED USER
   // ======================================================
 
   const applyAuthenticatedUser = useCallback((userData) => {
@@ -190,24 +221,29 @@ function Navbar() {
 
     const data = getRoleUser(userData);
 
-    const admin = checkIsAdmin(data);
-    const tutor = !admin && checkIsTutor(data);
+    const admin = checkIsAdmin(userData);
+    const tutor = !admin && checkIsTutor(userData);
+
+    console.log("🔎 Navbar authentication state:", {
+      name: data?.name,
+      email: data?.email,
+      backendRole: data?.role,
+      backendIsTutor: data?.is_tutor,
+      storedRole: localStorage.getItem("userRole"),
+      isAuthenticated: true,
+      isAdmin: admin,
+      isTutor: tutor
+    });
 
     setUser(data);
     setIsAuthenticated(true);
     setIsAdmin(admin);
     setIsTutor(tutor);
-
-    console.log("EduSpantech Navbar authentication:", {
-      authenticated: true,
-      user: data?.name,
-      role: data?.role,
-      storedRole: localStorage.getItem("userRole"),
-      isTutor: tutor,
-      isAdmin: admin,
-      navigation: admin ? "admin" : tutor ? "tutor" : "student"
-    });
   }, []);
+
+  // ======================================================
+  // PRESERVE EXISTING SESSION
+  // ======================================================
 
   const preserveExistingSession = useCallback(() => {
     const tokenExists = hasAuthToken();
@@ -218,7 +254,7 @@ function Navbar() {
       return;
     }
 
-    const storedUser = getStoredUser();
+    const storedUser = authService.getStoredUser();
 
     setIsAuthenticated(true);
 
@@ -255,7 +291,6 @@ function Navbar() {
         return;
       }
 
-      // Avoid unnecessary repeated requests for the same token.
       if (lastCheckedTokenRef.current === token) {
         return;
       }
@@ -309,7 +344,7 @@ function Navbar() {
     const handleLogin = () => {
       lastCheckedTokenRef.current = null;
 
-      const storedUser = getStoredUser();
+      const storedUser = authService.getStoredUser();
 
       if (hasAuthToken()) {
         if (storedUser) {
@@ -334,6 +369,8 @@ function Navbar() {
     const handleLogout = () => {
       lastCheckedTokenRef.current = null;
 
+      localStorage.removeItem("userRole");
+
       applyAuthenticatedUser(null);
 
       setIsUserDropdownOpen(false);
@@ -341,37 +378,35 @@ function Navbar() {
     };
 
     const handleStorageChange = (event) => {
-      const relevantKeys = [
-        "accessToken",
-        "token",
-        "authToken",
-        "user",
-        "userRole"
-      ];
+      if (
+        event.key === "accessToken" ||
+        event.key === "token" ||
+        event.key === "authToken" ||
+        event.key === "user" ||
+        event.key === "userRole"
+      ) {
+        lastCheckedTokenRef.current = null;
 
-      if (!relevantKeys.includes(event.key)) return;
-
-      lastCheckedTokenRef.current = null;
-
-      if (!hasAuthToken()) {
-        applyAuthenticatedUser(null);
-      } else {
-        const storedUser = getStoredUser();
-
-        if (storedUser) {
-          applyAuthenticatedUser(storedUser);
+        if (!hasAuthToken()) {
+          applyAuthenticatedUser(null);
         } else {
-          const storedRole = normalizeRole(
-            localStorage.getItem("userRole")
-          );
+          const storedUser = authService.getStoredUser();
 
-          setUser(null);
-          setIsAdmin(false);
-          setIsAuthenticated(true);
-          setIsTutor(storedRole === "tutor");
+          if (storedUser) {
+            applyAuthenticatedUser(storedUser);
+          } else {
+            const storedRole = normalizeRole(
+              localStorage.getItem("userRole")
+            );
+
+            setUser(null);
+            setIsAdmin(false);
+            setIsAuthenticated(true);
+            setIsTutor(storedRole === "tutor");
+          }
+
+          setAuthRefresh((value) => value + 1);
         }
-
-        setAuthRefresh((value) => value + 1);
       }
     };
 
@@ -392,6 +427,8 @@ function Navbar() {
 
   const handleLogout = () => {
     lastCheckedTokenRef.current = null;
+
+    localStorage.removeItem("userRole");
 
     setIsAuthenticated(false);
     setUser(null);
@@ -415,19 +452,25 @@ function Navbar() {
     setIsSearchOpen(false);
     setIsLanguageOpen(false);
     setIsUserDropdownOpen(false);
+
     playClick();
   };
 
-  const closeMenu = () => setIsMenuOpen(false);
+  const closeMenu = () => {
+    setIsMenuOpen(false);
+  };
 
   const toggleUserDropdown = () => {
     setIsUserDropdownOpen((value) => !value);
     setIsSearchOpen(false);
     setIsLanguageOpen(false);
+
     playClick();
   };
 
-  const closeUserDropdown = () => setIsUserDropdownOpen(false);
+  const closeUserDropdown = () => {
+    setIsUserDropdownOpen(false);
+  };
 
   const openSearch = () => {
     setIsSearchOpen(true);
@@ -452,12 +495,14 @@ function Navbar() {
   const toggleLanguage = () => {
     setIsLanguageOpen((value) => !value);
     setIsUserDropdownOpen(false);
+
     playClick();
   };
 
   const handleLanguageChange = (langCode) => {
     changeLanguage(langCode);
     setIsLanguageOpen(false);
+
     playClick();
   };
 
@@ -517,6 +562,7 @@ function Navbar() {
     setIsMenuOpen(false);
     setIsUserDropdownOpen(false);
     setIsLanguageOpen(false);
+
     closeSearch();
   }, [location.pathname]);
 
@@ -530,6 +576,7 @@ function Navbar() {
         setIsMenuOpen(false);
         setIsUserDropdownOpen(false);
         setIsLanguageOpen(false);
+
         closeSearch();
       }
     };
@@ -684,77 +731,167 @@ function Navbar() {
   // ======================================================
 
   const adminNavLinks = [
-    { path: "/admin/dashboard", label: "Dashboard", icon: <PieChart size={18} /> },
-    { path: "/admin/users", label: "Users", icon: <Users size={18} /> },
-    { path: "/admin/tutors", label: "Tutors", icon: <Users size={18} /> },
-    { path: "/admin/content", label: "Content", icon: <Book size={18} /> },
-    { path: "/admin/payments", label: "Payments", icon: <CreditCard size={18} /> },
-    { path: "/admin/analytics", label: "Analytics", icon: <BarChart2 size={18} /> },
-    { path: "/admin/settings", label: "Settings", icon: <Settings size={18} /> }
+    {
+      path: "/admin/dashboard",
+      label: "Dashboard",
+      icon: <PieChart size={18} />
+    },
+    {
+      path: "/admin/users",
+      label: "Users",
+      icon: <Users size={18} />
+    },
+    {
+      path: "/admin/tutors",
+      label: "Tutors",
+      icon: <Users size={18} />
+    },
+    {
+      path: "/admin/content",
+      label: "Content",
+      icon: <Book size={18} />
+    },
+    {
+      path: "/admin/payments",
+      label: "Payments",
+      icon: <CreditCard size={18} />
+    },
+    {
+      path: "/admin/analytics",
+      label: "Analytics",
+      icon: <BarChart2 size={18} />
+    },
+    {
+      path: "/admin/settings",
+      label: "Settings",
+      icon: <Settings size={18} />
+    }
   ];
 
   const tutorNavLinks = [
-    { path: "/", label: "Home", icon: <Home size={18} /> },
-    { path: "/tutor/dashboard", label: "Dashboard", icon: <BarChart2 size={18} /> },
-    { path: "/my-sessions", label: "Sessions", icon: <Calendar size={18} /> },
-    { path: "/resources", label: "Resources", icon: <Folder size={18} /> }
+    {
+      path: "/",
+      label: "Home",
+      icon: <Home size={18} />
+    },
+    {
+      path: "/tutor/dashboard",
+      label: "Dashboard",
+      icon: <BarChart2 size={18} />
+    },
+    {
+      path: "/my-sessions",
+      label: "Sessions",
+      icon: <Calendar size={18} />
+    },
+    {
+      path: "/resources",
+      label: "Resources",
+      icon: <Folder size={18} />
+    }
   ];
 
   const studentNavLinks = [
-    { path: "/", label: "Home", icon: <Home size={18} /> },
-    { path: "/subjects", label: "Subjects", icon: <Book size={18} /> },
-    { path: "/curriculum", label: "Curriculum", icon: <LayoutGrid size={18} /> },
-    { path: "/tutors", label: "Tutors", icon: <Users size={18} /> },
-    { path: "/pricing", label: "Pricing", icon: <DollarSign size={18} /> },
-    { path: "/resources", label: "Resources", icon: <Folder size={18} /> },
-    { path: "/mission", label: "Our Mission", icon: <Target size={18} /> }
+    {
+      path: "/",
+      label: "Home",
+      icon: <Home size={18} />
+    },
+    {
+      path: "/subjects",
+      label: "Subjects",
+      icon: <Book size={18} />
+    },
+    {
+      path: "/curriculum",
+      label: "Curriculum",
+      icon: <LayoutGrid size={18} />
+    },
+    {
+      path: "/tutors",
+      label: "Tutors",
+      icon: <Users size={18} />
+    },
+    {
+      path: "/pricing",
+      label: "Pricing",
+      icon: <DollarSign size={18} />
+    },
+    {
+      path: "/resources",
+      label: "Resources",
+      icon: <Folder size={18} />
+    },
+    {
+      path: "/mission",
+      label: "Our Mission",
+      icon: <Target size={18} />
+    }
   ];
 
   const baseNavLinks = [
-    { path: "/", label: "Home", icon: <Home size={18} /> },
-    { path: "/subjects", label: "Subjects", icon: <Book size={18} /> },
-    { path: "/curriculum", label: "Curriculum", icon: <LayoutGrid size={18} /> },
-    { path: "/tutors", label: "Tutors", icon: <Users size={18} /> },
-    { path: "/pricing", label: "Pricing", icon: <DollarSign size={18} /> },
-    { path: "/resources", label: "Resources", icon: <Folder size={18} /> },
-    { path: "/mission", label: "Our Mission", icon: <Target size={18} /> }
+    {
+      path: "/",
+      label: "Home",
+      icon: <Home size={18} />
+    },
+    {
+      path: "/subjects",
+      label: "Subjects",
+      icon: <Book size={18} />
+    },
+    {
+      path: "/curriculum",
+      label: "Curriculum",
+      icon: <LayoutGrid size={18} />
+    },
+    {
+      path: "/tutors",
+      label: "Tutors",
+      icon: <Users size={18} />
+    },
+    {
+      path: "/pricing",
+      label: "Pricing",
+      icon: <DollarSign size={18} />
+    },
+    {
+      path: "/resources",
+      label: "Resources",
+      icon: <Folder size={18} />
+    },
+    {
+      path: "/mission",
+      label: "Our Mission",
+      icon: <Target size={18} />
+    }
   ];
 
   // ======================================================
-  // RESOLVE NAVIGATION ROLE
+  // SELECT NAVIGATION BY ACCOUNT ROLE
   // ======================================================
-
-  // Use the latest stored user as a secondary source.
-  // This also handles cases where the API user object is incomplete.
-  const storedUser = getStoredUser();
-
-  const resolvedAdmin =
-    isAdmin ||
-    checkIsAdmin(user) ||
-    checkIsAdmin(storedUser);
-
-  const resolvedTutor =
-    !resolvedAdmin &&
-    (
-      isTutor ||
-      checkIsTutor(user) ||
-      checkIsTutor(storedUser) ||
-      normalizeRole(localStorage.getItem("userRole")) === "tutor"
-    );
 
   let navLinks = baseNavLinks;
 
-  if (resolvedAdmin) {
+  if (isAdmin) {
     navLinks = adminNavLinks;
-  } else if (resolvedTutor) {
+  } else if (isAuthenticated && isTutor) {
     navLinks = tutorNavLinks;
   } else if (isAuthenticated) {
     navLinks = studentNavLinks;
   }
 
-  const showSearch = !resolvedAdmin;
+  console.log("📍 Navbar navigation selected:", {
+    isAuthenticated,
+    isTutor,
+    isAdmin,
+    navigation: navLinks.map((link) => link.label)
+  });
 
-  const isActive = (path) => location.pathname === path;
+  const showSearch = !isAdmin;
+
+  const isActive = (path) =>
+    location.pathname === path;
 
   const getTypeLabel = (type) => ({
     subject: "Subject",
@@ -767,7 +904,9 @@ function Navbar() {
     user?.name?.split(" ")[0] || user?.name || "User";
 
   const getUserInitial = () =>
-    user?.name ? user.name.charAt(0).toUpperCase() : "U";
+    user?.name
+      ? user.name.charAt(0).toUpperCase()
+      : "U";
 
   const getUserTier = () =>
     user
@@ -779,7 +918,12 @@ function Navbar() {
       )
       : "Silver";
 
-  const getAvatarImage = () => user?.avatar || null;
+  const getAvatarImage = () =>
+    user?.avatar || null;
+
+  // ======================================================
+  // LOGO
+  // ======================================================
 
   const renderLogo = () => (
     <div className="logo-icon">
@@ -791,14 +935,21 @@ function Navbar() {
           onError={() => setLogoError(true)}
         />
       ) : (
-        <span style={{ fontSize: "20px", fontWeight: 700, color: "#818cf8" }}>
+        <span
+          style={{
+            fontSize: "20px",
+            fontWeight: 700,
+            color: "#818cf8"
+          }}
+        >
           ∑
         </span>
       )}
     </div>
   );
 
-  const isAdminRoute = location.pathname.startsWith("/admin");
+  const isAdminRoute =
+    location.pathname.startsWith("/admin");
 
   if (isAdminRoute) return null;
 
@@ -809,33 +960,40 @@ function Navbar() {
   return (
     <>
       <header
-        className={`navbar ${resolvedAdmin ? "admin-navbar" : ""} ${
-          resolvedTutor ? "tutor-navbar" : ""
-        }`}
+        className={`navbar ${isAdmin ? "admin-navbar" : ""}`}
         ref={menuRef}
       >
         <div className="navbar-container">
 
+          {/* LOGO */}
+
           <Link
-            to={resolvedAdmin ? "/admin/dashboard" : "/"}
+            to={isAdmin ? "/admin/dashboard" : "/"}
             className="logo"
             onClick={closeMenu}
           >
             {renderLogo()}
 
             <div className="logo-content">
-              <span className="logo-title">EduSpantech</span>
+              <span className="logo-title">
+                EduSpantech
+              </span>
+
               <span className="logo-subtitle">
-                {resolvedAdmin
+                {isAdmin
                   ? "Admin Panel"
                   : t("app.subtitle") || "Global Education Platform"}
               </span>
             </div>
 
-            {resolvedAdmin && (
-              <span className="admin-badge">ADMIN</span>
+            {isAdmin && (
+              <span className="admin-badge">
+                ADMIN
+              </span>
             )}
           </Link>
+
+          {/* DESKTOP NAVIGATION */}
 
           <nav className="navbar-links">
             {navLinks.map((link) => (
@@ -843,23 +1001,30 @@ function Navbar() {
                 key={link.path}
                 to={link.path}
                 className={`${isActive(link.path) ? "active" : ""} ${
-                  resolvedAdmin
+                  isAdmin
                     ? "admin-nav-link"
-                    : resolvedTutor
+                    : isTutor
                       ? "tutor-nav-link"
                       : "student-nav-link"
                 }`}
                 onClick={() => playClick()}
               >
                 {link.icon && (
-                  <span className="nav-icon">{link.icon}</span>
+                  <span className="nav-icon">
+                    {link.icon}
+                  </span>
                 )}
+
                 {link.label}
               </Link>
             ))}
           </nav>
 
+          {/* NAVBAR ACTIONS */}
+
           <div className="navbar-actions">
+
+            {/* SEARCH */}
 
             {showSearch && (
               <button
@@ -872,9 +1037,16 @@ function Navbar() {
               </button>
             )}
 
-            <div className="language-container" ref={languageRef}>
+            {/* LANGUAGE */}
+
+            <div
+              className="language-container"
+              ref={languageRef}
+            >
               <button
-                className={`language-button ${isLanguageOpen ? "active" : ""}`}
+                className={`language-button ${
+                  isLanguageOpen ? "active" : ""
+                }`}
                 aria-label="Language"
                 aria-expanded={isLanguageOpen}
                 onClick={toggleLanguage}
@@ -887,30 +1059,52 @@ function Navbar() {
 
                 <ChevronDown
                   size={14}
-                  className={`language-arrow ${isLanguageOpen ? "open" : ""}`}
+                  className={`language-arrow ${
+                    isLanguageOpen ? "open" : ""
+                  }`}
                 />
               </button>
 
-              <div className={`language-dropdown ${isLanguageOpen ? "open" : ""}`}>
+              <div
+                className={`language-dropdown ${
+                  isLanguageOpen ? "open" : ""
+                }`}
+              >
                 {Object.values(languages).map((lang) => (
                   <button
                     key={lang.code}
                     className={`language-option ${
-                      currentLanguage === lang.code ? "active" : ""
+                      currentLanguage === lang.code
+                        ? "active"
+                        : ""
                     }`}
-                    onClick={() => handleLanguageChange(lang.code)}
+                    onClick={() =>
+                      handleLanguageChange(lang.code)
+                    }
                   >
-                    <span className="lang-flag">{lang.flag}</span>
-                    <span className="lang-name">{lang.nativeName}</span>
-                    <span className="lang-code">{lang.code.toUpperCase()}</span>
+                    <span className="lang-flag">
+                      {lang.flag}
+                    </span>
+
+                    <span className="lang-name">
+                      {lang.nativeName}
+                    </span>
+
+                    <span className="lang-code">
+                      {lang.code.toUpperCase()}
+                    </span>
 
                     {currentLanguage === lang.code && (
-                      <span className="lang-check">✓</span>
+                      <span className="lang-check">
+                        ✓
+                      </span>
                     )}
                   </button>
                 ))}
               </div>
             </div>
+
+            {/* NOTIFICATIONS */}
 
             {isAuthenticated && (
               <NotificationBell
@@ -921,16 +1115,20 @@ function Navbar() {
               />
             )}
 
-            {isAuthenticated ? (
-              <div className="user-menu" ref={userDropdownRef}>
+            {/* AUTHENTICATED USER */}
 
+            {isAuthenticated ? (
+              <div
+                className="user-menu"
+                ref={userDropdownRef}
+              >
                 <button
                   className={`user-dropdown-toggle ${
                     isUserDropdownOpen ? "open" : ""
                   } ${
-                    resolvedAdmin
+                    isAdmin
                       ? "admin-dropdown"
-                      : resolvedTutor
+                      : isTutor
                         ? "tutor-dropdown"
                         : "student-dropdown"
                   }`}
@@ -941,9 +1139,9 @@ function Navbar() {
                   <div
                     className="user-avatar-circle"
                     style={{
-                      background: resolvedAdmin
+                      background: isAdmin
                         ? "linear-gradient(135deg, #f59e0b, #d97706)"
-                        : resolvedTutor
+                        : isTutor
                           ? "linear-gradient(135deg, #059669, #10b981)"
                           : "linear-gradient(135deg, #4f46e5, #7c3aed)"
                     }}
@@ -960,21 +1158,39 @@ function Navbar() {
                       </span>
                     )}
 
-                    {resolvedAdmin && (
-                      <span className="admin-badge-avatar" title="Admin">
+                    {isAdmin && (
+                      <span
+                        className="admin-badge-avatar"
+                        title="Admin"
+                      >
                         👑
                       </span>
                     )}
 
-                    <span className="avatar-chevron" aria-hidden="true">
-                      <ChevronDown size={10} strokeWidth={3} />
+                    <span
+                      className="avatar-chevron"
+                      aria-hidden="true"
+                    >
+                      <ChevronDown
+                        size={10}
+                        strokeWidth={3}
+                      />
                     </span>
                   </div>
 
-                  <span className="user-name">{getUserName()}</span>
+                  <span className="user-name">
+                    {getUserName()}
+                  </span>
                 </button>
 
-                <div className={`user-dropdown ${isUserDropdownOpen ? "open" : ""}`}>
+                {/* USER DROPDOWN */}
+
+                <div
+                  className={`user-dropdown ${
+                    isUserDropdownOpen ? "open" : ""
+                  }`}
+                >
+                  {/* USER PROFILE HEADER */}
 
                   <div className="dropdown-header">
                     <div className="dropdown-user-info">
@@ -982,9 +1198,9 @@ function Navbar() {
                       <div
                         className="dropdown-avatar"
                         style={{
-                          background: resolvedAdmin
+                          background: isAdmin
                             ? "linear-gradient(135deg, #f59e0b, #d97706)"
-                            : resolvedTutor
+                            : isTutor
                               ? "linear-gradient(135deg, #059669, #10b981)"
                               : "linear-gradient(135deg, #4f46e5, #7c3aed)"
                         }}
@@ -1011,11 +1227,11 @@ function Navbar() {
                           {user?.email || ""}
                         </span>
 
-                        {resolvedAdmin ? (
+                        {isAdmin ? (
                           <span className="dropdown-user-tier admin-tier">
                             👑 Admin
                           </span>
-                        ) : resolvedTutor ? (
+                        ) : isTutor ? (
                           <span className="dropdown-user-tier tutor-tier">
                             👨‍🏫 Tutor Account
                           </span>
@@ -1028,148 +1244,376 @@ function Navbar() {
                     </div>
                   </div>
 
-                  {/* ADMIN ACCOUNT MENU */}
+                  {/* ADMIN DROPDOWN */}
 
-                  {resolvedAdmin && (
+                  {isAdmin && (
                     <div className="dropdown-items admin-dropdown-items">
 
-                      <Link to="/admin/dashboard" className="dropdown-item" onClick={() => { closeUserDropdown(); playClick(); }}>
-                        <PieChart size={18} className="dropdown-icon" />
+                      <Link
+                        to="/admin/dashboard"
+                        className="dropdown-item"
+                        onClick={() => {
+                          closeUserDropdown();
+                          playClick();
+                        }}
+                      >
+                        <PieChart
+                          size={18}
+                          className="dropdown-icon"
+                        />
                         <span>Dashboard</span>
                       </Link>
 
-                      <Link to="/admin/users" className="dropdown-item" onClick={() => { closeUserDropdown(); playClick(); }}>
-                        <Users size={18} className="dropdown-icon" />
+                      <Link
+                        to="/admin/users"
+                        className="dropdown-item"
+                        onClick={() => {
+                          closeUserDropdown();
+                          playClick();
+                        }}
+                      >
+                        <Users
+                          size={18}
+                          className="dropdown-icon"
+                        />
                         <span>Manage Users</span>
                       </Link>
 
-                      <Link to="/admin/tutors" className="dropdown-item" onClick={() => { closeUserDropdown(); playClick(); }}>
-                        <Users size={18} className="dropdown-icon" />
+                      <Link
+                        to="/admin/tutors"
+                        className="dropdown-item"
+                        onClick={() => {
+                          closeUserDropdown();
+                          playClick();
+                        }}
+                      >
+                        <Users
+                          size={18}
+                          className="dropdown-icon"
+                        />
                         <span>Manage Tutors</span>
                       </Link>
 
-                      <Link to="/admin/content" className="dropdown-item" onClick={() => { closeUserDropdown(); playClick(); }}>
-                        <Book size={18} className="dropdown-icon" />
+                      <Link
+                        to="/admin/content"
+                        className="dropdown-item"
+                        onClick={() => {
+                          closeUserDropdown();
+                          playClick();
+                        }}
+                      >
+                        <Book
+                          size={18}
+                          className="dropdown-icon"
+                        />
                         <span>Content Management</span>
                       </Link>
 
-                      <Link to="/admin/payments" className="dropdown-item" onClick={() => { closeUserDropdown(); playClick(); }}>
-                        <CreditCard size={18} className="dropdown-icon" />
+                      <Link
+                        to="/admin/payments"
+                        className="dropdown-item"
+                        onClick={() => {
+                          closeUserDropdown();
+                          playClick();
+                        }}
+                      >
+                        <CreditCard
+                          size={18}
+                          className="dropdown-icon"
+                        />
                         <span>Payments</span>
                       </Link>
 
-                      <Link to="/admin/analytics" className="dropdown-item" onClick={() => { closeUserDropdown(); playClick(); }}>
-                        <BarChart2 size={18} className="dropdown-icon" />
+                      <Link
+                        to="/admin/analytics"
+                        className="dropdown-item"
+                        onClick={() => {
+                          closeUserDropdown();
+                          playClick();
+                        }}
+                      >
+                        <BarChart2
+                          size={18}
+                          className="dropdown-icon"
+                        />
                         <span>Analytics</span>
                       </Link>
 
-                      <Link to="/admin/settings" className="dropdown-item" onClick={() => { closeUserDropdown(); playClick(); }}>
-                        <Settings size={18} className="dropdown-icon" />
+                      <Link
+                        to="/admin/settings"
+                        className="dropdown-item"
+                        onClick={() => {
+                          closeUserDropdown();
+                          playClick();
+                        }}
+                      >
+                        <Settings
+                          size={18}
+                          className="dropdown-icon"
+                        />
                         <span>System Settings</span>
                       </Link>
 
-                      <Link to="/admin/activity" className="dropdown-item" onClick={() => { closeUserDropdown(); playClick(); }}>
-                        <FileText size={18} className="dropdown-icon" />
+                      <Link
+                        to="/admin/activity"
+                        className="dropdown-item"
+                        onClick={() => {
+                          closeUserDropdown();
+                          playClick();
+                        }}
+                      >
+                        <FileText
+                          size={18}
+                          className="dropdown-icon"
+                        />
                         <span>Audit Log</span>
                       </Link>
 
                       <div className="dropdown-divider"></div>
 
-                      <Link to="/admin/profile" className="dropdown-item" onClick={() => { closeUserDropdown(); playClick(); }}>
-                        <User size={18} className="dropdown-icon" />
+                      <Link
+                        to="/admin/profile"
+                        className="dropdown-item"
+                        onClick={() => {
+                          closeUserDropdown();
+                          playClick();
+                        }}
+                      >
+                        <User
+                          size={18}
+                          className="dropdown-icon"
+                        />
                         <span>My Profile</span>
                       </Link>
 
-                      <button className="dropdown-item logout" onClick={handleLogout}>
-                        <LogOut size={18} className="dropdown-icon" />
+                      <button
+                        className="dropdown-item logout"
+                        onClick={handleLogout}
+                      >
+                        <LogOut
+                          size={18}
+                          className="dropdown-icon"
+                        />
                         <span>Logout</span>
                       </button>
                     </div>
                   )}
 
-                  {/* STUDENT ACCOUNT MENU */}
+                  {/* STUDENT DROPDOWN */}
 
-                  {!resolvedAdmin && !resolvedTutor && (
+                  {!isAdmin && !isTutor && (
                     <div className="dropdown-items">
 
-                      <Link to="/profile" className="dropdown-item" onClick={() => { closeUserDropdown(); playClick(); }}>
-                        <User size={18} className="dropdown-icon" />
+                      <Link
+                        to="/profile"
+                        className="dropdown-item"
+                        onClick={() => {
+                          closeUserDropdown();
+                          playClick();
+                        }}
+                      >
+                        <User
+                          size={18}
+                          className="dropdown-icon"
+                        />
                         <span>Profile</span>
                       </Link>
 
-                      <Link to="/settings" className="dropdown-item" onClick={() => { closeUserDropdown(); playClick(); }}>
-                        <Settings size={18} className="dropdown-icon" />
+                      <Link
+                        to="/settings"
+                        className="dropdown-item"
+                        onClick={() => {
+                          closeUserDropdown();
+                          playClick();
+                        }}
+                      >
+                        <Settings
+                          size={18}
+                          className="dropdown-icon"
+                        />
                         <span>Settings</span>
                       </Link>
 
-                      <Link to="/dashboard" className="dropdown-item" onClick={() => { closeUserDropdown(); playClick(); }}>
-                        <BookOpen size={18} className="dropdown-icon" />
+                      <Link
+                        to="/dashboard"
+                        className="dropdown-item"
+                        onClick={() => {
+                          closeUserDropdown();
+                          playClick();
+                        }}
+                      >
+                        <BookOpen
+                          size={18}
+                          className="dropdown-icon"
+                        />
                         <span>Dashboard</span>
                       </Link>
 
-                      <Link to="/my-courses" className="dropdown-item" onClick={() => { closeUserDropdown(); playClick(); }}>
-                        <Award size={18} className="dropdown-icon" />
+                      <Link
+                        to="/my-courses"
+                        className="dropdown-item"
+                        onClick={() => {
+                          closeUserDropdown();
+                          playClick();
+                        }}
+                      >
+                        <Award
+                          size={18}
+                          className="dropdown-icon"
+                        />
                         <span>My Courses</span>
                       </Link>
 
-                      <Link to="/my-sessions" className="dropdown-item" onClick={() => { closeUserDropdown(); playClick(); }}>
-                        <Clock size={18} className="dropdown-icon" />
+                      <Link
+                        to="/my-sessions"
+                        className="dropdown-item"
+                        onClick={() => {
+                          closeUserDropdown();
+                          playClick();
+                        }}
+                      >
+                        <Clock
+                          size={18}
+                          className="dropdown-icon"
+                        />
                         <span>My Sessions</span>
                       </Link>
 
-                      <Link to="/help" className="dropdown-item" onClick={() => { closeUserDropdown(); playClick(); }}>
-                        <HelpCircle size={18} className="dropdown-icon" />
+                      <Link
+                        to="/help"
+                        className="dropdown-item"
+                        onClick={() => {
+                          closeUserDropdown();
+                          playClick();
+                        }}
+                      >
+                        <HelpCircle
+                          size={18}
+                          className="dropdown-icon"
+                        />
                         <span>Help &amp; Support</span>
                       </Link>
 
                       <div className="dropdown-divider"></div>
 
-                      <button className="dropdown-item logout" onClick={handleLogout}>
-                        <LogOut size={18} className="dropdown-icon" />
+                      <button
+                        className="dropdown-item logout"
+                        onClick={handleLogout}
+                      >
+                        <LogOut
+                          size={18}
+                          className="dropdown-icon"
+                        />
                         <span>Logout</span>
                       </button>
                     </div>
                   )}
 
-                  {/* TUTOR ACCOUNT MENU */}
+                  {/* TUTOR DROPDOWN */}
 
-                  {!resolvedAdmin && resolvedTutor && (
+                  {!isAdmin && isTutor && (
                     <div className="dropdown-items tutor-dropdown-items">
 
-                      <Link to="/profile" className="dropdown-item" onClick={() => { closeUserDropdown(); playClick(); }}>
-                        <User size={18} className="dropdown-icon" />
+                      <Link
+                        to="/profile"
+                        className="dropdown-item"
+                        onClick={() => {
+                          closeUserDropdown();
+                          playClick();
+                        }}
+                      >
+                        <User
+                          size={18}
+                          className="dropdown-icon"
+                        />
                         <span>My Profile</span>
                       </Link>
 
-                      <Link to="/settings" className="dropdown-item" onClick={() => { closeUserDropdown(); playClick(); }}>
-                        <Settings size={18} className="dropdown-icon" />
+                      <Link
+                        to="/settings"
+                        className="dropdown-item"
+                        onClick={() => {
+                          closeUserDropdown();
+                          playClick();
+                        }}
+                      >
+                        <Settings
+                          size={18}
+                          className="dropdown-icon"
+                        />
                         <span>Settings</span>
                       </Link>
 
-                      <Link to="/tutor/dashboard" className="dropdown-item" onClick={() => { closeUserDropdown(); playClick(); }}>
-                        <BarChart2 size={18} className="dropdown-icon" />
+                      <Link
+                        to="/tutor/dashboard"
+                        className="dropdown-item"
+                        onClick={() => {
+                          closeUserDropdown();
+                          playClick();
+                        }}
+                      >
+                        <BarChart2
+                          size={18}
+                          className="dropdown-icon"
+                        />
                         <span>Dashboard</span>
                       </Link>
 
-                      <Link to="/tutor/students" className="dropdown-item" onClick={() => { closeUserDropdown(); playClick(); }}>
-                        <Users size={18} className="dropdown-icon" />
+                      <Link
+                        to="/tutor/students"
+                        className="dropdown-item"
+                        onClick={() => {
+                          closeUserDropdown();
+                          playClick();
+                        }}
+                      >
+                        <Users
+                          size={18}
+                          className="dropdown-icon"
+                        />
                         <span>My Students</span>
                       </Link>
 
-                      <Link to="/tutor/earnings" className="dropdown-item" onClick={() => { closeUserDropdown(); playClick(); }}>
-                        <TrendingUp size={18} className="dropdown-icon" />
+                      <Link
+                        to="/tutor/earnings"
+                        className="dropdown-item"
+                        onClick={() => {
+                          closeUserDropdown();
+                          playClick();
+                        }}
+                      >
+                        <TrendingUp
+                          size={18}
+                          className="dropdown-icon"
+                        />
                         <span>Earnings</span>
                       </Link>
 
-                      <Link to="/help" className="dropdown-item" onClick={() => { closeUserDropdown(); playClick(); }}>
-                        <HelpCircle size={18} className="dropdown-icon" />
+                      <Link
+                        to="/help"
+                        className="dropdown-item"
+                        onClick={() => {
+                          closeUserDropdown();
+                          playClick();
+                        }}
+                      >
+                        <HelpCircle
+                          size={18}
+                          className="dropdown-icon"
+                        />
                         <span>Help &amp; Support</span>
                       </Link>
 
                       <div className="dropdown-divider"></div>
 
-                      <button className="dropdown-item logout" onClick={handleLogout}>
-                        <LogOut size={18} className="dropdown-icon" />
+                      <button
+                        className="dropdown-item logout"
+                        onClick={handleLogout}
+                      >
+                        <LogOut
+                          size={18}
+                          className="dropdown-icon"
+                        />
                         <span>Logout</span>
                       </button>
                     </div>
@@ -1177,16 +1621,28 @@ function Navbar() {
                 </div>
               </div>
             ) : (
+              /* LOGGED-OUT ACTIONS */
+
               <div className="auth-buttons">
-                <Link to="/login" className="login-button" onClick={() => playClick()}>
+                <Link
+                  to="/login"
+                  className="login-button"
+                  onClick={() => playClick()}
+                >
                   {t("nav.login") || "Login"}
                 </Link>
 
-                <Link to="/register" className="signup-button" onClick={() => playClick()}>
+                <Link
+                  to="/register"
+                  className="signup-button"
+                  onClick={() => playClick()}
+                >
                   {t("nav.register") || "Sign Up"}
                 </Link>
               </div>
             )}
+
+            {/* MOBILE MENU BUTTON */}
 
             <button
               className="mobile-menu"
@@ -1194,7 +1650,10 @@ function Navbar() {
               aria-label="Toggle menu"
               aria-expanded={isMenuOpen}
             >
-              {isMenuOpen ? <X size={24} /> : <Menu size={24} />}
+              {isMenuOpen
+                ? <X size={24} />
+                : <Menu size={24} />
+              }
             </button>
           </div>
         </div>
@@ -1217,10 +1676,16 @@ function Navbar() {
           />
 
           <div className="search-overlay-panel">
-            <div className="search-overlay-header">
 
-              <form onSubmit={handleSearch} className="search-overlay-form">
-                <Search size={20} className="search-overlay-icon" />
+            <div className="search-overlay-header">
+              <form
+                onSubmit={handleSearch}
+                className="search-overlay-form"
+              >
+                <Search
+                  size={20}
+                  className="search-overlay-icon"
+                />
 
                 <input
                   ref={searchOverlayInputRef}
@@ -1231,7 +1696,9 @@ function Navbar() {
                     "Search subjects, tutors, resources…"
                   }
                   value={searchQuery}
-                  onChange={(event) => setSearchQuery(event.target.value)}
+                  onChange={(event) =>
+                    setSearchQuery(event.target.value)
+                  }
                 />
 
                 {searchQuery && (
@@ -1243,6 +1710,7 @@ function Navbar() {
                       setSearchQuery("");
                       setSearchResults([]);
                       setShowSuggestions(false);
+
                       searchOverlayInputRef.current?.focus();
                     }}
                   >
@@ -1267,7 +1735,9 @@ function Navbar() {
                   <div
                     key={`${result.type}-${result.title}-${index}`}
                     className="search-overlay-result"
-                    onClick={() => handleResultClick(result.path)}
+                    onClick={() =>
+                      handleResultClick(result.path)
+                    }
                   >
                     <div className="search-overlay-result-icon">
                       {result.icon}
@@ -1291,12 +1761,16 @@ function Navbar() {
               ) : searchQuery.trim().length >= 2 ? (
                 <div className="search-overlay-empty">
                   <Search size={32} />
-                  <p>No results found for "{searchQuery}"</p>
+                  <p>
+                    No results found for "{searchQuery}"
+                  </p>
                 </div>
               ) : (
                 <div className="search-overlay-hint">
                   <Search size={32} />
-                  <p>Type at least 2 characters to search</p>
+                  <p>
+                    Type at least 2 characters to search
+                  </p>
                 </div>
               )}
             </div>
@@ -1321,7 +1795,9 @@ function Navbar() {
       ================================================== */}
 
       <div
-        className={`mobile-menu-overlay ${isMenuOpen ? "open" : ""}`}
+        className={`mobile-menu-overlay ${
+          isMenuOpen ? "open" : ""
+        }`}
         role="dialog"
         aria-modal="true"
         aria-hidden={!isMenuOpen}
@@ -1330,9 +1806,9 @@ function Navbar() {
 
           <div className="mobile-menu-header">
             <span className="mobile-menu-title">
-              {resolvedAdmin
+              {isAdmin
                 ? "Admin Menu"
-                : resolvedTutor
+                : isTutor
                   ? "Tutor Menu"
                   : "Menu"}
             </span>
@@ -1346,12 +1822,16 @@ function Navbar() {
             </button>
           </div>
 
+          {/* MOBILE PRIMARY NAVIGATION */}
+
           <nav className="mobile-nav-links">
             {navLinks.map((link) => (
               <Link
                 key={link.path}
                 to={link.path}
-                className={isActive(link.path) ? "active" : ""}
+                className={
+                  isActive(link.path) ? "active" : ""
+                }
                 onClick={() => {
                   closeMenu();
                   playClick();
@@ -1362,6 +1842,7 @@ function Navbar() {
                     {link.icon}
                   </span>
                 )}
+
                 {link.label}
               </Link>
             ))}
@@ -1369,105 +1850,231 @@ function Navbar() {
 
           <div className="mobile-divider"></div>
 
-          {/* STUDENT MOBILE TOOLS */}
+          {/* STUDENT MOBILE ACCOUNT TOOLS */}
 
-          {isAuthenticated && !resolvedAdmin && !resolvedTutor && (
+          {isAuthenticated && !isAdmin && !isTutor && (
             <div className="mobile-section">
-              <div className="mobile-section-label">Account</div>
+              <div className="mobile-section-label">
+                Account
+              </div>
 
-              <Link to="/profile" onClick={() => { closeMenu(); playClick(); }}>
+              <Link
+                to="/profile"
+                onClick={() => {
+                  closeMenu();
+                  playClick();
+                }}
+              >
                 <User size={18} /> Profile
               </Link>
 
-              <Link to="/settings" onClick={() => { closeMenu(); playClick(); }}>
+              <Link
+                to="/settings"
+                onClick={() => {
+                  closeMenu();
+                  playClick();
+                }}
+              >
                 <Settings size={18} /> Settings
               </Link>
 
-              <Link to="/dashboard" onClick={() => { closeMenu(); playClick(); }}>
+              <Link
+                to="/dashboard"
+                onClick={() => {
+                  closeMenu();
+                  playClick();
+                }}
+              >
                 <BookOpen size={18} /> Dashboard
               </Link>
 
-              <Link to="/my-courses" onClick={() => { closeMenu(); playClick(); }}>
+              <Link
+                to="/my-courses"
+                onClick={() => {
+                  closeMenu();
+                  playClick();
+                }}
+              >
                 <Award size={18} /> My Courses
               </Link>
 
-              <Link to="/my-sessions" onClick={() => { closeMenu(); playClick(); }}>
+              <Link
+                to="/my-sessions"
+                onClick={() => {
+                  closeMenu();
+                  playClick();
+                }}
+              >
                 <Clock size={18} /> My Sessions
               </Link>
 
-              <Link to="/help" onClick={() => { closeMenu(); playClick(); }}>
+              <Link
+                to="/help"
+                onClick={() => {
+                  closeMenu();
+                  playClick();
+                }}
+              >
                 <HelpCircle size={18} /> Help &amp; Support
               </Link>
             </div>
           )}
 
-          {/* TUTOR MOBILE TOOLS */}
+          {/* TUTOR MOBILE ACCOUNT TOOLS */}
 
-          {isAuthenticated && !resolvedAdmin && resolvedTutor && (
+          {isAuthenticated && !isAdmin && isTutor && (
             <div className="mobile-section">
-              <div className="mobile-section-label">Tutor Tools</div>
+              <div className="mobile-section-label">
+                Tutor Tools
+              </div>
 
-              <Link to="/profile" onClick={() => { closeMenu(); playClick(); }}>
+              <Link
+                to="/profile"
+                onClick={() => {
+                  closeMenu();
+                  playClick();
+                }}
+              >
                 <User size={18} /> My Profile
               </Link>
 
-              <Link to="/settings" onClick={() => { closeMenu(); playClick(); }}>
+              <Link
+                to="/settings"
+                onClick={() => {
+                  closeMenu();
+                  playClick();
+                }}
+              >
                 <Settings size={18} /> Settings
               </Link>
 
-              <Link to="/tutor/dashboard" onClick={() => { closeMenu(); playClick(); }}>
+              <Link
+                to="/tutor/dashboard"
+                onClick={() => {
+                  closeMenu();
+                  playClick();
+                }}
+              >
                 <BarChart2 size={18} /> Dashboard
               </Link>
 
-              <Link to="/tutor/students" onClick={() => { closeMenu(); playClick(); }}>
+              <Link
+                to="/tutor/students"
+                onClick={() => {
+                  closeMenu();
+                  playClick();
+                }}
+              >
                 <Users size={18} /> My Students
               </Link>
 
-              <Link to="/tutor/earnings" onClick={() => { closeMenu(); playClick(); }}>
+              <Link
+                to="/tutor/earnings"
+                onClick={() => {
+                  closeMenu();
+                  playClick();
+                }}
+              >
                 <TrendingUp size={18} /> Earnings
               </Link>
 
-              <Link to="/help" onClick={() => { closeMenu(); playClick(); }}>
+              <Link
+                to="/help"
+                onClick={() => {
+                  closeMenu();
+                  playClick();
+                }}
+              >
                 <HelpCircle size={18} /> Help
               </Link>
             </div>
           )}
 
-          {/* ADMIN MOBILE TOOLS */}
+          {/* ADMIN MOBILE ACCOUNT TOOLS */}
 
-          {resolvedAdmin && (
+          {isAdmin && (
             <div className="mobile-section">
-              <div className="mobile-section-label">Admin</div>
+              <div className="mobile-section-label">
+                Admin
+              </div>
 
-              <Link to="/admin/dashboard" onClick={() => { closeMenu(); playClick(); }}>
+              <Link
+                to="/admin/dashboard"
+                onClick={() => {
+                  closeMenu();
+                  playClick();
+                }}
+              >
                 <PieChart size={18} /> Dashboard
               </Link>
 
-              <Link to="/admin/users" onClick={() => { closeMenu(); playClick(); }}>
+              <Link
+                to="/admin/users"
+                onClick={() => {
+                  closeMenu();
+                  playClick();
+                }}
+              >
                 <Users size={18} /> Manage Users
               </Link>
 
-              <Link to="/admin/tutors" onClick={() => { closeMenu(); playClick(); }}>
+              <Link
+                to="/admin/tutors"
+                onClick={() => {
+                  closeMenu();
+                  playClick();
+                }}
+              >
                 <Users size={18} /> Manage Tutors
               </Link>
 
-              <Link to="/admin/content" onClick={() => { closeMenu(); playClick(); }}>
+              <Link
+                to="/admin/content"
+                onClick={() => {
+                  closeMenu();
+                  playClick();
+                }}
+              >
                 <Book size={18} /> Content
               </Link>
 
-              <Link to="/admin/payments" onClick={() => { closeMenu(); playClick(); }}>
+              <Link
+                to="/admin/payments"
+                onClick={() => {
+                  closeMenu();
+                  playClick();
+                }}
+              >
                 <CreditCard size={18} /> Payments
               </Link>
 
-              <Link to="/admin/analytics" onClick={() => { closeMenu(); playClick(); }}>
+              <Link
+                to="/admin/analytics"
+                onClick={() => {
+                  closeMenu();
+                  playClick();
+                }}
+              >
                 <BarChart2 size={18} /> Analytics
               </Link>
 
-              <Link to="/admin/settings" onClick={() => { closeMenu(); playClick(); }}>
+              <Link
+                to="/admin/settings"
+                onClick={() => {
+                  closeMenu();
+                  playClick();
+                }}
+              >
                 <Settings size={18} /> Settings
               </Link>
 
-              <Link to="/admin/activity" onClick={() => { closeMenu(); playClick(); }}>
+              <Link
+                to="/admin/activity"
+                onClick={() => {
+                  closeMenu();
+                  playClick();
+                }}
+              >
                 <FileText size={18} /> Audit Log
               </Link>
             </div>
@@ -1478,14 +2085,18 @@ function Navbar() {
           {/* MOBILE LANGUAGE SELECTOR */}
 
           <div className="mobile-section">
-            <div className="mobile-section-label">🌐 Language</div>
+            <div className="mobile-section-label">
+              🌐 Language
+            </div>
 
             <div className="mobile-lang-grid">
               {Object.values(languages).map((lang) => (
                 <button
                   key={lang.code}
                   className={`mobile-language-option ${
-                    currentLanguage === lang.code ? "active" : ""
+                    currentLanguage === lang.code
+                      ? "active"
+                      : ""
                   }`}
                   onClick={() => {
                     handleLanguageChange(lang.code);
@@ -1501,11 +2112,14 @@ function Navbar() {
 
           <div className="mobile-divider"></div>
 
-          {/* MOBILE AUTHENTICATION */}
+          {/* MOBILE LOGOUT / AUTH BUTTONS */}
 
           <div className="mobile-section">
             {isAuthenticated ? (
-              <button className="mobile-logout" onClick={handleLogout}>
+              <button
+                className="mobile-logout"
+                onClick={handleLogout}
+              >
                 <LogOut size={18} /> Logout
               </button>
             ) : (
@@ -1513,7 +2127,10 @@ function Navbar() {
                 <Link
                   to="/login"
                   className="mobile-login"
-                  onClick={() => { closeMenu(); playClick(); }}
+                  onClick={() => {
+                    closeMenu();
+                    playClick();
+                  }}
                 >
                   {t("nav.login") || "Login"}
                 </Link>
@@ -1521,7 +2138,10 @@ function Navbar() {
                 <Link
                   to="/register"
                   className="mobile-signup"
-                  onClick={() => { closeMenu(); playClick(); }}
+                  onClick={() => {
+                    closeMenu();
+                    playClick();
+                  }}
                 >
                   {t("nav.register") || "Sign Up"}
                 </Link>

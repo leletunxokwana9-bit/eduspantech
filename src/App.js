@@ -1,5 +1,6 @@
 
-// src/App.js - COMPLETE WITH TOUR GUIDE, ADMIN PROTECTION & SESSION RECORDINGS
+// src/App.js - COMPLETE WITH TUTOR NAVBAR, TOUR GUIDE,
+// ADMIN PROTECTION & SESSION RECORDINGS
 
 import React, { Suspense, lazy, useState, useEffect } from 'react';
 import {
@@ -57,41 +58,16 @@ import Timetable from './pages/Timetable';
 
 import { supabase } from './services/supabaseClient';
 
-// ============================================
-// PARENT MODULE IMPORTS
-// ============================================
 import ParentLogin from './pages/ParentLogin';
 import ParentRegister from './pages/ParentRegister';
 import ParentDashboard from './pages/ParentDashboard';
 
-// ============================================
-// SESSION RECORDINGS IMPORT
-// ============================================
 import SessionRecordings from './pages/SessionRecordings';
-
-// ============================================
-// OUR MISSION PAGE IMPORT
-// ============================================
 import MissionPage from './pages/MissionPage';
-
-// ============================================
-// TOUR GUIDE IMPORT
-// ============================================
 import TourGuide from './components/TourGuide';
-
-// ============================================
-// TUTOR APPLICATION (Public)
-// ============================================
 import BecomeATutor from './pages/BecomeATutor';
-
-// ============================================
-// TRACK APPLICATION (Public)
-// ============================================
 import TrackApplication from './pages/TrackApplication';
 
-// ============================================
-// ADMIN ROUTES - Direct imports
-// ============================================
 import AdminLayout from './pages/Admin/AdminLayout';
 import AdminDashboard from './pages/Admin/AdminDashboard';
 import AdminUsers from './pages/Admin/AdminUsers';
@@ -106,24 +82,14 @@ import AdminLogin from './pages/Admin/AdminLogin';
 import AdminProfile from './pages/Admin/AdminProfile';
 import AdminPricing from './pages/Admin/AdminPricing';
 
-// ============================================
-// ADMIN LOGIN LAYOUT
-// ============================================
 import AdminLoginLayout from './pages/Admin/AdminLoginLayout';
-
-// ============================================
-// PUBLIC SUBJECT CONTENT
-// ============================================
 import SubjectContent from './pages/SubjectContent';
-
-// ============================================
-// SPLASH SCREEN
-// ============================================
 import SplashScreen from './components/SplashScreen';
 
 // ============================================
-// ERROR BOUNDARY COMPONENT
+// ERROR BOUNDARY
 // ============================================
+
 class ErrorBoundary extends React.Component {
   constructor(props) {
     super(props);
@@ -144,7 +110,6 @@ class ErrorBoundary extends React.Component {
   componentDidCatch(error, errorInfo) {
     console.error('❌ React Error Boundary caught an error:', error);
     console.error('Error Info:', errorInfo);
-
     this.setState({ errorInfo });
   }
 
@@ -192,7 +157,6 @@ class ErrorBoundary extends React.Component {
               }}
             >
               <summary>Technical Details</summary>
-
               <pre
                 style={{
                   marginTop: '12px',
@@ -216,15 +180,8 @@ class ErrorBoundary extends React.Component {
               border: 'none',
               borderRadius: '8px',
               cursor: 'pointer',
-              fontSize: '16px',
-              transition: 'background 0.3s'
+              fontSize: '16px'
             }}
-            onMouseEnter={(e) =>
-              (e.target.style.background = '#6366f1')
-            }
-            onMouseLeave={(e) =>
-              (e.target.style.background = '#4f46e5')
-            }
           >
             Refresh Page
           </button>
@@ -239,6 +196,7 @@ class ErrorBoundary extends React.Component {
 // ============================================
 // LAZY LOAD WITH ERROR HANDLING
 // ============================================
+
 const withLazyErrorHandling = (importFn, componentName) => {
   return lazy(() =>
     importFn()
@@ -274,11 +232,9 @@ const withLazyErrorHandling = (importFn, componentName) => {
               }}
             >
               <h2>⚠️ Failed to load {componentName}</h2>
-
               <p style={{ color: '#94a3b8', marginTop: '12px' }}>
                 {err.message || 'An error occurred loading this page'}
               </p>
-
               <button
                 onClick={() => window.location.reload()}
                 style={{
@@ -304,6 +260,7 @@ const withLazyErrorHandling = (importFn, componentName) => {
 // ============================================
 // LAZY LOADED COMPONENTS
 // ============================================
+
 const MyCourses = withLazyErrorHandling(
   () => import('./pages/MyCourses'),
   'MyCourses'
@@ -315,8 +272,9 @@ const MySessions = withLazyErrorHandling(
 );
 
 // ============================================
-// LAZY LOAD FALLBACK COMPONENT
+// PAGE LOADER
 // ============================================
+
 const PageLoader = () => (
   <div
     style={{
@@ -340,9 +298,7 @@ const PageLoader = () => (
         animation: 'spin 0.8s linear infinite'
       }}
     />
-
     <p>Loading...</p>
-
     <style>
       {`
         @keyframes spin {
@@ -358,8 +314,15 @@ const PageLoader = () => (
 // ============================================
 // STUDENT PROTECTED ROUTE
 // ============================================
+
 const StudentRoute = ({ children }) => {
-  const user = JSON.parse(localStorage.getItem('user'));
+  let user = null;
+
+  try {
+    user = JSON.parse(localStorage.getItem('user') || 'null');
+  } catch (error) {
+    console.error('Unable to read stored user:', error);
+  }
 
   if (!user) {
     return <Navigate to="/login" replace />;
@@ -379,12 +342,22 @@ const StudentRoute = ({ children }) => {
 // ============================================
 // SESSION REMINDER LISTENER
 // ============================================
+
 const SessionReminderListener = () => {
   const navigate = useNavigate();
-  const user = JSON.parse(localStorage.getItem('user'));
+  const [userId, setUserId] = useState(null);
 
   useEffect(() => {
-    if (!user?.id) return;
+    try {
+      const user = JSON.parse(localStorage.getItem('user') || 'null');
+      setUserId(user?.id || null);
+    } catch (error) {
+      console.error('Unable to read session reminder user:', error);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (!userId) return;
 
     const channel = supabase
       .channel('public:session_alerts')
@@ -394,7 +367,7 @@ const SessionReminderListener = () => {
           event: 'INSERT',
           schema: 'public',
           table: 'notifications',
-          filter: `user_id=eq.${user.id}`
+          filter: `user_id=eq.${userId}`
         },
         (payload) => {
           const notif = payload.new;
@@ -420,19 +393,23 @@ const SessionReminderListener = () => {
       )
       .subscribe();
 
-    return () => supabase.removeChannel(channel);
-  }, [user?.id, navigate]);
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [userId, navigate]);
 
   return null;
 };
 
 // ============================================
-// WRAPPER COMPONENT FOR CONDITIONAL LAYOUT
+// APP CONTENT
 // ============================================
+
 const AppContent = () => {
   const location = useLocation();
 
   const isAdminRoute = location.pathname.startsWith('/admin');
+
   const isVerifyEmailRoute =
     location.pathname === '/verify-email';
 
@@ -440,14 +417,16 @@ const AppContent = () => {
     location.pathname.startsWith('/parent') ||
     location.pathname.startsWith('/session-recordings');
 
-  const isTutorPortalRoute =
-    location.pathname.startsWith('/tutor/');
+  // IMPORTANT:
+  // Tutor routes are deliberately NOT excluded here.
+  // This allows the existing Navbar to remain visible
+  // on /tutor/dashboard, /tutor/students, /tutor/earnings
+  // and /tutor/session/:sessionId.
 
   const hideNavigation =
     isAdminRoute ||
     isVerifyEmailRoute ||
-    isParentRoute ||
-    isTutorPortalRoute;
+    isParentRoute;
 
   return (
     <div className="app">
@@ -461,17 +440,15 @@ const AppContent = () => {
         <Suspense fallback={<PageLoader />}>
           <Routes>
 
-            {/* ============================================
-                STANDALONE ROUTES (NO NAVBAR/FOOTER)
-                ============================================ */}
+            {/* STANDALONE ROUTES */}
+
             <Route
               path="/verify-email"
               element={<VerifyEmail />}
             />
 
-            {/* ============================================
-                ADMIN LOGIN
-                ============================================ */}
+            {/* ADMIN LOGIN */}
+
             <Route element={<AdminLoginLayout />}>
               <Route
                 path="/admin/login"
@@ -479,17 +456,11 @@ const AppContent = () => {
               />
             </Route>
 
-            {/* ============================================
-                ADMIN ROUTES
-                ============================================ */}
+            {/* ADMIN ROUTES */}
+
             <Route path="/admin" element={<AdminLayout />}>
               <Route index element={<AdminDashboard />} />
-
-              <Route
-                path="dashboard"
-                element={<AdminDashboard />}
-              />
-
+              <Route path="dashboard" element={<AdminDashboard />} />
               <Route path="users" element={<AdminUsers />} />
               <Route path="tutors" element={<AdminTutors />} />
               <Route path="content" element={<AdminContent />} />
@@ -512,9 +483,8 @@ const AppContent = () => {
               />
             </Route>
 
-            {/* ============================================
-                CORE ROUTES
-                ============================================ */}
+            {/* CORE ROUTES */}
+
             <Route
               path="/forgot-password"
               element={<ForgotPassword />}
@@ -522,25 +492,14 @@ const AppContent = () => {
 
             <Route path="/login" element={<Login />} />
 
-            {/* PARENT ROUTES */}
-            <Route
-              path="/parent-login"
-              element={<ParentLogin />}
-            />
-
-            <Route
-              path="/parent-register"
-              element={<ParentRegister />}
-            />
-
+            <Route path="/parent-login" element={<ParentLogin />} />
+            <Route path="/parent-register" element={<ParentRegister />} />
             <Route path="/register" element={<Register />} />
 
-            {/* ============================================
-                PUBLIC ROUTES
-                ============================================ */}
+            {/* PUBLIC ROUTES */}
+
             <Route path="/" element={<Home />} />
             <Route path="/mission" element={<MissionPage />} />
-
             <Route path="/subjects" element={<Subjects />} />
 
             <Route
@@ -605,9 +564,8 @@ const AppContent = () => {
               element={<TrackApplication />}
             />
 
-            {/* ============================================
-                PROTECTED ROUTES
-                ============================================ */}
+            {/* STUDENT PROTECTED ROUTES */}
+
             <Route
               path="/timetable"
               element={
@@ -698,25 +656,22 @@ const AppContent = () => {
               }
             />
 
-            {/* ============================================
-                PARENT DASHBOARD
-                ============================================ */}
+            {/* PARENT DASHBOARD */}
+
             <Route
               path="/parent/dashboard"
               element={<ParentDashboard />}
             />
 
-            {/* ============================================
-                PARENT SESSION RECORDINGS
-                ============================================ */}
+            {/* PARENT SESSION RECORDINGS */}
+
             <Route
               path="/parent/session-recordings"
               element={<SessionRecordings />}
             />
 
-            {/* ============================================
-                STUDENT SESSION RECORDINGS
-                ============================================ */}
+            {/* STUDENT SESSION RECORDINGS */}
+
             <Route
               path="/session-recordings"
               element={
@@ -726,9 +681,8 @@ const AppContent = () => {
               }
             />
 
-            {/* ============================================
-                PRIVATE TUTOR PORTAL ROUTES
-                ============================================ */}
+            {/* TUTOR PORTAL ROUTES */}
+
             <Route
               path="/tutor/dashboard"
               element={<TutorDashboard />}
@@ -749,9 +703,8 @@ const AppContent = () => {
               element={<TutorEarnings />}
             />
 
-            {/* ============================================
-                LAZY LOADED ROUTES
-                ============================================ */}
+            {/* LAZY LOADED ROUTES */}
+
             <Route
               path="/my-courses"
               element={
@@ -781,8 +734,9 @@ const AppContent = () => {
 };
 
 // ============================================
-// MAIN APP COMPONENT
+// MAIN APP
 // ============================================
+
 function App() {
   console.log('🚀 App starting...');
   console.log('📋 Environment:', process.env.NODE_ENV);

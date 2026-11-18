@@ -123,15 +123,24 @@
   letter-spacing: -0.5px;
 }
 
-.text-content p {
+/* Text Content (Supports HTML from database) */
+.text-content {
   font-size: 16px;
   color: #cbd5e1;
   line-height: 1.8;
+}
+
+.text-content p {
   margin-bottom: 16px;
 }
 
 .text-content p:last-child {
   margin-bottom: 0;
+}
+
+.text-content strong {
+  color: #ffffff;
+  font-weight: 700;
 }
 
 /* Bullet Lists */
@@ -225,14 +234,18 @@
   font-weight: 700;
 }
 
-.phase-card p {
+.phase-card .phase-content {
   font-size: 14px;
   color: #94a3b8;
   line-height: 1.6;
   margin: 0;
 }
 
-/* Highlight Box (Public Universities) */
+.phase-card .phase-content strong {
+  color: #cbd5e1;
+}
+
+/* Highlight Box (Pricing & Universities) */
 .highlight-box {
   display: flex;
   gap: 24px;
@@ -252,7 +265,12 @@
   flex-shrink: 0;
 }
 
-/* Infrastructure & Why Choose Headers */
+.pricing-icon {
+  background: rgba(250, 204, 21, 0.15);
+  color: #facc15;
+}
+
+/* Infrastructure, Why Choose & Impact Headers */
 .infra-header, .why-header {
   display: flex;
   align-items: center;
@@ -262,6 +280,13 @@
 
 .infra-icon { color: #38bdf8; }
 .why-icon { color: #34d399; }
+.impact-icon { color: #f472b6; }
+
+/* Social Impact Section */
+.impact-section {
+  background: linear-gradient(180deg, #111827 0%, #1a1025 100%);
+  border: 1px solid rgba(244, 114, 182, 0.2);
+}
 
 /* CTA Footer */
 .mission-cta {

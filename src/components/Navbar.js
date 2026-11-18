@@ -17,23 +17,30 @@ import "./Navbar.css";
 
 import logo from "../assets/EduspanLogo.png";
 
-// Authentication helpers
-const hasAuthToken = () => Boolean(
+// ======================================================
+// AUTHENTICATION HELPERS
+// ======================================================
+
+const getStoredToken = () =>
   localStorage.getItem("accessToken") ||
   localStorage.getItem("token") ||
-  localStorage.getItem("authToken")
-);
+  localStorage.getItem("authToken");
+
+const hasAuthToken = () => Boolean(getStoredToken());
 
 const normalizeRole = (value) =>
   String(value || "").trim().toLowerCase();
+
+const isTrue = (value) =>
+  value === true ||
+  value === 1 ||
+  ["true", "1"].includes(normalizeRole(value));
 
 const checkIsTutor = (userData) => {
   if (!userData) return false;
 
   return (
-    userData.is_tutor === true ||
-    userData.is_tutor === 1 ||
-    normalizeRole(userData.is_tutor) === "true" ||
+    isTrue(userData.is_tutor) ||
     ["tutor", "instructor"].includes(normalizeRole(userData.role))
   );
 };
@@ -42,17 +49,30 @@ const checkIsAdmin = (userData) => {
   if (!userData) return false;
 
   return (
-    userData.is_admin === true ||
-    userData.is_admin === 1 ||
-    userData.is_super_admin === true ||
-    userData.is_super_admin === 1 ||
-    ["true", "1"].includes(normalizeRole(userData.is_admin)) ||
-    ["true", "1"].includes(normalizeRole(userData.is_super_admin)) ||
-    ["admin", "super_admin"].includes(normalizeRole(userData.role))
+    isTrue(userData.is_admin) ||
+    isTrue(userData.is_super_admin) ||
+    ["admin", "super_admin", "superadmin"].includes(
+      normalizeRole(userData.role)
+    )
   );
 };
 
+// ======================================================
+// NAVBAR
+// ======================================================
+
 function Navbar() {
+  const location = useLocation();
+  const navigate = useNavigate();
+
+  const menuRef = useRef(null);
+  const languageRef = useRef(null);
+  const userDropdownRef = useRef(null);
+  const searchOverlayInputRef = useRef(null);
+
+  // Prevent unnecessary repeated authentication requests.
+  const lastCheckedTokenRef = useRef(null);
+
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [isLanguageOpen, setIsLanguageOpen] = useState(false);
@@ -63,32 +83,32 @@ function Navbar() {
   const [showSuggestions, setShowSuggestions] = useState(false);
 
   const [user, setUser] = useState(() => authService.getStoredUser());
-  const [isAuthenticated, setIsAuthenticated] = useState(() => hasAuthToken());
 
-  const [isTutor, setIsTutor] = useState(() =>
-    checkIsTutor(authService.getStoredUser())
+  const [isAuthenticated, setIsAuthenticated] = useState(() =>
+    hasAuthToken()
   );
 
-  const [isAdmin, setIsAdmin] = useState(() =>
-    checkIsAdmin(authService.getStoredUser())
-  );
+  const [isTutor, setIsTutor] = useState(() => {
+    return hasAuthToken() && checkIsTutor(authService.getStoredUser());
+  });
 
+  const [isAdmin, setIsAdmin] = useState(() => {
+    return hasAuthToken() && checkIsAdmin(authService.getStoredUser());
+  });
+
+  const [authRefresh, setAuthRefresh] = useState(0);
   const [logoError, setLogoError] = useState(false);
 
-  const location = useLocation();
-  const navigate = useNavigate();
-
-  const menuRef = useRef(null);
-  const languageRef = useRef(null);
-  const userDropdownRef = useRef(null);
-  const searchOverlayInputRef = useRef(null);
-
-  // Homepage data is used for search suggestions only.
-  // It must never determine whether the navbar is rendered.
+  // Homepage data is ONLY used for search suggestions.
+  // Its loading state must never control navbar rendering.
   const { data } = useHomeData();
 
   const { currentLanguage, changeLanguage, t, languages } = useLanguage();
   const { playClick } = useSound();
+
+  // ======================================================
+  // AUTHENTICATION STATE
+  // ======================================================
 
   const applyAuthenticatedUser = useCallback((userData) => {
     if (!userData) {
@@ -108,47 +128,123 @@ function Navbar() {
     setIsTutor(tutor);
   }, []);
 
-  // Resolve authentication and role from the backend.
-  // The cancellation guard prevents stale requests from overwriting
-  // newer authentication state after navigation.
+  const preserveExistingSession = useCallback(() => {
+    // A failed API request is not proof that the session is invalid.
+    // Keep the existing token and cached user.
+    const tokenExists = hasAuthToken();
+
+    if (!tokenExists) {
+      lastCheckedTokenRef.current = null;
+      applyAuthenticatedUser(null);
+      return;
+    }
+
+    const storedUser = authService.getStoredUser();
+
+    setIsAuthenticated(true);
+
+    if (storedUser) {
+      applyAuthenticatedUser(storedUser);
+    }
+  }, [applyAuthenticatedUser]);
+
+  // Resolve the authenticated user from the authentication endpoint.
+  //
+  // IMPORTANT:
+  // Do not use getCurrentUserWithSubscription() here.
+  // The navbar must not depend on the subscription endpoint working.
+  //
+  // IMPORTANT:
+  // A failed request must not automatically log users out.
   useEffect(() => {
     let cancelled = false;
 
-    const checkAuth = async () => {
-      if (!hasAuthToken()) {
-        if (!cancelled) applyAuthenticatedUser(null);
+    const checkAuthentication = async () => {
+      const token = getStoredToken();
+
+      if (!token) {
+        lastCheckedTokenRef.current = null;
+
+        if (!cancelled) {
+          applyAuthenticatedUser(null);
+        }
+
+        return;
+      }
+
+      // Do not repeatedly request the same authenticated user
+      // on every route navigation.
+      if (lastCheckedTokenRef.current === token) {
         return;
       }
 
       try {
-        const userData =
-          await authService.getCurrentUserWithSubscription();
+        const userData = await authService.getCurrentUser();
 
         if (cancelled) return;
 
         if (userData) {
+          // Only mark this token as successfully checked
+          // after receiving an actual user.
+          lastCheckedTokenRef.current = token;
+
           applyAuthenticatedUser(userData);
-        } else {
+          return;
+        }
+
+        // A null result is not automatically treated as logout.
+        // The auth service may already have cleared an invalid token.
+        if (!hasAuthToken()) {
+          lastCheckedTokenRef.current = null;
           applyAuthenticatedUser(null);
+        } else {
+          preserveExistingSession();
         }
       } catch (error) {
         if (cancelled) return;
 
-        console.error("Navbar authentication error:", error);
-        applyAuthenticatedUser(null);
+        console.error("Navbar authentication check failed:", error);
+
+        // Preserve a valid-looking local session when the API
+        // is temporarily unavailable or returns a network error.
+        preserveExistingSession();
       }
     };
 
-    checkAuth();
+    checkAuthentication();
 
     return () => {
       cancelled = true;
     };
-  }, [location.pathname, applyAuthenticatedUser]);
+  }, [
+    location.pathname,
+    authRefresh,
+    applyAuthenticatedUser,
+    preserveExistingSession
+  ]);
 
-  // Respond to authentication changes made elsewhere in the application.
+  // Listen for login/logout events.
   useEffect(() => {
+    const handleLogin = () => {
+      lastCheckedTokenRef.current = null;
+
+      const storedUser = authService.getStoredUser();
+
+      if (hasAuthToken()) {
+        if (storedUser) {
+          applyAuthenticatedUser(storedUser);
+        } else {
+          setIsAuthenticated(true);
+        }
+
+        setAuthRefresh((value) => value + 1);
+      } else {
+        applyAuthenticatedUser(null);
+      }
+    };
+
     const handleLogout = () => {
+      lastCheckedTokenRef.current = null;
       applyAuthenticatedUser(null);
       setIsUserDropdownOpen(false);
       setIsMenuOpen(false);
@@ -161,36 +257,42 @@ function Navbar() {
         event.key === "authToken" ||
         event.key === "user"
       ) {
+        lastCheckedTokenRef.current = null;
+
         if (!hasAuthToken()) {
           applyAuthenticatedUser(null);
+        } else {
+          const storedUser = authService.getStoredUser();
+
+          if (storedUser) {
+            applyAuthenticatedUser(storedUser);
+          } else {
+            setIsAuthenticated(true);
+          }
+
+          setAuthRefresh((value) => value + 1);
         }
       }
     };
 
+    window.addEventListener("auth:login", handleLogin);
     window.addEventListener("auth:logout", handleLogout);
     window.addEventListener("storage", handleStorageChange);
 
     return () => {
+      window.removeEventListener("auth:login", handleLogin);
       window.removeEventListener("auth:logout", handleLogout);
       window.removeEventListener("storage", handleStorageChange);
     };
   }, [applyAuthenticatedUser]);
 
-  // Prevent background scrolling when overlays are open.
-  useEffect(() => {
-    const lock = isMenuOpen || isSearchOpen;
-
-    if (lock) {
-      const previousOverflow = document.body.style.overflow;
-      document.body.style.overflow = "hidden";
-
-      return () => {
-        document.body.style.overflow = previousOverflow;
-      };
-    }
-  }, [isMenuOpen, isSearchOpen]);
+  // ======================================================
+  // LOGOUT
+  // ======================================================
 
   const handleLogout = () => {
+    lastCheckedTokenRef.current = null;
+
     setIsAuthenticated(false);
     setUser(null);
     setIsTutor(false);
@@ -200,8 +302,13 @@ function Navbar() {
     setIsMenuOpen(false);
 
     playClick();
+
     authService.logout();
   };
+
+  // ======================================================
+  // OVERLAY CONTROLS
+  // ======================================================
 
   const toggleMenu = () => {
     setIsMenuOpen((value) => !value);
@@ -254,7 +361,27 @@ function Navbar() {
     playClick();
   };
 
-  // Close dropdowns when clicking outside.
+  // ======================================================
+  // BODY SCROLL LOCK
+  // ======================================================
+
+  useEffect(() => {
+    const lock = isMenuOpen || isSearchOpen;
+
+    if (lock) {
+      const previousOverflow = document.body.style.overflow;
+      document.body.style.overflow = "hidden";
+
+      return () => {
+        document.body.style.overflow = previousOverflow;
+      };
+    }
+  }, [isMenuOpen, isSearchOpen]);
+
+  // ======================================================
+  // CLOSE DROPDOWNS WHEN CLICKING OUTSIDE
+  // ======================================================
+
   useEffect(() => {
     const onDown = (event) => {
       if (
@@ -281,15 +408,21 @@ function Navbar() {
     };
   }, []);
 
-  // Close overlays on navigation.
+  // ======================================================
+  // CLOSE OVERLAYS ON NAVIGATION
+  // ======================================================
+
   useEffect(() => {
     setIsMenuOpen(false);
     setIsUserDropdownOpen(false);
     setIsLanguageOpen(false);
     closeSearch();
-  }, [location]);
+  }, [location.pathname]);
 
-  // Escape closes open overlays.
+  // ======================================================
+  // ESCAPE KEY
+  // ======================================================
+
   useEffect(() => {
     const onKey = (event) => {
       if (event.key === "Escape") {
@@ -307,7 +440,10 @@ function Navbar() {
     };
   }, []);
 
-  // Search functionality.
+  // ======================================================
+  // SEARCH
+  // ======================================================
+
   const performSearch = useCallback((query) => {
     const term = query.toLowerCase().trim();
     const results = [];
@@ -442,7 +578,10 @@ function Navbar() {
     closeSearch();
   };
 
-  // Navigation definitions.
+  // ======================================================
+  // NAVIGATION LINKS
+  // ======================================================
+
   const adminNavLinks = [
     { path: "/admin/dashboard", label: "Dashboard", icon: <PieChart size={18} /> },
     { path: "/admin/users", label: "Users", icon: <Users size={18} /> },
@@ -502,7 +641,7 @@ function Navbar() {
   }[type] || "");
 
   const getUserName = () =>
-    user ? (user.name?.split(" ")[0] || user.name || "User") : "User";
+    user?.name?.split(" ")[0] || user?.name || "User";
 
   const getUserInitial = () =>
     user?.name ? user.name.charAt(0).toUpperCase() : "U";
@@ -540,6 +679,10 @@ function Navbar() {
   const isAdminRoute = location.pathname.startsWith("/admin");
 
   if (isAdminRoute) return null;
+
+  // ======================================================
+  // RENDER
+  // ======================================================
 
   return (
     <>
@@ -758,93 +901,54 @@ function Navbar() {
 
                   {isAdmin && (
                     <div className="dropdown-items admin-dropdown-items">
-                      <Link
-                        to="/admin/dashboard"
-                        className="dropdown-item"
-                        onClick={() => { closeUserDropdown(); playClick(); }}
-                      >
+                      <Link to="/admin/dashboard" className="dropdown-item" onClick={() => { closeUserDropdown(); playClick(); }}>
                         <PieChart size={18} className="dropdown-icon" />
                         <span>Dashboard</span>
                       </Link>
 
-                      <Link
-                        to="/admin/users"
-                        className="dropdown-item"
-                        onClick={() => { closeUserDropdown(); playClick(); }}
-                      >
+                      <Link to="/admin/users" className="dropdown-item" onClick={() => { closeUserDropdown(); playClick(); }}>
                         <Users size={18} className="dropdown-icon" />
                         <span>Manage Users</span>
                       </Link>
 
-                      <Link
-                        to="/admin/tutors"
-                        className="dropdown-item"
-                        onClick={() => { closeUserDropdown(); playClick(); }}
-                      >
+                      <Link to="/admin/tutors" className="dropdown-item" onClick={() => { closeUserDropdown(); playClick(); }}>
                         <Users size={18} className="dropdown-icon" />
                         <span>Manage Tutors</span>
                       </Link>
 
-                      <Link
-                        to="/admin/content"
-                        className="dropdown-item"
-                        onClick={() => { closeUserDropdown(); playClick(); }}
-                      >
+                      <Link to="/admin/content" className="dropdown-item" onClick={() => { closeUserDropdown(); playClick(); }}>
                         <Book size={18} className="dropdown-icon" />
                         <span>Content Management</span>
                       </Link>
 
-                      <Link
-                        to="/admin/payments"
-                        className="dropdown-item"
-                        onClick={() => { closeUserDropdown(); playClick(); }}
-                      >
+                      <Link to="/admin/payments" className="dropdown-item" onClick={() => { closeUserDropdown(); playClick(); }}>
                         <CreditCard size={18} className="dropdown-icon" />
                         <span>Payments</span>
                       </Link>
 
-                      <Link
-                        to="/admin/analytics"
-                        className="dropdown-item"
-                        onClick={() => { closeUserDropdown(); playClick(); }}
-                      >
+                      <Link to="/admin/analytics" className="dropdown-item" onClick={() => { closeUserDropdown(); playClick(); }}>
                         <BarChart2 size={18} className="dropdown-icon" />
                         <span>Analytics</span>
                       </Link>
 
-                      <Link
-                        to="/admin/settings"
-                        className="dropdown-item"
-                        onClick={() => { closeUserDropdown(); playClick(); }}
-                      >
+                      <Link to="/admin/settings" className="dropdown-item" onClick={() => { closeUserDropdown(); playClick(); }}>
                         <Settings size={18} className="dropdown-icon" />
                         <span>System Settings</span>
                       </Link>
 
-                      <Link
-                        to="/admin/activity"
-                        className="dropdown-item"
-                        onClick={() => { closeUserDropdown(); playClick(); }}
-                      >
+                      <Link to="/admin/activity" className="dropdown-item" onClick={() => { closeUserDropdown(); playClick(); }}>
                         <FileText size={18} className="dropdown-icon" />
                         <span>Audit Log</span>
                       </Link>
 
                       <div className="dropdown-divider"></div>
 
-                      <Link
-                        to="/admin/profile"
-                        className="dropdown-item"
-                        onClick={() => { closeUserDropdown(); playClick(); }}
-                      >
+                      <Link to="/admin/profile" className="dropdown-item" onClick={() => { closeUserDropdown(); playClick(); }}>
                         <User size={18} className="dropdown-icon" />
                         <span>My Profile</span>
                       </Link>
 
-                      <button
-                        className="dropdown-item logout"
-                        onClick={handleLogout}
-                      >
+                      <button className="dropdown-item logout" onClick={handleLogout}>
                         <LogOut size={18} className="dropdown-icon" />
                         <span>Logout</span>
                       </button>
@@ -853,66 +957,39 @@ function Navbar() {
 
                   {!isAdmin && !isTutor && (
                     <div className="dropdown-items">
-                      <Link
-                        to="/profile"
-                        className="dropdown-item"
-                        onClick={() => { closeUserDropdown(); playClick(); }}
-                      >
+                      <Link to="/profile" className="dropdown-item" onClick={() => { closeUserDropdown(); playClick(); }}>
                         <User size={18} className="dropdown-icon" />
                         <span>Profile</span>
                       </Link>
 
-                      <Link
-                        to="/settings"
-                        className="dropdown-item"
-                        onClick={() => { closeUserDropdown(); playClick(); }}
-                      >
+                      <Link to="/settings" className="dropdown-item" onClick={() => { closeUserDropdown(); playClick(); }}>
                         <Settings size={18} className="dropdown-icon" />
                         <span>Settings</span>
                       </Link>
 
-                      <Link
-                        to="/dashboard"
-                        className="dropdown-item"
-                        onClick={() => { closeUserDropdown(); playClick(); }}
-                      >
+                      <Link to="/dashboard" className="dropdown-item" onClick={() => { closeUserDropdown(); playClick(); }}>
                         <BookOpen size={18} className="dropdown-icon" />
                         <span>Dashboard</span>
                       </Link>
 
-                      <Link
-                        to="/my-courses"
-                        className="dropdown-item"
-                        onClick={() => { closeUserDropdown(); playClick(); }}
-                      >
+                      <Link to="/my-courses" className="dropdown-item" onClick={() => { closeUserDropdown(); playClick(); }}>
                         <Award size={18} className="dropdown-icon" />
                         <span>My Courses</span>
                       </Link>
 
-                      <Link
-                        to="/my-sessions"
-                        className="dropdown-item"
-                        onClick={() => { closeUserDropdown(); playClick(); }}
-                      >
+                      <Link to="/my-sessions" className="dropdown-item" onClick={() => { closeUserDropdown(); playClick(); }}>
                         <Clock size={18} className="dropdown-icon" />
                         <span>My Sessions</span>
                       </Link>
 
-                      <Link
-                        to="/help"
-                        className="dropdown-item"
-                        onClick={() => { closeUserDropdown(); playClick(); }}
-                      >
+                      <Link to="/help" className="dropdown-item" onClick={() => { closeUserDropdown(); playClick(); }}>
                         <HelpCircle size={18} className="dropdown-icon" />
                         <span>Help &amp; Support</span>
                       </Link>
 
                       <div className="dropdown-divider"></div>
 
-                      <button
-                        className="dropdown-item logout"
-                        onClick={handleLogout}
-                      >
+                      <button className="dropdown-item logout" onClick={handleLogout}>
                         <LogOut size={18} className="dropdown-icon" />
                         <span>Logout</span>
                       </button>
@@ -921,66 +998,39 @@ function Navbar() {
 
                   {!isAdmin && isTutor && (
                     <div className="dropdown-items tutor-dropdown-items">
-                      <Link
-                        to="/profile"
-                        className="dropdown-item"
-                        onClick={() => { closeUserDropdown(); playClick(); }}
-                      >
+                      <Link to="/profile" className="dropdown-item" onClick={() => { closeUserDropdown(); playClick(); }}>
                         <User size={18} className="dropdown-icon" />
                         <span>My Profile</span>
                       </Link>
 
-                      <Link
-                        to="/settings"
-                        className="dropdown-item"
-                        onClick={() => { closeUserDropdown(); playClick(); }}
-                      >
+                      <Link to="/settings" className="dropdown-item" onClick={() => { closeUserDropdown(); playClick(); }}>
                         <Settings size={18} className="dropdown-icon" />
                         <span>Settings</span>
                       </Link>
 
-                      <Link
-                        to="/tutor/dashboard"
-                        className="dropdown-item"
-                        onClick={() => { closeUserDropdown(); playClick(); }}
-                      >
+                      <Link to="/tutor/dashboard" className="dropdown-item" onClick={() => { closeUserDropdown(); playClick(); }}>
                         <BarChart2 size={18} className="dropdown-icon" />
                         <span>Dashboard</span>
                       </Link>
 
-                      <Link
-                        to="/tutor/students"
-                        className="dropdown-item"
-                        onClick={() => { closeUserDropdown(); playClick(); }}
-                      >
+                      <Link to="/tutor/students" className="dropdown-item" onClick={() => { closeUserDropdown(); playClick(); }}>
                         <Users size={18} className="dropdown-icon" />
                         <span>My Students</span>
                       </Link>
 
-                      <Link
-                        to="/tutor/earnings"
-                        className="dropdown-item"
-                        onClick={() => { closeUserDropdown(); playClick(); }}
-                      >
+                      <Link to="/tutor/earnings" className="dropdown-item" onClick={() => { closeUserDropdown(); playClick(); }}>
                         <TrendingUp size={18} className="dropdown-icon" />
                         <span>Earnings</span>
                       </Link>
 
-                      <Link
-                        to="/help"
-                        className="dropdown-item"
-                        onClick={() => { closeUserDropdown(); playClick(); }}
-                      >
+                      <Link to="/help" className="dropdown-item" onClick={() => { closeUserDropdown(); playClick(); }}>
                         <HelpCircle size={18} className="dropdown-icon" />
                         <span>Help &amp; Support</span>
                       </Link>
 
                       <div className="dropdown-divider"></div>
 
-                      <button
-                        className="dropdown-item logout"
-                        onClick={handleLogout}
-                      >
+                      <button className="dropdown-item logout" onClick={handleLogout}>
                         <LogOut size={18} className="dropdown-icon" />
                         <span>Logout</span>
                       </button>
@@ -990,19 +1040,11 @@ function Navbar() {
               </div>
             ) : (
               <div className="auth-buttons">
-                <Link
-                  to="/login"
-                  className="login-button"
-                  onClick={() => playClick()}
-                >
+                <Link to="/login" className="login-button" onClick={() => playClick()}>
                   {t("nav.login") || "Login"}
                 </Link>
 
-                <Link
-                  to="/register"
-                  className="signup-button"
-                  onClick={() => playClick()}
-                >
+                <Link to="/register" className="signup-button" onClick={() => playClick()}>
                   {t("nav.register") || "Sign Up"}
                 </Link>
               </div>
@@ -1020,7 +1062,7 @@ function Navbar() {
         </div>
       </header>
 
-      {/* Search overlay */}
+      {/* SEARCH OVERLAY */}
       {isSearchOpen && (
         <div
           className="search-overlay"
@@ -1028,17 +1070,11 @@ function Navbar() {
           aria-modal="true"
           aria-label="Search"
         >
-          <div
-            className="search-overlay-backdrop"
-            onClick={closeSearch}
-          />
+          <div className="search-overlay-backdrop" onClick={closeSearch} />
 
           <div className="search-overlay-panel">
             <div className="search-overlay-header">
-              <form
-                onSubmit={handleSearch}
-                className="search-overlay-form"
-              >
+              <form onSubmit={handleSearch} className="search-overlay-form">
                 <Search size={20} className="search-overlay-icon" />
 
                 <input
@@ -1123,7 +1159,7 @@ function Navbar() {
         </div>
       )}
 
-      {/* Mobile menu */}
+      {/* MOBILE MENU BACKDROP */}
       {isMenuOpen && (
         <div
           className="mobile-menu-backdrop"
@@ -1132,6 +1168,7 @@ function Navbar() {
         />
       )}
 
+      {/* MOBILE MENU */}
       <div
         className={`mobile-menu-overlay ${isMenuOpen ? "open" : ""}`}
         role="dialog"
@@ -1169,9 +1206,7 @@ function Navbar() {
                 }}
               >
                 {link.icon && (
-                  <span className="mobile-nav-icon">
-                    {link.icon}
-                  </span>
+                  <span className="mobile-nav-icon">{link.icon}</span>
                 )}
                 {link.label}
               </Link>
@@ -1306,10 +1341,7 @@ function Navbar() {
 
           <div className="mobile-section">
             {isAuthenticated ? (
-              <button
-                className="mobile-logout"
-                onClick={handleLogout}
-              >
+              <button className="mobile-logout" onClick={handleLogout}>
                 <LogOut size={18} /> Logout
               </button>
             ) : (

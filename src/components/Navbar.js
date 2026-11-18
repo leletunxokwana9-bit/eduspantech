@@ -33,10 +33,19 @@ import { useHomeData } from "../hooks/useHomeData";
 import { useLanguage } from "../context/LanguageContext";
 import { useSound } from "../context/SoundContext";
 import { authService } from "../services/authService";
+import { supabase } from "../services/supabaseClient";
 import NotificationBell from "./NotificationBell";
 import "./Navbar.css";
 
 import logo from "../assets/EduspanLogo.png";
+
+// ======================================================
+// API CONFIGURATION
+// ======================================================
+
+const API_URL =
+  process.env.REACT_APP_API_URL ||
+  "https://eduspantech-backend.onrender.com/api";
 
 // ======================================================
 // AUTHENTICATION HELPERS
@@ -46,6 +55,9 @@ const getStoredToken = () =>
   localStorage.getItem("accessToken") ||
   localStorage.getItem("token") ||
   localStorage.getItem("authToken");
+
+const getStoredRefreshToken = () =>
+  localStorage.getItem("refreshToken");
 
 const hasAuthToken = () => Boolean(getStoredToken());
 
@@ -59,8 +71,17 @@ const isTrue = (value) =>
 
 const getRoleUser = (userData) => {
   if (!userData) return null;
+
   return userData.user || userData;
 };
+
+const getAccessTokenFromResponse = (data) =>
+  data?.accessToken ||
+  data?.access_token ||
+  data?.token ||
+  data?.data?.accessToken ||
+  data?.data?.access_token ||
+  null;
 
 // ======================================================
 // TUTOR DETECTION
@@ -273,13 +294,14 @@ function Navbar() {
 
   // ======================================================
   // AUTHENTICATION CHECK
+  // MATCHES THE TUTORSESSION AUTHENTICATION APPROACH
   // ======================================================
 
   useEffect(() => {
     let cancelled = false;
 
     const checkAuthentication = async () => {
-      const token = getStoredToken();
+      let token = getStoredToken();
 
       if (!token) {
         lastCheckedTokenRef.current = null;
@@ -291,24 +313,160 @@ function Navbar() {
         return;
       }
 
+      // Do not repeat a successful check for the same token.
       if (lastCheckedTokenRef.current === token) {
         return;
       }
 
       try {
-        const userData = await authService.getCurrentUser();
+        // STEP 1: Verify the current access token.
+        let response = await fetch(`${API_URL}/auth/me`, {
+          method: "GET",
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json"
+          }
+        });
 
-        if (cancelled) return;
+        // STEP 2: If expired, refresh the access token.
+        if (response.status === 401) {
+          const refreshToken = getStoredRefreshToken();
 
-        if (userData) {
+          if (refreshToken) {
+            try {
+              const refreshResponse = await fetch(
+                `${API_URL}/auth/refresh`,
+                {
+                  method: "POST",
+                  headers: {
+                    "Content-Type": "application/json"
+                  },
+                  body: JSON.stringify({
+                    refreshToken
+                  })
+                }
+              );
+
+              if (refreshResponse.ok) {
+                const refreshData =
+                  await refreshResponse.json();
+
+                const newAccessToken =
+                  getAccessTokenFromResponse(refreshData);
+
+                if (newAccessToken) {
+                  localStorage.setItem(
+                    "accessToken",
+                    newAccessToken
+                  );
+
+                  token = newAccessToken;
+
+                  // STEP 3: Retry /auth/me with the new token.
+                  response = await fetch(`${API_URL}/auth/me`, {
+                    method: "GET",
+                    headers: {
+                      Authorization: `Bearer ${token}`,
+                      "Content-Type": "application/json"
+                    }
+                  });
+                }
+              }
+            } catch (refreshError) {
+              console.error(
+                "Navbar token refresh failed:",
+                refreshError
+              );
+            }
+          }
+        }
+
+        // STEP 4: Apply the authenticated backend user.
+        if (response.ok) {
+          const responseData = await response.json();
+
+          if (cancelled) return;
+
+          const authenticatedUser =
+            responseData.user || responseData;
+
           lastCheckedTokenRef.current = token;
-          applyAuthenticatedUser(userData);
+
+          applyAuthenticatedUser(authenticatedUser);
+
           return;
         }
 
-        if (!hasAuthToken()) {
-          lastCheckedTokenRef.current = null;
-          applyAuthenticatedUser(null);
+        console.warn(
+          "Navbar backend authentication unsuccessful:",
+          response.status
+        );
+
+        if (cancelled) return;
+
+        // STEP 5: Supabase fallback, as in TutorSession.
+        try {
+          const {
+            data: { session },
+            error: sessionError
+          } = await supabase.auth.getSession();
+
+          if (
+            !sessionError &&
+            session?.user
+          ) {
+            const {
+              data: profile,
+              error: profileError
+            } = await supabase
+              .from("users")
+              .select("*")
+              .eq("id", session.user.id)
+              .single();
+
+            if (!profileError && profile) {
+              if (cancelled) return;
+
+              const supabaseUser = {
+                ...profile,
+                id: profile.id || session.user.id,
+                email:
+                  profile.email ||
+                  session.user.email
+              };
+
+              lastCheckedTokenRef.current =
+                getStoredToken();
+
+              applyAuthenticatedUser(supabaseUser);
+
+              return;
+            }
+
+            if (profileError) {
+              console.error(
+                "Navbar Supabase profile lookup failed:",
+                profileError
+              );
+            }
+          }
+        } catch (supabaseError) {
+          console.error(
+            "Navbar Supabase fallback failed:",
+            supabaseError
+          );
+        }
+
+        if (cancelled) return;
+
+        // STEP 6: Keep the existing stored session if available.
+        const storedUser = authService.getStoredUser();
+
+        if (storedUser) {
+          lastCheckedTokenRef.current =
+            getStoredToken();
+
+          applyAuthenticatedUser(storedUser);
         } else {
           preserveExistingSession();
         }
@@ -320,7 +478,15 @@ function Navbar() {
           error
         );
 
-        preserveExistingSession();
+        // Do not unnecessarily log out a user because
+        // the backend is temporarily unavailable.
+        const storedUser = authService.getStoredUser();
+
+        if (storedUser) {
+          applyAuthenticatedUser(storedUser);
+        } else {
+          preserveExistingSession();
+        }
       }
     };
 
@@ -1257,10 +1423,7 @@ function Navbar() {
                           playClick();
                         }}
                       >
-                        <PieChart
-                          size={18}
-                          className="dropdown-icon"
-                        />
+                        <PieChart size={18} className="dropdown-icon" />
                         <span>Dashboard</span>
                       </Link>
 
@@ -1272,10 +1435,7 @@ function Navbar() {
                           playClick();
                         }}
                       >
-                        <Users
-                          size={18}
-                          className="dropdown-icon"
-                        />
+                        <Users size={18} className="dropdown-icon" />
                         <span>Manage Users</span>
                       </Link>
 
@@ -1287,10 +1447,7 @@ function Navbar() {
                           playClick();
                         }}
                       >
-                        <Users
-                          size={18}
-                          className="dropdown-icon"
-                        />
+                        <Users size={18} className="dropdown-icon" />
                         <span>Manage Tutors</span>
                       </Link>
 
@@ -1302,10 +1459,7 @@ function Navbar() {
                           playClick();
                         }}
                       >
-                        <Book
-                          size={18}
-                          className="dropdown-icon"
-                        />
+                        <Book size={18} className="dropdown-icon" />
                         <span>Content Management</span>
                       </Link>
 
@@ -1317,10 +1471,7 @@ function Navbar() {
                           playClick();
                         }}
                       >
-                        <CreditCard
-                          size={18}
-                          className="dropdown-icon"
-                        />
+                        <CreditCard size={18} className="dropdown-icon" />
                         <span>Payments</span>
                       </Link>
 
@@ -1332,10 +1483,7 @@ function Navbar() {
                           playClick();
                         }}
                       >
-                        <BarChart2
-                          size={18}
-                          className="dropdown-icon"
-                        />
+                        <BarChart2 size={18} className="dropdown-icon" />
                         <span>Analytics</span>
                       </Link>
 
@@ -1347,10 +1495,7 @@ function Navbar() {
                           playClick();
                         }}
                       >
-                        <Settings
-                          size={18}
-                          className="dropdown-icon"
-                        />
+                        <Settings size={18} className="dropdown-icon" />
                         <span>System Settings</span>
                       </Link>
 
@@ -1362,10 +1507,7 @@ function Navbar() {
                           playClick();
                         }}
                       >
-                        <FileText
-                          size={18}
-                          className="dropdown-icon"
-                        />
+                        <FileText size={18} className="dropdown-icon" />
                         <span>Audit Log</span>
                       </Link>
 
@@ -1379,10 +1521,7 @@ function Navbar() {
                           playClick();
                         }}
                       >
-                        <User
-                          size={18}
-                          className="dropdown-icon"
-                        />
+                        <User size={18} className="dropdown-icon" />
                         <span>My Profile</span>
                       </Link>
 
@@ -1390,10 +1529,7 @@ function Navbar() {
                         className="dropdown-item logout"
                         onClick={handleLogout}
                       >
-                        <LogOut
-                          size={18}
-                          className="dropdown-icon"
-                        />
+                        <LogOut size={18} className="dropdown-icon" />
                         <span>Logout</span>
                       </button>
                     </div>
@@ -1412,10 +1548,7 @@ function Navbar() {
                           playClick();
                         }}
                       >
-                        <User
-                          size={18}
-                          className="dropdown-icon"
-                        />
+                        <User size={18} className="dropdown-icon" />
                         <span>Profile</span>
                       </Link>
 
@@ -1427,10 +1560,7 @@ function Navbar() {
                           playClick();
                         }}
                       >
-                        <Settings
-                          size={18}
-                          className="dropdown-icon"
-                        />
+                        <Settings size={18} className="dropdown-icon" />
                         <span>Settings</span>
                       </Link>
 
@@ -1442,10 +1572,7 @@ function Navbar() {
                           playClick();
                         }}
                       >
-                        <BookOpen
-                          size={18}
-                          className="dropdown-icon"
-                        />
+                        <BookOpen size={18} className="dropdown-icon" />
                         <span>Dashboard</span>
                       </Link>
 
@@ -1457,10 +1584,7 @@ function Navbar() {
                           playClick();
                         }}
                       >
-                        <Award
-                          size={18}
-                          className="dropdown-icon"
-                        />
+                        <Award size={18} className="dropdown-icon" />
                         <span>My Courses</span>
                       </Link>
 
@@ -1472,10 +1596,7 @@ function Navbar() {
                           playClick();
                         }}
                       >
-                        <Clock
-                          size={18}
-                          className="dropdown-icon"
-                        />
+                        <Clock size={18} className="dropdown-icon" />
                         <span>My Sessions</span>
                       </Link>
 
@@ -1487,10 +1608,7 @@ function Navbar() {
                           playClick();
                         }}
                       >
-                        <HelpCircle
-                          size={18}
-                          className="dropdown-icon"
-                        />
+                        <HelpCircle size={18} className="dropdown-icon" />
                         <span>Help &amp; Support</span>
                       </Link>
 
@@ -1500,10 +1618,7 @@ function Navbar() {
                         className="dropdown-item logout"
                         onClick={handleLogout}
                       >
-                        <LogOut
-                          size={18}
-                          className="dropdown-icon"
-                        />
+                        <LogOut size={18} className="dropdown-icon" />
                         <span>Logout</span>
                       </button>
                     </div>
@@ -1522,10 +1637,7 @@ function Navbar() {
                           playClick();
                         }}
                       >
-                        <User
-                          size={18}
-                          className="dropdown-icon"
-                        />
+                        <User size={18} className="dropdown-icon" />
                         <span>My Profile</span>
                       </Link>
 
@@ -1537,10 +1649,7 @@ function Navbar() {
                           playClick();
                         }}
                       >
-                        <Settings
-                          size={18}
-                          className="dropdown-icon"
-                        />
+                        <Settings size={18} className="dropdown-icon" />
                         <span>Settings</span>
                       </Link>
 
@@ -1552,10 +1661,7 @@ function Navbar() {
                           playClick();
                         }}
                       >
-                        <BarChart2
-                          size={18}
-                          className="dropdown-icon"
-                        />
+                        <BarChart2 size={18} className="dropdown-icon" />
                         <span>Dashboard</span>
                       </Link>
 
@@ -1567,10 +1673,7 @@ function Navbar() {
                           playClick();
                         }}
                       >
-                        <Users
-                          size={18}
-                          className="dropdown-icon"
-                        />
+                        <Users size={18} className="dropdown-icon" />
                         <span>My Students</span>
                       </Link>
 
@@ -1582,10 +1685,7 @@ function Navbar() {
                           playClick();
                         }}
                       >
-                        <TrendingUp
-                          size={18}
-                          className="dropdown-icon"
-                        />
+                        <TrendingUp size={18} className="dropdown-icon" />
                         <span>Earnings</span>
                       </Link>
 
@@ -1597,10 +1697,7 @@ function Navbar() {
                           playClick();
                         }}
                       >
-                        <HelpCircle
-                          size={18}
-                          className="dropdown-icon"
-                        />
+                        <HelpCircle size={18} className="dropdown-icon" />
                         <span>Help &amp; Support</span>
                       </Link>
 
@@ -1610,10 +1707,7 @@ function Navbar() {
                         className="dropdown-item logout"
                         onClick={handleLogout}
                       >
-                        <LogOut
-                          size={18}
-                          className="dropdown-icon"
-                        />
+                        <LogOut size={18} className="dropdown-icon" />
                         <span>Logout</span>
                       </button>
                     </div>

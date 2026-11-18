@@ -36,24 +36,48 @@ const isTrue = (value) =>
   value === 1 ||
   ["true", "1"].includes(normalizeRole(value));
 
+// Handles both a direct user object and { user: {...} } responses.
+const getRoleUser = (userData) => {
+  if (!userData) return null;
+
+  return userData.user || userData;
+};
+
+// Match the same tutor indicators used by Login.js.
+// The saved userRole is also checked because the backend may return
+// role: "student" even when the login flow identified a tutor.
 const checkIsTutor = (userData) => {
-  if (!userData) return false;
+  const data = getRoleUser(userData);
+
+  const storedTutorRole =
+    normalizeRole(localStorage.getItem("userRole")) === "tutor";
+
+  if (!data) return storedTutorRole;
+
+  const roleList = Array.isArray(data.roles) ? data.roles : [];
 
   return (
-    isTrue(userData.is_tutor) ||
-    ["tutor", "instructor"].includes(normalizeRole(userData.role))
+    isTrue(data.is_tutor) ||
+    ["tutor", "instructor"].includes(normalizeRole(data.role)) ||
+    normalizeRole(data.userType) === "tutor" ||
+    normalizeRole(data.type) === "tutor" ||
+    roleList.some((role) => normalizeRole(role) === "tutor") ||
+    storedTutorRole
   );
 };
 
 const checkIsAdmin = (userData) => {
-  if (!userData) return false;
+  const data = getRoleUser(userData);
+
+  if (!data) return false;
 
   return (
-    isTrue(userData.is_admin) ||
-    isTrue(userData.is_super_admin) ||
+    isTrue(data.is_admin) ||
+    isTrue(data.is_super_admin) ||
     ["admin", "super_admin", "superadmin"].includes(
-      normalizeRole(userData.role)
-    )
+      normalizeRole(data.role)
+    ) ||
+    data.admin_role != null
   );
 };
 
@@ -70,7 +94,6 @@ function Navbar() {
   const userDropdownRef = useRef(null);
   const searchOverlayInputRef = useRef(null);
 
-  // Prevent unnecessary repeated authentication requests.
   const lastCheckedTokenRef = useRef(null);
 
   const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -88,13 +111,13 @@ function Navbar() {
     hasAuthToken()
   );
 
-  const [isTutor, setIsTutor] = useState(() => {
-    return hasAuthToken() && checkIsTutor(authService.getStoredUser());
-  });
+  const [isTutor, setIsTutor] = useState(() =>
+    hasAuthToken() && checkIsTutor(authService.getStoredUser())
+  );
 
-  const [isAdmin, setIsAdmin] = useState(() => {
-    return hasAuthToken() && checkIsAdmin(authService.getStoredUser());
-  });
+  const [isAdmin, setIsAdmin] = useState(() =>
+    hasAuthToken() && checkIsAdmin(authService.getStoredUser())
+  );
 
   const [authRefresh, setAuthRefresh] = useState(0);
   const [logoError, setLogoError] = useState(false);
@@ -120,17 +143,18 @@ function Navbar() {
     }
 
     const admin = checkIsAdmin(userData);
+
+    // The saved role is a fallback when the API response does not
+    // correctly return the tutor role.
     const tutor = !admin && checkIsTutor(userData);
 
-    setUser(userData);
+    setUser(getRoleUser(userData));
     setIsAuthenticated(true);
     setIsAdmin(admin);
     setIsTutor(tutor);
   }, []);
 
   const preserveExistingSession = useCallback(() => {
-    // A failed API request is not proof that the session is invalid.
-    // Keep the existing token and cached user.
     const tokenExists = hasAuthToken();
 
     if (!tokenExists) {
@@ -145,17 +169,15 @@ function Navbar() {
 
     if (storedUser) {
       applyAuthenticatedUser(storedUser);
+    } else {
+      // Even without a cached user object, preserve the tutor role.
+      setIsTutor(
+        normalizeRole(localStorage.getItem("userRole")) === "tutor"
+      );
     }
   }, [applyAuthenticatedUser]);
 
   // Resolve the authenticated user from the authentication endpoint.
-  //
-  // IMPORTANT:
-  // Do not use getCurrentUserWithSubscription() here.
-  // The navbar must not depend on the subscription endpoint working.
-  //
-  // IMPORTANT:
-  // A failed request must not automatically log users out.
   useEffect(() => {
     let cancelled = false;
 
@@ -172,8 +194,6 @@ function Navbar() {
         return;
       }
 
-      // Do not repeatedly request the same authenticated user
-      // on every route navigation.
       if (lastCheckedTokenRef.current === token) {
         return;
       }
@@ -184,16 +204,11 @@ function Navbar() {
         if (cancelled) return;
 
         if (userData) {
-          // Only mark this token as successfully checked
-          // after receiving an actual user.
           lastCheckedTokenRef.current = token;
-
           applyAuthenticatedUser(userData);
           return;
         }
 
-        // A null result is not automatically treated as logout.
-        // The auth service may already have cleared an invalid token.
         if (!hasAuthToken()) {
           lastCheckedTokenRef.current = null;
           applyAuthenticatedUser(null);
@@ -204,9 +219,6 @@ function Navbar() {
         if (cancelled) return;
 
         console.error("Navbar authentication check failed:", error);
-
-        // Preserve a valid-looking local session when the API
-        // is temporarily unavailable or returns a network error.
         preserveExistingSession();
       }
     };
@@ -223,7 +235,10 @@ function Navbar() {
     preserveExistingSession
   ]);
 
-  // Listen for login/logout events.
+  // ======================================================
+  // LOGIN / LOGOUT / STORAGE EVENTS
+  // ======================================================
+
   useEffect(() => {
     const handleLogin = () => {
       lastCheckedTokenRef.current = null;
@@ -235,6 +250,9 @@ function Navbar() {
           applyAuthenticatedUser(storedUser);
         } else {
           setIsAuthenticated(true);
+          setIsTutor(
+            normalizeRole(localStorage.getItem("userRole")) === "tutor"
+          );
         }
 
         setAuthRefresh((value) => value + 1);
@@ -245,6 +263,9 @@ function Navbar() {
 
     const handleLogout = () => {
       lastCheckedTokenRef.current = null;
+
+      localStorage.removeItem("userRole");
+
       applyAuthenticatedUser(null);
       setIsUserDropdownOpen(false);
       setIsMenuOpen(false);
@@ -255,7 +276,8 @@ function Navbar() {
         event.key === "accessToken" ||
         event.key === "token" ||
         event.key === "authToken" ||
-        event.key === "user"
+        event.key === "user" ||
+        event.key === "userRole"
       ) {
         lastCheckedTokenRef.current = null;
 
@@ -268,6 +290,9 @@ function Navbar() {
             applyAuthenticatedUser(storedUser);
           } else {
             setIsAuthenticated(true);
+            setIsTutor(
+              normalizeRole(localStorage.getItem("userRole")) === "tutor"
+            );
           }
 
           setAuthRefresh((value) => value + 1);
@@ -292,6 +317,8 @@ function Navbar() {
 
   const handleLogout = () => {
     lastCheckedTokenRef.current = null;
+
+    localStorage.removeItem("userRole");
 
     setIsAuthenticated(false);
     setUser(null);
@@ -675,7 +702,6 @@ function Navbar() {
     </div>
   );
 
-  // Admin routes use their own admin layout/navbar.
   const isAdminRoute = location.pathname.startsWith("/admin");
 
   if (isAdminRoute) return null;

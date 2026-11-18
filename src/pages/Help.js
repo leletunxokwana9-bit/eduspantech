@@ -6,7 +6,7 @@ import TermsOfService from './Terms';
 import PrivacyPolicy from './Privacy';
 import {
   LifeBuoy, Search, Rocket, GraduationCap, PenTool, CreditCard, Settings,
-  Mail, MessageCircle, Clock, FileText, Shield, Cookie, Plus, Minus,
+  Mail, MessageCircle, Clock, FileText, Shield, Plus, Minus,
 } from 'lucide-react';
 import './Help.css';
 import './Register.css';
@@ -554,7 +554,7 @@ const Help = () => {
               gap: 6
             }}
           >
-            <Cookie size={16} strokeWidth={2} />
+            <span role="img" aria-label="Cookie">🍪</span>
             Cookie Policy
           </button>
         </div>

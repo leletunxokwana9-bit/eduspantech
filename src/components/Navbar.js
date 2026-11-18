@@ -29,23 +29,21 @@ const getStoredToken = () =>
 const hasAuthToken = () => Boolean(getStoredToken());
 
 const normalizeRole = (value) =>
-  String(value || "").trim().toLowerCase();
+  String(value ?? "").trim().toLowerCase();
 
 const isTrue = (value) =>
   value === true ||
   value === 1 ||
   ["true", "1"].includes(normalizeRole(value));
 
-// Handles both a direct user object and { user: {...} } responses.
 const getRoleUser = (userData) => {
   if (!userData) return null;
-
   return userData.user || userData;
 };
 
-// Match the same tutor indicators used by Login.js.
-// The saved userRole is also checked because the backend may return
-// role: "student" even when the login flow identified a tutor.
+// Tutor detection prioritises the actual user data returned by
+// the backend. The saved userRole is only a fallback when the
+// backend has not supplied any role information.
 const checkIsTutor = (userData) => {
   const data = getRoleUser(userData);
 
@@ -54,16 +52,33 @@ const checkIsTutor = (userData) => {
 
   if (!data) return storedTutorRole;
 
+  const role = normalizeRole(data.role);
+  const userType = normalizeRole(data.userType);
+  const type = normalizeRole(data.type);
+
   const roleList = Array.isArray(data.roles) ? data.roles : [];
 
-  return (
+  const hasTutorIndicator =
     isTrue(data.is_tutor) ||
-    ["tutor", "instructor"].includes(normalizeRole(data.role)) ||
-    normalizeRole(data.userType) === "tutor" ||
-    normalizeRole(data.type) === "tutor" ||
-    roleList.some((role) => normalizeRole(role) === "tutor") ||
-    storedTutorRole
-  );
+    ["tutor", "instructor"].includes(role) ||
+    userType === "tutor" ||
+    type === "tutor" ||
+    roleList.some((item) => normalizeRole(item) === "tutor");
+
+  if (hasTutorIndicator) return true;
+
+  // Do not allow an old localStorage tutor role to override
+  // an explicit student or admin role returned by the backend.
+  const hasBackendRoleInformation =
+    data.is_tutor !== undefined && data.is_tutor !== null ||
+    data.role !== undefined && data.role !== null ||
+    data.userType !== undefined && data.userType !== null ||
+    data.type !== undefined && data.type !== null ||
+    roleList.length > 0;
+
+  if (hasBackendRoleInformation) return false;
+
+  return storedTutorRole;
 };
 
 const checkIsAdmin = (userData) => {
@@ -77,7 +92,7 @@ const checkIsAdmin = (userData) => {
     ["admin", "super_admin", "superadmin"].includes(
       normalizeRole(data.role)
     ) ||
-    data.admin_role != null
+    Boolean(normalizeRole(data.admin_role))
   );
 };
 
@@ -143,9 +158,6 @@ function Navbar() {
     }
 
     const admin = checkIsAdmin(userData);
-
-    // The saved role is a fallback when the API response does not
-    // correctly return the tutor role.
     const tutor = !admin && checkIsTutor(userData);
 
     setUser(getRoleUser(userData));
@@ -170,7 +182,8 @@ function Navbar() {
     if (storedUser) {
       applyAuthenticatedUser(storedUser);
     } else {
-      // Even without a cached user object, preserve the tutor role.
+      setUser(null);
+      setIsAdmin(false);
       setIsTutor(
         normalizeRole(localStorage.getItem("userRole")) === "tutor"
       );
@@ -249,6 +262,8 @@ function Navbar() {
         if (storedUser) {
           applyAuthenticatedUser(storedUser);
         } else {
+          setUser(null);
+          setIsAdmin(false);
           setIsAuthenticated(true);
           setIsTutor(
             normalizeRole(localStorage.getItem("userRole")) === "tutor"
@@ -289,6 +304,8 @@ function Navbar() {
           if (storedUser) {
             applyAuthenticatedUser(storedUser);
           } else {
+            setUser(null);
+            setIsAdmin(false);
             setIsAuthenticated(true);
             setIsTutor(
               normalizeRole(localStorage.getItem("userRole")) === "tutor"

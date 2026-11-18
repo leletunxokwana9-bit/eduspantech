@@ -360,3 +360,181 @@
   .cta-buttons { flex-direction: column; }
   .btn-primary, .btn-outline { width: 100%; justify-content: center; }
 }
+/* =========================================
+   DYNAMIC MISSION CTA
+   ========================================= */
+
+.mission-cta {
+  position: relative;
+  overflow: hidden;
+  text-align: center;
+  background: linear-gradient(135deg, #1e1b4b 0%, #111827 100%);
+  border: 1px solid rgba(124, 58, 237, 0.3);
+  border-radius: 24px;
+  padding: 52px 32px;
+  margin-top: 20px;
+}
+
+.mission-cta h3 {
+  font-size: 28px;
+  font-weight: 700;
+  line-height: 1.3;
+  color: #ffffff;
+  margin: 0 0 14px;
+}
+
+.mission-cta p {
+  max-width: 680px;
+  margin: 0 auto 28px;
+  color: #a5b4c7;
+  font-size: 16px;
+  line-height: 1.7;
+}
+
+.mission-cta .cta-buttons {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 14px;
+}
+
+.mission-cta .btn-primary,
+.mission-cta .btn-outline {
+  min-height: 48px;
+  padding: 13px 26px;
+  border-radius: 10px;
+  font-size: 15px;
+  font-weight: 650;
+  text-decoration: none;
+  transition: background 0.2s ease, border-color 0.2s ease,
+              transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.mission-cta .btn-primary {
+  background: #7c3aed;
+  color: #ffffff;
+  border: 1px solid #7c3aed;
+}
+
+.mission-cta .btn-primary:hover {
+  background: #6d28d9;
+  border-color: #6d28d9;
+  transform: translateY(-2px);
+  box-shadow: 0 8px 20px rgba(124, 58, 237, 0.25);
+}
+
+.mission-cta .btn-outline {
+  background: transparent;
+  color: #ffffff;
+  border: 1px solid rgba(255, 255, 255, 0.22);
+}
+
+.mission-cta .btn-outline:hover {
+  background: rgba(255, 255, 255, 0.06);
+  border-color: rgba(255, 255, 255, 0.45);
+  transform: translateY(-2px);
+}
+
+/* Role-specific CTA appearances */
+
+.mission-cta-student {
+  border-color: rgba(56, 189, 248, 0.25);
+}
+
+.mission-cta-tutor {
+  border-color: rgba(52, 211, 153, 0.25);
+}
+
+.mission-cta-parent {
+  border-color: rgba(250, 204, 21, 0.25);
+}
+
+.mission-cta-admin {
+  border-color: rgba(148, 163, 184, 0.2);
+}
+
+/* Authentication loading state */
+
+.mission-cta-loading {
+  min-height: 190px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  gap: 14px;
+}
+
+.mission-cta-loading-inner {
+  width: 100%;
+  max-width: 420px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+}
+
+.mission-cta-skeleton {
+  height: 13px;
+  width: 65%;
+  border-radius: 20px;
+  background: rgba(255, 255, 255, 0.08);
+  animation: missionPulse 1.4s ease-in-out infinite;
+}
+
+.mission-cta-skeleton.short {
+  width: 40%;
+}
+
+.mission-cta-skeleton.button {
+  width: 145px;
+  height: 42px;
+  margin-top: 8px;
+}
+
+@keyframes missionPulse {
+  0%, 100% {
+    opacity: 0.45;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+
+/* Responsive CTA */
+
+@media (max-width: 768px) {
+  .mission-cta {
+    padding: 36px 22px;
+  }
+
+  .mission-cta h3 {
+    font-size: 24px;
+  }
+
+  .mission-cta p {
+    font-size: 15px;
+  }
+
+  .mission-cta .cta-buttons {
+    flex-direction: column;
+    width: 100%;
+  }
+
+  .mission-cta .btn-primary,
+  .mission-cta .btn-outline {
+    width: 100%;
+    justify-content: center;
+  }
+}
+
+@media (max-width: 480px) {
+  .mission-cta {
+    padding: 30px 18px;
+    border-radius: 18px;
+  }
+
+  .mission-cta h3 {
+    font-size: 22px;
+  }
+}

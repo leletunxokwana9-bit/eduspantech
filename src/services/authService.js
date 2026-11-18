@@ -3,27 +3,55 @@
 
 import { API_BASE_URL } from './api';
 
-// --------------------------------------------------
+// ==================================================
 // TOKEN HELPERS
-// --------------------------------------------------
+// ==================================================
 
-const getToken = () =>
-  localStorage.getItem('accessToken') ||
-  localStorage.getItem('token') ||
-  localStorage.getItem('authToken');
+const getToken = () => {
+  const candidates = [
+    localStorage.getItem('accessToken'),
+    localStorage.getItem('token'),
+    localStorage.getItem('authToken'),
+  ];
 
-const getRefreshToken = () =>
-  localStorage.getItem('refreshToken');
+  return candidates.find((token) =>
+    typeof token === 'string' &&
+    token.trim() !== '' &&
+    token !== 'undefined' &&
+    token !== 'null' &&
+    token.split('.').length === 3
+  ) || null;
+};
 
-const setTokens = (accessToken, refreshToken) => {
-  if (accessToken) {
-    localStorage.setItem('accessToken', accessToken);
+const getRefreshToken = () => {
+  const token = localStorage.getItem('refreshToken');
 
-    // Keep legacy token storage synchronised.
-    localStorage.setItem('token', accessToken);
+  if (
+    !token ||
+    token === 'undefined' ||
+    token === 'null'
+  ) {
+    return null;
   }
 
-  if (refreshToken) {
+  return token;
+};
+
+const setTokens = (accessToken, refreshToken) => {
+  if (
+    accessToken &&
+    typeof accessToken === 'string' &&
+    accessToken.split('.').length === 3
+  ) {
+    localStorage.setItem('accessToken', accessToken);
+    localStorage.setItem('token', accessToken);
+    localStorage.removeItem('authToken');
+  }
+
+  if (
+    refreshToken &&
+    typeof refreshToken === 'string'
+  ) {
     localStorage.setItem('refreshToken', refreshToken);
   }
 };
@@ -36,6 +64,8 @@ const clearTokens = () => {
   localStorage.removeItem('user');
   localStorage.removeItem('userRole');
 
+  meInFlight = null;
+
   try {
     window.dispatchEvent(new Event('auth:logout'));
   } catch {
@@ -43,9 +73,9 @@ const clearTokens = () => {
   }
 };
 
-// --------------------------------------------------
+// ==================================================
 // JWT HELPERS
-// --------------------------------------------------
+// ==================================================
 
 const decodeToken = (token) => {
   try {
@@ -76,6 +106,7 @@ const decodeToken = (token) => {
     const decoded = new TextDecoder().decode(bytes);
 
     return JSON.parse(decoded);
+
   } catch (error) {
     console.error('JWT decoding error:', error);
     return null;
@@ -92,21 +123,31 @@ const isTokenValid = (token) => {
   return payload.exp * 1000 > Date.now();
 };
 
+// ==================================================
+// STORED USER
+// ==================================================
+
 const getStoredUser = () => {
   try {
     const user = localStorage.getItem('user');
+
     return user ? JSON.parse(user) : null;
+
   } catch {
     return null;
   }
 };
 
+// ==================================================
+// REQUEST STATE
+// ==================================================
+
 let meInFlight = null;
 let refreshInFlight = null;
 
-// --------------------------------------------------
+// ==================================================
 // AUTH SERVICE
-// --------------------------------------------------
+// ==================================================
 
 const authService = {
 
@@ -131,18 +172,26 @@ const authService = {
 
       if (!response.ok) {
         if (response.status === 400) {
-          throw new Error(data.error || 'Invalid registration data.');
+          throw new Error(
+            data.error || 'Invalid registration data.'
+          );
         }
 
         if (response.status === 409) {
-          throw new Error('An account with this email already exists.');
+          throw new Error(
+            'An account with this email already exists.'
+          );
         }
 
         if (response.status === 500) {
-          throw new Error('Server error. Please try again later.');
+          throw new Error(
+            'Server error. Please try again later.'
+          );
         }
 
-        throw new Error(data.error || 'Registration failed');
+        throw new Error(
+          data.error || 'Registration failed'
+        );
       }
 
       if (data.success) {
@@ -157,7 +206,9 @@ const authService = {
 
       return {
         success: false,
-        error: data.error || 'Registration failed. Please try again.',
+        error:
+          data.error ||
+          'Registration failed. Please try again.',
       };
 
     } catch (error) {
@@ -165,7 +216,9 @@ const authService = {
 
       return {
         success: false,
-        error: error.message || 'Registration failed. Please try again.',
+        error:
+          error.message ||
+          'Registration failed. Please try again.',
       };
     }
   },
@@ -200,10 +253,16 @@ const authService = {
       }
 
       if (response.ok && data.accessToken) {
-        setTokens(data.accessToken, data.refreshToken);
+        setTokens(
+          data.accessToken,
+          data.refreshToken
+        );
 
         if (data.user) {
-          localStorage.setItem('user', JSON.stringify(data.user));
+          localStorage.setItem(
+            'user',
+            JSON.stringify(data.user)
+          );
 
           localStorage.setItem(
             'userRole',
@@ -223,7 +282,9 @@ const authService = {
         if (data.needsVerification) {
           return {
             success: false,
-            error: data.error || 'Please verify your email before logging in',
+            error:
+              data.error ||
+              'Please verify your email before logging in',
             needsVerification: true,
             email: data.email,
           };
@@ -238,7 +299,8 @@ const authService = {
       if (response.status === 401) {
         return {
           success: false,
-          error: data.error || 'Invalid email or password',
+          error:
+            data.error || 'Invalid email or password',
         };
       }
 
@@ -252,7 +314,9 @@ const authService = {
 
       return {
         success: false,
-        error: error.message || 'Login failed. Please check your connection.',
+        error:
+          error.message ||
+          'Login failed. Please check your connection.',
       };
     }
   },
@@ -292,22 +356,34 @@ const authService = {
       }
 
       if (response.ok && data.accessToken) {
-        setTokens(data.accessToken, data.refreshToken);
+        setTokens(
+          data.accessToken,
+          data.refreshToken
+        );
 
         if (data.user) {
-          localStorage.setItem('user', JSON.stringify(data.user));
+          localStorage.setItem(
+            'user',
+            JSON.stringify(data.user)
+          );
 
           const role =
             data.user.role ||
-            (data.user.is_tutor ? 'tutor' : 'student');
+            (
+              data.user.is_tutor === true ||
+              data.user.is_tutor === 1
+                ? 'tutor'
+                : 'student'
+            );
 
           localStorage.setItem('userRole', role);
         }
 
-        // Allow a fresh /auth/me request after login.
         meInFlight = null;
 
-        window.dispatchEvent(new Event('auth:login'));
+        window.dispatchEvent(
+          new Event('auth:login')
+        );
 
         return {
           success: true,
@@ -320,7 +396,8 @@ const authService = {
       if (response.status === 429) {
         return {
           success: false,
-          error: data.error || 'Too many failed attempts',
+          error:
+            data.error || 'Too many failed attempts',
           retryAfter: data.retryAfter || 900,
           attemptsLeft: 0,
         };
@@ -330,7 +407,9 @@ const authService = {
         if (data.banned) {
           return {
             success: false,
-            error: data.error || 'Your account has been suspended',
+            error:
+              data.error ||
+              'Your account has been suspended',
             banned: true,
             bannedUntil: data.bannedUntil || null,
             banReason: data.banReason || null,
@@ -340,7 +419,8 @@ const authService = {
         if (data.inactive) {
           return {
             success: false,
-            error: data.error || 'Your account is inactive',
+            error:
+              data.error || 'Your account is inactive',
             inactive: true,
           };
         }
@@ -348,7 +428,9 @@ const authService = {
         if (data.needsVerification) {
           return {
             success: false,
-            error: data.error || 'Please verify your email before logging in',
+            error:
+              data.error ||
+              'Please verify your email before logging in',
             needsVerification: true,
             email: data.email,
           };
@@ -364,7 +446,8 @@ const authService = {
         if (data.requires2FA) {
           return {
             success: false,
-            error: data.error || 'Two-factor code required',
+            error:
+              data.error || 'Two-factor code required',
             requires2FA: true,
             attemptsLeft:
               typeof data.attemptsLeft === 'number'
@@ -375,7 +458,8 @@ const authService = {
 
         return {
           success: false,
-          error: data.error || 'Invalid email or password',
+          error:
+            data.error || 'Invalid email or password',
           attemptsLeft:
             typeof data.attemptsLeft === 'number'
               ? data.attemptsLeft
@@ -393,7 +477,9 @@ const authService = {
 
       return {
         success: false,
-        error: error.message || 'Login failed. Please check your connection.',
+        error:
+          error.message ||
+          'Login failed. Please check your connection.',
       };
     }
   },
@@ -403,9 +489,6 @@ const authService = {
   // ------------------------------------------------
 
   logout: () => {
-    meInFlight = null;
-    refreshInFlight = null;
-
     clearTokens();
 
     window.location.href = '/login';
@@ -440,7 +523,8 @@ const authService = {
         );
 
         if (response.status === 401) {
-          const refreshed = await authService.refreshToken();
+          const refreshed =
+            await authService.refreshToken();
 
           if (!refreshed) {
             return null;
@@ -481,7 +565,11 @@ const authService = {
 
         const user = data.user || data;
 
-        if (!user || typeof user !== 'object') {
+        if (
+          !user ||
+          typeof user !== 'object' ||
+          Array.isArray(user)
+        ) {
           return null;
         }
 
@@ -493,7 +581,11 @@ const authService = {
         return user;
 
       } catch (error) {
-        console.error('Get current user error:', error);
+        console.error(
+          'Get current user error:',
+          error
+        );
+
         return null;
 
       } finally {
@@ -517,6 +609,10 @@ const authService = {
 
     try {
       const token = getToken();
+
+      if (!token) {
+        return user;
+      }
 
       const subResponse = await fetch(
         `${API_BASE_URL}/subscriptions`,
@@ -574,7 +670,8 @@ const authService = {
       );
 
       if (response.status === 401) {
-        const refreshed = await authService.refreshToken();
+        const refreshed =
+          await authService.refreshToken();
 
         if (refreshed) {
           const newToken = getToken();
@@ -637,7 +734,10 @@ const authService = {
   // CHANGE PASSWORD
   // ------------------------------------------------
 
-  changePassword: async (currentPassword, newPassword) => {
+  changePassword: async (
+    currentPassword,
+    newPassword
+  ) => {
     try {
       const token = getToken();
 
@@ -661,7 +761,8 @@ const authService = {
       );
 
       if (response.status === 401) {
-        const refreshed = await authService.refreshToken();
+        const refreshed =
+          await authService.refreshToken();
 
         if (refreshed) {
           const newToken = getToken();
@@ -783,7 +884,11 @@ const authService = {
 
         const data = await response.json();
 
-        if (!data.accessToken) {
+        if (
+          !data.accessToken ||
+          typeof data.accessToken !== 'string' ||
+          data.accessToken.split('.').length !== 3
+        ) {
           clearTokens();
           return false;
         }
@@ -882,7 +987,11 @@ const authService = {
       };
 
     } catch (error) {
-      console.error('Resend verification error:', error);
+      console.error(
+        'Resend verification error:',
+        error
+      );
+
       throw error;
     }
   },
@@ -927,6 +1036,10 @@ const authService = {
   isAuthenticated: () => {
     const token = getToken();
 
+    if (!token) {
+      return false;
+    }
+
     return isTokenValid(token);
   },
 
@@ -937,7 +1050,7 @@ const authService = {
   getStoredUser: () => getStoredUser(),
 
   // ------------------------------------------------
-  // AVATAR
+  // UPDATE AVATAR
   // ------------------------------------------------
 
   updateAvatar: async (avatarData) => {

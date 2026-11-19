@@ -402,6 +402,7 @@
   right: 0;
   z-index: 1100;
   width: min(390px, 88vw);
+  height: 100vh;
   height: 100dvh;
   padding: 22px;
   overflow-y: auto;
@@ -409,13 +410,15 @@
   border-left: 1px solid #263750;
   box-shadow: -15px 0 45px rgba(0, 0, 0, 0.4);
   transform: translateX(105%);
-  transition: transform 0.28s ease;
+  transition: transform 0.28s ease, visibility 0.28s ease;
   visibility: hidden;
+  pointer-events: none;
 }
 
 .parent-mobile-panel.open {
   transform: translateX(0);
   visibility: visible;
+  pointer-events: auto;
 }
 
 .parent-mobile-panel-header {
@@ -640,6 +643,10 @@
   .parent-mobile-toggle {
     display: flex;
   }
+
+  .parent-nav-link.active::after {
+    display: none;
+  }
 }
 
 /* =====================================================
@@ -735,7 +742,7 @@
   font-weight: 700;
   text-decoration: none;
   white-space: nowrap;
-  transition: 0.2s ease;
+  transition: background 0.2s ease, border-color 0.2s ease, color 0.2s ease;
 }
 
 .parent-login-link {

@@ -39,6 +39,10 @@ function ParentNavbar({ user, onLogout }) {
   const profileRef = useRef(null);
   const languageRef = useRef(null);
 
+  // =====================================================
+  // PARENT NAVIGATION LINKS
+  // =====================================================
+
   const navLinks = [
     {
       path: "/parent-dashboard",
@@ -67,6 +71,10 @@ function ParentNavbar({ user, onLogout }) {
     }
   ];
 
+  // =====================================================
+  // ACTIVE NAVIGATION
+  // =====================================================
+
   const isActive = (path) => {
     if (path === "/parent-dashboard") {
       return location.pathname === path;
@@ -77,6 +85,10 @@ function ParentNavbar({ user, onLogout }) {
       location.pathname.startsWith(`${path}/`)
     );
   };
+
+  // =====================================================
+  // PARENT DETAILS
+  // =====================================================
 
   const firstName =
     user?.name?.trim().split(/\s+/)[0] || "Parent";
@@ -96,6 +108,10 @@ function ParentNavbar({ user, onLogout }) {
     user?.profileImage ||
     null;
 
+  // =====================================================
+  // MENU HELPERS
+  // =====================================================
+
   const closeMenus = () => {
     setMobileOpen(false);
     setProfileOpen(false);
@@ -105,7 +121,10 @@ function ParentNavbar({ user, onLogout }) {
   const handleLogout = () => {
     closeMenus();
     playClick();
-    onLogout();
+
+    if (onLogout) {
+      onLogout();
+    }
   };
 
   const handleLanguageChange = (code) => {
@@ -114,9 +133,17 @@ function ParentNavbar({ user, onLogout }) {
     playClick();
   };
 
+  // =====================================================
+  // CLOSE MENUS WHEN ROUTE CHANGES
+  // =====================================================
+
   useEffect(() => {
     closeMenus();
   }, [location.pathname]);
+
+  // =====================================================
+  // CLOSE DROPDOWNS WHEN CLICKING OUTSIDE
+  // =====================================================
 
   useEffect(() => {
     const handleOutsideClick = (event) => {
@@ -144,6 +171,10 @@ function ParentNavbar({ user, onLogout }) {
     };
   }, []);
 
+  // =====================================================
+  // MOBILE MENU SCROLL LOCK AND ESCAPE KEY
+  // =====================================================
+
   useEffect(() => {
     if (!mobileOpen) return;
 
@@ -163,6 +194,10 @@ function ParentNavbar({ user, onLogout }) {
       document.removeEventListener("keydown", handleEscape);
     };
   }, [mobileOpen]);
+
+  // =====================================================
+  // RENDER
+  // =====================================================
 
   return (
     <>
@@ -332,6 +367,8 @@ function ParentNavbar({ user, onLogout }) {
               {profileOpen && (
                 <div className="parent-account-dropdown">
 
+                  {/* ACCOUNT INFORMATION */}
+
                   <div className="parent-account-dropdown-header">
                     <div className="parent-avatar parent-avatar-large">
                       {avatar ? (
@@ -350,9 +387,15 @@ function ParentNavbar({ user, onLogout }) {
 
                   <div className="parent-dropdown-divider" />
 
+                  {/* MY PROFILE — PARENT PROFILE PAGE */}
+
                   <Link
-                    to="/profile"
-                    className="parent-dropdown-item"
+                    to="/parent-profile"
+                    className={`parent-dropdown-item ${
+                      location.pathname === "/parent-profile"
+                        ? "active"
+                        : ""
+                    }`}
                     onClick={() => {
                       closeMenus();
                       playClick();
@@ -361,6 +404,8 @@ function ParentNavbar({ user, onLogout }) {
                     <User size={17} />
                     <span>My Profile</span>
                   </Link>
+
+                  {/* ACCOUNT SETTINGS */}
 
                   <Link
                     to="/settings"
@@ -375,6 +420,8 @@ function ParentNavbar({ user, onLogout }) {
                   </Link>
 
                   <div className="parent-dropdown-divider" />
+
+                  {/* SIGN OUT */}
 
                   <button
                     type="button"
@@ -408,6 +455,7 @@ function ParentNavbar({ user, onLogout }) {
                 <Menu size={23} />
               )}
             </button>
+
           </div>
         </div>
       </header>
@@ -444,6 +492,8 @@ function ParentNavbar({ user, onLogout }) {
           </button>
         </div>
 
+        {/* MOBILE ACCOUNT INFORMATION */}
+
         <div className="parent-mobile-profile">
           <div className="parent-avatar parent-avatar-large">
             {avatar ? (
@@ -458,6 +508,8 @@ function ParentNavbar({ user, onLogout }) {
             <span>Parent Account</span>
           </div>
         </div>
+
+        {/* PLATFORM NAVIGATION */}
 
         <nav className="parent-mobile-navigation">
           <span className="parent-mobile-label">
@@ -492,13 +544,17 @@ function ParentNavbar({ user, onLogout }) {
 
         <div className="parent-mobile-divider" />
 
+        {/* MOBILE ACCOUNT MENU */}
+
         <div className="parent-mobile-account">
           <span className="parent-mobile-label">
             ACCOUNT
           </span>
 
+          {/* MY PROFILE — PARENT PROFILE PAGE */}
+
           <Link
-            to="/profile"
+            to="/parent-profile"
             onClick={() => {
               setMobileOpen(false);
               playClick();
@@ -507,6 +563,8 @@ function ParentNavbar({ user, onLogout }) {
             <User size={18} />
             My Profile
           </Link>
+
+          {/* ACCOUNT SETTINGS */}
 
           <Link
             to="/settings"
@@ -519,6 +577,8 @@ function ParentNavbar({ user, onLogout }) {
             Account Settings
           </Link>
 
+          {/* SIGN OUT */}
+
           <button
             type="button"
             onClick={handleLogout}
@@ -528,6 +588,8 @@ function ParentNavbar({ user, onLogout }) {
             Sign Out
           </button>
         </div>
+
+        {/* MOBILE LANGUAGE SETTINGS */}
 
         <div className="parent-mobile-language">
           <span className="parent-mobile-label">

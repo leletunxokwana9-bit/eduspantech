@@ -1,25 +1,28 @@
 
 /* =========================================================
    EDUSPANTECH — PARENT HOME
-   Premium Parent & Guardian Experience
+   Dark Premium Parent & Guardian Experience
 ========================================================= */
 
 .parent-home {
-  --parent-primary: #2457d6;
-  --parent-primary-dark: #173eaa;
-  --parent-navy: #14213d;
-  --parent-text: #243047;
-  --parent-muted: #68758a;
-  --parent-border: #e8edf5;
-  --parent-light: #f6f8fc;
-  --parent-white: #ffffff;
+  --ph-bg: #080e1b;
+  --ph-bg-soft: #0d1628;
+  --ph-surface: #111d32;
+  --ph-surface-light: #172640;
+  --ph-primary: #4779f5;
+  --ph-primary-hover: #3264df;
+  --ph-accent: #76a0ff;
+  --ph-text: #f4f7ff;
+  --ph-muted: #a1aec4;
+  --ph-border: rgba(158, 181, 221, 0.13);
+  --ph-success: #36c995;
 
   width: 100%;
   min-height: 100vh;
-  background: #ffffff;
-  color: var(--parent-text);
-  font-family: inherit;
   overflow: hidden;
+  color: var(--ph-text);
+  background: var(--ph-bg);
+  font-family: inherit;
 }
 
 .parent-home *,
@@ -29,31 +32,39 @@
 }
 
 /* =========================================================
-   HERO SECTION
+   HERO
 ========================================================= */
 
 .parent-hero {
   width: 100%;
-  padding: 24px 4.5% 0;
-  background: #ffffff;
+  padding: 26px 4.5% 0;
+  background: var(--ph-bg);
 }
 
 .parent-hero-visual {
   position: relative;
+  isolation: isolate;
   width: 100%;
-  min-height: 610px;
+  min-height: 650px;
   display: flex;
   align-items: center;
   overflow: hidden;
-  isolation: isolate;
+  border: 1px solid var(--ph-border);
   border-radius: 22px;
+
   background:
     radial-gradient(
-      circle at 85% 15%,
-      rgba(63, 112, 218, 0.12),
-      transparent 35%
+      circle at 78% 18%,
+      rgba(65, 112, 230, 0.18),
+      transparent 34%
     ),
-    linear-gradient(120deg, #f4f7fd 0%, #edf2fb 100%);
+    linear-gradient(
+      115deg,
+      #101d34 0%,
+      #101a2e 50%,
+      #172747 100%
+    );
+
   background-position: center;
   background-size: cover;
 }
@@ -62,43 +73,64 @@
   background-repeat: no-repeat;
 }
 
+/* Overlay stays above the background and below the content */
+
 .parent-hero-overlay {
   position: absolute;
   inset: 0;
-  z-index: -1;
-  background: linear-gradient(
-    90deg,
-    rgba(248, 250, 255, 0.98) 0%,
-    rgba(248, 250, 255, 0.96) 38%,
-    rgba(248, 250, 255, 0.78) 62%,
-    rgba(248, 250, 255, 0.36) 100%
-  );
+  z-index: 0;
+  pointer-events: none;
+
+  background:
+    linear-gradient(
+      90deg,
+      rgba(7, 13, 26, 0.98) 0%,
+      rgba(7, 13, 26, 0.95) 37%,
+      rgba(7, 13, 26, 0.80) 65%,
+      rgba(7, 13, 26, 0.48) 100%
+    );
 }
 
 .parent-hero-content {
+  position: relative;
+  z-index: 1;
+
   width: 100%;
-  max-width: 1380px;
+  max-width: 1450px;
   margin: 0 auto;
-  padding: 80px 7%;
+  padding: 78px 6%;
+
   display: grid;
-  grid-template-columns: minmax(0, 1.15fr) minmax(330px, 0.85fr);
+
+  /* Two independent columns prevent the card
+     from overlapping the heading or buttons. */
+
+  grid-template-columns:
+    minmax(0, 1.12fr)
+    minmax(320px, 0.88fr);
+
   align-items: center;
-  gap: 65px;
+  gap: clamp(35px, 5vw, 85px);
 }
 
 .parent-hero-copy {
-  max-width: 670px;
+  position: relative;
+  z-index: 2;
+  width: 100%;
+  max-width: 650px;
+  min-width: 0;
 }
 
 .parent-eyebrow {
   display: inline-flex;
   align-items: center;
-  gap: 9px;
-  margin-bottom: 26px;
-  color: var(--parent-primary);
-  font-size: 11px;
+  gap: 10px;
+  margin-bottom: 27px;
+
+  color: var(--ph-accent);
+  font-size: 10px;
   font-weight: 800;
-  letter-spacing: 1.7px;
+  letter-spacing: 1.8px;
 }
 
 .parent-eyebrow svg {
@@ -107,93 +139,101 @@
 }
 
 .parent-hero-copy h1 {
+  max-width: 650px;
   margin: 0;
-  color: var(--parent-navy);
-  font-size: clamp(42px, 5.1vw, 66px);
+
+  color: #ffffff;
+  font-size: clamp(43px, 4.6vw, 66px);
   font-weight: 800;
-  line-height: 1.08;
-  letter-spacing: -2.7px;
+  line-height: 1.12;
+  letter-spacing: -2.8px;
+
+  overflow-wrap: normal;
 }
 
 .parent-hero-copy h1 span {
   display: block;
-  color: var(--parent-primary);
+  margin-top: 5px;
+  color: var(--ph-accent);
 }
 
 .parent-hero-description {
-  max-width: 570px;
+  max-width: 550px;
   margin: 25px 0 0;
-  color: #5e6c83;
-  font-size: 16px;
-  line-height: 1.85;
+
+  color: #b5c1d6;
+  font-size: 15px;
+  line-height: 1.9;
 }
+
+/* =========================================================
+   HERO ACTIONS
+========================================================= */
 
 .parent-hero-actions {
   display: flex;
   align-items: center;
   flex-wrap: wrap;
-  gap: 13px;
-  margin-top: 35px;
+  gap: 14px;
+  margin-top: 34px;
 }
-
-/* =========================================================
-   BUTTONS
-========================================================= */
 
 .parent-primary-btn,
 .parent-secondary-btn {
-  min-height: 52px;
+  min-height: 51px;
   padding: 0 23px;
+
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 11px;
+  gap: 10px;
+
   border-radius: 9px;
-  font-size: 14px;
-  font-weight: 700;
+  font-size: 13px;
+  font-weight: 750;
   text-decoration: none;
+
   transition:
     background 0.2s ease,
-    color 0.2s ease,
     border-color 0.2s ease,
+    color 0.2s ease,
     transform 0.2s ease,
     box-shadow 0.2s ease;
 }
 
 .parent-primary-btn {
   color: #ffffff;
-  background: var(--parent-primary);
-  border: 1px solid var(--parent-primary);
-  box-shadow: 0 5px 14px rgba(36, 87, 214, 0.13);
+  background: var(--ph-primary);
+  border: 1px solid var(--ph-primary);
+  box-shadow: 0 7px 22px rgba(51, 101, 222, 0.22);
 }
 
 .parent-primary-btn:hover {
-  background: var(--parent-primary-dark);
-  border-color: var(--parent-primary-dark);
   color: #ffffff;
+  background: var(--ph-primary-hover);
+  border-color: var(--ph-primary-hover);
   transform: translateY(-2px);
-  box-shadow: 0 9px 20px rgba(36, 87, 214, 0.2);
-}
-
-.parent-primary-btn svg,
-.parent-secondary-btn svg {
-  transition: transform 0.2s ease;
+  box-shadow: 0 10px 26px rgba(51, 101, 222, 0.3);
 }
 
 .parent-primary-btn:hover svg {
   transform: translateX(4px);
 }
 
+.parent-primary-btn svg {
+  transition: transform 0.2s ease;
+}
+
 .parent-secondary-btn {
-  color: var(--parent-navy);
-  background: #ffffff;
-  border: 1px solid #dce3ef;
+  color: #e6edff;
+  background: rgba(255, 255, 255, 0.055);
+  border: 1px solid rgba(189, 207, 245, 0.23);
 }
 
 .parent-secondary-btn:hover {
-  color: var(--parent-primary);
-  border-color: var(--parent-primary);
-  background: #f7f9ff;
+  color: #ffffff;
+  background: rgba(71, 121, 245, 0.16);
+  border-color: var(--ph-accent);
 }
 
 /* =========================================================
@@ -203,32 +243,43 @@
 .parent-hero-trust {
   display: flex;
   align-items: center;
-  gap: 9px;
+  gap: 10px;
   margin-top: 27px;
-  color: #65738a;
-  font-size: 12px;
+
+  color: #aab8ce;
+  font-size: 11px;
   font-weight: 600;
 }
 
 .parent-hero-trust svg {
-  color: #26956b;
+  color: var(--ph-success);
   flex-shrink: 0;
 }
 
 /* =========================================================
-   HERO PREVIEW CARD
+   EDUCATION PREVIEW CARD
 ========================================================= */
 
 .parent-hero-card {
+  position: relative;
+  z-index: 2;
+
   width: 100%;
-  max-width: 440px;
+  max-width: 430px;
+  min-width: 0;
   justify-self: end;
+
   padding: 27px;
-  border: 1px solid rgba(226, 233, 245, 0.95);
+
+  background: rgba(17, 29, 50, 0.96);
+  border: 1px solid rgba(163, 190, 244, 0.19);
   border-radius: 17px;
-  background: rgba(255, 255, 255, 0.96);
-  box-shadow: 0 25px 65px rgba(23, 42, 79, 0.12);
-  backdrop-filter: blur(12px);
+
+  box-shadow:
+    0 25px 65px rgba(0, 0, 0, 0.3),
+    inset 0 1px 0 rgba(255, 255, 255, 0.035);
+
+  backdrop-filter: blur(16px);
 }
 
 .parent-preview-top {
@@ -240,27 +291,31 @@
 .parent-preview-icon {
   width: 49px;
   height: 49px;
+  flex-shrink: 0;
+
   display: flex;
   align-items: center;
   justify-content: center;
-  flex-shrink: 0;
-  color: var(--parent-primary);
-  background: #edf3ff;
+
+  color: #91b2ff;
+  background: rgba(71, 121, 245, 0.16);
+  border: 1px solid rgba(103, 149, 255, 0.13);
   border-radius: 12px;
 }
 
 .parent-preview-label {
   display: block;
   margin-bottom: 5px;
-  color: #8793a6;
+
+  color: #8fa3c3;
   font-size: 9px;
   font-weight: 800;
-  letter-spacing: 1.2px;
+  letter-spacing: 1.3px;
 }
 
 .parent-preview-top strong {
   display: block;
-  color: var(--parent-navy);
+  color: #ffffff;
   font-size: 17px;
   font-weight: 750;
 }
@@ -268,15 +323,20 @@
 .parent-preview-divider {
   height: 1px;
   margin: 23px 0;
-  background: #edf0f5;
+  background: rgba(166, 189, 228, 0.13);
 }
+
+/* =========================================================
+   PREVIEW ITEMS
+========================================================= */
 
 .parent-preview-item {
   display: flex;
   align-items: center;
   gap: 13px;
-  padding: 15px 0;
-  border-bottom: 1px solid #f0f2f6;
+  padding: 16px 0;
+
+  border-bottom: 1px solid rgba(166, 189, 228, 0.10);
 }
 
 .parent-preview-item:last-of-type {
@@ -284,28 +344,30 @@
 }
 
 .parent-preview-item-icon {
-  width: 42px;
-  height: 42px;
+  width: 43px;
+  height: 43px;
+  flex-shrink: 0;
+
   display: flex;
   align-items: center;
   justify-content: center;
-  flex-shrink: 0;
+
   border-radius: 11px;
 }
 
 .parent-preview-item-icon.progress {
-  color: #2875d9;
-  background: #edf5ff;
+  color: #7ca8ff;
+  background: rgba(64, 121, 234, 0.16);
 }
 
 .parent-preview-item-icon.sessions {
-  color: #159b78;
-  background: #eaf8f3;
+  color: #56d7ae;
+  background: rgba(40, 184, 139, 0.13);
 }
 
 .parent-preview-item-icon.reports {
-  color: #8b65ce;
-  background: #f3efff;
+  color: #c3a0ff;
+  background: rgba(150, 107, 228, 0.16);
 }
 
 .parent-preview-item > div:nth-child(2) {
@@ -315,38 +377,44 @@
 
 .parent-preview-item strong {
   display: block;
-  color: #25334a;
-  font-size: 13px;
+  color: #edf2ff;
+  font-size: 12px;
   font-weight: 750;
 }
 
 .parent-preview-item span {
   display: block;
   margin-top: 5px;
-  color: #8a95a7;
-  font-size: 11px;
+  color: #94a4bf;
+  font-size: 10px;
+  line-height: 1.5;
 }
 
 .parent-preview-check {
-  color: #24a276;
   flex-shrink: 0;
+  color: var(--ph-success);
 }
 
 .parent-preview-footer {
   display: flex;
   align-items: center;
   gap: 9px;
-  margin-top: 20px;
+
+  margin-top: 19px;
   padding: 13px;
+
+  color: #a8e6d1;
+  background: rgba(44, 179, 132, 0.10);
+  border: 1px solid rgba(54, 201, 149, 0.12);
   border-radius: 9px;
-  color: #40745e;
-  background: #eff8f3;
-  font-size: 11px;
+
+  font-size: 10px;
   font-weight: 650;
 }
 
 .parent-preview-footer svg {
   flex-shrink: 0;
+  color: var(--ph-success);
 }
 
 /* =========================================================
@@ -354,21 +422,23 @@
 ========================================================= */
 
 .parent-intro {
-  max-width: 1380px;
+  width: 100%;
+  max-width: 1450px;
   margin: 0 auto;
-  padding: 115px 6% 110px;
+  padding: 110px 6% 105px;
 }
 
 .parent-section-heading {
-  max-width: 690px;
-  margin: 0 auto 55px;
+  max-width: 700px;
+  margin: 0 auto 53px;
   text-align: center;
 }
 
 .parent-section-label {
   display: inline-block;
   margin-bottom: 15px;
-  color: var(--parent-primary);
+
+  color: var(--ph-accent);
   font-size: 10px;
   font-weight: 800;
   letter-spacing: 1.8px;
@@ -376,61 +446,73 @@
 
 .parent-section-heading h2 {
   margin: 0;
-  color: var(--parent-navy);
-  font-size: clamp(29px, 3.3vw, 42px);
+
+  color: #f3f6ff;
+  font-size: clamp(30px, 3.3vw, 43px);
   font-weight: 800;
-  letter-spacing: -1.5px;
+  letter-spacing: -1.6px;
   line-height: 1.2;
 }
 
 .parent-section-heading p {
   max-width: 620px;
-  margin: 17px auto 0;
-  color: var(--parent-muted);
-  font-size: 14px;
+  margin: 18px auto 0;
+
+  color: var(--ph-muted);
+  font-size: 13px;
   line-height: 1.9;
 }
 
 /* =========================================================
-   FEATURE CARDS
+   FEATURE GRID
 ========================================================= */
 
 .parent-feature-grid {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 19px;
+  gap: 18px;
 }
 
 .parent-feature-card {
   position: relative;
-  min-height: 255px;
+  min-width: 0;
+  min-height: 260px;
   padding: 27px 23px;
+
   overflow: hidden;
-  background: #ffffff;
-  border: 1px solid var(--parent-border);
+
+  background: var(--ph-surface);
+  border: 1px solid var(--ph-border);
   border-radius: 13px;
+
   transition:
     transform 0.25s ease,
     border-color 0.25s ease,
+    background 0.25s ease,
     box-shadow 0.25s ease;
 }
 
 .parent-feature-card:hover {
   transform: translateY(-5px);
-  border-color: #cbd9f8;
-  box-shadow: 0 16px 35px rgba(31, 58, 105, 0.07);
+  background: #14233c;
+  border-color: rgba(104, 151, 255, 0.38);
+  box-shadow: 0 17px 38px rgba(0, 0, 0, 0.19);
 }
 
 .parent-feature-icon {
-  width: 49px;
-  height: 49px;
+  width: 48px;
+  height: 48px;
+
   display: flex;
   align-items: center;
   justify-content: center;
+
   margin-bottom: 23px;
-  color: var(--parent-primary);
-  background: #edf3ff;
-  border-radius: 12px;
+
+  color: #8db0ff;
+  background: rgba(71, 121, 245, 0.15);
+  border: 1px solid rgba(71, 121, 245, 0.13);
+  border-radius: 11px;
 }
 
 .parent-feature-icon svg {
@@ -439,42 +521,61 @@
 
 .parent-feature-card h3 {
   margin: 0 0 12px;
-  color: var(--parent-navy);
-  font-size: 15px;
+
+  color: #f2f5ff;
+  font-size: 14px;
   font-weight: 750;
-  line-height: 1.45;
+  line-height: 1.5;
 }
 
 .parent-feature-card p {
   margin: 0;
-  color: var(--parent-muted);
-  font-size: 12px;
-  line-height: 1.85;
+
+  color: #9caac1;
+  font-size: 11px;
+  line-height: 1.9;
 }
 
 .parent-feature-number {
   position: absolute;
-  right: 17px;
+  right: 15px;
   bottom: 8px;
-  color: #f1f4f9;
-  font-size: 43px;
+
+  color: rgba(153, 177, 222, 0.08);
+  font-size: 45px;
   font-weight: 850;
   line-height: 1;
+
   pointer-events: none;
 }
 
 /* =========================================================
-   PARENT PARTNERSHIP
+   PARTNERSHIP SECTION
 ========================================================= */
 
 .parent-partnership {
   width: 100%;
   display: grid;
-  grid-template-columns: 1fr 0.9fr;
+
+  grid-template-columns:
+    minmax(0, 1fr)
+    minmax(0, 0.9fr);
+
   align-items: center;
   gap: 65px;
-  padding: 90px 9%;
-  background: #f6f8fc;
+
+  padding: 95px 9%;
+
+  background:
+    radial-gradient(
+      circle at 85% 45%,
+      rgba(48, 91, 174, 0.13),
+      transparent 34%
+    ),
+    #0d1729;
+
+  border-top: 1px solid var(--ph-border);
+  border-bottom: 1px solid var(--ph-border);
 }
 
 .parent-partnership-content {
@@ -485,41 +586,53 @@
 .parent-partnership-icon {
   width: 52px;
   height: 52px;
+
   display: flex;
   align-items: center;
   justify-content: center;
+
   margin-bottom: 25px;
-  color: var(--parent-primary);
-  background: #e8efff;
-  border-radius: 13px;
+
+  color: #8fb0ff;
+  background: rgba(71, 121, 245, 0.15);
+  border: 1px solid rgba(71, 121, 245, 0.15);
+  border-radius: 12px;
 }
 
 .parent-partnership-content h2 {
   margin: 0;
-  color: var(--parent-navy);
-  font-size: clamp(31px, 3.5vw, 43px);
+
+  color: #f4f7ff;
+  font-size: clamp(31px, 3.5vw, 44px);
   font-weight: 800;
-  letter-spacing: -1.6px;
+  letter-spacing: -1.7px;
   line-height: 1.2;
 }
 
 .parent-partnership-content h2 span {
   display: block;
-  color: var(--parent-primary);
+  color: var(--ph-accent);
 }
 
 .parent-partnership-content > p {
   margin: 19px 0 0;
-  color: var(--parent-muted);
-  font-size: 14px;
+
+  color: #a2b0c6;
+  font-size: 13px;
   line-height: 1.9;
 }
 
+/* =========================================================
+   BENEFITS LIST
+========================================================= */
+
 .parent-benefits-list {
   display: grid;
-  gap: 15px;
-  margin: 28px 0;
+  gap: 16px;
+
+  margin: 29px 0;
   padding: 0;
+
   list-style: none;
 }
 
@@ -527,30 +640,35 @@
   display: flex;
   align-items: center;
   gap: 12px;
-  color: #435169;
-  font-size: 13px;
+
+  color: #d0d9e9;
+  font-size: 12px;
   font-weight: 600;
 }
 
 .parent-benefits-list svg {
   flex-shrink: 0;
-  color: #21966f;
+  color: var(--ph-success);
 }
 
 .parent-partnership-link {
   display: inline-flex;
   align-items: center;
   gap: 10px;
-  color: var(--parent-primary);
-  font-size: 13px;
+
+  color: #8eb0ff;
+  font-size: 12px;
   font-weight: 750;
   text-decoration: none;
-  transition: gap 0.2s ease;
+
+  transition:
+    gap 0.2s ease,
+    color 0.2s ease;
 }
 
 .parent-partnership-link:hover {
   gap: 16px;
-  color: var(--parent-primary-dark);
+  color: #ffffff;
 }
 
 /* =========================================================
@@ -560,23 +678,28 @@
 .parent-partnership-visual {
   position: relative;
   min-height: 390px;
+
   display: flex;
   align-items: center;
   justify-content: center;
+
   overflow: hidden;
-  border-radius: 20px;
+
   background:
     radial-gradient(
-      circle at 50% 45%,
-      rgba(255, 255, 255, 0.95),
-      transparent 47%
+      circle at 50% 43%,
+      rgba(66, 112, 216, 0.18),
+      transparent 45%
     ),
-    #eaf0fc;
+    #14223a;
+
+  border: 1px solid rgba(146, 174, 227, 0.14);
+  border-radius: 19px;
 }
 
 .parent-partnership-decoration {
   position: absolute;
-  border: 1px solid rgba(36, 87, 214, 0.12);
+  border: 1px solid rgba(111, 154, 248, 0.16);
   border-radius: 50%;
 }
 
@@ -593,23 +716,28 @@
 .parent-partnership-illustration {
   position: relative;
   z-index: 1;
+
   display: flex;
   flex-direction: column;
   align-items: center;
+
   text-align: center;
 }
 
 .parent-illustration-circle {
   width: 165px;
   height: 165px;
+
   display: flex;
   align-items: center;
   justify-content: center;
-  color: var(--parent-primary);
-  background: #ffffff;
-  border: 1px solid #e4eafa;
+
+  color: #91b2ff;
+  background: #1c3153;
+  border: 1px solid rgba(140, 174, 243, 0.2);
   border-radius: 50%;
-  box-shadow: 0 20px 55px rgba(34, 70, 135, 0.12);
+
+  box-shadow: 0 20px 55px rgba(0, 0, 0, 0.25);
 }
 
 .parent-illustration-caption {
@@ -619,25 +747,33 @@
 .parent-illustration-caption span {
   display: block;
   margin-bottom: 8px;
-  color: var(--parent-primary);
+
+  color: var(--ph-accent);
   font-size: 11px;
   font-weight: 800;
   letter-spacing: 1.5px;
 }
 
 .parent-illustration-caption strong {
-  color: var(--parent-navy);
-  font-size: 17px;
+  color: #f1f5ff;
+  font-size: 16px;
   font-weight: 750;
 }
 
 /* =========================================================
-   FINAL CALL TO ACTION
+   FINAL CTA
 ========================================================= */
 
 .parent-final-cta {
   padding: 105px 6%;
-  background: #ffffff;
+
+  background:
+    radial-gradient(
+      ellipse at center,
+      rgba(54, 100, 197, 0.12),
+      transparent 62%
+    ),
+    var(--ph-bg);
 }
 
 .parent-final-cta-content {
@@ -648,8 +784,9 @@
 
 .parent-final-cta-content h2 {
   margin: 0;
-  color: var(--parent-navy);
-  font-size: clamp(37px, 4.5vw, 55px);
+
+  color: #f5f7ff;
+  font-size: clamp(38px, 4.5vw, 57px);
   font-weight: 850;
   letter-spacing: -2px;
   line-height: 1.13;
@@ -658,8 +795,9 @@
 .parent-final-cta-content > p {
   max-width: 590px;
   margin: 20px auto 0;
-  color: var(--parent-muted);
-  font-size: 14px;
+
+  color: var(--ph-muted);
+  font-size: 13px;
   line-height: 1.9;
 }
 
@@ -668,55 +806,44 @@
   align-items: center;
   justify-content: center;
   flex-wrap: wrap;
-  gap: 24px;
+  gap: 25px;
+
   margin-top: 33px;
 }
 
 .parent-final-login {
-  color: #56647b;
-  font-size: 13px;
+  color: #aebbd1;
+  font-size: 12px;
   font-weight: 650;
   text-decoration: none;
+
   transition: color 0.2s ease;
 }
 
 .parent-final-login:hover {
-  color: var(--parent-primary);
+  color: #ffffff;
 }
 
 /* =========================================================
-   RESPONSIVE — LARGE SCREENS
-========================================================= */
-
-@media (min-width: 1600px) {
-  .parent-hero {
-    padding-left: 6%;
-    padding-right: 6%;
-  }
-
-  .parent-hero-visual {
-    min-height: 680px;
-  }
-
-  .parent-hero-content {
-    padding-top: 95px;
-    padding-bottom: 95px;
-  }
-}
-
-/* =========================================================
-   RESPONSIVE — TABLETS
+   TABLET
 ========================================================= */
 
 @media (max-width: 1100px) {
   .parent-hero-content {
-    grid-template-columns: 1fr 0.85fr;
+    grid-template-columns:
+      minmax(0, 1fr)
+      minmax(290px, 0.85fr);
+
     gap: 30px;
     padding: 65px 5%;
   }
 
   .parent-hero-copy h1 {
     font-size: 48px;
+  }
+
+  .parent-hero-card {
+    max-width: 390px;
   }
 
   .parent-feature-grid {
@@ -730,9 +857,13 @@
   }
 }
 
+/* =========================================================
+   SMALLER SCREENS
+========================================================= */
+
 @media (max-width: 800px) {
   .parent-hero {
-    padding: 14px 3% 0;
+    padding: 16px 3% 0;
   }
 
   .parent-hero-visual {
@@ -740,13 +871,13 @@
   }
 
   .parent-hero-overlay {
-    background: rgba(248, 250, 255, 0.88);
+    background: rgba(7, 13, 26, 0.87);
   }
 
   .parent-hero-content {
-    grid-template-columns: 1fr;
+    grid-template-columns: minmax(0, 1fr);
     gap: 40px;
-    padding: 65px 7%;
+    padding: 55px 7%;
   }
 
   .parent-hero-copy {
@@ -754,10 +885,16 @@
   }
 
   .parent-hero-copy h1 {
-    font-size: clamp(40px, 8vw, 55px);
+    max-width: 620px;
+    font-size: clamp(40px, 7vw, 54px);
+  }
+
+  .parent-hero-description {
+    max-width: 600px;
   }
 
   .parent-hero-card {
+    width: 100%;
     max-width: 520px;
     justify-self: start;
   }
@@ -768,7 +905,7 @@
   }
 
   .parent-partnership {
-    grid-template-columns: 1fr;
+    grid-template-columns: minmax(0, 1fr);
     gap: 45px;
     padding: 75px 7%;
   }
@@ -784,7 +921,7 @@
 }
 
 /* =========================================================
-   RESPONSIVE — MOBILE
+   MOBILE
 ========================================================= */
 
 @media (max-width: 560px) {
@@ -793,32 +930,37 @@
   }
 
   .parent-hero-visual {
-    border-radius: 15px;
+    border-radius: 14px;
   }
 
   .parent-hero-content {
-    padding: 48px 22px;
-    gap: 35px;
+    padding: 43px 21px;
+    gap: 32px;
   }
 
   .parent-eyebrow {
     font-size: 9px;
     letter-spacing: 1.2px;
+    margin-bottom: 21px;
   }
 
   .parent-hero-copy h1 {
-    font-size: 39px;
+    font-size: 38px;
     letter-spacing: -1.8px;
+    line-height: 1.14;
   }
 
   .parent-hero-description {
-    font-size: 13px;
-    line-height: 1.8;
+    margin-top: 19px;
+    font-size: 12px;
+    line-height: 1.85;
   }
 
   .parent-hero-actions {
-    align-items: stretch;
     flex-direction: column;
+    align-items: stretch;
+    gap: 11px;
+    margin-top: 26px;
   }
 
   .parent-primary-btn,
@@ -828,7 +970,7 @@
 
   .parent-hero-trust {
     align-items: flex-start;
-    font-size: 11px;
+    font-size: 10px;
     line-height: 1.6;
   }
 
@@ -842,53 +984,57 @@
   }
 
   .parent-preview-item strong {
-    font-size: 12px;
+    font-size: 11px;
   }
 
   .parent-preview-item span {
-    font-size: 10px;
+    font-size: 9px;
   }
 
   .parent-intro {
-    padding: 75px 20px;
+    padding: 70px 19px;
   }
 
   .parent-section-heading {
-    margin-bottom: 35px;
+    margin-bottom: 34px;
   }
 
   .parent-section-heading h2 {
-    font-size: 30px;
+    font-size: 29px;
   }
 
   .parent-section-heading p {
-    font-size: 13px;
+    font-size: 12px;
   }
 
   .parent-feature-grid {
-    grid-template-columns: 1fr;
-    gap: 14px;
+    grid-template-columns: minmax(0, 1fr);
+    gap: 13px;
   }
 
   .parent-feature-card {
-    min-height: 210px;
-    padding: 24px;
+    min-height: 205px;
+    padding: 23px;
   }
 
   .parent-partnership {
-    padding: 65px 23px;
+    padding: 65px 22px;
   }
 
   .parent-partnership-content h2 {
-    font-size: 33px;
+    font-size: 32px;
   }
 
   .parent-partnership-content > p {
-    font-size: 13px;
+    font-size: 12px;
+  }
+
+  .parent-benefits-list li {
+    font-size: 11px;
   }
 
   .parent-partnership-visual {
-    min-height: 290px;
+    min-height: 285px;
   }
 
   .parent-illustration-circle {
@@ -902,21 +1048,21 @@
   }
 
   .parent-final-cta {
-    padding: 75px 22px;
+    padding: 75px 21px;
   }
 
   .parent-final-cta-content h2 {
-    font-size: 39px;
+    font-size: 38px;
     letter-spacing: -1.5px;
   }
 
   .parent-final-cta-content > p {
-    font-size: 13px;
+    font-size: 12px;
   }
 
   .parent-final-actions {
     flex-direction: column;
-    gap: 20px;
+    gap: 19px;
   }
 }
 
@@ -925,7 +1071,7 @@
 ========================================================= */
 
 .parent-home a:focus-visible {
-  outline: 3px solid rgba(36, 87, 214, 0.4);
+  outline: 3px solid rgba(118, 160, 255, 0.7);
   outline-offset: 4px;
 }
 

@@ -34,7 +34,10 @@ import { useLanguage } from "../context/LanguageContext";
 import { useSound } from "../context/SoundContext";
 import { authService } from "../services/authService";
 import { supabase } from "../services/supabaseClient";
+
 import NotificationBell from "./NotificationBell";
+import ParentNavbar from "./ParentNavbar";
+
 import "./Navbar.css";
 
 import logo from "../assets/EduspanLogo.png";
@@ -131,8 +134,6 @@ const checkIsTutor = (userData) => {
     return false;
   }
 
-  // Preserve the role established during login when the
-  // backend returns an incomplete user profile.
   if (storedTutorRole) {
     return true;
   }
@@ -157,6 +158,64 @@ const checkIsAdmin = (userData) => {
     ) ||
     Boolean(normalizeRole(data.admin_role))
   );
+};
+
+// ======================================================
+// PARENT DETECTION
+// ======================================================
+
+const checkIsParent = (userData) => {
+  const data = getRoleUser(userData);
+
+  const storedRole = normalizeRole(
+    localStorage.getItem("userRole")
+  );
+
+  if (!data) {
+    return storedRole === "parent";
+  }
+
+  const role = normalizeRole(data.role);
+  const userType = normalizeRole(data.userType);
+  const type = normalizeRole(data.type);
+
+  const roleList = Array.isArray(data.roles)
+    ? data.roles.map((item) => normalizeRole(item))
+    : [];
+
+  const backendIdentifiesAdmin =
+    isTrue(data.is_admin) ||
+    isTrue(data.is_super_admin) ||
+    ["admin", "super_admin", "superadmin"].includes(role) ||
+    Boolean(normalizeRole(data.admin_role));
+
+  const backendIdentifiesTutor =
+    isTrue(data.is_tutor) ||
+    role === "tutor" ||
+    role === "instructor" ||
+    userType === "tutor" ||
+    type === "tutor" ||
+    roleList.includes("tutor") ||
+    roleList.includes("instructor");
+
+  if (backendIdentifiesAdmin || backendIdentifiesTutor) {
+    return false;
+  }
+
+  const backendIdentifiesParent =
+    isTrue(data.is_parent) ||
+    role === "parent" ||
+    userType === "parent" ||
+    type === "parent" ||
+    roleList.includes("parent");
+
+  if (backendIdentifiesParent) {
+    return true;
+  }
+
+  // Preserve the role established during parent login
+  // if the backend returns an incomplete profile.
+  return storedRole === "parent";
 };
 
 // ======================================================
@@ -209,6 +268,11 @@ function Navbar() {
     checkIsAdmin(authService.getStoredUser())
   );
 
+  const [isParent, setIsParent] = useState(() =>
+    hasAuthToken() &&
+    checkIsParent(authService.getStoredUser())
+  );
+
   const [authRefresh, setAuthRefresh] = useState(0);
   const [logoError, setLogoError] = useState(false);
 
@@ -237,6 +301,7 @@ function Navbar() {
       setIsAuthenticated(false);
       setIsTutor(false);
       setIsAdmin(false);
+      setIsParent(false);
       return;
     }
 
@@ -244,22 +309,29 @@ function Navbar() {
 
     const admin = checkIsAdmin(userData);
     const tutor = !admin && checkIsTutor(userData);
+    const parent =
+      !admin &&
+      !tutor &&
+      checkIsParent(userData);
 
     console.log("🔎 Navbar authentication state:", {
       name: data?.name,
       email: data?.email,
       backendRole: data?.role,
       backendIsTutor: data?.is_tutor,
+      backendIsParent: data?.is_parent,
       storedRole: localStorage.getItem("userRole"),
       isAuthenticated: true,
       isAdmin: admin,
-      isTutor: tutor
+      isTutor: tutor,
+      isParent: parent
     });
 
     setUser(data);
     setIsAuthenticated(true);
     setIsAdmin(admin);
     setIsTutor(tutor);
+    setIsParent(parent);
   }, []);
 
   // ======================================================
@@ -289,6 +361,7 @@ function Navbar() {
       setUser(null);
       setIsAdmin(false);
       setIsTutor(storedRole === "tutor");
+      setIsParent(storedRole === "parent");
     }
   }, [applyAuthenticatedUser]);
 
@@ -411,10 +484,7 @@ function Navbar() {
             error: sessionError
           } = await supabase.auth.getSession();
 
-          if (
-            !sessionError &&
-            session?.user
-          ) {
+          if (!sessionError && session?.user) {
             const {
               data: profile,
               error: profileError
@@ -524,6 +594,7 @@ function Navbar() {
           setIsAdmin(false);
           setIsAuthenticated(true);
           setIsTutor(storedRole === "tutor");
+          setIsParent(storedRole === "parent");
         }
 
         setAuthRefresh((value) => value + 1);
@@ -532,7 +603,7 @@ function Navbar() {
       }
     };
 
-    const handleLogout = () => {
+    const handleLogoutEvent = () => {
       lastCheckedTokenRef.current = null;
 
       localStorage.removeItem("userRole");
@@ -569,6 +640,7 @@ function Navbar() {
             setIsAdmin(false);
             setIsAuthenticated(true);
             setIsTutor(storedRole === "tutor");
+            setIsParent(storedRole === "parent");
           }
 
           setAuthRefresh((value) => value + 1);
@@ -577,12 +649,12 @@ function Navbar() {
     };
 
     window.addEventListener("auth:login", handleLogin);
-    window.addEventListener("auth:logout", handleLogout);
+    window.addEventListener("auth:logout", handleLogoutEvent);
     window.addEventListener("storage", handleStorageChange);
 
     return () => {
       window.removeEventListener("auth:login", handleLogin);
-      window.removeEventListener("auth:logout", handleLogout);
+      window.removeEventListener("auth:logout", handleLogoutEvent);
       window.removeEventListener("storage", handleStorageChange);
     };
   }, [applyAuthenticatedUser]);
@@ -600,6 +672,7 @@ function Navbar() {
     setUser(null);
     setIsTutor(false);
     setIsAdmin(false);
+    setIsParent(false);
 
     setIsUserDropdownOpen(false);
     setIsMenuOpen(false);
@@ -1043,6 +1116,8 @@ function Navbar() {
     navLinks = adminNavLinks;
   } else if (isAuthenticated && isTutor) {
     navLinks = tutorNavLinks;
+  } else if (isAuthenticated && isParent) {
+    navLinks = [];
   } else if (isAuthenticated) {
     navLinks = studentNavLinks;
   }
@@ -1051,10 +1126,13 @@ function Navbar() {
     isAuthenticated,
     isTutor,
     isAdmin,
-    navigation: navLinks.map((link) => link.label)
+    isParent,
+    navigation: isParent
+      ? ["Dashboard", "Learning", "Resources", "Tutors", "Help Centre"]
+      : navLinks.map((link) => link.label)
   });
 
-  const showSearch = !isAdmin;
+  const showSearch = !isAdmin && !isParent;
 
   const isActive = (path) =>
     location.pathname === path;
@@ -1120,7 +1198,25 @@ function Navbar() {
   if (isAdminRoute) return null;
 
   // ======================================================
-  // RENDER
+  // PARENT NAVBAR
+  // ======================================================
+
+  if (
+    isAuthenticated &&
+    isParent &&
+    !isAdmin &&
+    !isTutor
+  ) {
+    return (
+      <ParentNavbar
+        user={user}
+        onLogout={handleLogout}
+      />
+    );
+  }
+
+  // ======================================================
+  // RENDER EXISTING STUDENT / TUTOR / ADMIN NAVBAR
   // ======================================================
 
   return (
@@ -2180,7 +2276,7 @@ function Navbar() {
 
           <div className="mobile-section">
             <div className="mobile-section-label">
-              🌐 Language
+              <Globe size={15} /> Language
             </div>
 
             <div className="mobile-lang-grid">

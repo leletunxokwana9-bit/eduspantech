@@ -13,7 +13,9 @@ import {
   X,
   User,
   Settings,
-  LogOut
+  LogOut,
+  LogIn,
+  UserPlus
 } from "lucide-react";
 
 import { useLanguage } from "../context/LanguageContext";
@@ -30,6 +32,10 @@ function ParentNavbar({ user, onLogout }) {
     useLanguage();
 
   const { playClick } = useSound();
+
+  const isAuthenticatedParent = Boolean(
+    user && (user.id || user.email || user.name)
+  );
 
   const [mobileOpen, setMobileOpen] = useState(false);
   const [profileOpen, setProfileOpen] = useState(false);
@@ -122,7 +128,7 @@ function ParentNavbar({ user, onLogout }) {
     closeMenus();
     playClick();
 
-    if (onLogout) {
+    if (isAuthenticatedParent && onLogout) {
       onLogout();
     }
   };
@@ -320,120 +326,138 @@ function ParentNavbar({ user, onLogout }) {
               )}
             </div>
 
-            {/* NOTIFICATIONS */}
+            {/* NOTIFICATIONS — AUTHENTICATED PARENTS ONLY */}
 
-            <div className="parent-notification">
-              <NotificationBell
-                isActive={
-                  location.pathname === "/notifications"
-                }
-              />
-            </div>
+            {isAuthenticatedParent && (
+              <div className="parent-notification">
+                <NotificationBell
+                  isActive={
+                    location.pathname === "/notifications"
+                  }
+                />
+              </div>
+            )}
 
-            {/* PARENT ACCOUNT */}
+            {/* AUTHENTICATED PARENT ACCOUNT */}
 
-            <div
-              className="parent-account-wrapper"
-              ref={profileRef}
-            >
-              <button
-                type="button"
-                className={`parent-account-toggle ${
-                  profileOpen ? "active" : ""
-                }`}
-                onClick={() => {
-                  setProfileOpen((value) => !value);
-                  setLanguageOpen(false);
-                  playClick();
-                }}
-                aria-label="Parent account menu"
-                aria-expanded={profileOpen}
+            {isAuthenticatedParent ? (
+              <div
+                className="parent-account-wrapper"
+                ref={profileRef}
               >
-                <div className="parent-avatar">
-                  {avatar ? (
-                    <img src={avatar} alt="Parent profile" />
-                  ) : (
-                    <span>{initials}</span>
-                  )}
-                </div>
-
-                <span className="parent-account-name">
-                  {firstName}
-                </span>
-
-                <ChevronDown size={15} />
-              </button>
-
-              {profileOpen && (
-                <div className="parent-account-dropdown">
-
-                  {/* ACCOUNT INFORMATION */}
-
-                  <div className="parent-account-dropdown-header">
-                    <div className="parent-avatar parent-avatar-large">
-                      {avatar ? (
-                        <img src={avatar} alt="Parent profile" />
-                      ) : (
-                        <span>{initials}</span>
-                      )}
-                    </div>
-
-                    <div className="parent-account-details">
-                      <strong>{user?.name || "Parent"}</strong>
-                      <span>{user?.email || ""}</span>
-                      <small>Parent Account</small>
-                    </div>
+                <button
+                  type="button"
+                  className={`parent-account-toggle ${
+                    profileOpen ? "active" : ""
+                  }`}
+                  onClick={() => {
+                    setProfileOpen((value) => !value);
+                    setLanguageOpen(false);
+                    playClick();
+                  }}
+                  aria-label="Parent account menu"
+                  aria-expanded={profileOpen}
+                >
+                  <div className="parent-avatar">
+                    {avatar ? (
+                      <img src={avatar} alt="Parent profile" />
+                    ) : (
+                      <span>{initials}</span>
+                    )}
                   </div>
 
-                  <div className="parent-dropdown-divider" />
+                  <span className="parent-account-name">
+                    {firstName}
+                  </span>
 
-                  {/* MY PROFILE — PARENT PROFILE PAGE */}
+                  <ChevronDown size={15} />
+                </button>
 
-                  <Link
-                    to="/parent-profile"
-                    className={`parent-dropdown-item ${
-                      location.pathname === "/parent-profile"
-                        ? "active"
-                        : ""
-                    }`}
-                    onClick={() => {
-                      closeMenus();
-                      playClick();
-                    }}
-                  >
-                    <User size={17} />
-                    <span>My Profile</span>
-                  </Link>
+                {profileOpen && (
+                  <div className="parent-account-dropdown">
 
-                  {/* ACCOUNT SETTINGS */}
+                    <div className="parent-account-dropdown-header">
+                      <div className="parent-avatar parent-avatar-large">
+                        {avatar ? (
+                          <img src={avatar} alt="Parent profile" />
+                        ) : (
+                          <span>{initials}</span>
+                        )}
+                      </div>
 
-                  <Link
-                    to="/settings"
-                    className="parent-dropdown-item"
-                    onClick={() => {
-                      closeMenus();
-                      playClick();
-                    }}
-                  >
-                    <Settings size={17} />
-                    <span>Account Settings</span>
-                  </Link>
+                      <div className="parent-account-details">
+                        <strong>{user?.name || "Parent"}</strong>
+                        <span>{user?.email || ""}</span>
+                        <small>Parent Account</small>
+                      </div>
+                    </div>
 
-                  <div className="parent-dropdown-divider" />
+                    <div className="parent-dropdown-divider" />
 
-                  {/* SIGN OUT */}
+                    <Link
+                      to="/parent-profile"
+                      className={`parent-dropdown-item ${
+                        location.pathname === "/parent-profile"
+                          ? "active"
+                          : ""
+                      }`}
+                      onClick={() => {
+                        closeMenus();
+                        playClick();
+                      }}
+                    >
+                      <User size={17} />
+                      <span>My Profile</span>
+                    </Link>
 
-                  <button
-                    type="button"
-                    className="parent-dropdown-item parent-logout"
-                    onClick={handleLogout}
-                  >
-                    <LogOut size={17} />
-                    <span>Sign Out</span>
-                  </button>
+                    <Link
+                      to="/settings"
+                      className="parent-dropdown-item"
+                      onClick={() => {
+                        closeMenus();
+                        playClick();
+                      }}
+                    >
+                      <Settings size={17} />
+                      <span>Account Settings</span>
+                    </Link>
+
+                    <div className="parent-dropdown-divider" />
+
+                    <button
+                      type="button"
+                      className="parent-dropdown-item parent-logout"
+                      onClick={handleLogout}
+                    >
+                      <LogOut size={17} />
+                      <span>Sign Out</span>
+                    </button>
+                  </div>
                 </div>
-              )}
-            </div>
+              </div>
+            ) : (
+              /* PUBLIC PARENT ACTIONS */
+
+              <div className="parent-public-actions">
+                <Link
+                  to="/parent-login"
+                  className="parent-login-link"
+                  onClick={() => playClick()}
+                >
+                  <LogIn size={17} />
+                  <span>Login</span>
+                </Link>
+
+                <Link
+                  to="/parent-register"
+                  className="parent-register-link"
+                  onClick={() => playClick()}
+                >
+                  <UserPlus size={17} />
+                  <span>Register</span>
+                </Link>
+              </div>
+            )}
 
             {/* MOBILE MENU BUTTON */}
 
@@ -492,22 +516,24 @@ function ParentNavbar({ user, onLogout }) {
           </button>
         </div>
 
-        {/* MOBILE ACCOUNT INFORMATION */}
+        {/* MOBILE ACCOUNT INFORMATION — AUTHENTICATED ONLY */}
 
-        <div className="parent-mobile-profile">
-          <div className="parent-avatar parent-avatar-large">
-            {avatar ? (
-              <img src={avatar} alt="Parent profile" />
-            ) : (
-              <span>{initials}</span>
-            )}
-          </div>
+        {isAuthenticatedParent && (
+          <div className="parent-mobile-profile">
+            <div className="parent-avatar parent-avatar-large">
+              {avatar ? (
+                <img src={avatar} alt="Parent profile" />
+              ) : (
+                <span>{initials}</span>
+              )}
+            </div>
 
-          <div>
-            <strong>{user?.name || "Parent"}</strong>
-            <span>Parent Account</span>
+            <div>
+              <strong>{user?.name || "Parent"}</strong>
+              <span>Parent Account</span>
+            </div>
           </div>
-        </div>
+        )}
 
         {/* PLATFORM NAVIGATION */}
 
@@ -551,42 +577,64 @@ function ParentNavbar({ user, onLogout }) {
             ACCOUNT
           </span>
 
-          {/* MY PROFILE — PARENT PROFILE PAGE */}
+          {isAuthenticatedParent ? (
+            <>
+              <Link
+                to="/parent-profile"
+                onClick={() => {
+                  setMobileOpen(false);
+                  playClick();
+                }}
+              >
+                <User size={18} />
+                My Profile
+              </Link>
 
-          <Link
-            to="/parent-profile"
-            onClick={() => {
-              setMobileOpen(false);
-              playClick();
-            }}
-          >
-            <User size={18} />
-            My Profile
-          </Link>
+              <Link
+                to="/settings"
+                onClick={() => {
+                  setMobileOpen(false);
+                  playClick();
+                }}
+              >
+                <Settings size={18} />
+                Account Settings
+              </Link>
 
-          {/* ACCOUNT SETTINGS */}
+              <button
+                type="button"
+                onClick={handleLogout}
+                className="parent-mobile-logout"
+              >
+                <LogOut size={18} />
+                Sign Out
+              </button>
+            </>
+          ) : (
+            <>
+              <Link
+                to="/parent-login"
+                onClick={() => {
+                  setMobileOpen(false);
+                  playClick();
+                }}
+              >
+                <LogIn size={18} />
+                Parent Login
+              </Link>
 
-          <Link
-            to="/settings"
-            onClick={() => {
-              setMobileOpen(false);
-              playClick();
-            }}
-          >
-            <Settings size={18} />
-            Account Settings
-          </Link>
-
-          {/* SIGN OUT */}
-
-          <button
-            type="button"
-            onClick={handleLogout}
-            className="parent-mobile-logout"
-          >
-            <LogOut size={18} />
-            Sign Out
-          </button>
+              <Link
+                to="/parent-register"
+                onClick={() => {
+                  setMobileOpen(false);
+                  playClick();
+                }}
+              >
+                <UserPlus size={18} />
+                Parent Registration
+              </Link>
+            </>
+          )}
         </div>
 
         {/* MOBILE LANGUAGE SETTINGS */}

@@ -62,8 +62,6 @@ import { supabase } from './services/supabaseClient';
 import ParentLogin from './pages/ParentLogin';
 import ParentRegister from './pages/ParentRegister';
 import ParentDashboard from './pages/ParentDashboard';
-
-// Parent public landing page
 import ParentHome from './pages/ParentHome';
 
 import SessionRecordings from './pages/SessionRecordings';
@@ -91,12 +89,83 @@ import SubjectContent from './pages/SubjectContent';
 import SplashScreen from './components/SplashScreen';
 
 // ============================================
+// STORAGE HELPERS
+// ============================================
+
+const getStoredUser = () => {
+  try {
+    const storedUser = JSON.parse(
+      localStorage.getItem('user') || 'null'
+    );
+
+    if (!storedUser) return null;
+
+    // Support both:
+    // { id, role, ... }
+    // { user: { id, role, ... } }
+    return storedUser.user || storedUser;
+  } catch (error) {
+    console.error('Unable to read stored user:', error);
+    return null;
+  }
+};
+
+const getUserRole = (user) => {
+  if (!user) return '';
+
+  const storedRole = localStorage.getItem('userRole');
+
+  const role =
+    user.role ||
+    user.userType ||
+    user.user_type ||
+    user.type ||
+    storedRole ||
+    '';
+
+  return String(role).toLowerCase();
+};
+
+const isParentAccount = (user) => {
+  if (!user) return false;
+
+  const role = getUserRole(user);
+
+  const roles = Array.isArray(user.roles)
+    ? user.roles.map((item) => String(item).toLowerCase())
+    : [];
+
+  return (
+    role === 'parent' ||
+    role === 'guardian' ||
+    user.is_parent === true ||
+    user.is_parent === 'true' ||
+    roles.includes('parent') ||
+    roles.includes('guardian')
+  );
+};
+
+const isAdminAccount = (user) => {
+  if (!user) return false;
+
+  const role = getUserRole(user);
+
+  return (
+    user.is_admin === true ||
+    user.is_super_admin === true ||
+    role === 'admin' ||
+    role === 'super_admin'
+  );
+};
+
+// ============================================
 // ERROR BOUNDARY
 // ============================================
 
 class ErrorBoundary extends React.Component {
   constructor(props) {
     super(props);
+
     this.state = {
       hasError: false,
       error: null,
@@ -114,6 +183,7 @@ class ErrorBoundary extends React.Component {
   componentDidCatch(error, errorInfo) {
     console.error('❌ React Error Boundary caught an error:', error);
     console.error('Error Info:', errorInfo);
+
     this.setState({ errorInfo });
   }
 
@@ -325,23 +395,17 @@ const PageLoader = () => (
 // ============================================
 
 const StudentRoute = ({ children }) => {
-  let user = null;
-
-  try {
-    user = JSON.parse(localStorage.getItem('user') || 'null');
-  } catch (error) {
-    console.error('Unable to read stored user:', error);
-  }
+  const user = getStoredUser();
 
   if (!user) {
     return <Navigate to="/login" replace />;
   }
 
-  if (
-    user.is_admin ||
-    user.is_super_admin ||
-    user.role === 'admin'
-  ) {
+  if (isParentAccount(user)) {
+    return <Navigate to="/parent/dashboard" replace />;
+  }
+
+  if (isAdminAccount(user)) {
     return <Navigate to="/admin/dashboard" replace />;
   }
 
@@ -353,43 +417,13 @@ const StudentRoute = ({ children }) => {
 // ============================================
 
 const ParentRoute = ({ children }) => {
-  let storedUser = null;
+  const user = getStoredUser();
 
-  try {
-    storedUser = JSON.parse(localStorage.getItem('user') || 'null');
-  } catch (error) {
-    storedUser = null;
-  }
-
-  if (!storedUser) {
+  if (!user) {
     return <Navigate to="/parent-login" replace />;
   }
 
-  // ParentLogin may store either a user object or { user: userObject }.
-  const user = storedUser.user || storedUser;
-
-  const role = String(
-    user.role ||
-    user.userType ||
-    user.type ||
-    storedUser.role ||
-    localStorage.getItem('userRole') ||
-    ''
-  ).toLowerCase();
-
-  const isParent =
-    role === 'parent' ||
-    role === 'guardian' ||
-    user.is_parent === true ||
-    user.is_parent === 'true' ||
-    storedUser.is_parent === true ||
-    storedUser.is_parent === 'true' ||
-    (Array.isArray(user.roles) &&
-      user.roles.some((item) =>
-        ['parent', 'guardian'].includes(String(item).toLowerCase())
-      ));
-
-  if (!isParent) {
+  if (!isParentAccount(user)) {
     return <Navigate to="/parent-login" replace />;
   }
 
@@ -405,12 +439,8 @@ const SessionReminderListener = () => {
   const [userId, setUserId] = useState(null);
 
   useEffect(() => {
-    try {
-      const user = JSON.parse(localStorage.getItem('user') || 'null');
-      setUserId(user?.id || null);
-    } catch (error) {
-      console.error('Unable to read session reminder user:', error);
-    }
+    const user = getStoredUser();
+    setUserId(user?.id || null);
   }, []);
 
   useEffect(() => {
@@ -465,20 +495,22 @@ const SessionReminderListener = () => {
 const AppContent = () => {
   const location = useLocation();
 
-  const isAdminRoute = location.pathname.startsWith('/admin');
+  const currentPath = location.pathname;
+
+  const isAdminRoute = currentPath.startsWith('/admin');
 
   const isVerifyEmailRoute =
-    location.pathname === '/verify-email';
+    currentPath === '/verify-email';
 
-  // Only standalone parent authentication pages hide
-  // the global navigation. Public Parent Home and the
-  // Parent Dashboard retain the parent-specific navbar.
+  // Parent login and registration are standalone pages.
+  // The public Parent Home and Parent Dashboard must
+  // retain the parent-specific navbar.
   const isParentAuthRoute =
-    location.pathname === '/parent-login' ||
-    location.pathname === '/parent-register';
+    currentPath === '/parent-login' ||
+    currentPath === '/parent-register';
 
   const isStandaloneSessionRecordings =
-    location.pathname === '/session-recordings';
+    currentPath === '/session-recordings';
 
   const hideNavigation =
     isAdminRoute ||
@@ -498,14 +530,18 @@ const AppContent = () => {
         <Suspense fallback={<PageLoader />}>
           <Routes>
 
-            {/* STANDALONE ROUTES */}
+            {/* ========================================
+                STANDALONE ROUTES
+            ======================================== */}
 
             <Route
               path="/verify-email"
               element={<VerifyEmail />}
             />
 
-            {/* ADMIN LOGIN */}
+            {/* ========================================
+                ADMIN LOGIN
+            ======================================== */}
 
             <Route element={<AdminLoginLayout />}>
               <Route
@@ -514,7 +550,9 @@ const AppContent = () => {
               />
             </Route>
 
-            {/* ADMIN ROUTES */}
+            {/* ========================================
+                ADMIN ROUTES
+            ======================================== */}
 
             <Route path="/admin" element={<AdminLayout />}>
               <Route index element={<AdminDashboard />} />
@@ -541,23 +579,40 @@ const AppContent = () => {
               />
             </Route>
 
-            {/* CORE ROUTES */}
+            {/* ========================================
+                CORE ROUTES
+            ======================================== */}
 
             <Route
               path="/forgot-password"
               element={<ForgotPassword />}
             />
 
-            <Route path="/login" element={<Login />} />
+            <Route
+              path="/login"
+              element={<Login />}
+            />
 
-            {/* PARENT PUBLIC HOME */}
+            <Route
+              path="/register"
+              element={<Register />}
+            />
+
+            {/* ========================================
+                PARENT PUBLIC HOME
+                No authentication required.
+                Parent navbar must remain visible.
+            ======================================== */}
 
             <Route
               path="/parent"
               element={<ParentHome />}
             />
 
-            {/* PARENT AUTHENTICATION */}
+            {/* ========================================
+                PARENT AUTHENTICATION
+                Navbar is hidden on these routes.
+            ======================================== */}
 
             <Route
               path="/parent-login"
@@ -569,29 +624,51 @@ const AppContent = () => {
               element={<ParentRegister />}
             />
 
-            <Route path="/register" element={<Register />} />
-
-            {/* PUBLIC ROUTES */}
+            {/* ========================================
+                PUBLIC ROUTES
+            ======================================== */}
 
             <Route path="/" element={<Home />} />
-            <Route path="/mission" element={<MissionPage />} />
-            <Route path="/subjects" element={<Subjects />} />
+
+            <Route
+              path="/mission"
+              element={<MissionPage />}
+            />
+
+            <Route
+              path="/subjects"
+              element={<Subjects />}
+            />
 
             <Route
               path="/subjects/:subjectName"
               element={<SubjectDetail />}
             />
 
-            <Route path="/curriculum" element={<Curriculum />} />
+            <Route
+              path="/curriculum"
+              element={<Curriculum />}
+            />
 
             <Route
               path="/curriculum/:countryId"
               element={<CurriculumDetail />}
             />
 
-            <Route path="/tutors" element={<Tutors />} />
-            <Route path="/pricing" element={<Pricing />} />
-            <Route path="/resources" element={<Resources />} />
+            <Route
+              path="/tutors"
+              element={<Tutors />}
+            />
+
+            <Route
+              path="/pricing"
+              element={<Pricing />}
+            />
+
+            <Route
+              path="/resources"
+              element={<Resources />}
+            />
 
             <Route
               path="/resources/:vaultName/:resourceId"
@@ -618,16 +695,30 @@ const AppContent = () => {
               element={<ResourceDetail />}
             />
 
-            <Route path="/terms" element={<Terms />} />
-            <Route path="/privacy" element={<Privacy />} />
-            <Route path="/search" element={<SearchResults />} />
+            <Route
+              path="/terms"
+              element={<Terms />}
+            />
+
+            <Route
+              path="/privacy"
+              element={<Privacy />}
+            />
+
+            <Route
+              path="/search"
+              element={<SearchResults />}
+            />
 
             <Route
               path="/subject-content/:subjectId"
               element={<SubjectContent />}
             />
 
-            <Route path="/team" element={<Team />} />
+            <Route
+              path="/team"
+              element={<Team />}
+            />
 
             <Route
               path="/become-a-tutor"
@@ -639,7 +730,9 @@ const AppContent = () => {
               element={<TrackApplication />}
             />
 
-            {/* STUDENT PROTECTED ROUTES */}
+            {/* ========================================
+                STUDENT PROTECTED ROUTES
+            ======================================== */}
 
             <Route
               path="/timetable"
@@ -731,7 +824,11 @@ const AppContent = () => {
               }
             />
 
-            {/* PARENT DASHBOARD */}
+            {/* ========================================
+                PARENT DASHBOARD
+                Requires a parent/guardian account.
+                Parent navbar remains visible.
+            ======================================== */}
 
             <Route
               path="/parent/dashboard"
@@ -742,7 +839,9 @@ const AppContent = () => {
               }
             />
 
-            {/* PARENT SESSION RECORDINGS */}
+            {/* ========================================
+                PARENT SESSION RECORDINGS
+            ======================================== */}
 
             <Route
               path="/parent/session-recordings"
@@ -753,7 +852,9 @@ const AppContent = () => {
               }
             />
 
-            {/* STUDENT SESSION RECORDINGS */}
+            {/* ========================================
+                STUDENT SESSION RECORDINGS
+            ======================================== */}
 
             <Route
               path="/session-recordings"
@@ -764,7 +865,9 @@ const AppContent = () => {
               }
             />
 
-            {/* TUTOR PORTAL ROUTES */}
+            {/* ========================================
+                TUTOR PORTAL ROUTES
+            ======================================== */}
 
             <Route
               path="/tutor/dashboard"
@@ -786,7 +889,9 @@ const AppContent = () => {
               element={<TutorEarnings />}
             />
 
-            {/* LAZY LOADED ROUTES */}
+            {/* ========================================
+                LAZY LOADED ROUTES
+            ======================================== */}
 
             <Route
               path="/my-courses"
@@ -806,11 +911,21 @@ const AppContent = () => {
               }
             />
 
+            {/* ========================================
+                FALLBACK
+            ======================================== */}
+
+            <Route
+              path="*"
+              element={<Navigate to="/" replace />}
+            />
+
           </Routes>
         </Suspense>
       </main>
 
       {!hideNavigation && <Footer />}
+
       {!hideNavigation && <ChatWidget />}
     </div>
   );

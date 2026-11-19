@@ -32,7 +32,7 @@ import {
   ExternalLink
 } from 'lucide-react';
 
-import { supabase } from '../supabaseClient';
+import { supabase } from '../services/supabaseClient';
 import './ParentHelp.css';
 
 const ICONS = {

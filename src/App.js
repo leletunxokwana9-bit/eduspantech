@@ -1,9 +1,12 @@
 
-// src/App.js - COMPLETE WITH PARENT HOME,
-// PARENT NAVBAR, TUTOR NAVBAR, TOUR GUIDE,
-// ADMIN PROTECTION & SESSION RECORDINGS
+// src/App.js
+// COMPLETE APP ROUTING
+// Parent Home, Parent Navbar, Parent Profile, Parent Help Centre,
+// Tutor Protection, Student Protection, Admin Protection,
+// Tour Guide, Session Recordings and Existing App Features.
 
 import React, { Suspense, lazy, useState, useEffect } from 'react';
+
 import {
   BrowserRouter as Router,
   Routes,
@@ -13,12 +16,23 @@ import {
   Navigate
 } from 'react-router-dom';
 
+// =====================================================
+// CORE COMPONENTS
+// =====================================================
+
 import Navbar from './components/Navbar';
 import Footer from './components/Footer';
+import ChatWidget from './components/ChatWidget';
+import TourGuide from './components/TourGuide';
+import SplashScreen from './components/SplashScreen';
+
+// =====================================================
+// PUBLIC PAGES
+// =====================================================
+
 import Home from './pages/Home';
 import Login from './pages/Login';
 import Register from './pages/Register';
-import Dashboard from './pages/Dashboard';
 import Subjects from './pages/Subjects';
 import SubjectDetail from './pages/SubjectDetail';
 import Curriculum from './pages/Curriculum';
@@ -29,47 +43,55 @@ import Resources from './pages/Resources';
 import ResourceDetail from './pages/ResourceDetail';
 import Terms from './pages/Terms';
 import Privacy from './pages/Privacy';
-import TutorSession from './pages/TutorSession';
-import Checkout from './pages/Checkout';
-import PaymentSuccess from './pages/PaymentSuccess';
 import SearchResults from './pages/SearchResults';
+import MissionPage from './pages/MissionPage';
+import BecomeATutor from './pages/BecomeATutor';
+import TrackApplication from './pages/TrackApplication';
+import Team from './pages/Team';
 
-import { LanguageProvider } from './context/LanguageContext';
-import { SessionSettingsProvider } from './context/SessionSettingsContext';
-import { ThemeProvider } from './context/ThemeContext';
-import { SoundProvider } from './context/SoundContext';
+// =====================================================
+// STUDENT PAGES
+// =====================================================
 
-import './App.css';
-
+import Dashboard from './pages/Dashboard';
 import Profile from './pages/Profile';
 import Settings from './pages/Settings';
 import Help from './pages/Help';
 import Practice from './pages/Practice';
+import TutorSession from './pages/TutorSession';
+import Checkout from './pages/Checkout';
+import PaymentSuccess from './pages/PaymentSuccess';
 import VerifyEmail from './pages/VerifyEmail';
-import ChatWidget from './components/ChatWidget';
-
-import TutorDashboard from './pages/TutorDashboard';
-import AddTutor from './pages/Admin/AddTutor';
-import TutorStudents from './pages/TutorStudents';
-import TutorEarnings from './pages/TutorEarnings';
 import Notifications from './pages/Notifications';
 import ForgotPassword from './pages/ForgotPassword';
-import Team from './pages/Team';
 import Timetable from './pages/Timetable';
+import SubjectContent from './pages/SubjectContent';
+import SessionRecordings from './pages/SessionRecordings';
 
-import { supabase } from './services/supabaseClient';
+// =====================================================
+// TUTOR PAGES
+// =====================================================
+
+import TutorDashboard from './pages/TutorDashboard';
+import TutorStudents from './pages/TutorStudents';
+import TutorEarnings from './pages/TutorEarnings';
+
+// =====================================================
+// PARENT PAGES
+// =====================================================
 
 import ParentLogin from './pages/ParentLogin';
 import ParentRegister from './pages/ParentRegister';
 import ParentDashboard from './pages/ParentDashboard';
 import ParentHome from './pages/ParentHome';
+import ParentProfile from './pages/ParentProfile';
+import ParentHelp from './pages/ParentHelp';
 
-import SessionRecordings from './pages/SessionRecordings';
-import MissionPage from './pages/MissionPage';
-import TourGuide from './components/TourGuide';
-import BecomeATutor from './pages/BecomeATutor';
-import TrackApplication from './pages/TrackApplication';
+// =====================================================
+// ADMIN PAGES
+// =====================================================
 
+import AddTutor from './pages/Admin/AddTutor';
 import AdminLayout from './pages/Admin/AdminLayout';
 import AdminDashboard from './pages/Admin/AdminDashboard';
 import AdminUsers from './pages/Admin/AdminUsers';
@@ -83,14 +105,116 @@ import AdminActivity from './pages/Admin/AdminActivity';
 import AdminLogin from './pages/Admin/AdminLogin';
 import AdminProfile from './pages/Admin/AdminProfile';
 import AdminPricing from './pages/Admin/AdminPricing';
-
 import AdminLoginLayout from './pages/Admin/AdminLoginLayout';
-import SubjectContent from './pages/SubjectContent';
-import SplashScreen from './components/SplashScreen';
 
-// ============================================
+// =====================================================
+// CONTEXT PROVIDERS
+// =====================================================
+
+import { LanguageProvider } from './context/LanguageContext';
+import { SessionSettingsProvider } from './context/SessionSettingsContext';
+import { ThemeProvider } from './context/ThemeContext';
+import { SoundProvider } from './context/SoundContext';
+
+// =====================================================
+// SERVICES AND STYLES
+// =====================================================
+
+import { supabase } from './services/supabaseClient';
+import './App.css';
+
+// =====================================================
+// LAZY-LOADED PAGES
+// =====================================================
+
+const withLazyErrorHandling = (importFn, componentName) => {
+  return lazy(() =>
+    importFn()
+      .then((module) => {
+        console.log(`Loaded ${componentName} successfully`);
+
+        if (module.default) {
+          return module;
+        }
+
+        if (module[componentName]) {
+          return {
+            default: module[componentName]
+          };
+        }
+
+        throw new Error(
+          `${componentName} has no default or named export`
+        );
+      })
+      .catch((error) => {
+        console.error(
+          `Failed to load ${componentName}:`,
+          error
+        );
+
+        return {
+          default: () => (
+            <div
+              style={{
+                padding: '60px 20px',
+                textAlign: 'center',
+                color: '#ef4444',
+                minHeight: '100vh',
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'center',
+                justifyContent: 'center',
+                background: '#0a0e1a'
+              }}
+            >
+              <h2>Failed to load {componentName}</h2>
+
+              <p
+                style={{
+                  color: '#94a3b8',
+                  marginTop: '12px'
+                }}
+              >
+                {error.message ||
+                  'An error occurred loading this page.'}
+              </p>
+
+              <button
+                onClick={() => window.location.reload()}
+                style={{
+                  marginTop: '24px',
+                  padding: '12px 32px',
+                  background: '#4f46e5',
+                  color: '#ffffff',
+                  border: 'none',
+                  borderRadius: '8px',
+                  cursor: 'pointer',
+                  fontSize: '16px'
+                }}
+              >
+                Refresh Page
+              </button>
+            </div>
+          )
+        };
+      })
+  );
+};
+
+const MyCourses = withLazyErrorHandling(
+  () => import('./pages/MyCourses'),
+  'MyCourses'
+);
+
+const MySessions = withLazyErrorHandling(
+  () => import('./pages/MySessions'),
+  'MySessions'
+);
+
+// =====================================================
 // STORAGE HELPERS
-// ============================================
+// =====================================================
 
 const getStoredUser = () => {
   try {
@@ -98,17 +222,25 @@ const getStoredUser = () => {
       localStorage.getItem('user') || 'null'
     );
 
-    if (!storedUser) return null;
+    if (!storedUser) {
+      return null;
+    }
 
     return storedUser.user || storedUser;
   } catch (error) {
-    console.error('Unable to read stored user:', error);
+    console.error(
+      'Unable to read stored user:',
+      error
+    );
+
     return null;
   }
 };
 
 const getUserRole = (user) => {
-  if (!user) return '';
+  if (!user) {
+    return '';
+  }
 
   const storedRole = localStorage.getItem('userRole');
 
@@ -123,13 +255,21 @@ const getUserRole = (user) => {
   return String(role).toLowerCase();
 };
 
+// =====================================================
+// ROLE HELPERS
+// =====================================================
+
 const isParentAccount = (user) => {
-  if (!user) return false;
+  if (!user) {
+    return false;
+  }
 
   const role = getUserRole(user);
 
   const roles = Array.isArray(user.roles)
-    ? user.roles.map((item) => String(item).toLowerCase())
+    ? user.roles.map((item) =>
+        String(item).toLowerCase()
+      )
     : [];
 
   return (
@@ -143,7 +283,9 @@ const isParentAccount = (user) => {
 };
 
 const isAdminAccount = (user) => {
-  if (!user) return false;
+  if (!user) {
+    return false;
+  }
 
   const role = getUserRole(user);
 
@@ -155,9 +297,30 @@ const isAdminAccount = (user) => {
   );
 };
 
-// ============================================
+const isTutorAccount = (user) => {
+  if (!user) {
+    return false;
+  }
+
+  const role = getUserRole(user);
+
+  const roles = Array.isArray(user.roles)
+    ? user.roles.map((item) =>
+        String(item).toLowerCase()
+      )
+    : [];
+
+  return (
+    role === 'tutor' ||
+    user.is_tutor === true ||
+    user.is_tutor === 'true' ||
+    roles.includes('tutor')
+  );
+};
+
+// =====================================================
 // ERROR BOUNDARY
-// ============================================
+// =====================================================
 
 class ErrorBoundary extends React.Component {
   constructor(props) {
@@ -178,10 +341,19 @@ class ErrorBoundary extends React.Component {
   }
 
   componentDidCatch(error, errorInfo) {
-    console.error('❌ React Error Boundary caught an error:', error);
-    console.error('Error Info:', errorInfo);
+    console.error(
+      'React Error Boundary caught an error:',
+      error
+    );
 
-    this.setState({ errorInfo });
+    console.error(
+      'Error Info:',
+      errorInfo
+    );
+
+    this.setState({
+      errorInfo
+    });
   }
 
   render() {
@@ -197,11 +369,16 @@ class ErrorBoundary extends React.Component {
             alignItems: 'center',
             justifyContent: 'center',
             background: '#0a0e1a',
-            color: '#fff'
+            color: '#ffffff'
           }}
         >
-          <h1 style={{ color: '#ef4444', fontSize: '28px' }}>
-            ⚠️ Something went wrong
+          <h1
+            style={{
+              color: '#ef4444',
+              fontSize: '28px'
+            }}
+          >
+            Something went wrong
           </h1>
 
           <p
@@ -211,7 +388,8 @@ class ErrorBoundary extends React.Component {
               maxWidth: '500px'
             }}
           >
-            {this.state.error?.message || 'An unexpected error occurred'}
+            {this.state.error?.message ||
+              'An unexpected error occurred.'}
           </p>
 
           {this.state.errorInfo && (
@@ -227,7 +405,9 @@ class ErrorBoundary extends React.Component {
                 borderRadius: '8px'
               }}
             >
-              <summary>Technical Details</summary>
+              <summary>
+                Technical Details
+              </summary>
 
               <pre
                 style={{
@@ -248,7 +428,7 @@ class ErrorBoundary extends React.Component {
               marginTop: '24px',
               padding: '12px 32px',
               background: '#4f46e5',
-              color: 'white',
+              color: '#ffffff',
               border: 'none',
               borderRadius: '8px',
               cursor: 'pointer',
@@ -265,89 +445,9 @@ class ErrorBoundary extends React.Component {
   }
 }
 
-// ============================================
-// LAZY LOAD WITH ERROR HANDLING
-// ============================================
-
-const withLazyErrorHandling = (importFn, componentName) => {
-  return lazy(() =>
-    importFn()
-      .then((module) => {
-        console.log(`✅ ${componentName} loaded successfully`);
-
-        if (module.default) return module;
-
-        if (module[componentName]) {
-          return { default: module[componentName] };
-        }
-
-        throw new Error(
-          `${componentName} has no default or named export`
-        );
-      })
-      .catch((err) => {
-        console.error(`❌ Failed to load ${componentName}:`, err);
-
-        return {
-          default: () => (
-            <div
-              style={{
-                padding: '60px 20px',
-                textAlign: 'center',
-                color: '#ef4444',
-                minHeight: '100vh',
-                display: 'flex',
-                flexDirection: 'column',
-                alignItems: 'center',
-                justifyContent: 'center',
-                background: '#0a0e1a'
-              }}
-            >
-              <h2>⚠️ Failed to load {componentName}</h2>
-
-              <p style={{ color: '#94a3b8', marginTop: '12px' }}>
-                {err.message || 'An error occurred loading this page'}
-              </p>
-
-              <button
-                onClick={() => window.location.reload()}
-                style={{
-                  marginTop: '24px',
-                  padding: '12px 32px',
-                  background: '#4f46e5',
-                  color: 'white',
-                  border: 'none',
-                  borderRadius: '8px',
-                  cursor: 'pointer',
-                  fontSize: '16px'
-                }}
-              >
-                Refresh Page
-              </button>
-            </div>
-          )
-        };
-      })
-  );
-};
-
-// ============================================
-// LAZY LOADED COMPONENTS
-// ============================================
-
-const MyCourses = withLazyErrorHandling(
-  () => import('./pages/MyCourses'),
-  'MyCourses'
-);
-
-const MySessions = withLazyErrorHandling(
-  () => import('./pages/MySessions'),
-  'MySessions'
-);
-
-// ============================================
+// =====================================================
 // PAGE LOADER
-// ============================================
+// =====================================================
 
 const PageLoader = () => (
   <div
@@ -387,9 +487,9 @@ const PageLoader = () => (
   </div>
 );
 
-// ============================================
+// =====================================================
 // STUDENT PROTECTED ROUTE
-// ============================================
+// =====================================================
 
 const StudentRoute = ({ children }) => {
   const user = getStoredUser();
@@ -399,49 +499,128 @@ const StudentRoute = ({ children }) => {
   }
 
   if (isParentAccount(user)) {
-    return <Navigate to="/parent/dashboard" replace />;
+    return (
+      <Navigate
+        to="/parent/dashboard"
+        replace
+      />
+    );
   }
 
   if (isAdminAccount(user)) {
-    return <Navigate to="/admin/dashboard" replace />;
+    return (
+      <Navigate
+        to="/admin/dashboard"
+        replace
+      />
+    );
+  }
+
+  if (isTutorAccount(user)) {
+    return (
+      <Navigate
+        to="/tutor/dashboard"
+        replace
+      />
+    );
   }
 
   return children;
 };
 
-// ============================================
+// =====================================================
 // PARENT PROTECTED ROUTE
-// ============================================
+// =====================================================
 
 const ParentRoute = ({ children }) => {
   const user = getStoredUser();
 
   if (!user) {
-    return <Navigate to="/parent-login" replace />;
+    return (
+      <Navigate
+        to="/parent-login"
+        replace
+      />
+    );
   }
 
   if (!isParentAccount(user)) {
-    return <Navigate to="/parent-login" replace />;
+    return (
+      <Navigate
+        to="/parent-login"
+        replace
+      />
+    );
   }
 
   return children;
 };
 
-// ============================================
+// =====================================================
+// TUTOR PROTECTED ROUTE
+// =====================================================
+
+const TutorRoute = ({ children }) => {
+  const user = getStoredUser();
+
+  if (!user) {
+    return (
+      <Navigate
+        to="/login"
+        replace
+      />
+    );
+  }
+
+  if (!isTutorAccount(user)) {
+    if (isParentAccount(user)) {
+      return (
+        <Navigate
+          to="/parent/dashboard"
+          replace
+        />
+      );
+    }
+
+    if (isAdminAccount(user)) {
+      return (
+        <Navigate
+          to="/admin/dashboard"
+          replace
+        />
+      );
+    }
+
+    return (
+      <Navigate
+        to="/dashboard"
+        replace
+      />
+    );
+  }
+
+  return children;
+};
+
+// =====================================================
 // SESSION REMINDER LISTENER
-// ============================================
+// =====================================================
 
 const SessionReminderListener = () => {
   const navigate = useNavigate();
+
   const [userId, setUserId] = useState(null);
 
   useEffect(() => {
     const user = getStoredUser();
+
     setUserId(user?.id || null);
   }, []);
 
   useEffect(() => {
-    if (!userId) return;
+    if (!userId) {
+      return;
+    }
 
     const channel = supabase
       .channel('public:session_alerts')
@@ -464,7 +643,9 @@ const SessionReminderListener = () => {
             if (goToSession) {
               navigate('/my-sessions');
             }
-          } else if (notif.type === 'session_started') {
+          } else if (
+            notif.type === 'session_started'
+          ) {
             const goToSession = window.confirm(
               `🚀 ${notif.title}\n\n${notif.message}\n\nClick OK to join the session now.`
             );
@@ -485,16 +666,17 @@ const SessionReminderListener = () => {
   return null;
 };
 
-// ============================================
+// =====================================================
 // APP CONTENT
-// ============================================
+// =====================================================
 
 const AppContent = () => {
   const location = useLocation();
 
   const currentPath = location.pathname;
 
-  const isAdminRoute = currentPath.startsWith('/admin');
+  const isAdminRoute =
+    currentPath.startsWith('/admin');
 
   const isVerifyEmailRoute =
     currentPath === '/verify-email';
@@ -502,14 +684,8 @@ const AppContent = () => {
   const isStandaloneSessionRecordings =
     currentPath === '/session-recordings';
 
-  // ============================================
-  // NAVIGATION VISIBILITY
-  // ============================================
-
-  // IMPORTANT:
-  // Do NOT hide navigation on parent login/register.
-  // Navbar.js detects these parent routes and renders
-  // ParentNavbar automatically.
+  // Parent routes intentionally remain visible
+  // so Navbar.js can render ParentNavbar.
 
   const hideNavigation =
     isAdminRoute ||
@@ -518,7 +694,10 @@ const AppContent = () => {
 
   return (
     <div className="app">
-      {!hideNavigation && <SessionReminderListener />}
+
+      {!hideNavigation && (
+        <SessionReminderListener />
+      )}
 
       {!hideNavigation && <Navbar />}
 
@@ -528,18 +707,18 @@ const AppContent = () => {
         <Suspense fallback={<PageLoader />}>
           <Routes>
 
-            {/* ========================================
+            {/* =====================================
                 STANDALONE ROUTES
-            ======================================== */}
+            ===================================== */}
 
             <Route
               path="/verify-email"
               element={<VerifyEmail />}
             />
 
-            {/* ========================================
+            {/* =====================================
                 ADMIN LOGIN
-            ======================================== */}
+            ===================================== */}
 
             <Route element={<AdminLoginLayout />}>
               <Route
@@ -548,28 +727,73 @@ const AppContent = () => {
               />
             </Route>
 
-            {/* ========================================
+            {/* =====================================
                 ADMIN ROUTES
-            ======================================== */}
+            ===================================== */}
 
-            <Route path="/admin" element={<AdminLayout />}>
-              <Route index element={<AdminDashboard />} />
-              <Route path="dashboard" element={<AdminDashboard />} />
-              <Route path="users" element={<AdminUsers />} />
-              <Route path="tutors" element={<AdminTutors />} />
-              <Route path="content" element={<AdminContent />} />
+            <Route
+              path="/admin"
+              element={<AdminLayout />}
+            >
+              <Route
+                index
+                element={<AdminDashboard />}
+              />
+
+              <Route
+                path="dashboard"
+                element={<AdminDashboard />}
+              />
+
+              <Route
+                path="users"
+                element={<AdminUsers />}
+              />
+
+              <Route
+                path="tutors"
+                element={<AdminTutors />}
+              />
+
+              <Route
+                path="content"
+                element={<AdminContent />}
+              />
 
               <Route
                 path="content/:subjectId"
                 element={<AdminSubjectContent />}
               />
 
-              <Route path="payments" element={<AdminPayments />} />
-              <Route path="pricing" element={<AdminPricing />} />
-              <Route path="analytics" element={<AdminAnalytics />} />
-              <Route path="settings" element={<AdminSettings />} />
-              <Route path="activity" element={<AdminActivity />} />
-              <Route path="profile" element={<AdminProfile />} />
+              <Route
+                path="payments"
+                element={<AdminPayments />}
+              />
+
+              <Route
+                path="pricing"
+                element={<AdminPricing />}
+              />
+
+              <Route
+                path="analytics"
+                element={<AdminAnalytics />}
+              />
+
+              <Route
+                path="settings"
+                element={<AdminSettings />}
+              />
+
+              <Route
+                path="activity"
+                element={<AdminActivity />}
+              />
+
+              <Route
+                path="profile"
+                element={<AdminProfile />}
+              />
 
               <Route
                 path="notifications"
@@ -577,9 +801,9 @@ const AppContent = () => {
               />
             </Route>
 
-            {/* ========================================
-                CORE ROUTES
-            ======================================== */}
+            {/* =====================================
+                CORE AUTHENTICATION ROUTES
+            ===================================== */}
 
             <Route
               path="/forgot-password"
@@ -596,37 +820,42 @@ const AppContent = () => {
               element={<Register />}
             />
 
-            {/* ========================================
+            {/* =====================================
                 PARENT PUBLIC HOME
                 No authentication required.
-                Parent navbar remains visible.
-            ======================================== */}
+            ===================================== */}
 
             <Route
               path="/parent"
               element={<ParentHome />}
             />
 
-            {/* ========================================
-                PARENT AUTHENTICATION
-                Parent navbar remains visible.
-            ======================================== */}
+            {/* =====================================
+                PARENT LOGIN
+            ===================================== */}
 
             <Route
               path="/parent-login"
               element={<ParentLogin />}
             />
 
+            {/* =====================================
+                PARENT REGISTRATION
+            ===================================== */}
+
             <Route
               path="/parent-register"
               element={<ParentRegister />}
             />
 
-            {/* ========================================
+            {/* =====================================
                 PUBLIC ROUTES
-            ======================================== */}
+            ===================================== */}
 
-            <Route path="/" element={<Home />} />
+            <Route
+              path="/"
+              element={<Home />}
+            />
 
             <Route
               path="/mission"
@@ -728,9 +957,9 @@ const AppContent = () => {
               element={<TrackApplication />}
             />
 
-            {/* ========================================
+            {/* =====================================
                 STUDENT PROTECTED ROUTES
-            ======================================== */}
+            ===================================== */}
 
             <Route
               path="/timetable"
@@ -822,11 +1051,9 @@ const AppContent = () => {
               }
             />
 
-            {/* ========================================
-                PARENT DASHBOARD
-                Requires a parent/guardian account.
-                Parent navbar remains visible.
-            ======================================== */}
+            {/* =====================================
+                PARENT PROTECTED ROUTES
+            ===================================== */}
 
             <Route
               path="/parent/dashboard"
@@ -837,9 +1064,29 @@ const AppContent = () => {
               }
             />
 
-            {/* ========================================
-                PARENT SESSION RECORDINGS
-            ======================================== */}
+            {/* Parent Profile */}
+
+            <Route
+              path="/parent-profile"
+              element={
+                <ParentRoute>
+                  <ParentProfile />
+                </ParentRoute>
+              }
+            />
+
+            {/* Parent Help Centre */}
+
+            <Route
+              path="/parent/help/*"
+              element={
+                <ParentRoute>
+                  <ParentHelp />
+                </ParentRoute>
+              }
+            />
+
+            {/* Parent Session Recordings */}
 
             <Route
               path="/parent/session-recordings"
@@ -850,9 +1097,9 @@ const AppContent = () => {
               }
             />
 
-            {/* ========================================
+            {/* =====================================
                 STUDENT SESSION RECORDINGS
-            ======================================== */}
+            ===================================== */}
 
             <Route
               path="/session-recordings"
@@ -863,33 +1110,49 @@ const AppContent = () => {
               }
             />
 
-            {/* ========================================
-                TUTOR PORTAL ROUTES
-            ======================================== */}
+            {/* =====================================
+                TUTOR PROTECTED ROUTES
+            ===================================== */}
 
             <Route
               path="/tutor/dashboard"
-              element={<TutorDashboard />}
+              element={
+                <TutorRoute>
+                  <TutorDashboard />
+                </TutorRoute>
+              }
             />
 
             <Route
               path="/tutor/session/:sessionId"
-              element={<TutorSession />}
+              element={
+                <TutorRoute>
+                  <TutorSession />
+                </TutorRoute>
+              }
             />
 
             <Route
               path="/tutor/students"
-              element={<TutorStudents />}
+              element={
+                <TutorRoute>
+                  <TutorStudents />
+                </TutorRoute>
+              }
             />
 
             <Route
               path="/tutor/earnings"
-              element={<TutorEarnings />}
+              element={
+                <TutorRoute>
+                  <TutorEarnings />
+                </TutorRoute>
+              }
             />
 
-            {/* ========================================
-                LAZY LOADED ROUTES
-            ======================================== */}
+            {/* =====================================
+                LAZY-LOADED STUDENT ROUTES
+            ===================================== */}
 
             <Route
               path="/my-courses"
@@ -909,13 +1172,18 @@ const AppContent = () => {
               }
             />
 
-            {/* ========================================
-                FALLBACK
-            ======================================== */}
+            {/* =====================================
+                FALLBACK ROUTE
+            ===================================== */}
 
             <Route
               path="*"
-              element={<Navigate to="/" replace />}
+              element={
+                <Navigate
+                  to="/"
+                  replace
+                />
+              }
             />
 
           </Routes>
@@ -925,17 +1193,18 @@ const AppContent = () => {
       {!hideNavigation && <Footer />}
 
       {!hideNavigation && <ChatWidget />}
+
     </div>
   );
 };
 
-// ============================================
+// =====================================================
 // MAIN APP
-// ============================================
+// =====================================================
 
 function App() {
-  console.log('🚀 App starting...');
-  console.log('📋 Environment:', process.env.NODE_ENV);
+  console.log('App starting...');
+  console.log('Environment:', process.env.NODE_ENV);
 
   const [isAppReady, setIsAppReady] = useState(false);
 
@@ -954,8 +1223,13 @@ function App() {
           <ThemeProvider>
             <LanguageProvider>
               <SessionSettingsProvider>
-                <SplashScreen isReady={isAppReady} />
+
+                <SplashScreen
+                  isReady={isAppReady}
+                />
+
                 <AppContent />
+
               </SessionSettingsProvider>
             </LanguageProvider>
           </ThemeProvider>

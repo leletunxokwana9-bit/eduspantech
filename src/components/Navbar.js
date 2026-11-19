@@ -39,7 +39,6 @@ import NotificationBell from "./NotificationBell";
 import ParentNavbar from "./ParentNavbar";
 
 import "./Navbar.css";
-
 import logo from "../assets/EduspanLogo.png";
 
 // ======================================================
@@ -74,7 +73,6 @@ const isTrue = (value) =>
 
 const getRoleUser = (userData) => {
   if (!userData) return null;
-
   return userData.user || userData;
 };
 
@@ -97,10 +95,8 @@ const checkIsTutor = (userData) => {
     localStorage.getItem("userRole")
   );
 
-  const storedTutorRole = storedRole === "tutor";
-
   if (!data) {
-    return storedTutorRole;
+    return storedRole === "tutor";
   }
 
   const role = normalizeRole(data.role);
@@ -134,11 +130,7 @@ const checkIsTutor = (userData) => {
     return false;
   }
 
-  if (storedTutorRole) {
-    return true;
-  }
-
-  return false;
+  return storedRole === "tutor";
 };
 
 // ======================================================
@@ -205,18 +197,32 @@ const checkIsParent = (userData) => {
   const backendIdentifiesParent =
     isTrue(data.is_parent) ||
     role === "parent" ||
+    role === "guardian" ||
     userType === "parent" ||
+    userType === "guardian" ||
     type === "parent" ||
-    roleList.includes("parent");
+    type === "guardian" ||
+    roleList.includes("parent") ||
+    roleList.includes("guardian");
 
   if (backendIdentifiesParent) {
     return true;
   }
 
-  // Preserve the role established during parent login
-  // if the backend returns an incomplete profile.
   return storedRole === "parent";
 };
+
+// ======================================================
+// ROUTE HELPERS
+// ======================================================
+
+const isParentAreaPath = (pathname) =>
+  pathname === "/parent" ||
+  pathname.startsWith("/parent/");
+
+const isParentAuthenticationPath = (pathname) =>
+  pathname === "/parent-login" ||
+  pathname === "/parent-register";
 
 // ======================================================
 // NAVBAR
@@ -232,6 +238,20 @@ function Navbar() {
   const searchOverlayInputRef = useRef(null);
 
   const lastCheckedTokenRef = useRef(null);
+
+  // ------------------------------------------------------
+  // ROUTE STATE
+  // ------------------------------------------------------
+
+  const isParentRoute =
+    isParentAreaPath(location.pathname);
+
+  const isParentAuthPage =
+    isParentAuthenticationPath(location.pathname);
+
+  const shouldShowParentNavbar =
+    isParentRoute &&
+    !isParentAuthPage;
 
   // ------------------------------------------------------
   // UI STATE
@@ -367,7 +387,6 @@ function Navbar() {
 
   // ======================================================
   // AUTHENTICATION CHECK
-  // MATCHES THE TUTORSESSION AUTHENTICATION APPROACH
   // ======================================================
 
   useEffect(() => {
@@ -386,13 +405,11 @@ function Navbar() {
         return;
       }
 
-      // Do not repeat a successful check for the same token.
       if (lastCheckedTokenRef.current === token) {
         return;
       }
 
       try {
-        // STEP 1: Verify the current access token.
         let response = await fetch(`${API_URL}/auth/me`, {
           method: "GET",
           headers: {
@@ -401,7 +418,7 @@ function Navbar() {
           }
         });
 
-        // STEP 2: If expired, refresh the access token.
+        // Refresh expired access token.
         if (response.status === 401) {
           const refreshToken = getStoredRefreshToken();
 
@@ -435,7 +452,6 @@ function Navbar() {
 
                   token = newAccessToken;
 
-                  // STEP 3: Retry /auth/me with the new token.
                   response = await fetch(`${API_URL}/auth/me`, {
                     method: "GET",
                     headers: {
@@ -454,7 +470,6 @@ function Navbar() {
           }
         }
 
-        // STEP 4: Apply the authenticated backend user.
         if (response.ok) {
           const responseData = await response.json();
 
@@ -466,7 +481,6 @@ function Navbar() {
           lastCheckedTokenRef.current = token;
 
           applyAuthenticatedUser(authenticatedUser);
-
           return;
         }
 
@@ -477,7 +491,7 @@ function Navbar() {
 
         if (cancelled) return;
 
-        // STEP 5: Supabase fallback, as in TutorSession.
+        // Supabase fallback.
         try {
           const {
             data: { session },
@@ -509,7 +523,6 @@ function Navbar() {
                 getStoredToken();
 
               applyAuthenticatedUser(supabaseUser);
-
               return;
             }
 
@@ -529,7 +542,6 @@ function Navbar() {
 
         if (cancelled) return;
 
-        // STEP 6: Keep the existing stored session if available.
         const storedUser = authService.getStoredUser();
 
         if (storedUser) {
@@ -548,8 +560,6 @@ function Navbar() {
           error
         );
 
-        // Do not unnecessarily log out a user because
-        // the backend is temporarily unavailable.
         const storedUser = authService.getStoredUser();
 
         if (storedUser) {
@@ -1123,13 +1133,14 @@ function Navbar() {
   }
 
   console.log("📍 Navbar navigation selected:", {
+    pathname: location.pathname,
+    isParentRoute,
+    shouldShowParentNavbar,
     isAuthenticated,
     isTutor,
     isAdmin,
     isParent,
-    navigation: isParent
-      ? ["Dashboard", "Learning", "Resources", "Tutors", "Help Centre"]
-      : navLinks.map((link) => link.label)
+    navigation: navLinks.map((link) => link.label)
   });
 
   const showSearch = !isAdmin && !isParent;
@@ -1192,6 +1203,10 @@ function Navbar() {
     </div>
   );
 
+  // ======================================================
+  // ADMIN ROUTES
+  // ======================================================
+
   const isAdminRoute =
     location.pathname.startsWith("/admin");
 
@@ -1199,24 +1214,24 @@ function Navbar() {
 
   // ======================================================
   // PARENT NAVBAR
+  // PUBLIC PARENT HOME + AUTHENTICATED PARENT AREA
   // ======================================================
 
-  if (
-    isAuthenticated &&
-    isParent &&
-    !isAdmin &&
-    !isTutor
-  ) {
+  if (shouldShowParentNavbar && !isAdmin && !isTutor) {
     return (
       <ParentNavbar
-        user={user}
-        onLogout={handleLogout}
+        user={isAuthenticated && isParent ? user : null}
+        onLogout={
+          isAuthenticated && isParent
+            ? handleLogout
+            : undefined
+        }
       />
     );
   }
 
   // ======================================================
-  // RENDER EXISTING STUDENT / TUTOR / ADMIN NAVBAR
+  // RENDER EXISTING STUDENT / TUTOR NAVBAR
   // ======================================================
 
   return (
@@ -1811,8 +1826,6 @@ function Navbar() {
                 </div>
               </div>
             ) : (
-              /* LOGGED-OUT ACTIONS */
-
               <div className="auth-buttons">
                 <Link
                   to="/login"
@@ -1849,9 +1862,7 @@ function Navbar() {
         </div>
       </header>
 
-      {/* ==================================================
-          SEARCH OVERLAY
-      ================================================== */}
+      {/* SEARCH OVERLAY */}
 
       {isSearchOpen && (
         <div
@@ -1968,9 +1979,7 @@ function Navbar() {
         </div>
       )}
 
-      {/* ==================================================
-          MOBILE MENU BACKDROP
-      ================================================== */}
+      {/* MOBILE MENU BACKDROP */}
 
       {isMenuOpen && (
         <div
@@ -1980,9 +1989,7 @@ function Navbar() {
         />
       )}
 
-      {/* ==================================================
-          MOBILE MENU
-      ================================================== */}
+      {/* MOBILE MENU */}
 
       <div
         className={`mobile-menu-overlay ${

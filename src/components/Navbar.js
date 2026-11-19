@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useRef, useCallback } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import {
@@ -1212,10 +1211,19 @@ function Navbar() {
   // ======================================================
 
   if (shouldShowParentNavbar) {
+    const isAuthenticatedParent =
+      isAuthenticated &&
+      isParent &&
+      Boolean(user);
+
     return (
       <ParentNavbar
-        user={isAuthenticated ? user : null}
-        onLogout={isAuthenticated ? handleLogout : undefined}
+        user={isAuthenticatedParent ? user : null}
+        onLogout={
+          isAuthenticatedParent
+            ? handleLogout
+            : undefined
+        }
       />
     );
   }

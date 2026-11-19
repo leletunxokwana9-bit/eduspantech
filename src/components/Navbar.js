@@ -1,287 +1,61 @@
 
-import React, { useState, useEffect, useRef, useCallback } from "react";
-import { Link, useLocation, useNavigate } from "react-router-dom";
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import {
+  Link,
+  useLocation,
+  useNavigate
+} from 'react-router-dom';
+
+import {
+  Home,
+  BookOpen,
+  GraduationCap,
+  Users,
+  CalendarDays,
+  Library,
+  Target,
+  LayoutDashboard,
+  User,
+  UserRound,
+  Settings,
+  LogOut,
   Search,
-  Globe,
-  ChevronDown,
   Menu,
   X,
-  User,
-  LogOut,
-  Settings,
-  BookOpen,
-  Award,
-  Clock,
-  HelpCircle,
-  Home,
-  Book,
-  LayoutGrid,
-  Users,
-  DollarSign,
-  Folder,
-  BarChart2,
-  TrendingUp,
-  PieChart,
+  ChevronDown,
+  ShieldCheck,
   CreditCard,
+  BarChart3,
   FileText,
-  Calendar,
-  Target
-} from "lucide-react";
+  Wallet,
+  HelpCircle,
+  Bell,
+  BriefcaseBusiness,
+  ClipboardList,
+  Activity,
+  Languages,
+  BookMarked
+} from 'lucide-react';
 
-import { useHomeData } from "../hooks/useHomeData";
-import { useLanguage } from "../context/LanguageContext";
-import { useSound } from "../context/SoundContext";
-import { authService } from "../services/authService";
-import { supabase } from "../services/supabaseClient";
+import { useHomeData } from '../context/HomeDataContext';
+import { useLanguage } from '../context/LanguageContext';
+import { useSound } from '../context/SoundContext';
 
-import NotificationBell from "./NotificationBell";
-import ParentNavbar from "./ParentNavbar";
+import { authService } from '../services/authService';
 
-import "./Navbar.css";
+import NotificationBell from './NotificationBell';
+import ParentNavbar from './ParentNavbar';
 
-import logo from "../assets/EduspanLogo.png";
+import './Navbar.css';
 
-// ======================================================
-// API CONFIGURATION
-// ======================================================
+import logo from '../assets/EduspanLogo.png';
 
-const API_URL =
-  process.env.REACT_APP_API_URL ||
-  "https://eduspantech-backend.onrender.com/api";
 
-// ======================================================
-// AUTHENTICATION HELPERS
-// ======================================================
-
-const getStoredToken = () =>
-  localStorage.getItem("accessToken") ||
-  localStorage.getItem("token") ||
-  localStorage.getItem("authToken");
-
-const getStoredRefreshToken = () =>
-  localStorage.getItem("refreshToken");
-
-const hasAuthToken = () => Boolean(getStoredToken());
-
-const normalizeRole = (value) =>
-  String(value ?? "").trim().toLowerCase();
-
-const isTrue = (value) =>
-  value === true ||
-  value === 1 ||
-  ["true", "1"].includes(normalizeRole(value));
-
-const getRoleUser = (userData) => {
-  if (!userData) return null;
-
-  return userData.user || userData;
-};
-
-const getAccessTokenFromResponse = (data) =>
-  data?.accessToken ||
-  data?.access_token ||
-  data?.token ||
-  data?.data?.accessToken ||
-  data?.data?.access_token ||
-  null;
-
-// ======================================================
-// TUTOR DETECTION
-// ======================================================
-
-const checkIsTutor = (userData) => {
-  const data = getRoleUser(userData);
-
-  const storedRole = normalizeRole(
-    localStorage.getItem("userRole")
-  );
-
-  const storedTutorRole = storedRole === "tutor";
-
-  if (!data) {
-    return storedTutorRole;
-  }
-
-  const role = normalizeRole(data.role);
-  const userType = normalizeRole(data.userType);
-  const type = normalizeRole(data.type);
-
-  const roleList = Array.isArray(data.roles)
-    ? data.roles.map((item) => normalizeRole(item))
-    : [];
-
-  const backendIdentifiesTutor =
-    isTrue(data.is_tutor) ||
-    role === "tutor" ||
-    role === "instructor" ||
-    userType === "tutor" ||
-    type === "tutor" ||
-    roleList.includes("tutor") ||
-    roleList.includes("instructor");
-
-  if (backendIdentifiesTutor) {
-    return true;
-  }
-
-  const backendIdentifiesAdmin =
-    isTrue(data.is_admin) ||
-    isTrue(data.is_super_admin) ||
-    ["admin", "super_admin", "superadmin"].includes(role) ||
-    Boolean(normalizeRole(data.admin_role));
-
-  if (backendIdentifiesAdmin) {
-    return false;
-  }
-
-  if (storedTutorRole) {
-    return true;
-  }
-
-  return false;
-};
-
-// ======================================================
-// ADMIN DETECTION
-// ======================================================
-
-const checkIsAdmin = (userData) => {
-  const data = getRoleUser(userData);
-
-  if (!data) return false;
-
-  return (
-    isTrue(data.is_admin) ||
-    isTrue(data.is_super_admin) ||
-    ["admin", "super_admin", "superadmin"].includes(
-      normalizeRole(data.role)
-    ) ||
-    Boolean(normalizeRole(data.admin_role))
-  );
-};
-
-// ======================================================
-// PARENT DETECTION
-// ======================================================
-
-const checkIsParent = (userData) => {
-  const data = getRoleUser(userData);
-
-  const storedRole = normalizeRole(
-    localStorage.getItem("userRole")
-  );
-
-  if (!data) {
-    return storedRole === "parent";
-  }
-
-  const role = normalizeRole(data.role);
-  const userType = normalizeRole(data.userType);
-  const type = normalizeRole(data.type);
-
-  const roleList = Array.isArray(data.roles)
-    ? data.roles.map((item) => normalizeRole(item))
-    : [];
-
-  const backendIdentifiesAdmin =
-    isTrue(data.is_admin) ||
-    isTrue(data.is_super_admin) ||
-    ["admin", "super_admin", "superadmin"].includes(role) ||
-    Boolean(normalizeRole(data.admin_role));
-
-  const backendIdentifiesTutor =
-    isTrue(data.is_tutor) ||
-    role === "tutor" ||
-    role === "instructor" ||
-    userType === "tutor" ||
-    type === "tutor" ||
-    roleList.includes("tutor") ||
-    roleList.includes("instructor");
-
-  if (backendIdentifiesAdmin || backendIdentifiesTutor) {
-    return false;
-  }
-
-  const backendIdentifiesParent =
-    isTrue(data.is_parent) ||
-    role === "parent" ||
-    userType === "parent" ||
-    type === "parent" ||
-    roleList.includes("parent");
-
-  if (backendIdentifiesParent) {
-    return true;
-  }
-
-  // Preserve the role established during parent login
-  // if the backend returns an incomplete profile.
-  return storedRole === "parent";
-};
-
-// ======================================================
-// NAVBAR
-// ======================================================
-
-function Navbar() {
+const Navbar = () => {
   const location = useLocation();
   const navigate = useNavigate();
 
-  const menuRef = useRef(null);
-  const languageRef = useRef(null);
-  const userDropdownRef = useRef(null);
-  const searchOverlayInputRef = useRef(null);
-
-  const lastCheckedTokenRef = useRef(null);
-
-  // ------------------------------------------------------
-  // UI STATE
-  // ------------------------------------------------------
-
-  const [isMenuOpen, setIsMenuOpen] = useState(false);
-  const [isSearchOpen, setIsSearchOpen] = useState(false);
-  const [isLanguageOpen, setIsLanguageOpen] = useState(false);
-  const [isUserDropdownOpen, setIsUserDropdownOpen] = useState(false);
-
-  const [searchQuery, setSearchQuery] = useState("");
-  const [searchResults, setSearchResults] = useState([]);
-  const [showSuggestions, setShowSuggestions] = useState(false);
-
-  // ------------------------------------------------------
-  // AUTHENTICATION STATE
-  // ------------------------------------------------------
-
-  const [user, setUser] = useState(() =>
-    authService.getStoredUser()
-  );
-
-  const [isAuthenticated, setIsAuthenticated] = useState(() =>
-    hasAuthToken()
-  );
-
-  const [isTutor, setIsTutor] = useState(() =>
-    hasAuthToken() &&
-    checkIsTutor(authService.getStoredUser())
-  );
-
-  const [isAdmin, setIsAdmin] = useState(() =>
-    hasAuthToken() &&
-    checkIsAdmin(authService.getStoredUser())
-  );
-
-  const [isParent, setIsParent] = useState(() =>
-    hasAuthToken() &&
-    checkIsParent(authService.getStoredUser())
-  );
-
-  const [authRefresh, setAuthRefresh] = useState(0);
-  const [logoError, setLogoError] = useState(false);
-
-  // ------------------------------------------------------
-  // CONTEXTS
-  // ------------------------------------------------------
-
   const { data } = useHomeData();
-
   const {
     currentLanguage,
     changeLanguage,
@@ -291,922 +65,672 @@ function Navbar() {
 
   const { playClick } = useSound();
 
-  // ======================================================
-  // APPLY AUTHENTICATED USER
-  // ======================================================
+  const searchInputRef = useRef(null);
+  const searchTimerRef = useRef(null);
 
-  const applyAuthenticatedUser = useCallback((userData) => {
-    if (!userData) {
-      setUser(null);
-      setIsAuthenticated(false);
-      setIsTutor(false);
-      setIsAdmin(false);
-      setIsParent(false);
-      return;
+  const [user, setUser] = useState(null);
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+
+  const [userMenuOpen, setUserMenuOpen] = useState(false);
+  const [languageOpen, setLanguageOpen] = useState(false);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+
+  const [searchOpen, setSearchOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [searchResults, setSearchResults] = useState([]);
+
+  const [loadingUser, setLoadingUser] = useState(true);
+
+
+  // =========================================================
+  // GENERAL HELPERS
+  // =========================================================
+
+  const getToken = () => {
+    const candidates = [
+      localStorage.getItem('accessToken'),
+      localStorage.getItem('token'),
+      localStorage.getItem('authToken')
+    ];
+
+    return candidates.find(
+      token =>
+        typeof token === 'string' &&
+        token.trim() !== '' &&
+        token !== 'undefined' &&
+        token !== 'null'
+    );
+  };
+
+
+  const normalizeRole = value => {
+    if (typeof value !== 'string') return '';
+
+    return value
+      .trim()
+      .toLowerCase()
+      .replace(/[\s-]+/g, '_');
+  };
+
+
+  const getUserRole = currentUser => {
+    if (!currentUser) {
+      return normalizeRole(localStorage.getItem('userRole'));
     }
 
-    const data = getRoleUser(userData);
+    const explicitRole =
+      currentUser.role ||
+      currentUser.userRole ||
+      currentUser.user_role ||
+      currentUser.userType ||
+      currentUser.user_type ||
+      currentUser.type;
 
-    const admin = checkIsAdmin(userData);
-    const tutor = !admin && checkIsTutor(userData);
-    const parent =
-      !admin &&
-      !tutor &&
-      checkIsParent(userData);
-
-    console.log("🔎 Navbar authentication state:", {
-      name: data?.name,
-      email: data?.email,
-      backendRole: data?.role,
-      backendIsTutor: data?.is_tutor,
-      backendIsParent: data?.is_parent,
-      storedRole: localStorage.getItem("userRole"),
-      isAuthenticated: true,
-      isAdmin: admin,
-      isTutor: tutor,
-      isParent: parent
-    });
-
-    setUser(data);
-    setIsAuthenticated(true);
-    setIsAdmin(admin);
-    setIsTutor(tutor);
-    setIsParent(parent);
-  }, []);
-
-  // ======================================================
-  // PRESERVE EXISTING SESSION
-  // ======================================================
-
-  const preserveExistingSession = useCallback(() => {
-    const tokenExists = hasAuthToken();
-
-    if (!tokenExists) {
-      lastCheckedTokenRef.current = null;
-      applyAuthenticatedUser(null);
-      return;
+    if (explicitRole) {
+      return normalizeRole(explicitRole);
     }
 
-    const storedUser = authService.getStoredUser();
-
-    setIsAuthenticated(true);
-
-    if (storedUser) {
-      applyAuthenticatedUser(storedUser);
-    } else {
-      const storedRole = normalizeRole(
-        localStorage.getItem("userRole")
-      );
-
-      setUser(null);
-      setIsAdmin(false);
-      setIsTutor(storedRole === "tutor");
-      setIsParent(storedRole === "parent");
+    if (currentUser.is_parent === true || currentUser.isParent === true) {
+      return 'parent';
     }
-  }, [applyAuthenticatedUser]);
 
-  // ======================================================
-  // AUTHENTICATION CHECK
-  // MATCHES THE TUTORSESSION AUTHENTICATION APPROACH
-  // ======================================================
+    if (currentUser.is_admin === true || currentUser.isAdmin === true) {
+      return 'admin';
+    }
+
+    if (currentUser.is_tutor === true || currentUser.isTutor === true) {
+      return 'tutor';
+    }
+
+    const roles = Array.isArray(currentUser.roles)
+      ? currentUser.roles.map(normalizeRole)
+      : [];
+
+    if (roles.includes('parent')) return 'parent';
+    if (roles.includes('admin')) return 'admin';
+    if (roles.includes('tutor')) return 'tutor';
+
+    const adminRole = normalizeRole(currentUser.admin_role);
+
+    if (adminRole && adminRole !== 'none') {
+      return 'admin';
+    }
+
+    return normalizeRole(localStorage.getItem('userRole')) || 'student';
+  };
+
+
+  const role = getUserRole(user);
+
+  const isAdmin = role === 'admin' || role === 'administrator';
+  const isTutor = role === 'tutor';
+  const isParent = role === 'parent';
+
+
+  const isActive = path => {
+    if (path === '/') {
+      return location.pathname === '/';
+    }
+
+    return (
+      location.pathname === path ||
+      location.pathname.startsWith(`${path}/`)
+    );
+  };
+
+
+  const handleClick = () => {
+    if (typeof playClick === 'function') {
+      playClick();
+    }
+  };
+
+
+  const closeAllMenus = () => {
+    setUserMenuOpen(false);
+    setLanguageOpen(false);
+    setMobileMenuOpen(false);
+  };
+
+
+  // =========================================================
+  // AUTHENTICATION
+  // =========================================================
 
   useEffect(() => {
-    let cancelled = false;
+    let mounted = true;
 
-    const checkAuthentication = async () => {
-      let token = getStoredToken();
-
-      if (!token) {
-        lastCheckedTokenRef.current = null;
-
-        if (!cancelled) {
-          applyAuthenticatedUser(null);
-        }
-
-        return;
-      }
-
-      // Do not repeat a successful check for the same token.
-      if (lastCheckedTokenRef.current === token) {
-        return;
-      }
+    const loadUser = async () => {
+      setLoadingUser(true);
 
       try {
-        // STEP 1: Verify the current access token.
-        let response = await fetch(`${API_URL}/auth/me`, {
-          method: "GET",
-          headers: {
-            Authorization: `Bearer ${token}`,
-            "Content-Type": "application/json"
+        const token = getToken();
+
+        if (!token) {
+          if (mounted) {
+            setUser(null);
+            setIsAuthenticated(false);
           }
-        });
-
-        // STEP 2: If expired, refresh the access token.
-        if (response.status === 401) {
-          const refreshToken = getStoredRefreshToken();
-
-          if (refreshToken) {
-            try {
-              const refreshResponse = await fetch(
-                `${API_URL}/auth/refresh`,
-                {
-                  method: "POST",
-                  headers: {
-                    "Content-Type": "application/json"
-                  },
-                  body: JSON.stringify({
-                    refreshToken
-                  })
-                }
-              );
-
-              if (refreshResponse.ok) {
-                const refreshData =
-                  await refreshResponse.json();
-
-                const newAccessToken =
-                  getAccessTokenFromResponse(refreshData);
-
-                if (newAccessToken) {
-                  localStorage.setItem(
-                    "accessToken",
-                    newAccessToken
-                  );
-
-                  token = newAccessToken;
-
-                  // STEP 3: Retry /auth/me with the new token.
-                  response = await fetch(`${API_URL}/auth/me`, {
-                    method: "GET",
-                    headers: {
-                      Authorization: `Bearer ${token}`,
-                      "Content-Type": "application/json"
-                    }
-                  });
-                }
-              }
-            } catch (refreshError) {
-              console.error(
-                "Navbar token refresh failed:",
-                refreshError
-              );
-            }
-          }
-        }
-
-        // STEP 4: Apply the authenticated backend user.
-        if (response.ok) {
-          const responseData = await response.json();
-
-          if (cancelled) return;
-
-          const authenticatedUser =
-            responseData.user || responseData;
-
-          lastCheckedTokenRef.current = token;
-
-          applyAuthenticatedUser(authenticatedUser);
 
           return;
         }
 
-        console.warn(
-          "Navbar backend authentication unsuccessful:",
-          response.status
-        );
+        let storedUser = null;
 
-        if (cancelled) return;
-
-        // STEP 5: Supabase fallback, as in TutorSession.
         try {
-          const {
-            data: { session },
-            error: sessionError
-          } = await supabase.auth.getSession();
+          storedUser = authService.getStoredUser?.() || null;
+        } catch (error) {
+          console.warn('Unable to read stored user:', error);
+        }
 
-          if (!sessionError && session?.user) {
-            const {
-              data: profile,
-              error: profileError
-            } = await supabase
-              .from("users")
-              .select("*")
-              .eq("id", session.user.id)
-              .single();
+        if (storedUser && mounted) {
+          setUser(storedUser);
+          setIsAuthenticated(true);
+        }
 
-            if (!profileError && profile) {
-              if (cancelled) return;
+        try {
+          const response = await authService.getCurrentUser();
 
-              const supabaseUser = {
-                ...profile,
-                id: profile.id || session.user.id,
-                email:
-                  profile.email ||
-                  session.user.email
-              };
+          const currentUser =
+            response?.user ||
+            response?.data?.user ||
+            response?.data ||
+            response ||
+            storedUser;
 
-              lastCheckedTokenRef.current =
-                getStoredToken();
-
-              applyAuthenticatedUser(supabaseUser);
-
-              return;
-            }
-
-            if (profileError) {
-              console.error(
-                "Navbar Supabase profile lookup failed:",
-                profileError
-              );
-            }
+          if (mounted && currentUser) {
+            setUser(currentUser);
+            setIsAuthenticated(true);
+          } else if (mounted && !storedUser) {
+            setUser(null);
+            setIsAuthenticated(false);
           }
-        } catch (supabaseError) {
-          console.error(
-            "Navbar Supabase fallback failed:",
-            supabaseError
-          );
+        } catch (error) {
+          console.error('Unable to verify current user:', error);
+
+          if (mounted && storedUser) {
+            setUser(storedUser);
+            setIsAuthenticated(true);
+          }
         }
-
-        if (cancelled) return;
-
-        // STEP 6: Keep the existing stored session if available.
-        const storedUser = authService.getStoredUser();
-
-        if (storedUser) {
-          lastCheckedTokenRef.current =
-            getStoredToken();
-
-          applyAuthenticatedUser(storedUser);
-        } else {
-          preserveExistingSession();
-        }
-      } catch (error) {
-        if (cancelled) return;
-
-        console.error(
-          "Navbar authentication check failed:",
-          error
-        );
-
-        // Do not unnecessarily log out a user because
-        // the backend is temporarily unavailable.
-        const storedUser = authService.getStoredUser();
-
-        if (storedUser) {
-          applyAuthenticatedUser(storedUser);
-        } else {
-          preserveExistingSession();
+      } finally {
+        if (mounted) {
+          setLoadingUser(false);
         }
       }
     };
 
-    checkAuthentication();
+    loadUser();
 
-    return () => {
-      cancelled = true;
-    };
-  }, [
-    location.pathname,
-    authRefresh,
-    applyAuthenticatedUser,
-    preserveExistingSession
-  ]);
+    const handleLogin = event => {
+      const loggedInUser =
+        event?.detail?.user ||
+        event?.detail ||
+        authService.getStoredUser?.();
 
-  // ======================================================
-  // LOGIN / LOGOUT / STORAGE EVENTS
-  // ======================================================
-
-  useEffect(() => {
-    const handleLogin = () => {
-      lastCheckedTokenRef.current = null;
-
-      const storedUser = authService.getStoredUser();
-
-      if (hasAuthToken()) {
-        if (storedUser) {
-          applyAuthenticatedUser(storedUser);
-        } else {
-          const storedRole = normalizeRole(
-            localStorage.getItem("userRole")
-          );
-
-          setUser(null);
-          setIsAdmin(false);
-          setIsAuthenticated(true);
-          setIsTutor(storedRole === "tutor");
-          setIsParent(storedRole === "parent");
-        }
-
-        setAuthRefresh((value) => value + 1);
+      if (loggedInUser) {
+        setUser(loggedInUser);
+        setIsAuthenticated(true);
       } else {
-        applyAuthenticatedUser(null);
+        loadUser();
       }
     };
 
     const handleLogoutEvent = () => {
-      lastCheckedTokenRef.current = null;
-
-      localStorage.removeItem("userRole");
-
-      applyAuthenticatedUser(null);
-
-      setIsUserDropdownOpen(false);
-      setIsMenuOpen(false);
+      setUser(null);
+      setIsAuthenticated(false);
+      closeAllMenus();
     };
 
-    const handleStorageChange = (event) => {
+    const handleStorageChange = event => {
       if (
-        event.key === "accessToken" ||
-        event.key === "token" ||
-        event.key === "authToken" ||
-        event.key === "user" ||
-        event.key === "userRole"
+        event.key === 'accessToken' ||
+        event.key === 'token' ||
+        event.key === 'authToken' ||
+        event.key === 'user' ||
+        event.key === 'userRole'
       ) {
-        lastCheckedTokenRef.current = null;
-
-        if (!hasAuthToken()) {
-          applyAuthenticatedUser(null);
-        } else {
-          const storedUser = authService.getStoredUser();
-
-          if (storedUser) {
-            applyAuthenticatedUser(storedUser);
-          } else {
-            const storedRole = normalizeRole(
-              localStorage.getItem("userRole")
-            );
-
-            setUser(null);
-            setIsAdmin(false);
-            setIsAuthenticated(true);
-            setIsTutor(storedRole === "tutor");
-            setIsParent(storedRole === "parent");
-          }
-
-          setAuthRefresh((value) => value + 1);
-        }
+        loadUser();
       }
     };
 
-    window.addEventListener("auth:login", handleLogin);
-    window.addEventListener("auth:logout", handleLogoutEvent);
-    window.addEventListener("storage", handleStorageChange);
+    window.addEventListener('auth:login', handleLogin);
+    window.addEventListener('auth:logout', handleLogoutEvent);
+    window.addEventListener('storage', handleStorageChange);
 
     return () => {
-      window.removeEventListener("auth:login", handleLogin);
-      window.removeEventListener("auth:logout", handleLogoutEvent);
-      window.removeEventListener("storage", handleStorageChange);
+      mounted = false;
+
+      window.removeEventListener('auth:login', handleLogin);
+      window.removeEventListener('auth:logout', handleLogoutEvent);
+      window.removeEventListener('storage', handleStorageChange);
     };
-  }, [applyAuthenticatedUser]);
+  }, []);
 
-  // ======================================================
-  // LOGOUT
-  // ======================================================
 
-  const handleLogout = () => {
-    lastCheckedTokenRef.current = null;
+  const handleLogout = async () => {
+    handleClick();
+    closeAllMenus();
 
-    localStorage.removeItem("userRole");
+    try {
+      await authService.logout();
+    } catch (error) {
+      console.error('Logout error:', error);
+    } finally {
+      [
+        'accessToken',
+        'refreshToken',
+        'token',
+        'authToken',
+        'user',
+        'userRole'
+      ].forEach(key => localStorage.removeItem(key));
 
-    setIsAuthenticated(false);
-    setUser(null);
-    setIsTutor(false);
-    setIsAdmin(false);
-    setIsParent(false);
+      setUser(null);
+      setIsAuthenticated(false);
 
-    setIsUserDropdownOpen(false);
-    setIsMenuOpen(false);
+      window.dispatchEvent(new Event('auth:logout'));
 
-    playClick();
-
-    authService.logout();
-  };
-
-  // ======================================================
-  // OVERLAY CONTROLS
-  // ======================================================
-
-  const toggleMenu = () => {
-    setIsMenuOpen((value) => !value);
-    setIsSearchOpen(false);
-    setIsLanguageOpen(false);
-    setIsUserDropdownOpen(false);
-
-    playClick();
-  };
-
-  const closeMenu = () => {
-    setIsMenuOpen(false);
-  };
-
-  const toggleUserDropdown = () => {
-    setIsUserDropdownOpen((value) => !value);
-    setIsSearchOpen(false);
-    setIsLanguageOpen(false);
-
-    playClick();
-  };
-
-  const closeUserDropdown = () => {
-    setIsUserDropdownOpen(false);
-  };
-
-  const openSearch = () => {
-    setIsSearchOpen(true);
-    setIsLanguageOpen(false);
-    setIsUserDropdownOpen(false);
-    setIsMenuOpen(false);
-
-    playClick();
-
-    requestAnimationFrame(() => {
-      searchOverlayInputRef.current?.focus();
-    });
-  };
-
-  const closeSearch = () => {
-    setIsSearchOpen(false);
-    setSearchQuery("");
-    setSearchResults([]);
-    setShowSuggestions(false);
-  };
-
-  const toggleLanguage = () => {
-    setIsLanguageOpen((value) => !value);
-    setIsUserDropdownOpen(false);
-
-    playClick();
-  };
-
-  const handleLanguageChange = (langCode) => {
-    changeLanguage(langCode);
-    setIsLanguageOpen(false);
-
-    playClick();
-  };
-
-  // ======================================================
-  // BODY SCROLL LOCK
-  // ======================================================
-
-  useEffect(() => {
-    const lock = isMenuOpen || isSearchOpen;
-
-    if (lock) {
-      const previousOverflow = document.body.style.overflow;
-
-      document.body.style.overflow = "hidden";
-
-      return () => {
-        document.body.style.overflow = previousOverflow;
-      };
+      navigate('/login');
     }
-  }, [isMenuOpen, isSearchOpen]);
+  };
 
-  // ======================================================
-  // CLOSE DROPDOWNS WHEN CLICKING OUTSIDE
-  // ======================================================
 
-  useEffect(() => {
-    const onDown = (event) => {
-      if (
-        userDropdownRef.current &&
-        !userDropdownRef.current.contains(event.target)
-      ) {
-        setIsUserDropdownOpen(false);
+  // =========================================================
+  // ROLE-BASED NAVIGATION
+  // =========================================================
+
+  const studentLinks = [
+    {
+      label: 'Home',
+      path: '/',
+      icon: <Home size={17} />
+    },
+    {
+      label: 'Subjects',
+      path: '/subjects',
+      icon: <BookOpen size={17} />
+    },
+    {
+      label: 'Curriculum',
+      path: '/curriculum',
+      icon: <GraduationCap size={17} />
+    },
+    {
+      label: 'Tutors',
+      path: '/tutors',
+      icon: <Users size={17} />
+    },
+    {
+      label: 'Pricing',
+      path: '/pricing',
+      icon: <CreditCard size={17} />
+    },
+    {
+      label: 'Resources',
+      path: '/resources',
+      icon: <Library size={17} />
+    },
+    {
+      label: 'Our Mission',
+      path: '/mission',
+      icon: <Target size={17} />
+    }
+  ];
+
+
+  const tutorLinks = [
+    {
+      label: 'Home',
+      path: '/',
+      icon: <Home size={17} />
+    },
+    {
+      label: 'Dashboard',
+      path: '/tutor/dashboard',
+      icon: <LayoutDashboard size={17} />
+    },
+    {
+      label: 'Sessions',
+      path: '/my-sessions',
+      icon: <CalendarDays size={17} />
+    },
+    {
+      label: 'Resources',
+      path: '/resources',
+      icon: <Library size={17} />
+    }
+  ];
+
+
+  const adminLinks = [
+    {
+      label: 'Dashboard',
+      path: '/admin/dashboard',
+      icon: <LayoutDashboard size={17} />,
+      admin: true
+    },
+    {
+      label: 'Users',
+      path: '/admin/users',
+      icon: <Users size={17} />,
+      admin: true
+    },
+    {
+      label: 'Tutors',
+      path: '/admin/tutors',
+      icon: <GraduationCap size={17} />,
+      admin: true
+    },
+    {
+      label: 'Content',
+      path: '/admin/content',
+      icon: <FileText size={17} />,
+      admin: true
+    },
+    {
+      label: 'Payments',
+      path: '/admin/payments',
+      icon: <Wallet size={17} />,
+      admin: true
+    },
+    {
+      label: 'Analytics',
+      path: '/admin/analytics',
+      icon: <BarChart3 size={17} />,
+      admin: true
+    },
+    {
+      label: 'Settings',
+      path: '/admin/settings',
+      icon: <Settings size={17} />,
+      admin: true
+    }
+  ];
+
+
+  const navigationLinks = isAdmin
+    ? adminLinks
+    : isTutor
+      ? tutorLinks
+      : studentLinks;
+
+
+  // =========================================================
+  // USER DROPDOWN LINKS
+  // =========================================================
+
+  const getAccountLinks = () => {
+    if (isAdmin) {
+      return [
+        {
+          label: 'Admin Dashboard',
+          path: '/admin/dashboard',
+          icon: <LayoutDashboard size={17} />
+        },
+        {
+          label: 'Manage Users',
+          path: '/admin/users',
+          icon: <Users size={17} />
+        },
+        {
+          label: 'Activity Logs',
+          path: '/admin/activity',
+          icon: <Activity size={17} />
+        },
+        {
+          label: 'My Profile',
+          path: '/admin/profile',
+          icon: <User size={17} />
+        },
+        {
+          label: 'Account Settings',
+          path: '/admin/settings',
+          icon: <Settings size={17} />
+        }
+      ];
+    }
+
+    if (isTutor) {
+      return [
+        {
+          label: 'My Profile',
+          path: '/tutor/profile',
+          icon: <User size={17} />
+        },
+        {
+          label: 'Tutor Dashboard',
+          path: '/tutor/dashboard',
+          icon: <LayoutDashboard size={17} />
+        },
+        {
+          label: 'My Students',
+          path: '/tutor/students',
+          icon: <Users size={17} />
+        },
+        {
+          label: 'My Sessions',
+          path: '/my-sessions',
+          icon: <CalendarDays size={17} />
+        },
+        {
+          label: 'My Earnings',
+          path: '/tutor/earnings',
+          icon: <Wallet size={17} />
+        },
+        {
+          label: 'Account Settings',
+          path: '/settings',
+          icon: <Settings size={17} />
+        },
+        {
+          label: 'Help Centre',
+          path: '/help',
+          icon: <HelpCircle size={17} />
+        }
+      ];
+    }
+
+    return [
+      {
+        label: 'My Profile',
+        path: '/profile',
+        icon: <User size={17} />
+      },
+      {
+        label: 'My Dashboard',
+        path: '/dashboard',
+        icon: <LayoutDashboard size={17} />
+      },
+      {
+        label: 'My Courses',
+        path: '/my-courses',
+        icon: <BookMarked size={17} />
+      },
+      {
+        label: 'My Sessions',
+        path: '/my-sessions',
+        icon: <CalendarDays size={17} />
+      },
+      {
+        label: 'Account Settings',
+        path: '/settings',
+        icon: <Settings size={17} />
+      },
+      {
+        label: 'Help Centre',
+        path: '/help',
+        icon: <HelpCircle size={17} />
       }
+    ];
+  };
 
-      if (
-        languageRef.current &&
-        !languageRef.current.contains(event.target)
-      ) {
-        setIsLanguageOpen(false);
-      }
-    };
 
-    document.addEventListener("mousedown", onDown);
-    document.addEventListener("touchstart", onDown);
-
-    return () => {
-      document.removeEventListener("mousedown", onDown);
-      document.removeEventListener("touchstart", onDown);
-    };
-  }, []);
-
-  // ======================================================
-  // CLOSE OVERLAYS ON NAVIGATION
-  // ======================================================
-
-  useEffect(() => {
-    setIsMenuOpen(false);
-    setIsUserDropdownOpen(false);
-    setIsLanguageOpen(false);
-
-    closeSearch();
-  }, [location.pathname]);
-
-  // ======================================================
-  // ESCAPE KEY
-  // ======================================================
-
-  useEffect(() => {
-    const onKey = (event) => {
-      if (event.key === "Escape") {
-        setIsMenuOpen(false);
-        setIsUserDropdownOpen(false);
-        setIsLanguageOpen(false);
-
-        closeSearch();
-      }
-    };
-
-    document.addEventListener("keydown", onKey);
-
-    return () => {
-      document.removeEventListener("keydown", onKey);
-    };
-  }, []);
-
-  // ======================================================
+  // =========================================================
   // SEARCH
-  // ======================================================
+  // =========================================================
 
-  const performSearch = useCallback((query) => {
-    const term = query.toLowerCase().trim();
-    const results = [];
+  const searchableItems = useMemo(() => {
+    const items = [];
 
-    if (!data) return;
+    const addItems = (collection, category, route) => {
+      if (!Array.isArray(collection)) return;
 
-    if (data.subjects?.items) {
-      data.subjects.items.forEach((subject) => {
-        const name = String(subject.name || "");
-        const description = String(subject.description || "");
+      collection.forEach(item => {
+        if (!item) return;
 
-        if (
-          name.toLowerCase().includes(term) ||
-          description.toLowerCase().includes(term)
-        ) {
-          results.push({
-            type: "subject",
-            title: name,
-            subtitle: description,
-            icon: subject.icon,
-            path: `/subjects/${name.toLowerCase().replace(/\s+/g, "-")}`
-          });
-        }
-      });
-    }
+        const title =
+          item.title ||
+          item.name ||
+          item.subject_name ||
+          item.full_name;
 
-    if (data.tutors?.shifts) {
-      data.tutors.shifts.forEach((shift) => {
-        shift.tutors?.forEach((tutor) => {
-          const name = String(tutor.name || "");
-          const subjects = tutor.subjects || [];
+        if (!title) return;
 
-          if (
-            name.toLowerCase().includes(term) ||
-            subjects.some((subject) =>
-              String(subject).toLowerCase().includes(term)
-            )
-          ) {
-            results.push({
-              type: "tutor",
-              title: name,
-              subtitle: `${tutor.tier || ""} • ${shift.name || ""}`,
-              icon: "🧑‍🏫",
-              path: "/tutors"
-            });
-          }
+        items.push({
+          title,
+          category,
+          path:
+            item.slug
+              ? `${route}/${item.slug}`
+              : item.id
+                ? `${route}/${item.id}`
+                : route
         });
       });
-    }
+    };
 
-    if (data.curriculum?.items) {
-      data.curriculum.items.forEach((country) => {
-        const name = String(country.country || "");
-        const description = String(country.description || "");
+    addItems(data?.subjects?.items, 'Subject', '/subjects');
+    addItems(data?.tutors?.shifts, 'Tutor', '/tutors');
+    addItems(data?.curriculum?.items, 'Curriculum', '/curriculum');
+    addItems(data?.resources?.vaults, 'Resource', '/resources');
 
-        if (
-          name.toLowerCase().includes(term) ||
-          (country.subjects || []).some((subject) =>
-            String(subject).toLowerCase().includes(term)
-          )
-        ) {
-          results.push({
-            type: "curriculum",
-            title: name,
-            subtitle: description,
-            icon: country.flag,
-            path: `/curriculum/${name.toLowerCase().replace(/\s+/g, "-")}`
-          });
-        }
-      });
-    }
-
-    if (data.resources?.vaults) {
-      data.resources.vaults.forEach((vault) => {
-        const name = String(vault.name || "");
-        const description = String(vault.description || "");
-
-        if (
-          name.toLowerCase().includes(term) ||
-          description.toLowerCase().includes(term) ||
-          (vault.topics || []).some((topic) =>
-            String(topic).toLowerCase().includes(term)
-          )
-        ) {
-          results.push({
-            type: "resource",
-            title: name,
-            subtitle: description,
-            icon: vault.icon,
-            path: `/resources/${name.toLowerCase().replace(/\s+/g, "-")}`
-          });
-        }
-      });
-    }
-
-    setSearchResults(results.slice(0, 8));
+    return items;
   }, [data]);
 
+
   useEffect(() => {
-    if (!isSearchOpen) return;
+    if (!searchOpen) return;
 
     const timer = setTimeout(() => {
-      if (searchQuery.trim().length >= 2) {
-        performSearch(searchQuery);
-        setShowSuggestions(true);
-      } else {
-        setSearchResults([]);
-        setShowSuggestions(false);
-      }
-    }, 250);
+      searchInputRef.current?.focus();
+    }, 100);
 
     return () => clearTimeout(timer);
-  }, [searchQuery, performSearch, isSearchOpen]);
+  }, [searchOpen]);
 
-  const handleSearch = (event) => {
+
+  useEffect(() => {
+    if (searchTimerRef.current) {
+      clearTimeout(searchTimerRef.current);
+    }
+
+    const query = searchQuery.trim();
+
+    if (query.length < 2) {
+      setSearchResults([]);
+      return;
+    }
+
+    searchTimerRef.current = setTimeout(() => {
+      const results = searchableItems
+        .filter(item =>
+          item.title.toLowerCase().includes(query.toLowerCase())
+        )
+        .slice(0, 8);
+
+      setSearchResults(results);
+    }, 250);
+
+    return () => {
+      if (searchTimerRef.current) {
+        clearTimeout(searchTimerRef.current);
+      }
+    };
+  }, [searchQuery, searchableItems]);
+
+
+  const openSearch = () => {
+    handleClick();
+    closeAllMenus();
+    setSearchOpen(true);
+    setSearchQuery('');
+    setSearchResults([]);
+  };
+
+
+  const closeSearch = () => {
+    setSearchOpen(false);
+    setSearchQuery('');
+    setSearchResults([]);
+  };
+
+
+  const handleSearchSubmit = event => {
     event.preventDefault();
 
-    if (searchQuery.trim()) {
-      playClick();
+    const query = searchQuery.trim();
 
-      navigate(
-        `/search?q=${encodeURIComponent(searchQuery.trim())}`
-      );
+    if (!query) return;
 
-      closeSearch();
-    }
-  };
-
-  const handleResultClick = (path) => {
-    playClick();
-    navigate(path);
     closeSearch();
+    navigate(`/search?q=${encodeURIComponent(query)}`);
   };
 
-  // ======================================================
-  // NAVIGATION LINKS
-  // ======================================================
 
-  const adminNavLinks = [
-    {
-      path: "/admin/dashboard",
-      label: "Dashboard",
-      icon: <PieChart size={18} />
-    },
-    {
-      path: "/admin/users",
-      label: "Users",
-      icon: <Users size={18} />
-    },
-    {
-      path: "/admin/tutors",
-      label: "Tutors",
-      icon: <Users size={18} />
-    },
-    {
-      path: "/admin/content",
-      label: "Content",
-      icon: <Book size={18} />
-    },
-    {
-      path: "/admin/payments",
-      label: "Payments",
-      icon: <CreditCard size={18} />
-    },
-    {
-      path: "/admin/analytics",
-      label: "Analytics",
-      icon: <BarChart2 size={18} />
-    },
-    {
-      path: "/admin/settings",
-      label: "Settings",
-      icon: <Settings size={18} />
+  // =========================================================
+  // LANGUAGE SELECTOR
+  // =========================================================
+
+  const languageOptions = Object.values(languages || {});
+
+
+  const handleLanguageChange = language => {
+    handleClick();
+
+    if (language?.code) {
+      changeLanguage(language.code);
     }
-  ];
 
-  const tutorNavLinks = [
-    {
-      path: "/",
-      label: "Home",
-      icon: <Home size={18} />
-    },
-    {
-      path: "/tutor/dashboard",
-      label: "Dashboard",
-      icon: <BarChart2 size={18} />
-    },
-    {
-      path: "/my-sessions",
-      label: "Sessions",
-      icon: <Calendar size={18} />
-    },
-    {
-      path: "/resources",
-      label: "Resources",
-      icon: <Folder size={18} />
-    }
-  ];
+    setLanguageOpen(false);
+  };
 
-  const studentNavLinks = [
-    {
-      path: "/",
-      label: "Home",
-      icon: <Home size={18} />
-    },
-    {
-      path: "/subjects",
-      label: "Subjects",
-      icon: <Book size={18} />
-    },
-    {
-      path: "/curriculum",
-      label: "Curriculum",
-      icon: <LayoutGrid size={18} />
-    },
-    {
-      path: "/tutors",
-      label: "Tutors",
-      icon: <Users size={18} />
-    },
-    {
-      path: "/pricing",
-      label: "Pricing",
-      icon: <DollarSign size={18} />
-    },
-    {
-      path: "/resources",
-      label: "Resources",
-      icon: <Folder size={18} />
-    },
-    {
-      path: "/mission",
-      label: "Our Mission",
-      icon: <Target size={18} />
-    }
-  ];
 
-  const baseNavLinks = [
-    {
-      path: "/",
-      label: "Home",
-      icon: <Home size={18} />
-    },
-    {
-      path: "/subjects",
-      label: "Subjects",
-      icon: <Book size={18} />
-    },
-    {
-      path: "/curriculum",
-      label: "Curriculum",
-      icon: <LayoutGrid size={18} />
-    },
-    {
-      path: "/tutors",
-      label: "Tutors",
-      icon: <Users size={18} />
-    },
-    {
-      path: "/pricing",
-      label: "Pricing",
-      icon: <DollarSign size={18} />
-    },
-    {
-      path: "/resources",
-      label: "Resources",
-      icon: <Folder size={18} />
-    },
-    {
-      path: "/mission",
-      label: "Our Mission",
-      icon: <Target size={18} />
-    }
-  ];
+  // =========================================================
+  // MENU TOGGLES
+  // =========================================================
 
-  // ======================================================
-  // SELECT NAVIGATION BY ACCOUNT ROLE
-  // ======================================================
+  const toggleUserMenu = () => {
+    handleClick();
+    setUserMenuOpen(previous => !previous);
+    setLanguageOpen(false);
+  };
 
-  let navLinks = baseNavLinks;
 
-  if (isAdmin) {
-    navLinks = adminNavLinks;
-  } else if (isAuthenticated && isTutor) {
-    navLinks = tutorNavLinks;
-  } else if (isAuthenticated && isParent) {
-    navLinks = [];
-  } else if (isAuthenticated) {
-    navLinks = studentNavLinks;
+  const toggleLanguageMenu = () => {
+    handleClick();
+    setLanguageOpen(previous => !previous);
+    setUserMenuOpen(false);
+  };
+
+
+  const toggleMobileMenu = () => {
+    handleClick();
+    setMobileMenuOpen(previous => !previous);
+    setUserMenuOpen(false);
+    setLanguageOpen(false);
+  };
+
+
+  // =========================================================
+  // ROUTE PROTECTION / ROLE NAVBAR
+  // =========================================================
+
+  if (location.pathname.startsWith('/admin') && !isAdmin) {
+    return null;
   }
 
-  console.log("📍 Navbar navigation selected:", {
-    isAuthenticated,
-    isTutor,
-    isAdmin,
-    isParent,
-    navigation: isParent
-      ? ["Dashboard", "Learning", "Resources", "Tutors", "Help Centre"]
-      : navLinks.map((link) => link.label)
-  });
-
-  const showSearch = !isAdmin && !isParent;
-
-  const isActive = (path) =>
-    location.pathname === path;
-
-  const getTypeLabel = (type) => ({
-    subject: "Subject",
-    tutor: "Tutor",
-    curriculum: "Curriculum",
-    resource: "Resource"
-  }[type] || "");
-
-  const getUserName = () =>
-    user?.name?.split(" ")[0] || user?.name || "User";
-
-  const getUserInitial = () =>
-    user?.name
-      ? user.name.charAt(0).toUpperCase()
-      : "U";
-
-  const getUserTier = () =>
-    user
-      ? (
-        user.tier ||
-        user.subscriptionTier ||
-        user.subscription?.tier ||
-        "Silver"
-      )
-      : "Silver";
-
-  const getAvatarImage = () =>
-    user?.avatar || null;
-
-  // ======================================================
-  // LOGO
-  // ======================================================
-
-  const renderLogo = () => (
-    <div className="logo-icon">
-      {!logoError ? (
-        <img
-          src={logo}
-          alt="EduSpantech"
-          className="logo-image"
-          onError={() => setLogoError(true)}
-        />
-      ) : (
-        <span
-          style={{
-            fontSize: "20px",
-            fontWeight: 700,
-            color: "#818cf8"
-          }}
-        >
-          ∑
-        </span>
-      )}
-    </div>
-  );
-
-  const isAdminRoute =
-    location.pathname.startsWith("/admin");
-
-  if (isAdminRoute) return null;
-
-  // ======================================================
-  // PARENT NAVBAR
-  // ======================================================
-
-  if (
-    isAuthenticated &&
-    isParent &&
-    !isAdmin &&
-    !isTutor
-  ) {
+  if (isParent && isAuthenticated) {
     return (
       <ParentNavbar
         user={user}
@@ -1215,26 +739,59 @@ function Navbar() {
     );
   }
 
-  // ======================================================
-  // RENDER EXISTING STUDENT / TUTOR / ADMIN NAVBAR
-  // ======================================================
+
+  // =========================================================
+  // USER DETAILS
+  // =========================================================
+
+  const userName =
+    user?.full_name ||
+    user?.name ||
+    user?.first_name ||
+    user?.username ||
+    'My Account';
+
+  const userEmail = user?.email || '';
+
+  const userInitial = userName.charAt(0).toUpperCase();
+
+  const avatarUrl =
+    user?.avatar_url ||
+    user?.profile_image ||
+    user?.profile_picture ||
+    user?.avatar ||
+    '';
+
+  const roleLabel = isAdmin
+    ? 'Administrator'
+    : isTutor
+      ? 'Tutor'
+      : 'Student';
+
+
+  // =========================================================
+  // RENDER
+  // =========================================================
 
   return (
     <>
-      <header
-        className={`navbar ${isAdmin ? "admin-navbar" : ""}`}
-        ref={menuRef}
-      >
+      <nav className="navbar">
         <div className="navbar-container">
 
           {/* LOGO */}
 
           <Link
-            to={isAdmin ? "/admin/dashboard" : "/"}
+            to="/"
             className="logo"
-            onClick={closeMenu}
+            onClick={handleClick}
           >
-            {renderLogo()}
+            <div className="logo-icon">
+              <img
+                src={logo}
+                alt="EduSpantech"
+                className="logo-image"
+              />
+            </div>
 
             <div className="logo-content">
               <span className="logo-title">
@@ -1242,45 +799,36 @@ function Navbar() {
               </span>
 
               <span className="logo-subtitle">
-                {isAdmin
-                  ? "Admin Panel"
-                  : t("app.subtitle") || "Global Education Platform"}
+                Education for the love of your life
               </span>
             </div>
-
-            {isAdmin && (
-              <span className="admin-badge">
-                ADMIN
-              </span>
-            )}
           </Link>
+
 
           {/* DESKTOP NAVIGATION */}
 
-          <nav className="navbar-links">
-            {navLinks.map((link) => (
+          <div className="navbar-links">
+            {navigationLinks.map(link => (
               <Link
                 key={link.path}
                 to={link.path}
-                className={`${isActive(link.path) ? "active" : ""} ${
-                  isAdmin
-                    ? "admin-nav-link"
-                    : isTutor
-                      ? "tutor-nav-link"
-                      : "student-nav-link"
-                }`}
-                onClick={() => playClick()}
+                className={[
+                  isActive(link.path) ? 'active' : '',
+                  isAdmin ? 'admin-nav-link' : '',
+                  isTutor ? 'tutor-nav-link' : '',
+                  !isAdmin && !isTutor ? 'student-nav-link' : ''
+                ].filter(Boolean).join(' ')}
+                onClick={handleClick}
               >
-                {link.icon && (
-                  <span className="nav-icon">
-                    {link.icon}
-                  </span>
-                )}
+                <span className="nav-icon">
+                  {link.icon}
+                </span>
 
                 {link.label}
               </Link>
             ))}
-          </nav>
+          </div>
+
 
           {/* NAVBAR ACTIONS */}
 
@@ -1288,75 +836,74 @@ function Navbar() {
 
             {/* SEARCH */}
 
-            {showSearch && (
-              <button
-                type="button"
-                className="search-icon-button"
-                aria-label="Open search"
-                onClick={openSearch}
-              >
-                <Search size={20} />
-              </button>
+            <button
+              type="button"
+              className="search-icon-button"
+              aria-label="Search"
+              onClick={openSearch}
+            >
+              <Search size={19} />
+            </button>
+
+
+            {/* NOTIFICATIONS */}
+
+            {isAuthenticated && (
+              <NotificationBell
+                isActive={
+                  isActive('/notifications') ||
+                  isActive('/admin/notifications')
+                }
+              />
             )}
+
 
             {/* LANGUAGE */}
 
-            <div
-              className="language-container"
-              ref={languageRef}
-            >
+            <div className="language-container">
               <button
-                className={`language-button ${
-                  isLanguageOpen ? "active" : ""
-                }`}
-                aria-label="Language"
-                aria-expanded={isLanguageOpen}
-                onClick={toggleLanguage}
+                type="button"
+                className={`language-button ${languageOpen ? 'active' : ''}`}
+                onClick={toggleLanguageMenu}
+                aria-expanded={languageOpen}
               >
-                <Globe size={18} />
+                <Languages size={16} />
 
                 <span className="language-code-label">
-                  {currentLanguage.toUpperCase()}
+                  {currentLanguage?.toUpperCase?.() || 'EN'}
                 </span>
 
                 <ChevronDown
-                  size={14}
-                  className={`language-arrow ${
-                    isLanguageOpen ? "open" : ""
-                  }`}
+                  size={13}
+                  className={`language-arrow ${languageOpen ? 'open' : ''}`}
                 />
               </button>
 
               <div
-                className={`language-dropdown ${
-                  isLanguageOpen ? "open" : ""
-                }`}
+                className={`language-dropdown ${languageOpen ? 'open' : ''}`}
               >
-                {Object.values(languages).map((lang) => (
+                {languageOptions.map(language => (
                   <button
-                    key={lang.code}
+                    type="button"
+                    key={language.code}
                     className={`language-option ${
-                      currentLanguage === lang.code
-                        ? "active"
-                        : ""
+                      currentLanguage === language.code ? 'active' : ''
                     }`}
-                    onClick={() =>
-                      handleLanguageChange(lang.code)
-                    }
+                    onClick={() => handleLanguageChange(language)}
                   >
                     <span className="lang-flag">
-                      {lang.flag}
+                      {language.flag}
                     </span>
 
                     <span className="lang-name">
-                      {lang.nativeName}
+                      {language.nativeName || language.name}
                     </span>
 
                     <span className="lang-code">
-                      {lang.code.toUpperCase()}
+                      {language.code?.toUpperCase()}
                     </span>
 
-                    {currentLanguage === lang.code && (
+                    {currentLanguage === language.code && (
                       <span className="lang-check">
                         ✓
                       </span>
@@ -1366,982 +913,447 @@ function Navbar() {
               </div>
             </div>
 
-            {/* NOTIFICATIONS */}
-
-            {isAuthenticated && (
-              <NotificationBell
-                isActive={
-                  isActive("/notifications") ||
-                  isActive("/admin/notifications")
-                }
-              />
-            )}
 
             {/* AUTHENTICATED USER */}
 
-            {isAuthenticated ? (
-              <div
-                className="user-menu"
-                ref={userDropdownRef}
-              >
+            {isAuthenticated && user ? (
+              <div className="user-menu">
                 <button
+                  type="button"
                   className={`user-dropdown-toggle ${
-                    isUserDropdownOpen ? "open" : ""
+                    userMenuOpen ? 'open' : ''
                   } ${
                     isAdmin
-                      ? "admin-dropdown"
+                      ? 'admin-dropdown'
                       : isTutor
-                        ? "tutor-dropdown"
-                        : "student-dropdown"
+                        ? 'tutor-dropdown'
+                        : ''
                   }`}
-                  onClick={toggleUserDropdown}
-                  aria-label="User menu"
-                  aria-expanded={isUserDropdownOpen}
+                  onClick={toggleUserMenu}
+                  aria-expanded={userMenuOpen}
                 >
-                  <div
-                    className="user-avatar-circle"
-                    style={{
-                      background: isAdmin
-                        ? "linear-gradient(135deg, #f59e0b, #d97706)"
-                        : isTutor
-                          ? "linear-gradient(135deg, #059669, #10b981)"
-                          : "linear-gradient(135deg, #4f46e5, #7c3aed)"
-                    }}
-                  >
-                    {getAvatarImage() ? (
+                  <div className="user-avatar-circle">
+                    {avatarUrl ? (
                       <img
-                        src={getAvatarImage()}
-                        alt="Avatar"
+                        src={avatarUrl}
+                        alt={userName}
                         className="user-avatar-img"
                       />
                     ) : (
                       <span className="user-avatar-initial">
-                        {getUserInitial()}
+                        {userInitial}
                       </span>
                     )}
 
                     {isAdmin && (
-                      <span
-                        className="admin-badge-avatar"
-                        title="Admin"
-                      >
-                        👑
+                      <span className="admin-badge-avatar">
+                        ★
                       </span>
                     )}
 
-                    <span
-                      className="avatar-chevron"
-                      aria-hidden="true"
-                    >
-                      <ChevronDown
-                        size={10}
-                        strokeWidth={3}
-                      />
+                    {isTutor && (
+                      <span className="tutor-badge">
+                        ✓
+                      </span>
+                    )}
+
+                    <span className="avatar-chevron">
+                      <ChevronDown size={9} />
                     </span>
                   </div>
 
                   <span className="user-name">
-                    {getUserName()}
+                    {userName}
                   </span>
                 </button>
+
 
                 {/* USER DROPDOWN */}
 
                 <div
                   className={`user-dropdown ${
-                    isUserDropdownOpen ? "open" : ""
+                    userMenuOpen ? 'open' : ''
                   }`}
                 >
-                  {/* USER PROFILE HEADER */}
-
                   <div className="dropdown-header">
                     <div className="dropdown-user-info">
 
-                      <div
-                        className="dropdown-avatar"
-                        style={{
-                          background: isAdmin
-                            ? "linear-gradient(135deg, #f59e0b, #d97706)"
-                            : isTutor
-                              ? "linear-gradient(135deg, #059669, #10b981)"
-                              : "linear-gradient(135deg, #4f46e5, #7c3aed)"
-                        }}
-                      >
-                        {getAvatarImage() ? (
+                      <div className="dropdown-avatar">
+                        {avatarUrl ? (
                           <img
-                            src={getAvatarImage()}
-                            alt="Avatar"
+                            src={avatarUrl}
+                            alt={userName}
                             className="dropdown-avatar-img"
                           />
                         ) : (
                           <span className="dropdown-avatar-initial">
-                            {getUserInitial()}
+                            {userInitial}
                           </span>
                         )}
                       </div>
 
                       <div className="dropdown-user-details">
                         <span className="dropdown-user-name">
-                          {user?.name || "User"}
+                          {userName}
                         </span>
 
                         <span className="dropdown-user-email">
-                          {user?.email || ""}
+                          {userEmail}
                         </span>
 
-                        {isAdmin ? (
-                          <span className="dropdown-user-tier admin-tier">
-                            👑 Admin
-                          </span>
-                        ) : isTutor ? (
-                          <span className="dropdown-user-tier tutor-tier">
-                            👨‍🏫 Tutor Account
-                          </span>
-                        ) : (
-                          <span className="dropdown-user-tier">
-                            🏅 {getUserTier()} Tier
-                          </span>
-                        )}
+                        <span
+                          className={`dropdown-user-tier ${
+                            isAdmin
+                              ? 'admin-tier'
+                              : isTutor
+                                ? 'tutor-tier'
+                                : ''
+                          }`}
+                        >
+                          {roleLabel}
+                        </span>
                       </div>
+
                     </div>
                   </div>
 
-                  {/* ADMIN DROPDOWN */}
 
-                  {isAdmin && (
-                    <div className="dropdown-items admin-dropdown-items">
-
+                  <div
+                    className={`dropdown-items ${
+                      isAdmin ? 'admin-dropdown-items' : ''
+                    }`}
+                  >
+                    {getAccountLinks().map(item => (
                       <Link
-                        to="/admin/dashboard"
+                        key={item.path}
+                        to={item.path}
                         className="dropdown-item"
                         onClick={() => {
-                          closeUserDropdown();
-                          playClick();
+                          handleClick();
+                          closeAllMenus();
                         }}
                       >
-                        <PieChart size={18} className="dropdown-icon" />
-                        <span>Dashboard</span>
+                        <span className="dropdown-icon">
+                          {item.icon}
+                        </span>
+
+                        {item.label}
                       </Link>
+                    ))}
 
-                      <Link
-                        to="/admin/users"
-                        className="dropdown-item"
-                        onClick={() => {
-                          closeUserDropdown();
-                          playClick();
-                        }}
-                      >
-                        <Users size={18} className="dropdown-icon" />
-                        <span>Manage Users</span>
-                      </Link>
+                    <div className="dropdown-divider" />
 
-                      <Link
-                        to="/admin/tutors"
-                        className="dropdown-item"
-                        onClick={() => {
-                          closeUserDropdown();
-                          playClick();
-                        }}
-                      >
-                        <Users size={18} className="dropdown-icon" />
-                        <span>Manage Tutors</span>
-                      </Link>
+                    <button
+                      type="button"
+                      className="dropdown-item logout"
+                      onClick={handleLogout}
+                    >
+                      <span className="dropdown-icon">
+                        <LogOut size={17} />
+                      </span>
 
-                      <Link
-                        to="/admin/content"
-                        className="dropdown-item"
-                        onClick={() => {
-                          closeUserDropdown();
-                          playClick();
-                        }}
-                      >
-                        <Book size={18} className="dropdown-icon" />
-                        <span>Content Management</span>
-                      </Link>
-
-                      <Link
-                        to="/admin/payments"
-                        className="dropdown-item"
-                        onClick={() => {
-                          closeUserDropdown();
-                          playClick();
-                        }}
-                      >
-                        <CreditCard size={18} className="dropdown-icon" />
-                        <span>Payments</span>
-                      </Link>
-
-                      <Link
-                        to="/admin/analytics"
-                        className="dropdown-item"
-                        onClick={() => {
-                          closeUserDropdown();
-                          playClick();
-                        }}
-                      >
-                        <BarChart2 size={18} className="dropdown-icon" />
-                        <span>Analytics</span>
-                      </Link>
-
-                      <Link
-                        to="/admin/settings"
-                        className="dropdown-item"
-                        onClick={() => {
-                          closeUserDropdown();
-                          playClick();
-                        }}
-                      >
-                        <Settings size={18} className="dropdown-icon" />
-                        <span>System Settings</span>
-                      </Link>
-
-                      <Link
-                        to="/admin/activity"
-                        className="dropdown-item"
-                        onClick={() => {
-                          closeUserDropdown();
-                          playClick();
-                        }}
-                      >
-                        <FileText size={18} className="dropdown-icon" />
-                        <span>Audit Log</span>
-                      </Link>
-
-                      <div className="dropdown-divider"></div>
-
-                      <Link
-                        to="/admin/profile"
-                        className="dropdown-item"
-                        onClick={() => {
-                          closeUserDropdown();
-                          playClick();
-                        }}
-                      >
-                        <User size={18} className="dropdown-icon" />
-                        <span>My Profile</span>
-                      </Link>
-
-                      <button
-                        className="dropdown-item logout"
-                        onClick={handleLogout}
-                      >
-                        <LogOut size={18} className="dropdown-icon" />
-                        <span>Logout</span>
-                      </button>
-                    </div>
-                  )}
-
-                  {/* STUDENT DROPDOWN */}
-
-                  {!isAdmin && !isTutor && (
-                    <div className="dropdown-items">
-
-                      <Link
-                        to="/profile"
-                        className="dropdown-item"
-                        onClick={() => {
-                          closeUserDropdown();
-                          playClick();
-                        }}
-                      >
-                        <User size={18} className="dropdown-icon" />
-                        <span>Profile</span>
-                      </Link>
-
-                      <Link
-                        to="/settings"
-                        className="dropdown-item"
-                        onClick={() => {
-                          closeUserDropdown();
-                          playClick();
-                        }}
-                      >
-                        <Settings size={18} className="dropdown-icon" />
-                        <span>Settings</span>
-                      </Link>
-
-                      <Link
-                        to="/dashboard"
-                        className="dropdown-item"
-                        onClick={() => {
-                          closeUserDropdown();
-                          playClick();
-                        }}
-                      >
-                        <BookOpen size={18} className="dropdown-icon" />
-                        <span>Dashboard</span>
-                      </Link>
-
-                      <Link
-                        to="/my-courses"
-                        className="dropdown-item"
-                        onClick={() => {
-                          closeUserDropdown();
-                          playClick();
-                        }}
-                      >
-                        <Award size={18} className="dropdown-icon" />
-                        <span>My Courses</span>
-                      </Link>
-
-                      <Link
-                        to="/my-sessions"
-                        className="dropdown-item"
-                        onClick={() => {
-                          closeUserDropdown();
-                          playClick();
-                        }}
-                      >
-                        <Clock size={18} className="dropdown-icon" />
-                        <span>My Sessions</span>
-                      </Link>
-
-                      <Link
-                        to="/help"
-                        className="dropdown-item"
-                        onClick={() => {
-                          closeUserDropdown();
-                          playClick();
-                        }}
-                      >
-                        <HelpCircle size={18} className="dropdown-icon" />
-                        <span>Help &amp; Support</span>
-                      </Link>
-
-                      <div className="dropdown-divider"></div>
-
-                      <button
-                        className="dropdown-item logout"
-                        onClick={handleLogout}
-                      >
-                        <LogOut size={18} className="dropdown-icon" />
-                        <span>Logout</span>
-                      </button>
-                    </div>
-                  )}
-
-                  {/* TUTOR DROPDOWN */}
-
-                  {!isAdmin && isTutor && (
-                    <div className="dropdown-items tutor-dropdown-items">
-
-                      <Link
-                        to="/profile"
-                        className="dropdown-item"
-                        onClick={() => {
-                          closeUserDropdown();
-                          playClick();
-                        }}
-                      >
-                        <User size={18} className="dropdown-icon" />
-                        <span>My Profile</span>
-                      </Link>
-
-                      <Link
-                        to="/settings"
-                        className="dropdown-item"
-                        onClick={() => {
-                          closeUserDropdown();
-                          playClick();
-                        }}
-                      >
-                        <Settings size={18} className="dropdown-icon" />
-                        <span>Settings</span>
-                      </Link>
-
-                      <Link
-                        to="/tutor/dashboard"
-                        className="dropdown-item"
-                        onClick={() => {
-                          closeUserDropdown();
-                          playClick();
-                        }}
-                      >
-                        <BarChart2 size={18} className="dropdown-icon" />
-                        <span>Dashboard</span>
-                      </Link>
-
-                      <Link
-                        to="/tutor/students"
-                        className="dropdown-item"
-                        onClick={() => {
-                          closeUserDropdown();
-                          playClick();
-                        }}
-                      >
-                        <Users size={18} className="dropdown-icon" />
-                        <span>My Students</span>
-                      </Link>
-
-                      <Link
-                        to="/tutor/earnings"
-                        className="dropdown-item"
-                        onClick={() => {
-                          closeUserDropdown();
-                          playClick();
-                        }}
-                      >
-                        <TrendingUp size={18} className="dropdown-icon" />
-                        <span>Earnings</span>
-                      </Link>
-
-                      <Link
-                        to="/help"
-                        className="dropdown-item"
-                        onClick={() => {
-                          closeUserDropdown();
-                          playClick();
-                        }}
-                      >
-                        <HelpCircle size={18} className="dropdown-icon" />
-                        <span>Help &amp; Support</span>
-                      </Link>
-
-                      <div className="dropdown-divider"></div>
-
-                      <button
-                        className="dropdown-item logout"
-                        onClick={handleLogout}
-                      >
-                        <LogOut size={18} className="dropdown-icon" />
-                        <span>Logout</span>
-                      </button>
-                    </div>
-                  )}
+                      Sign Out
+                    </button>
+                  </div>
                 </div>
               </div>
             ) : (
-              /* LOGGED-OUT ACTIONS */
+              /* PUBLIC AUTH BUTTONS */
 
               <div className="auth-buttons">
                 <Link
                   to="/login"
                   className="login-button"
-                  onClick={() => playClick()}
+                  onClick={handleClick}
                 >
-                  {t("nav.login") || "Login"}
+                  Login
                 </Link>
 
                 <Link
                   to="/register"
                   className="signup-button"
-                  onClick={() => playClick()}
+                  onClick={handleClick}
                 >
-                  {t("nav.register") || "Sign Up"}
+                  Get Started
                 </Link>
               </div>
             )}
 
+
             {/* MOBILE MENU BUTTON */}
 
             <button
+              type="button"
               className="mobile-menu"
-              onClick={toggleMenu}
-              aria-label="Toggle menu"
-              aria-expanded={isMenuOpen}
+              onClick={toggleMobileMenu}
+              aria-label="Open navigation menu"
+              aria-expanded={mobileMenuOpen}
             >
-              {isMenuOpen
-                ? <X size={24} />
-                : <Menu size={24} />
-              }
+              {mobileMenuOpen ? (
+                <X size={22} />
+              ) : (
+                <Menu size={22} />
+              )}
             </button>
+
           </div>
         </div>
-      </header>
+      </nav>
 
-      {/* ==================================================
+
+      {/* =====================================================
           SEARCH OVERLAY
-      ================================================== */}
+      ===================================================== */}
 
-      {isSearchOpen && (
-        <div
-          className="search-overlay"
-          role="dialog"
-          aria-modal="true"
-          aria-label="Search"
-        >
+      {searchOpen && (
+        <div className="mobile-menu-backdrop" onClick={closeSearch}>
           <div
-            className="search-overlay-backdrop"
-            onClick={closeSearch}
-          />
-
-          <div className="search-overlay-panel">
-
+            className="search-overlay-panel"
+            onClick={event => event.stopPropagation()}
+          >
             <div className="search-overlay-header">
-              <form
-                onSubmit={handleSearch}
-                className="search-overlay-form"
-              >
-                <Search
-                  size={20}
-                  className="search-overlay-icon"
-                />
-
-                <input
-                  ref={searchOverlayInputRef}
-                  type="text"
-                  className="search-overlay-input"
-                  placeholder={
-                    t("nav.search") ||
-                    "Search subjects, tutors, resources…"
-                  }
-                  value={searchQuery}
-                  onChange={(event) =>
-                    setSearchQuery(event.target.value)
-                  }
-                />
-
-                {searchQuery && (
-                  <button
-                    type="button"
-                    className="search-overlay-clear"
-                    aria-label="Clear"
-                    onClick={() => {
-                      setSearchQuery("");
-                      setSearchResults([]);
-                      setShowSuggestions(false);
-
-                      searchOverlayInputRef.current?.focus();
-                    }}
-                  >
-                    <X size={16} />
-                  </button>
-                )}
-              </form>
+              <h3>Search EduSpantech</h3>
 
               <button
                 type="button"
                 className="search-overlay-close"
-                aria-label="Close search"
                 onClick={closeSearch}
+                aria-label="Close search"
               >
                 <X size={20} />
               </button>
             </div>
 
-            <div className="search-overlay-results">
-              {showSuggestions && searchResults.length > 0 ? (
-                searchResults.map((result, index) => (
-                  <div
-                    key={`${result.type}-${result.title}-${index}`}
-                    className="search-overlay-result"
-                    onClick={() =>
-                      handleResultClick(result.path)
-                    }
-                  >
-                    <div className="search-overlay-result-icon">
-                      {result.icon}
-                    </div>
+            <form
+              className="search-overlay-form"
+              onSubmit={handleSearchSubmit}
+            >
+              <Search size={20} />
 
-                    <div className="search-overlay-result-info">
+              <input
+                ref={searchInputRef}
+                type="search"
+                className="search-overlay-input"
+                placeholder="Search subjects, tutors, resources..."
+                value={searchQuery}
+                onChange={event => setSearchQuery(event.target.value)}
+              />
+            </form>
+
+            {searchResults.length > 0 && (
+              <div className="search-overlay-results">
+                {searchResults.map((result, index) => (
+                  <Link
+                    key={`${result.category}-${result.title}-${index}`}
+                    to={result.path}
+                    className="search-overlay-result"
+                    onClick={closeSearch}
+                  >
+                    <div>
                       <div className="search-overlay-result-title">
                         {result.title}
                       </div>
 
-                      <div className="search-overlay-result-subtitle">
-                        {result.subtitle}
-                      </div>
+                      <span>{result.category}</span>
                     </div>
 
-                    <span className="search-overlay-result-type">
-                      {getTypeLabel(result.type)}
-                    </span>
-                  </div>
-                ))
-              ) : searchQuery.trim().length >= 2 ? (
+                    <Search size={15} />
+                  </Link>
+                ))}
+              </div>
+            )}
+
+            {searchQuery.trim().length >= 2 &&
+              searchResults.length === 0 && (
                 <div className="search-overlay-empty">
-                  <Search size={32} />
-                  <p>
-                    No results found for "{searchQuery}"
-                  </p>
-                </div>
-              ) : (
-                <div className="search-overlay-hint">
-                  <Search size={32} />
-                  <p>
-                    Type at least 2 characters to search
-                  </p>
+                  No matching results found.
                 </div>
               )}
-            </div>
+
+            <button
+              type="button"
+              className="search-overlay-submit"
+              onClick={handleSearchSubmit}
+              disabled={!searchQuery.trim()}
+            >
+              View all search results
+            </button>
           </div>
         </div>
       )}
 
-      {/* ==================================================
-          MOBILE MENU BACKDROP
-      ================================================== */}
 
-      {isMenuOpen && (
+      {/* =====================================================
+          MOBILE MENU BACKDROP
+      ===================================================== */}
+
+      {mobileMenuOpen && (
         <div
           className="mobile-menu-backdrop"
-          onClick={closeMenu}
-          aria-hidden="true"
+          onClick={() => setMobileMenuOpen(false)}
         />
       )}
 
-      {/* ==================================================
+
+      {/* =====================================================
           MOBILE MENU
-      ================================================== */}
+      ===================================================== */}
 
       <div
         className={`mobile-menu-overlay ${
-          isMenuOpen ? "open" : ""
+          mobileMenuOpen ? 'open' : ''
         }`}
-        role="dialog"
-        aria-modal="true"
-        aria-hidden={!isMenuOpen}
       >
-        <div className="mobile-menu-sheet">
-
+        <div
+          className="mobile-menu-sheet"
+          onClick={event => event.stopPropagation()}
+        >
           <div className="mobile-menu-header">
             <span className="mobile-menu-title">
-              {isAdmin
-                ? "Admin Menu"
-                : isTutor
-                  ? "Tutor Menu"
-                  : "Menu"}
+              Navigation
             </span>
 
             <button
+              type="button"
               className="mobile-menu-close"
-              onClick={closeMenu}
-              aria-label="Close menu"
+              onClick={() => setMobileMenuOpen(false)}
+              aria-label="Close navigation"
             >
-              <X size={24} />
+              <X size={20} />
             </button>
           </div>
 
-          {/* MOBILE PRIMARY NAVIGATION */}
 
-          <nav className="mobile-nav-links">
-            {navLinks.map((link) => (
+          {/* MAIN MOBILE LINKS */}
+
+          <div className="mobile-nav-links">
+            {navigationLinks.map(link => (
               <Link
                 key={link.path}
                 to={link.path}
-                className={
-                  isActive(link.path) ? "active" : ""
-                }
+                className={[
+                  isActive(link.path) ? 'active' : '',
+                  isAdmin ? 'admin-nav-link' : '',
+                  isTutor ? 'tutor-nav-link' : '',
+                  !isAdmin && !isTutor ? 'student-nav-link' : ''
+                ].filter(Boolean).join(' ')}
                 onClick={() => {
-                  closeMenu();
-                  playClick();
+                  handleClick();
+                  setMobileMenuOpen(false);
                 }}
               >
-                {link.icon && (
-                  <span className="mobile-nav-icon">
-                    {link.icon}
-                  </span>
-                )}
+                <span className="mobile-nav-icon">
+                  {link.icon}
+                </span>
 
                 {link.label}
               </Link>
             ))}
-          </nav>
-
-          <div className="mobile-divider"></div>
-
-          {/* STUDENT MOBILE ACCOUNT TOOLS */}
-
-          {isAuthenticated && !isAdmin && !isTutor && (
-            <div className="mobile-section">
-              <div className="mobile-section-label">
-                Account
-              </div>
-
-              <Link
-                to="/profile"
-                onClick={() => {
-                  closeMenu();
-                  playClick();
-                }}
-              >
-                <User size={18} /> Profile
-              </Link>
-
-              <Link
-                to="/settings"
-                onClick={() => {
-                  closeMenu();
-                  playClick();
-                }}
-              >
-                <Settings size={18} /> Settings
-              </Link>
-
-              <Link
-                to="/dashboard"
-                onClick={() => {
-                  closeMenu();
-                  playClick();
-                }}
-              >
-                <BookOpen size={18} /> Dashboard
-              </Link>
-
-              <Link
-                to="/my-courses"
-                onClick={() => {
-                  closeMenu();
-                  playClick();
-                }}
-              >
-                <Award size={18} /> My Courses
-              </Link>
-
-              <Link
-                to="/my-sessions"
-                onClick={() => {
-                  closeMenu();
-                  playClick();
-                }}
-              >
-                <Clock size={18} /> My Sessions
-              </Link>
-
-              <Link
-                to="/help"
-                onClick={() => {
-                  closeMenu();
-                  playClick();
-                }}
-              >
-                <HelpCircle size={18} /> Help &amp; Support
-              </Link>
-            </div>
-          )}
-
-          {/* TUTOR MOBILE ACCOUNT TOOLS */}
-
-          {isAuthenticated && !isAdmin && isTutor && (
-            <div className="mobile-section">
-              <div className="mobile-section-label">
-                Tutor Tools
-              </div>
-
-              <Link
-                to="/profile"
-                onClick={() => {
-                  closeMenu();
-                  playClick();
-                }}
-              >
-                <User size={18} /> My Profile
-              </Link>
-
-              <Link
-                to="/settings"
-                onClick={() => {
-                  closeMenu();
-                  playClick();
-                }}
-              >
-                <Settings size={18} /> Settings
-              </Link>
-
-              <Link
-                to="/tutor/dashboard"
-                onClick={() => {
-                  closeMenu();
-                  playClick();
-                }}
-              >
-                <BarChart2 size={18} /> Dashboard
-              </Link>
-
-              <Link
-                to="/tutor/students"
-                onClick={() => {
-                  closeMenu();
-                  playClick();
-                }}
-              >
-                <Users size={18} /> My Students
-              </Link>
-
-              <Link
-                to="/tutor/earnings"
-                onClick={() => {
-                  closeMenu();
-                  playClick();
-                }}
-              >
-                <TrendingUp size={18} /> Earnings
-              </Link>
-
-              <Link
-                to="/help"
-                onClick={() => {
-                  closeMenu();
-                  playClick();
-                }}
-              >
-                <HelpCircle size={18} /> Help
-              </Link>
-            </div>
-          )}
-
-          {/* ADMIN MOBILE ACCOUNT TOOLS */}
-
-          {isAdmin && (
-            <div className="mobile-section">
-              <div className="mobile-section-label">
-                Admin
-              </div>
-
-              <Link
-                to="/admin/dashboard"
-                onClick={() => {
-                  closeMenu();
-                  playClick();
-                }}
-              >
-                <PieChart size={18} /> Dashboard
-              </Link>
-
-              <Link
-                to="/admin/users"
-                onClick={() => {
-                  closeMenu();
-                  playClick();
-                }}
-              >
-                <Users size={18} /> Manage Users
-              </Link>
-
-              <Link
-                to="/admin/tutors"
-                onClick={() => {
-                  closeMenu();
-                  playClick();
-                }}
-              >
-                <Users size={18} /> Manage Tutors
-              </Link>
-
-              <Link
-                to="/admin/content"
-                onClick={() => {
-                  closeMenu();
-                  playClick();
-                }}
-              >
-                <Book size={18} /> Content
-              </Link>
-
-              <Link
-                to="/admin/payments"
-                onClick={() => {
-                  closeMenu();
-                  playClick();
-                }}
-              >
-                <CreditCard size={18} /> Payments
-              </Link>
-
-              <Link
-                to="/admin/analytics"
-                onClick={() => {
-                  closeMenu();
-                  playClick();
-                }}
-              >
-                <BarChart2 size={18} /> Analytics
-              </Link>
-
-              <Link
-                to="/admin/settings"
-                onClick={() => {
-                  closeMenu();
-                  playClick();
-                }}
-              >
-                <Settings size={18} /> Settings
-              </Link>
-
-              <Link
-                to="/admin/activity"
-                onClick={() => {
-                  closeMenu();
-                  playClick();
-                }}
-              >
-                <FileText size={18} /> Audit Log
-              </Link>
-            </div>
-          )}
-
-          <div className="mobile-divider"></div>
-
-          {/* MOBILE LANGUAGE SELECTOR */}
-
-          <div className="mobile-section">
-            <div className="mobile-section-label">
-              <Globe size={15} /> Language
-            </div>
-
-            <div className="mobile-lang-grid">
-              {Object.values(languages).map((lang) => (
-                <button
-                  key={lang.code}
-                  className={`mobile-language-option ${
-                    currentLanguage === lang.code
-                      ? "active"
-                      : ""
-                  }`}
-                  onClick={() => {
-                    handleLanguageChange(lang.code);
-                    closeMenu();
-                  }}
-                >
-                  <span>{lang.flag}</span>
-                  <span>{lang.nativeName}</span>
-                </button>
-              ))}
-            </div>
           </div>
 
-          <div className="mobile-divider"></div>
 
-          {/* MOBILE LOGOUT / AUTH BUTTONS */}
+          {isAuthenticated && (
+            <>
+              <div className="mobile-divider" />
 
-          <div className="mobile-section">
-            {isAuthenticated ? (
+              <div className="mobile-section">
+                <span className="mobile-section-label">
+                  My Account
+                </span>
+
+                {getAccountLinks().map(item => (
+                  <Link
+                    key={item.path}
+                    to={item.path}
+                    onClick={() => {
+                      handleClick();
+                      setMobileMenuOpen(false);
+                    }}
+                  >
+                    {item.icon}
+                    {item.label}
+                  </Link>
+                ))}
+              </div>
+
+              <div className="mobile-divider" />
+
               <button
+                type="button"
                 className="mobile-logout"
                 onClick={handleLogout}
               >
-                <LogOut size={18} /> Logout
+                <LogOut size={17} />
+                Sign Out
               </button>
-            ) : (
+            </>
+          )}
+
+
+          {!isAuthenticated && (
+            <>
+              <div className="mobile-divider" />
+
               <div className="mobile-auth-buttons">
                 <Link
                   to="/login"
                   className="mobile-login"
-                  onClick={() => {
-                    closeMenu();
-                    playClick();
-                  }}
+                  onClick={() => setMobileMenuOpen(false)}
                 >
-                  {t("nav.login") || "Login"}
+                  Login
                 </Link>
 
                 <Link
                   to="/register"
                   className="mobile-signup"
-                  onClick={() => {
-                    closeMenu();
-                    playClick();
-                  }}
+                  onClick={() => setMobileMenuOpen(false)}
                 >
-                  {t("nav.register") || "Sign Up"}
+                  Get Started
                 </Link>
               </div>
-            )}
-          </div>
+            </>
+          )}
+
+
+          {/* MOBILE LANGUAGE OPTIONS */}
+
+          {languageOptions.length > 0 && (
+            <>
+              <div className="mobile-divider" />
+
+              <div className="mobile-section">
+                <span className="mobile-section-label">
+                  Language
+                </span>
+
+                <div className="mobile-lang-grid">
+                  {languageOptions.map(language => (
+                    <button
+                      type="button"
+                      key={language.code}
+                      className={`mobile-language-option ${
+                        currentLanguage === language.code ? 'active' : ''
+                      }`}
+                      onClick={() => {
+                        handleLanguageChange(language);
+                        setMobileMenuOpen(false);
+                      }}
+                    >
+                      <span>{language.flag}</span>
+                      <span>
+                        {language.nativeName || language.name}
+                      </span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </>
+          )}
+
         </div>
       </div>
     </>
   );
-}
+};
 
 export default Navbar;

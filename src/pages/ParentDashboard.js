@@ -1,12 +1,12 @@
-
+```jsx
 // src/pages/ParentDashboard.js
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { authService } from '../services/authService';
 import { API_BASE_URL } from '../services/api';
 import {
   Users, Calendar, Clock, BookOpen, TrendingUp, CheckCircle, AlertCircle,
-  MessageSquare, ChevronDown, FileText, Video, Camera, LogOut, Upload, Trash2, X
+  MessageSquare, ChevronDown, FileText, Video, Trash2
 } from 'lucide-react';
 import RatingStars from '../components/RatingStars';
 import './ParentDashboard.css';
@@ -106,7 +106,7 @@ const OUTCOME_META = {
   'missed-student':   { label: 'Missed · Student', tone: 'danger',  icon: '❌' },
   'missed-tutor':     { label: 'Missed · Tutor',   tone: 'danger',  icon: '🚫' },
   'cancelled-parent': { label: 'Cancelled · You',  tone: 'muted',   icon: '🔁' },
-  'cancelled-tutor':  { label: 'Cancelled · Tutor', tone: 'muted',   icon: '🔁' },
+  'cancelled-tutor':  { label: 'Cancelled · Tutor', tone: 'muted',  icon: '🔁' },
   rescheduled:        { label: 'Rescheduled',      tone: 'warn',    icon: '🕓' },
   upcoming:           { label: 'Upcoming',          tone: 'info',    icon: '📅' },
   ongoing:            { label: 'In progress',      tone: 'info',    icon: '🟢' }
@@ -133,18 +133,7 @@ const AttendanceBadge = ({ outcome }) => {
 // ============================================
 const ParentDashboard = () => {
   const navigate = useNavigate();
-  const [parent, setParent] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [tagline, setTagline] = useState('Welcome back');
-
-  // Avatar
-  const [avatarUrl, setAvatarUrl] = useState(null);
-  const [photoUploading, setPhotoUploading] = useState(false);
-  const [photoError, setPhotoError] = useState('');
-  const fileInputRef = useRef(null);
-  const cameraInputRef = useRef(null);
-  const [showPhotoModal, setShowPhotoModal] = useState(false);
-  const [showViewPhotoModal, setShowViewPhotoModal] = useState(false);
 
   // Children
   const [children, setChildren] = useState([]);
@@ -186,29 +175,6 @@ const ParentDashboard = () => {
           navigate('/parent-login');
           return;
         }
-        setParent(user);
-        if (user.avatar) setAvatarUrl(user.avatar);
-
-        try {
-          const token = localStorage.getItem('accessToken');
-          const res = await fetch(`${API_BASE_URL}/app-messages/parent`, {
-            headers: { 'Authorization': `Bearer ${token}` }
-          });
-          if (res.ok) {
-            const data = await res.json();
-            const messagesArray = Array.isArray(data) ? data : (data.messages || data.data || []);
-            if (messagesArray.length > 0) {
-              const randomIndex = Math.floor(Math.random() * messagesArray.length);
-              const randomMessage = messagesArray[randomIndex];
-              setTagline(randomMessage.message || randomMessage.content || randomMessage);
-            } else {
-              setTagline(`Welcome back, ${user.name?.split(' ')[0] || 'Parent'}`);
-            }
-          }
-        } catch (err) {
-          setTagline(`Welcome back, ${user.name?.split(' ')[0] || 'Parent'}`);
-        }
-
         await fetchLinkedChildren();
       } catch (error) {
         navigate('/parent-login');
@@ -291,11 +257,6 @@ const ParentDashboard = () => {
     }
   };
 
-  const handleSignOut = () => {
-    authService.logout();
-    navigate('/parent-login');
-  };
-
   const handleTutorNameClick = (tutor) => {
     if (!tutor) return;
     setViewingTutor(tutor);
@@ -308,83 +269,6 @@ const ParentDashboard = () => {
     setViewingTutor(null);
     setShowFullProfile(false);
   };
-
-  // ============ PHOTO HANDLERS ============
-  const handlePhotoUpload = async (e) => {
-    const file = e.target.files[0];
-    if (!file) return;
-    if (!file.type.startsWith('image/')) {
-      setPhotoError('❌ Please upload an image file (JPG, PNG, WEBP)');
-      return;
-    }
-    if (file.size > 5 * 1024 * 1024) {
-      setPhotoError('❌ Image must be under 5MB');
-      return;
-    }
-    setPhotoUploading(true);
-    setPhotoError('');
-    setShowPhotoModal(false);
-    try {
-      const reader = new FileReader();
-      reader.readAsDataURL(file);
-      reader.onload = async () => {
-        const base64Image = reader.result;
-        const token = localStorage.getItem('accessToken');
-        const response = await fetch(`${API_BASE_URL}/auth/profile`, {
-          method: 'PUT',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${token}`
-          },
-          body: JSON.stringify({ avatar: base64Image })
-        });
-        if (response.ok) {
-          const data = await response.json();
-          if (data.success) {
-            setAvatarUrl(base64Image);
-            const storedUser = JSON.parse(localStorage.getItem('user') || '{}');
-            storedUser.avatar = base64Image;
-            localStorage.setItem('user', JSON.stringify(storedUser));
-          }
-        } else {
-          const errorData = await response.json();
-          setPhotoError(errorData.error || '❌ Failed to upload photo');
-        }
-        setPhotoUploading(false);
-      };
-    } catch (error) {
-      console.error('❌ Photo upload error:', error);
-      setPhotoError('❌ Error uploading photo');
-      setPhotoUploading(false);
-    }
-  };
-
-  const handleRemovePhoto = async () => {
-    if (!window.confirm('Are you sure you want to remove your profile photo?')) return;
-    try {
-      const token = localStorage.getItem('accessToken');
-      const response = await fetch(`${API_BASE_URL}/auth/profile`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
-        body: JSON.stringify({ avatar: null })
-      });
-      if (response.ok) {
-        setAvatarUrl(null);
-        const storedUser = JSON.parse(localStorage.getItem('user') || '{}');
-        storedUser.avatar = null;
-        localStorage.setItem('user', JSON.stringify(storedUser));
-        setShowPhotoModal(false);
-      }
-    } catch (error) {
-      console.error('❌ Remove photo error:', error);
-    }
-  };
-
-  const triggerFileInput = () => fileInputRef.current?.click();
-  const triggerCameraInput = () => cameraInputRef.current?.click();
 
   const handleLinkChild = async (e) => {
     e.preventDefault();
@@ -533,50 +417,6 @@ const ParentDashboard = () => {
 
   return (
     <div className="parent-dashboard">
-      {/* Header */}
-      <div className="parent-dashboard-header">
-        <div className="parent-header-content">
-          <div className="parent-profile-group">
-            <div
-              className="parent-avatar-container"
-              onClick={() => setShowPhotoModal(true)}
-              title="Manage Profile Photo"
-            >
-              {photoUploading ? (
-                <div className="avatar-loading-spinner"></div>
-              ) : avatarUrl ? (
-                <img src={avatarUrl} alt="Parent" className="parent-avatar-img" />
-              ) : (
-                <div className="parent-avatar-initial">
-                  {parent?.name?.charAt(0).toUpperCase() || 'P'}
-                </div>
-              )}
-              {!photoUploading && (
-                <div className="avatar-edit-overlay">
-                  <Camera size={16} />
-                </div>
-              )}
-            </div>
-            <div className="parent-text-info">
-              <h1>{parent?.name || 'Parent Portal'}</h1>
-              <p>{tagline}</p>
-            </div>
-          </div>
-          <div className="parent-header-actions">
-            <button className="btn-sign-out" onClick={handleSignOut}>
-              <LogOut size={18} />
-              Sign Out
-            </button>
-          </div>
-        </div>
-      </div>
-
-      {photoError && (
-        <div className="profile-error" style={{ margin: '0 auto 20px', maxWidth: '1200px', padding: '0 32px' }}>
-          {photoError}
-        </div>
-      )}
-
       {/* Child Selector */}
       <div className="child-selector-section">
         <div className="child-selector-header">
@@ -998,73 +838,6 @@ const ParentDashboard = () => {
         </div>
       )}
 
-      {/* Photo Modal */}
-      {showPhotoModal && (
-        <div className="modal-overlay" onClick={() => setShowPhotoModal(false)}>
-          <div className="modal-content photo-modal" onClick={e => e.stopPropagation()}>
-            <div className="modal-header">
-              <h3>Profile Photo</h3>
-              <button onClick={() => setShowPhotoModal(false)}>✕</button>
-            </div>
-            <div className="photo-modal-body">
-              <div className="photo-preview-container">
-                {avatarUrl ? (
-                  <img src={avatarUrl} alt="Profile" className="photo-large-view" />
-                ) : (
-                  <div className="photo-large-initial">
-                    {parent?.name?.charAt(0).toUpperCase() || 'P'}
-                  </div>
-                )}
-              </div>
-              {photoUploading && (
-                <div className="photo-uploading-status">
-                  <div className="loading-spinner"></div>
-                  <p>Uploading photo...</p>
-                </div>
-              )}
-            </div>
-            <div className="photo-modal-actions">
-              {avatarUrl ? (
-                <>
-                  <button className="photo-action-btn view" onClick={() => { setShowPhotoModal(false); setShowViewPhotoModal(true); }}>
-                    <EyeIcon /> View Full Photo
-                  </button>
-                  <button className="photo-action-btn change" onClick={triggerFileInput}>
-                    <Upload size={18} /> Change Photo
-                  </button>
-                  <button className="photo-action-btn remove" onClick={handleRemovePhoto}>
-                    <Trash2 size={18} /> Remove Photo
-                  </button>
-                </>
-              ) : (
-                <>
-                  <button className="photo-action-btn capture" onClick={triggerCameraInput}>
-                    <Camera size={18} /> Capture Photo
-                  </button>
-                  <button className="photo-action-btn upload" onClick={triggerFileInput}>
-                    <Upload size={18} /> Upload from Device
-                  </button>
-                </>
-              )}
-            </div>
-            <input type="file" ref={fileInputRef} onChange={handlePhotoUpload} accept="image/*" style={{ display: 'none' }} />
-            <input type="file" ref={cameraInputRef} onChange={handlePhotoUpload} accept="image/*" capture="user" style={{ display: 'none' }} />
-          </div>
-        </div>
-      )}
-
-      {/* View Full Photo Modal */}
-      {showViewPhotoModal && (
-        <div className="modal-overlay" onClick={() => setShowViewPhotoModal(false)}>
-          <div className="view-photo-container" onClick={e => e.stopPropagation()}>
-            <button className="view-photo-close" onClick={() => setShowViewPhotoModal(false)}>
-              <X size={24} />
-            </button>
-            {avatarUrl && <img src={avatarUrl} alt="Profile" className="view-photo-full" />}
-          </div>
-        </div>
-      )}
-
       {/* ============================================
           TUTOR PROFILE MODAL — with ratings & reviews
           ============================================ */}
@@ -1234,12 +1007,5 @@ const ParentDashboard = () => {
     </div>
   );
 };
-
-const EyeIcon = () => (
-  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
-    <circle cx="12" cy="12" r="3" />
-  </svg>
-);
 
 export default ParentDashboard;

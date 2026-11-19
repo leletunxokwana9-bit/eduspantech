@@ -35,6 +35,7 @@ const Login = () => {
   const [savedAccounts, setSavedAccounts] = useState([]);
 
   const emailInputRef = useRef(null);
+  const passwordInputRef = useRef(null);
   const dropdownRef = useRef(null);
 
   const [bannedInfo, setBannedInfo] = useState(null);
@@ -123,6 +124,8 @@ const Login = () => {
   // ============================================
 
   useEffect(() => {
+    let isMounted = true;
+
     const loadHeroImage = async () => {
       try {
         const response = await fetch(`${API_URL}/login-hero/active`);
@@ -133,17 +136,23 @@ const Login = () => {
 
         const data = await response.json();
 
-        if (data.success && data.image?.url) {
+        if (isMounted && data.success && data.image?.url) {
           setHeroImage(data.image);
         }
       } catch (err) {
         console.error('Login hero image error:', err);
       } finally {
-        setHeroImageLoading(false);
+        if (isMounted) {
+          setHeroImageLoading(false);
+        }
       }
     };
 
     loadHeroImage();
+
+    return () => {
+      isMounted = false;
+    };
   }, []);
 
   // ============================================
@@ -153,8 +162,7 @@ const Login = () => {
   const checkIsTutor = (userData) => {
     if (!userData) return false;
 
-    let data = userData;
-    if (userData.user) data = userData.user;
+    const data = userData.user || userData;
 
     return (
       data.is_tutor === true ||
@@ -164,15 +172,14 @@ const Login = () => {
       data.role === 'instructor' ||
       data.userType === 'tutor' ||
       data.type === 'tutor' ||
-      (data.roles && data.roles.includes('tutor'))
+      (Array.isArray(data.roles) && data.roles.includes('tutor'))
     );
   };
 
   const checkIsAdmin = (userData) => {
     if (!userData) return false;
 
-    let data = userData;
-    if (userData.user) data = userData.user;
+    const data = userData.user || userData;
 
     return (
       data.is_admin === true ||
@@ -187,6 +194,8 @@ const Login = () => {
   // ============================================
 
   useEffect(() => {
+    let isMounted = true;
+
     const loadAndBackfillAccounts = async () => {
       const saved = localStorage.getItem('eduspantech_saved_accounts');
 
@@ -194,6 +203,11 @@ const Login = () => {
 
       try {
         const accounts = JSON.parse(saved);
+
+        if (!Array.isArray(accounts)) {
+          return;
+        }
+
         let hasChanges = false;
 
         const updatedAccounts = await Promise.all(
@@ -225,6 +239,8 @@ const Login = () => {
           })
         );
 
+        if (!isMounted) return;
+
         setSavedAccounts(updatedAccounts);
 
         if (hasChanges) {
@@ -239,6 +255,10 @@ const Login = () => {
     };
 
     loadAndBackfillAccounts();
+
+    return () => {
+      isMounted = false;
+    };
   }, []);
 
   // ============================================
@@ -247,12 +267,13 @@ const Login = () => {
 
   useEffect(() => {
     const handleClickOutside = (event) => {
-      if (
-        dropdownRef.current &&
-        !dropdownRef.current.contains(event.target) &&
-        emailInputRef.current &&
-        !emailInputRef.current.contains(event.target)
-      ) {
+      const clickedDropdown =
+        dropdownRef.current?.contains(event.target);
+
+      const clickedEmail =
+        emailInputRef.current?.contains(event.target);
+
+      if (!clickedDropdown && !clickedEmail) {
         setShowSavedAccounts(false);
       }
     };
@@ -269,52 +290,52 @@ const Login = () => {
   // ============================================
 
   useEffect(() => {
+    let isMounted = true;
+
     const checkExistingSession = async () => {
       setIsCheckingSession(true);
 
       const token = localStorage.getItem('accessToken');
 
-      if (token) {
-        try {
-          const user = await authService.getCurrentUser();
+      if (!token) {
+        if (isMounted) setIsCheckingSession(false);
+        return;
+      }
 
-          if (user && user.name) {
-            const isTutor = checkIsTutor(user);
-            const isAdmin = checkIsAdmin(user);
+      try {
+        const user = await authService.getCurrentUser();
 
-            if (isAdmin) {
-              localStorage.removeItem('accessToken');
-              localStorage.removeItem('refreshToken');
-              localStorage.removeItem('user');
-              localStorage.removeItem('userRole');
+        if (!isMounted) return;
 
-              setIsCheckingSession(false);
-              return;
-            }
+        if (user && user.name) {
+          const isTutor = checkIsTutor(user);
+          const isAdmin = checkIsAdmin(user);
 
-            const confirmSwitch = window.confirm(
-              `You are currently logged in as "${user.name}".\n\nDo you want to switch accounts?`
-            );
-
-            if (confirmSwitch) {
-              localStorage.removeItem('accessToken');
-              localStorage.removeItem('refreshToken');
-              localStorage.removeItem('user');
-              localStorage.removeItem('userRole');
-
-              setIsCheckingSession(false);
-            } else {
-              navigate(isTutor ? '/tutor/dashboard' : '/dashboard');
-            }
-          } else {
+          if (isAdmin) {
             localStorage.removeItem('accessToken');
             localStorage.removeItem('refreshToken');
             localStorage.removeItem('user');
             localStorage.removeItem('userRole');
 
             setIsCheckingSession(false);
+            return;
           }
-        } catch (err) {
+
+          const confirmSwitch = window.confirm(
+            `You are currently logged in as "${user.name}".\n\nDo you want to switch accounts?`
+          );
+
+          if (confirmSwitch) {
+            localStorage.removeItem('accessToken');
+            localStorage.removeItem('refreshToken');
+            localStorage.removeItem('user');
+            localStorage.removeItem('userRole');
+
+            setIsCheckingSession(false);
+          } else {
+            navigate(isTutor ? '/tutor/dashboard' : '/dashboard');
+          }
+        } else {
           localStorage.removeItem('accessToken');
           localStorage.removeItem('refreshToken');
           localStorage.removeItem('user');
@@ -322,12 +343,23 @@ const Login = () => {
 
           setIsCheckingSession(false);
         }
-      } else {
-        setIsCheckingSession(false);
+      } catch (err) {
+        localStorage.removeItem('accessToken');
+        localStorage.removeItem('refreshToken');
+        localStorage.removeItem('user');
+        localStorage.removeItem('userRole');
+
+        if (isMounted) {
+          setIsCheckingSession(false);
+        }
       }
     };
 
     checkExistingSession();
+
+    return () => {
+      isMounted = false;
+    };
   }, [navigate]);
 
   // ============================================
@@ -389,6 +421,8 @@ const Login = () => {
         pendingUserData.userData,
         pendingUserData.isTutor
       );
+
+      setPendingUserData(null);
     }
   };
 
@@ -402,6 +436,8 @@ const Login = () => {
         pendingUserData.userData,
         pendingUserData.isTutor
       );
+
+      setPendingUserData(null);
     }
   };
 
@@ -409,9 +445,9 @@ const Login = () => {
     setEmail(account.email);
     setShowSavedAccounts(false);
 
-    setTimeout(() => {
-      document.querySelector('input[type="password"]')?.focus();
-    }, 50);
+    requestAnimationFrame(() => {
+      passwordInputRef.current?.focus();
+    });
   };
 
   // ============================================
@@ -441,14 +477,11 @@ const Login = () => {
             message: response.error || 'Your account has been suspended.',
             bannedUntil: response.bannedUntil
           });
-
-          setLoading(false);
           return;
         }
 
         if (response?.inactive) {
           setInactive(true);
-          setLoading(false);
           return;
         }
 
@@ -457,8 +490,6 @@ const Login = () => {
             retryAfter: response.retryAfter,
             message: response.error || 'Too many failed attempts.'
           });
-
-          setLoading(false);
           return;
         }
 
@@ -466,16 +497,12 @@ const Login = () => {
           setNeedsVerification(true);
           setUnverifiedEmail(email);
           setError('Please verify your email before logging in.');
-
-          setLoading(false);
           return;
         }
 
         if (response?.notStudent) {
           setError('Invalid Credentials');
           setAttemptsLeft(2);
-
-          setLoading(false);
           return;
         }
 
@@ -486,14 +513,10 @@ const Login = () => {
             response.error ||
             `Invalid email or password. ${response.attemptsLeft} attempts remaining.`
           );
-
-          setLoading(false);
           return;
         }
 
         setError(response?.error || 'Login failed. Please try again.');
-
-        setLoading(false);
         return;
       }
 
@@ -507,7 +530,6 @@ const Login = () => {
         localStorage.removeItem('user');
         localStorage.removeItem('userRole');
 
-        setLoading(false);
         return;
       }
 
@@ -517,8 +539,6 @@ const Login = () => {
         setRoleError(
           'This is a TUTOR account. Please select "Tutor" to login.'
         );
-
-        setLoading(false);
 
         localStorage.removeItem('accessToken');
         localStorage.removeItem('refreshToken');
@@ -533,8 +553,6 @@ const Login = () => {
           'This is a STUDENT account. Please select "Student" to login.'
         );
 
-        setLoading(false);
-
         localStorage.removeItem('accessToken');
         localStorage.removeItem('refreshToken');
         localStorage.removeItem('user');
@@ -546,7 +564,6 @@ const Login = () => {
       if (rememberMe) {
         setPendingUserData({ userData, isTutor });
         setShowSavePrompt(true);
-        setLoading(false);
         return;
       }
 
@@ -792,10 +809,17 @@ const Login = () => {
                 Tutor
               </button>
 
-              {/* Parent/Guardian opens the public Parent Home page */}
+              {/* IMPORTANT:
+                  Parent/Guardian goes to the public Parent Home.
+                  It must NOT go directly to /parent-login.
+                  The Parent Home has its own ParentNavbar and Login button.
+              */}
               <Link
                 to="/parent"
                 className="role-tab parent-role-tab"
+                onClick={() => {
+                  console.log('Navigating to public Parent Home: /parent');
+                }}
               >
                 <span className="role-icon">🛡</span>
                 Parent/Guardian
@@ -884,6 +908,7 @@ const Login = () => {
 
                   <div className="verification-actions">
                     <button
+                      type="button"
                       onClick={handleResendVerification}
                       disabled={loading}
                       className="resend-btn"
@@ -949,8 +974,8 @@ const Login = () => {
                   }}
                   placeholder="you@example.com"
                   required
-                  autoComplete="new-password"
-                  disabled={loading || bannedInfo || inactive || lockedInfo}
+                  autoComplete="username"
+                  disabled={loading || !!bannedInfo || inactive || !!lockedInfo}
                 />
 
                 {showSavedAccounts && savedAccounts.length > 0 && (
@@ -964,7 +989,7 @@ const Login = () => {
 
                     {savedAccounts.map((account, idx) => (
                       <div
-                        key={idx}
+                        key={account.email || idx}
                         className="saved-account-item"
                         onMouseDown={(e) => {
                           e.preventDefault();
@@ -978,7 +1003,7 @@ const Login = () => {
                               alt={account.name}
                               className="custom-modal-avatar-img"
                               onError={(e) => {
-                                e.target.style.display = 'none';
+                                e.currentTarget.style.display = 'none';
                               }}
                             />
                           ) : (
@@ -1009,20 +1034,21 @@ const Login = () => {
                 <div className="password-field">
 
                   <input
+                    ref={passwordInputRef}
                     type={showPassword ? 'text' : 'password'}
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
                     placeholder="Enter your password"
                     required
                     autoComplete="current-password"
-                    disabled={loading || bannedInfo || inactive || lockedInfo}
+                    disabled={loading || !!bannedInfo || inactive || !!lockedInfo}
                   />
 
                   <button
                     type="button"
                     className="toggle-password"
                     onClick={() => setShowPassword(!showPassword)}
-                    disabled={loading || bannedInfo || inactive || lockedInfo}
+                    disabled={loading || !!bannedInfo || inactive || !!lockedInfo}
                   >
                     {showPassword ? '🙈' : '👁️'}
                   </button>
@@ -1105,6 +1131,7 @@ const Login = () => {
             </p>
 
             <button
+              type="button"
               className="btn-save"
               onClick={() => setShowBlockedModal(false)}
               style={{ width: '100%' }}
@@ -1121,6 +1148,7 @@ const Login = () => {
           <div className="save-password-modal">
 
             <button
+              type="button"
               className="modal-close-btn"
               onClick={handleNeverSave}
             >
@@ -1154,6 +1182,7 @@ const Login = () => {
             <div className="save-password-actions">
 
               <button
+                type="button"
                 className="btn-never"
                 onClick={handleNeverSave}
               >
@@ -1161,6 +1190,7 @@ const Login = () => {
               </button>
 
               <button
+                type="button"
                 className="btn-save"
                 onClick={handleSavePassword}
               >

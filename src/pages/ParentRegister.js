@@ -1,4 +1,6 @@
+
 // src/pages/ParentRegister.js
+
 import React, { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { authService } from '../services/authService';
@@ -8,6 +10,7 @@ import './ParentRegister.css';
 
 const ParentRegister = () => {
   const navigate = useNavigate();
+
   const [formData, setFormData] = useState({
     fullName: '',
     email: '',
@@ -16,6 +19,7 @@ const ParentRegister = () => {
     country: 'ZA',
     agreeToTerms: false
   });
+
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [step, setStep] = useState(1);
@@ -26,25 +30,61 @@ const ParentRegister = () => {
   const [registrationSuccess, setRegistrationSuccess] = useState(false);
   const [registeredEmail, setRegisteredEmail] = useState('');
 
-  // Check if user is already logged in
+  // ============================================
+  // CHECK EXISTING AUTHENTICATION
+  // ============================================
+
   useEffect(() => {
+    let isMounted = true;
+
     const checkAuth = async () => {
       const accessToken = localStorage.getItem('accessToken');
-      if (accessToken) {
+
+      if (!accessToken) return;
+
+      try {
+        const currentUser = await authService.getCurrentUser();
+
+        if (!isMounted || !currentUser) return;
+
+        let storedUser = null;
+
         try {
-          const user = await authService.getCurrentUser();
-          if (user) {
-            const role = localStorage.getItem('userRole') || 'parent';
-            if (role === 'parent') {
-              navigate('/parent/dashboard');
-            } else if (role === 'tutor') {
-              navigate('/tutor/dashboard');
-            } else {
-              navigate('/dashboard');
-            }
-            return;
-          }
-        } catch (err) {
+          storedUser = JSON.parse(
+            localStorage.getItem('user') || 'null'
+          );
+        } catch (error) {
+          storedUser = null;
+        }
+
+        const user = currentUser.user || currentUser;
+
+        const storedUserData = storedUser?.user || storedUser || {};
+
+        const role = String(
+          user.role ||
+          user.userType ||
+          user.type ||
+          storedUserData.role ||
+          storedUserData.userType ||
+          storedUserData.type ||
+          localStorage.getItem('userRole') ||
+          ''
+        ).toLowerCase();
+
+        if (role === 'parent' || role === 'guardian') {
+          navigate('/parent/dashboard', { replace: true });
+        } else if (role === 'tutor') {
+          navigate('/tutor/dashboard', { replace: true });
+        } else if (role === 'admin') {
+          navigate('/admin/dashboard', { replace: true });
+        } else {
+          navigate('/dashboard', { replace: true });
+        }
+      } catch (err) {
+        console.error('Parent registration auth check:', err);
+
+        if (isMounted) {
           localStorage.removeItem('accessToken');
           localStorage.removeItem('refreshToken');
           localStorage.removeItem('user');
@@ -52,19 +92,34 @@ const ParentRegister = () => {
         }
       }
     };
+
     checkAuth();
+
+    return () => {
+      isMounted = false;
+    };
   }, [navigate]);
+
+  // ============================================
+  // FORM HANDLING
+  // ============================================
 
   const handleChange = (e) => {
     const { name, value, type, checked } = e.target;
-    setFormData({
-      ...formData,
+
+    setFormData((previous) => ({
+      ...previous,
       [name]: type === 'checkbox' ? checked : value
-    });
+    }));
   };
+
+  // ============================================
+  // PARENT REGISTRATION
+  // ============================================
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+
     setLoading(true);
     setError('');
 
@@ -88,20 +143,21 @@ const ParentRegister = () => {
 
     try {
       const registrationData = {
-        name: formData.fullName,
-        email: formData.email,
+        name: formData.fullName.trim(),
+        email: formData.email.trim().toLowerCase(),
         password: formData.password,
         country: formData.country,
         role: 'parent'
       };
 
-      console.log('📤 Parent Registration data:', registrationData);
+      console.log('Parent Registration initiated');
 
       const response = await authService.register(registrationData);
-      
-      if (response.success) {
-        setRegisteredEmail(formData.email);
+
+      if (response && response.success) {
+        setRegisteredEmail(registrationData.email);
         setRegistrationSuccess(true);
+
         setFormData({
           fullName: '',
           email: '',
@@ -110,110 +166,222 @@ const ParentRegister = () => {
           country: 'ZA',
           agreeToTerms: false
         });
+
         setStep(1);
       } else {
-        setError(response.error || 'Registration failed. Please try again.');
+        setError(
+          response?.error ||
+          'Registration failed. Please try again.'
+        );
       }
     } catch (err) {
-      console.error('Registration error:', err);
-      setError(err.message || 'Registration failed. Please try again.');
+      console.error('Parent registration error:', err);
+
+      setError(
+        err.message ||
+        'Registration failed. Please try again.'
+      );
     } finally {
       setLoading(false);
     }
   };
 
-  // Modal Component
+  // ============================================
+  // MODAL COMPONENT
+  // ============================================
+
   const Modal = ({ isOpen, onClose, title, children }) => {
     if (!isOpen) return null;
 
     return (
-      <div className="register-modal-overlay" onClick={onClose}>
-        <div className="register-modal" onClick={(e) => e.stopPropagation()}>
+      <div
+        className="register-modal-overlay"
+        onClick={onClose}
+      >
+        <div
+          className="register-modal"
+          onClick={(e) => e.stopPropagation()}
+        >
           <div className="register-modal-header">
             <h2>{title}</h2>
-            <button onClick={onClose} className="register-modal-close">×</button>
+
+            <button
+              type="button"
+              onClick={onClose}
+              className="register-modal-close"
+              aria-label="Close modal"
+            >
+              ×
+            </button>
           </div>
-          <div className="register-modal-body">{children}</div>
+
+          <div className="register-modal-body">
+            {children}
+          </div>
+
           <div className="register-modal-footer">
-            <button onClick={onClose} className="register-modal-btn">Close</button>
+            <button
+              type="button"
+              onClick={onClose}
+              className="register-modal-btn"
+            >
+              Close
+            </button>
           </div>
         </div>
       </div>
     );
   };
 
+  // ============================================
+  // TERMS CONTENT
+  // ============================================
+
   const TermsContent = () => {
     const terms = TermsOfService.getFullTerms();
+
     return (
       <div>
-        <div className="register-modal-date">Last Updated: {TermsOfService.effectiveDate}</div>
+        <div className="register-modal-date">
+          Last Updated: {TermsOfService.effectiveDate}
+        </div>
+
         {terms.map((section) => (
-          <div key={section.id} className="register-modal-section">
+          <div
+            key={section.id}
+            className="register-modal-section"
+          >
             <h3>{section.title}</h3>
-            {section.content.map((paragraph, index) => <p key={index}>{paragraph}</p>)}
+
+            {section.content.map((paragraph, index) => (
+              <p key={index}>{paragraph}</p>
+            ))}
           </div>
         ))}
       </div>
     );
   };
+
+  // ============================================
+  // PRIVACY CONTENT
+  // ============================================
 
   const PrivacyContent = () => {
     const privacy = PrivacyPolicy.getFullPolicy();
+
     return (
       <div>
-        <div className="register-modal-date">Last Updated: {PrivacyPolicy.effectiveDate}</div>
+        <div className="register-modal-date">
+          Last Updated: {PrivacyPolicy.effectiveDate}
+        </div>
+
         {privacy.map((section) => (
-          <div key={section.id} className="register-modal-section">
+          <div
+            key={section.id}
+            className="register-modal-section"
+          >
             <h3>{section.title}</h3>
-            {section.content.map((paragraph, index) => <p key={index}>{paragraph}</p>)}
+
+            {section.content.map((paragraph, index) => (
+              <p key={index}>{paragraph}</p>
+            ))}
           </div>
         ))}
       </div>
     );
   };
 
-  // Show verification success screen
+  // ============================================
+  // EMAIL VERIFICATION SUCCESS SCREEN
+  // ============================================
+
   if (registrationSuccess) {
     return (
       <div className="register-wrapper">
         <div className="register-bg">
           <div className="math-symbols">
-            <span className="math-symbol">∫</span><span className="math-symbol">∑</span><span className="math-symbol">π</span><span className="math-symbol">√</span><span className="math-symbol">∞</span><span className="math-symbol">∂</span><span className="math-symbol">Δ</span><span className="math-symbol">θ</span>
+            <span className="math-symbol">∫</span>
+            <span className="math-symbol">∑</span>
+            <span className="math-symbol">π</span>
+            <span className="math-symbol">√</span>
+            <span className="math-symbol">∞</span>
+            <span className="math-symbol">∂</span>
+            <span className="math-symbol">Δ</span>
+            <span className="math-symbol">θ</span>
           </div>
-          <div className="gradient-orb orb-1"></div><div className="gradient-orb orb-2"></div><div className="gradient-orb orb-3"></div>
+
+          <div className="gradient-orb orb-1"></div>
+          <div className="gradient-orb orb-2"></div>
+          <div className="gradient-orb orb-3"></div>
         </div>
 
         <div className="register-container">
-          <div className="register-right" style={{ maxWidth: '500px', margin: '0 auto', width: '100%' }}>
+          <div
+            className="register-right"
+            style={{
+              maxWidth: '500px',
+              margin: '0 auto',
+              width: '100%'
+            }}
+          >
             <div className="register-card verify-success-card">
               <div className="verification-success">
                 <div className="success-icon">
-                  <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-                    <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
-                    <polyline points="22 4 12 14.01 9 11.01"></polyline>
+                  <svg
+                    width="64"
+                    height="64"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="1.5"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  >
+                    <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" />
+                    <polyline points="22 4 12 14.01 9 11.01" />
                   </svg>
                 </div>
-                
+
                 <h2>Verify Your Email</h2>
+
                 <p className="verify-subtitle">
-                  We've sent a verification link to <br />
+                  We've sent a verification link to
+                  <br />
                   <strong>{registeredEmail}</strong>
                 </p>
 
                 <div className="verify-note">
-                  <p>🔒 Please check your inbox and click the verification link to activate your Parent Account.</p>
+                  <p>
+                    🔒 Please check your inbox and click the
+                    verification link to activate your Parent Account.
+                  </p>
                 </div>
 
                 <div className="verify-resend">
                   <p>Didn't receive the email?</p>
-                  <button 
+
+                  <button
+                    type="button"
                     onClick={async () => {
                       try {
                         setLoading(true);
-                        await authService.resendVerification(registeredEmail);
-                        alert('Verification email resent! Please check your inbox.');
+
+                        await authService.resendVerification(
+                          registeredEmail
+                        );
+
+                        alert(
+                          'Verification email resent! Please check your inbox.'
+                        );
                       } catch (err) {
-                        alert('Failed to resend verification email. Please try again.');
+                        console.error(
+                          'Resend verification error:',
+                          err
+                        );
+
+                        alert(
+                          'Failed to resend verification email. Please try again.'
+                        );
                       } finally {
                         setLoading(false);
                       }
@@ -221,14 +389,20 @@ const ParentRegister = () => {
                     disabled={loading}
                     className="resend-link"
                   >
-                    {loading ? 'Sending...' : 'Resend verification email'}
+                    {loading
+                      ? 'Sending...'
+                      : 'Resend verification email'}
                   </button>
                 </div>
 
                 <button
+                  type="button"
                   onClick={() => navigate('/parent-login')}
                   className="register-submit-btn"
-                  style={{ marginTop: '24px', width: '100%' }}
+                  style={{
+                    marginTop: '24px',
+                    width: '100%'
+                  }}
                 >
                   Go to Parent Login →
                 </button>
@@ -240,6 +414,10 @@ const ParentRegister = () => {
     );
   }
 
+  // ============================================
+  // REGISTRATION PAGE
+  // ============================================
+
   return (
     <div className="register-wrapper">
       <style>{`
@@ -248,6 +426,7 @@ const ParentRegister = () => {
           margin-top: 10px;
           margin-bottom: 20px;
         }
+
         .student-register-text-btn {
           background: none;
           border: none;
@@ -261,6 +440,7 @@ const ParentRegister = () => {
           font-family: inherit;
           text-decoration: none;
         }
+
         .student-register-text-btn:hover {
           color: #ffffff;
         }
@@ -268,9 +448,19 @@ const ParentRegister = () => {
 
       <div className="register-bg">
         <div className="math-symbols">
-          <span className="math-symbol">∫</span><span className="math-symbol">∑</span><span className="math-symbol">π</span><span className="math-symbol">√</span><span className="math-symbol">∞</span><span className="math-symbol">∂</span><span className="math-symbol">Δ</span><span className="math-symbol">θ</span>
+          <span className="math-symbol">∫</span>
+          <span className="math-symbol">∑</span>
+          <span className="math-symbol">π</span>
+          <span className="math-symbol">√</span>
+          <span className="math-symbol">∞</span>
+          <span className="math-symbol">∂</span>
+          <span className="math-symbol">Δ</span>
+          <span className="math-symbol">θ</span>
         </div>
-        <div className="gradient-orb orb-1"></div><div className="gradient-orb orb-2"></div><div className="gradient-orb orb-3"></div>
+
+        <div className="gradient-orb orb-1"></div>
+        <div className="gradient-orb orb-2"></div>
+        <div className="gradient-orb orb-3"></div>
       </div>
 
       <div className="register-container">
@@ -280,19 +470,38 @@ const ParentRegister = () => {
               <span className="logo-symbol">∑</span>
               <span className="logo-text">EduSpantech</span>
             </div>
+
             <h1 className="brand-headline">
-              Partner in your<br />
+              Partner in your
+              <br />
               <span className="highlight">child's success</span>
             </h1>
+
             <p className="brand-description">
-              Monitor progress, view term reports, and manage tutoring sessions all in one place. Designed specifically for parents and guardians.
+              Monitor progress, view term reports, and manage tutoring
+              sessions all in one place. Designed specifically for
+              parents and guardians.
             </p>
+
             <div className="brand-stats">
-              <div className="stat"><span className="stat-number">Live</span><span className="stat-label">Progress Tracking</span></div>
+              <div className="stat">
+                <span className="stat-number">Live</span>
+                <span className="stat-label">Progress Tracking</span>
+              </div>
+
               <div className="stat-divider"></div>
-              <div className="stat"><span className="stat-number">Term</span><span className="stat-label">Detailed Reports</span></div>
+
+              <div className="stat">
+                <span className="stat-number">Term</span>
+                <span className="stat-label">Detailed Reports</span>
+              </div>
+
               <div className="stat-divider"></div>
-              <div className="stat"><span className="stat-number">Easy</span><span className="stat-label">Session Booking</span></div>
+
+              <div className="stat">
+                <span className="stat-number">Easy</span>
+                <span className="stat-label">Session Booking</span>
+              </div>
             </div>
           </div>
         </div>
@@ -301,15 +510,21 @@ const ParentRegister = () => {
           <div className="register-card">
             <div className="register-header">
               <h2>Parent Registration</h2>
-              <p>Create an account to manage your child's education</p>
+
+              <p>
+                Create an account to manage your child's education
+              </p>
+
               <div className="register-badge">
                 <span>👨‍👩‍👧 For Parents & Guardians Only</span>
               </div>
             </div>
 
-            {/* Link back to Student Registration */}
             <div className="student-register-link-container">
-              <Link to="/register" className="student-register-text-btn">
+              <Link
+                to="/register"
+                className="student-register-text-btn"
+              >
                 Registering as a Student? Sign up here
               </Link>
             </div>
@@ -321,11 +536,15 @@ const ParentRegister = () => {
               </div>
             )}
 
-            <form onSubmit={handleSubmit} className="register-form">
+            <form
+              onSubmit={handleSubmit}
+              className="register-form"
+            >
               {step === 1 && (
                 <div className="register-step">
                   <div className="form-group">
                     <label>Full Name</label>
+
                     <input
                       type="text"
                       name="fullName"
@@ -339,6 +558,7 @@ const ParentRegister = () => {
 
                   <div className="form-group">
                     <label>Email Address</label>
+
                     <input
                       type="email"
                       name="email"
@@ -352,6 +572,7 @@ const ParentRegister = () => {
 
                   <div className="form-group">
                     <label>Country</label>
+
                     <select
                       name="country"
                       value={formData.country}
@@ -374,7 +595,11 @@ const ParentRegister = () => {
                     type="button"
                     className="register-next-btn"
                     onClick={() => setStep(2)}
-                    disabled={!formData.fullName || !formData.email}
+                    disabled={
+                      loading ||
+                      !formData.fullName.trim() ||
+                      !formData.email.trim()
+                    }
                   >
                     Next Step →
                   </button>
@@ -385,6 +610,7 @@ const ParentRegister = () => {
                 <div className="register-step">
                   <div className="form-group">
                     <label>Password</label>
+
                     <div className="password-field">
                       <input
                         type={showPassword ? 'text' : 'password'}
@@ -395,14 +621,24 @@ const ParentRegister = () => {
                         required
                         disabled={loading}
                       />
+
                       <button
                         type="button"
                         className="toggle-password"
-                        onClick={() => setShowPassword(!showPassword)}
+                        onClick={() =>
+                          setShowPassword(!showPassword)
+                        }
+                        disabled={loading}
+                        aria-label={
+                          showPassword
+                            ? 'Hide password'
+                            : 'Show password'
+                        }
                       >
                         {showPassword ? '🙈' : '👁️'}
                       </button>
                     </div>
+
                     <small className="form-hint">
                       Must be at least 8 characters with letters and numbers
                     </small>
@@ -410,9 +646,12 @@ const ParentRegister = () => {
 
                   <div className="form-group">
                     <label>Confirm Password</label>
+
                     <div className="password-field">
                       <input
-                        type={showConfirmPassword ? 'text' : 'password'}
+                        type={
+                          showConfirmPassword ? 'text' : 'password'
+                        }
                         name="confirmPassword"
                         value={formData.confirmPassword}
                         onChange={handleChange}
@@ -420,10 +659,19 @@ const ParentRegister = () => {
                         required
                         disabled={loading}
                       />
+
                       <button
                         type="button"
                         className="toggle-password"
-                        onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                        onClick={() =>
+                          setShowConfirmPassword(!showConfirmPassword)
+                        }
+                        disabled={loading}
+                        aria-label={
+                          showConfirmPassword
+                            ? 'Hide password'
+                            : 'Show password'
+                        }
                       >
                         {showConfirmPassword ? '🙈' : '👁️'}
                       </button>
@@ -439,9 +687,12 @@ const ParentRegister = () => {
                         onChange={handleChange}
                         disabled={loading}
                       />
+
                       <span className="checkmark"></span>
+
                       <span>
                         I agree to the{' '}
+
                         <span
                           className="terms-link"
                           onClick={(e) => {
@@ -451,7 +702,9 @@ const ParentRegister = () => {
                         >
                           Terms of Service
                         </span>
+
                         {' '}and{' '}
+
                         <span
                           className="terms-link"
                           onClick={(e) => {
@@ -474,10 +727,13 @@ const ParentRegister = () => {
                     >
                       ← Back
                     </button>
+
                     <button
                       type="submit"
                       className="register-submit-btn"
-                      disabled={loading || !formData.agreeToTerms}
+                      disabled={
+                        loading || !formData.agreeToTerms
+                      }
                     >
                       {loading ? (
                         <>
@@ -495,18 +751,27 @@ const ParentRegister = () => {
 
             <div className="register-footer">
               <p>
-                Already have an account? <Link to="/parent-login">Sign in</Link>
+                Already have an account?{' '}
+                <Link to="/parent-login">Sign in</Link>
               </p>
             </div>
           </div>
         </div>
       </div>
 
-      <Modal isOpen={showTermsModal} onClose={() => setShowTermsModal(false)} title="Terms of Service">
+      <Modal
+        isOpen={showTermsModal}
+        onClose={() => setShowTermsModal(false)}
+        title="Terms of Service"
+      >
         <TermsContent />
       </Modal>
 
-      <Modal isOpen={showPrivacyModal} onClose={() => setShowPrivacyModal(false)} title="Privacy Policy">
+      <Modal
+        isOpen={showPrivacyModal}
+        onClose={() => setShowPrivacyModal(false)}
+        title="Privacy Policy"
+      >
         <PrivacyContent />
       </Modal>
     </div>

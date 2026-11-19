@@ -1,6 +1,7 @@
 
 /* =====================================================
-   PARENT NAVBAR
+   EDUSPANTECH — PARENT NAVBAR
+   Premium dark theme
 ===================================================== */
 
 .parent-navbar {
@@ -9,9 +10,10 @@
   z-index: 1000;
   width: 100%;
   height: 76px;
-  background: #ffffff;
-  border-bottom: 1px solid #e9edf3;
-  box-shadow: 0 3px 15px rgba(15, 23, 42, 0.035);
+  background: #091426;
+  border-bottom: 1px solid rgba(148, 170, 205, 0.13);
+  box-shadow: 0 5px 22px rgba(0, 0, 0, 0.2);
+  color: #e8efff;
 }
 
 .parent-navbar-inner {
@@ -24,7 +26,9 @@
   gap: 28px;
 }
 
-/* BRAND */
+/* =====================================================
+   BRAND
+===================================================== */
 
 .parent-navbar-brand {
   display: flex;
@@ -32,7 +36,7 @@
   gap: 11px;
   min-width: 205px;
   text-decoration: none;
-  color: #17243a;
+  color: #f3f6ff;
 }
 
 .parent-navbar-logo {
@@ -53,7 +57,7 @@
 .parent-navbar-logo span {
   font-size: 27px;
   font-weight: 800;
-  color: #3157a4;
+  color: #6d9dff;
 }
 
 .parent-brand-copy {
@@ -67,6 +71,7 @@
   line-height: 1.1;
   font-weight: 800;
   letter-spacing: -0.45px;
+  color: #f3f6ff;
 }
 
 .parent-brand-subtitle {
@@ -74,10 +79,12 @@
   font-weight: 700;
   letter-spacing: 1.15px;
   text-transform: uppercase;
-  color: #718096;
+  color: #8798b5;
 }
 
-/* DESKTOP NAVIGATION */
+/* =====================================================
+   DESKTOP NAVIGATION
+===================================================== */
 
 .parent-desktop-navigation {
   display: flex;
@@ -96,7 +103,7 @@
   min-height: 42px;
   padding: 0 13px;
   border-radius: 9px;
-  color: #596579;
+  color: #a6b3ca;
   font-size: 13px;
   font-weight: 600;
   text-decoration: none;
@@ -105,13 +112,13 @@
 }
 
 .parent-nav-link:hover {
-  color: #254b91;
-  background: #f3f6fc;
+  color: #ffffff;
+  background: #142541;
 }
 
 .parent-nav-link.active {
-  color: #244d96;
-  background: #edf3ff;
+  color: #91b6ff;
+  background: #142d50;
 }
 
 .parent-nav-link.active::after {
@@ -122,10 +129,12 @@
   width: 60%;
   height: 3px;
   border-radius: 5px 5px 0 0;
-  background: #315ba8;
+  background: #5790f7;
 }
 
-/* ACTIONS */
+/* =====================================================
+   NAVBAR ACTIONS
+===================================================== */
 
 .parent-navbar-actions {
   display: flex;
@@ -147,16 +156,18 @@
   border: 1px solid transparent;
   border-radius: 8px;
   background: transparent;
-  color: #596579;
+  color: #a6b3ca;
   font-size: 12px;
   font-weight: 700;
   cursor: pointer;
+  transition: 0.2s ease;
 }
 
 .parent-language-button:hover,
 .parent-language-button.active {
-  background: #f4f6fa;
-  color: #244d96;
+  background: #142541;
+  border-color: rgba(148, 170, 205, 0.14);
+  color: #91b6ff;
 }
 
 .parent-language-dropdown {
@@ -165,10 +176,10 @@
   right: 0;
   width: 220px;
   padding: 7px;
-  background: #ffffff;
-  border: 1px solid #e7ebf1;
+  background: #101f36;
+  border: 1px solid #263a59;
   border-radius: 12px;
-  box-shadow: 0 15px 40px rgba(15, 23, 42, 0.13);
+  box-shadow: 0 18px 45px rgba(0, 0, 0, 0.38);
   z-index: 1010;
 }
 
@@ -182,16 +193,17 @@
   border: 0;
   border-radius: 7px;
   background: transparent;
-  color: #46536a;
+  color: #b5c2d8;
   font-size: 13px;
   text-align: left;
   cursor: pointer;
+  transition: 0.2s ease;
 }
 
 .parent-language-option:hover,
 .parent-language-option.active {
-  background: #f0f4fc;
-  color: #244d96;
+  background: #1a3153;
+  color: #91b6ff;
 }
 
 .parent-language-check {
@@ -204,7 +216,9 @@
   align-items: center;
 }
 
-/* ACCOUNT */
+/* =====================================================
+   ACCOUNT
+===================================================== */
 
 .parent-account-toggle {
   display: flex;
@@ -214,14 +228,15 @@
   border: 1px solid transparent;
   border-radius: 30px;
   background: transparent;
-  color: #344054;
+  color: #dce6f7;
   cursor: pointer;
+  transition: 0.2s ease;
 }
 
 .parent-account-toggle:hover,
 .parent-account-toggle.active {
-  background: #f5f7fb;
-  border-color: #e9edf3;
+  background: #142541;
+  border-color: #293e5e;
 }
 
 .parent-avatar {
@@ -232,8 +247,9 @@
   flex-shrink: 0;
   overflow: hidden;
   border-radius: 50%;
-  background: #e9effc;
-  color: #315ba8;
+  background: #1c3760;
+  border: 1px solid #35598b;
+  color: #a8c8ff;
   font-size: 13px;
   font-weight: 800;
 }
@@ -247,7 +263,7 @@
 .parent-account-name {
   max-width: 100px;
   overflow: hidden;
-  color: #344054;
+  color: #dce6f7;
   font-size: 13px;
   font-weight: 700;
   text-overflow: ellipsis;
@@ -260,10 +276,10 @@
   right: 0;
   width: 275px;
   padding: 9px;
-  background: #ffffff;
-  border: 1px solid #e7ebf1;
+  background: #101f36;
+  border: 1px solid #263a59;
   border-radius: 14px;
-  box-shadow: 0 16px 45px rgba(15, 23, 42, 0.14);
+  box-shadow: 0 18px 45px rgba(0, 0, 0, 0.4);
   z-index: 1010;
 }
 
@@ -287,19 +303,19 @@
 }
 
 .parent-account-details strong {
-  color: #17243a;
+  color: #edf3ff;
   font-size: 13px;
 }
 
 .parent-account-details span {
   overflow: hidden;
-  color: #718096;
+  color: #91a2bd;
   font-size: 11px;
   text-overflow: ellipsis;
 }
 
 .parent-account-details small {
-  color: #315ba8;
+  color: #82aaff;
   font-size: 10px;
   font-weight: 700;
   text-transform: uppercase;
@@ -310,7 +326,7 @@
 .parent-mobile-divider {
   height: 1px;
   margin: 7px 0;
-  background: #edf0f4;
+  background: #263750;
 }
 
 .parent-dropdown-item {
@@ -323,28 +339,31 @@
   border: 0;
   border-radius: 8px;
   background: transparent;
-  color: #46536a;
+  color: #b5c2d8;
   font-size: 13px;
   font-weight: 600;
   text-align: left;
   text-decoration: none;
   cursor: pointer;
+  transition: 0.2s ease;
 }
 
 .parent-dropdown-item:hover {
-  background: #f3f6fc;
-  color: #244d96;
+  background: #1a3153;
+  color: #91b6ff;
 }
 
 .parent-dropdown-item.parent-logout {
-  color: #c24141;
+  color: #ff8585;
 }
 
 .parent-dropdown-item.parent-logout:hover {
-  background: #fff1f1;
+  background: rgba(220, 70, 70, 0.12);
 }
 
-/* MOBILE CONTROLS */
+/* =====================================================
+   MOBILE CONTROLS
+===================================================== */
 
 .parent-mobile-toggle {
   display: none;
@@ -352,21 +371,29 @@
   height: 41px;
   align-items: center;
   justify-content: center;
-  border: 1px solid #e7ebf1;
+  border: 1px solid #293e5e;
   border-radius: 9px;
-  background: #ffffff;
-  color: #344054;
+  background: #12223b;
+  color: #e5edfc;
   cursor: pointer;
+  transition: 0.2s ease;
 }
 
-/* MOBILE BACKDROP AND PANEL */
+.parent-mobile-toggle:hover {
+  background: #1b3457;
+  border-color: #456da7;
+}
+
+/* =====================================================
+   MOBILE BACKDROP AND PANEL
+===================================================== */
 
 .parent-mobile-backdrop {
   position: fixed;
   inset: 0;
   z-index: 1090;
-  background: rgba(15, 23, 42, 0.42);
-  backdrop-filter: blur(2px);
+  background: rgba(2, 8, 20, 0.72);
+  backdrop-filter: blur(4px);
 }
 
 .parent-mobile-panel {
@@ -378,8 +405,9 @@
   height: 100dvh;
   padding: 22px;
   overflow-y: auto;
-  background: #ffffff;
-  box-shadow: -15px 0 45px rgba(15, 23, 42, 0.13);
+  background: #0b182b;
+  border-left: 1px solid #263750;
+  box-shadow: -15px 0 45px rgba(0, 0, 0, 0.4);
   transform: translateX(105%);
   transition: transform 0.28s ease;
   visibility: hidden;
@@ -403,12 +431,12 @@
 }
 
 .parent-mobile-panel-header strong {
-  color: #17243a;
+  color: #f0f5ff;
   font-size: 17px;
 }
 
 .parent-mobile-panel-header span {
-  color: #718096;
+  color: #91a2bd;
   font-size: 12px;
 }
 
@@ -417,11 +445,16 @@
   height: 38px;
   display: grid;
   place-items: center;
-  border: 0;
+  border: 1px solid #293e5e;
   border-radius: 8px;
-  background: #f3f5f9;
-  color: #46536a;
+  background: #142541;
+  color: #c6d3e8;
   cursor: pointer;
+}
+
+.parent-mobile-panel-header > button:hover {
+  background: #1d3659;
+  color: #ffffff;
 }
 
 .parent-mobile-profile {
@@ -430,9 +463,9 @@
   gap: 12px;
   margin: 24px 0;
   padding: 15px;
-  border: 1px solid #e9edf3;
+  border: 1px solid #263a59;
   border-radius: 12px;
-  background: #fafbfe;
+  background: #101f36;
 }
 
 .parent-mobile-profile > div:last-child {
@@ -442,12 +475,12 @@
 }
 
 .parent-mobile-profile strong {
-  color: #17243a;
+  color: #edf3ff;
   font-size: 13px;
 }
 
 .parent-mobile-profile span {
-  color: #718096;
+  color: #91a2bd;
   font-size: 11px;
 }
 
@@ -456,7 +489,7 @@
   align-items: center;
   gap: 7px;
   margin: 18px 0 9px;
-  color: #8a94a6;
+  color: #8194b1;
   font-size: 10px;
   font-weight: 800;
   letter-spacing: 1px;
@@ -480,29 +513,30 @@
   border: 0;
   border-radius: 9px;
   background: transparent;
-  color: #46536a;
+  color: #b5c2d8;
   font-size: 13px;
   font-weight: 600;
   text-align: left;
   text-decoration: none;
   cursor: pointer;
+  transition: 0.2s ease;
 }
 
 .parent-mobile-link:hover,
 .parent-mobile-account a:hover {
-  background: #f3f6fc;
-  color: #244d96;
+  background: #172b49;
+  color: #a6c5ff;
 }
 
 .parent-mobile-link.active {
-  background: #edf3ff;
-  color: #244d96;
+  background: #19345b;
+  color: #91b6ff;
 }
 
 .parent-mobile-link-arrow {
   margin-left: auto;
   transform: rotate(-90deg);
-  color: #a0aaba;
+  color: #8295b2;
 }
 
 .parent-mobile-account {
@@ -512,11 +546,11 @@
 }
 
 .parent-mobile-logout {
-  color: #c24141;
+  color: #ff8585;
 }
 
 .parent-mobile-logout:hover {
-  background: #fff1f1;
+  background: rgba(220, 70, 70, 0.12);
 }
 
 .parent-mobile-language-grid {
@@ -528,21 +562,38 @@
 .parent-mobile-language-grid button {
   min-height: 38px;
   padding: 7px;
-  border: 1px solid #e9edf3;
+  border: 1px solid #293e5e;
   border-radius: 8px;
-  background: #ffffff;
-  color: #46536a;
+  background: #101f36;
+  color: #b5c2d8;
   font-size: 11px;
   cursor: pointer;
+  transition: 0.2s ease;
+}
+
+.parent-mobile-language-grid button:hover {
+  background: #172b49;
+  color: #ffffff;
 }
 
 .parent-mobile-language-grid button.active {
-  border-color: #315ba8;
-  background: #edf3ff;
-  color: #244d96;
+  border-color: #5790f7;
+  background: #19345b;
+  color: #a6c5ff;
 }
 
-/* RESPONSIVE */
+/* =====================================================
+   ICON CONSISTENCY
+===================================================== */
+
+.parent-navbar svg,
+.parent-mobile-panel svg {
+  flex-shrink: 0;
+}
+
+/* =====================================================
+   RESPONSIVE — TABLET
+===================================================== */
 
 @media (max-width: 1150px) {
   .parent-navbar-inner {
@@ -565,6 +616,10 @@
   }
 }
 
+/* =====================================================
+   RESPONSIVE — MOBILE
+===================================================== */
+
 @media (max-width: 900px) {
   .parent-navbar {
     height: 68px;
@@ -586,6 +641,10 @@
     display: flex;
   }
 }
+
+/* =====================================================
+   RESPONSIVE — SMALL MOBILE
+===================================================== */
 
 @media (max-width: 480px) {
   .parent-navbar-inner {
@@ -630,5 +689,25 @@
 
   .parent-mobile-panel {
     padding: 19px;
+  }
+}
+
+/* =====================================================
+   ACCESSIBILITY
+===================================================== */
+
+.parent-navbar a:focus-visible,
+.parent-navbar button:focus-visible,
+.parent-mobile-panel a:focus-visible,
+.parent-mobile-panel button:focus-visible {
+  outline: 2px solid #75a6ff;
+  outline-offset: 3px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .parent-navbar *,
+  .parent-mobile-panel * {
+    transition-duration: 0.01ms !important;
+    animation-duration: 0.01ms !important;
   }
 }

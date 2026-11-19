@@ -353,33 +353,41 @@ const StudentRoute = ({ children }) => {
 // ============================================
 
 const ParentRoute = ({ children }) => {
-  let user = null;
+  let storedUser = null;
 
   try {
-    user = JSON.parse(localStorage.getItem('user') || 'null');
+    storedUser = JSON.parse(localStorage.getItem('user') || 'null');
   } catch (error) {
-    console.error('Unable to read stored parent user:', error);
+    storedUser = null;
   }
 
-  if (!user) {
+  if (!storedUser) {
     return <Navigate to="/parent-login" replace />;
   }
+
+  // ParentLogin may store either a user object or { user: userObject }.
+  const user = storedUser.user || storedUser;
 
   const role = String(
     user.role ||
     user.userType ||
     user.type ||
+    storedUser.role ||
     localStorage.getItem('userRole') ||
     ''
   ).toLowerCase();
 
   const isParent =
-    user.is_parent === true ||
-    user.is_parent === 'true' ||
     role === 'parent' ||
     role === 'guardian' ||
+    user.is_parent === true ||
+    user.is_parent === 'true' ||
+    storedUser.is_parent === true ||
+    storedUser.is_parent === 'true' ||
     (Array.isArray(user.roles) &&
-      (user.roles.includes('parent') || user.roles.includes('guardian')));
+      user.roles.some((item) =>
+        ['parent', 'guardian'].includes(String(item).toLowerCase())
+      ));
 
   if (!isParent) {
     return <Navigate to="/parent-login" replace />;

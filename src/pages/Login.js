@@ -42,11 +42,9 @@ const Login = () => {
   const [lockedInfo, setLockedInfo] = useState(null);
   const [attemptsLeft, setAttemptsLeft] = useState(null);
 
-  // Dynamic hero image
   const [heroImage, setHeroImage] = useState(null);
   const [heroImageLoading, setHeroImageLoading] = useState(true);
 
-  // Live student count
   const [studentCount, setStudentCount] = useState(null);
 
   // ============================================
@@ -666,8 +664,6 @@ const Login = () => {
 
       <div className="login-container login-container-new">
 
-        {/* LEFT HERO SECTION */}
-
         <section className="login-left">
 
           <div className="hero-copy">
@@ -681,8 +677,6 @@ const Login = () => {
               personalised learning — anytime, anywhere.
             </p>
           </div>
-
-          {/* ALIGNED FEATURES */}
 
           <div className="brand-features">
 
@@ -715,8 +709,6 @@ const Login = () => {
             </div>
 
           </div>
-
-          {/* LIVE STUDENT STATISTICS */}
 
           <div className="brand-stats">
 
@@ -755,8 +747,6 @@ const Login = () => {
 
           </div>
 
-          {/* DYNAMIC STUDENT IMAGE */}
-
           <div className="login-hero-image">
 
             {!heroImageLoading && heroImage?.url && (
@@ -773,8 +763,6 @@ const Login = () => {
 
         </section>
 
-        {/* RIGHT LOGIN SECTION */}
-
         <section className="login-right">
 
           <div className="login-card">
@@ -783,8 +771,6 @@ const Login = () => {
               <h2>Welcome Back</h2>
               <p>Sign in to continue your learning journey</p>
             </div>
-
-            {/* ROLE SELECTION */}
 
             <div className="role-tabs">
 
@@ -806,8 +792,9 @@ const Login = () => {
                 Tutor
               </button>
 
+              {/* Parent/Guardian opens the public Parent Home page */}
               <Link
-                to="/parent-login"
+                to="/parent"
                 className="role-tab parent-role-tab"
               >
                 <span className="role-icon">🛡</span>
@@ -822,8 +809,6 @@ const Login = () => {
                 {roleError}
               </div>
             )}
-
-            {/* BANNED NOTICE */}
 
             {bannedInfo && (
               <div className="login-banned-notice">
@@ -842,8 +827,6 @@ const Login = () => {
                 </div>
               </div>
             )}
-
-            {/* INACTIVE NOTICE */}
 
             {inactive && (
               <div className="login-inactive-notice">
@@ -868,8 +851,6 @@ const Login = () => {
               </div>
             )}
 
-            {/* LOCKED NOTICE */}
-
             {lockedInfo && (
               <div className="login-locked-notice">
                 <div className="locked-icon">🔒</div>
@@ -888,8 +869,6 @@ const Login = () => {
                 </div>
               </div>
             )}
-
-            {/* EMAIL VERIFICATION */}
 
             {needsVerification && (
               <div className="login-verification-notice">
@@ -928,8 +907,6 @@ const Login = () => {
               </div>
             )}
 
-            {/* LOGIN ERROR */}
-
             {error &&
               !needsVerification &&
               !roleError &&
@@ -949,11 +926,7 @@ const Login = () => {
                 </div>
               )}
 
-            {/* LOGIN FORM */}
-
             <form onSubmit={handleSubmit} className="login-form">
-
-              {/* EMAIL */}
 
               <div className="form-group relative">
 
@@ -1029,8 +1002,6 @@ const Login = () => {
 
               </div>
 
-              {/* PASSWORD */}
-
               <div className="form-group">
 
                 <label>Password</label>
@@ -1059,8 +1030,6 @@ const Login = () => {
                 </div>
               </div>
 
-              {/* FORM OPTIONS */}
-
               <div className="form-options">
 
                 <label className="remember-me">
@@ -1079,8 +1048,6 @@ const Login = () => {
                 </Link>
 
               </div>
-
-              {/* SIGN IN */}
 
               <button
                 type="submit"
@@ -1110,8 +1077,6 @@ const Login = () => {
 
             </form>
 
-            {/* LOGIN FOOTER */}
-
             <div className="login-footer">
               <p>
                 Don't have an account?{' '}
@@ -1124,8 +1089,6 @@ const Login = () => {
         </section>
 
       </div>
-
-      {/* BLOCKED ACCESS MODAL */}
 
       {showBlockedModal && (
         <div className="save-password-overlay">
@@ -1151,8 +1114,6 @@ const Login = () => {
           </div>
         </div>
       )}
-
-      {/* SAVE LOGIN DETAILS MODAL */}
 
       {showSavePrompt && (
         <div className="save-password-overlay">

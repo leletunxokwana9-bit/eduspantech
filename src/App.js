@@ -1,5 +1,6 @@
 
-// src/App.js - COMPLETE WITH TUTOR NAVBAR, TOUR GUIDE,
+// src/App.js - COMPLETE WITH PARENT HOME,
+// PARENT NAVBAR, TUTOR NAVBAR, TOUR GUIDE,
 // ADMIN PROTECTION & SESSION RECORDINGS
 
 import React, { Suspense, lazy, useState, useEffect } from 'react';
@@ -61,6 +62,9 @@ import { supabase } from './services/supabaseClient';
 import ParentLogin from './pages/ParentLogin';
 import ParentRegister from './pages/ParentRegister';
 import ParentDashboard from './pages/ParentDashboard';
+
+// Parent public landing page
+import ParentHome from './pages/ParentHome';
 
 import SessionRecordings from './pages/SessionRecordings';
 import MissionPage from './pages/MissionPage';
@@ -157,6 +161,7 @@ class ErrorBoundary extends React.Component {
               }}
             >
               <summary>Technical Details</summary>
+
               <pre
                 style={{
                   marginTop: '12px',
@@ -232,9 +237,11 @@ const withLazyErrorHandling = (importFn, componentName) => {
               }}
             >
               <h2>⚠️ Failed to load {componentName}</h2>
+
               <p style={{ color: '#94a3b8', marginTop: '12px' }}>
                 {err.message || 'An error occurred loading this page'}
               </p>
+
               <button
                 onClick={() => window.location.reload()}
                 style={{
@@ -298,7 +305,9 @@ const PageLoader = () => (
         animation: 'spin 0.8s linear infinite'
       }}
     />
+
     <p>Loading...</p>
+
     <style>
       {`
         @keyframes spin {
@@ -334,6 +343,46 @@ const StudentRoute = ({ children }) => {
     user.role === 'admin'
   ) {
     return <Navigate to="/admin/dashboard" replace />;
+  }
+
+  return children;
+};
+
+// ============================================
+// PARENT PROTECTED ROUTE
+// ============================================
+
+const ParentRoute = ({ children }) => {
+  let user = null;
+
+  try {
+    user = JSON.parse(localStorage.getItem('user') || 'null');
+  } catch (error) {
+    console.error('Unable to read stored parent user:', error);
+  }
+
+  if (!user) {
+    return <Navigate to="/parent-login" replace />;
+  }
+
+  const role = String(
+    user.role ||
+    user.userType ||
+    user.type ||
+    localStorage.getItem('userRole') ||
+    ''
+  ).toLowerCase();
+
+  const isParent =
+    user.is_parent === true ||
+    user.is_parent === 'true' ||
+    role === 'parent' ||
+    role === 'guardian' ||
+    (Array.isArray(user.roles) &&
+      (user.roles.includes('parent') || user.roles.includes('guardian')));
+
+  if (!isParent) {
+    return <Navigate to="/parent-login" replace />;
   }
 
   return children;
@@ -413,20 +462,21 @@ const AppContent = () => {
   const isVerifyEmailRoute =
     location.pathname === '/verify-email';
 
-  const isParentRoute =
-    location.pathname.startsWith('/parent') ||
-    location.pathname.startsWith('/session-recordings');
+  // Only standalone parent authentication pages hide
+  // the global navigation. Public Parent Home and the
+  // Parent Dashboard retain the parent-specific navbar.
+  const isParentAuthRoute =
+    location.pathname === '/parent-login' ||
+    location.pathname === '/parent-register';
 
-  // IMPORTANT:
-  // Tutor routes are deliberately NOT excluded here.
-  // This allows the existing Navbar to remain visible
-  // on /tutor/dashboard, /tutor/students, /tutor/earnings
-  // and /tutor/session/:sessionId.
+  const isStandaloneSessionRecordings =
+    location.pathname === '/session-recordings';
 
   const hideNavigation =
     isAdminRoute ||
     isVerifyEmailRoute ||
-    isParentRoute;
+    isParentAuthRoute ||
+    isStandaloneSessionRecordings;
 
   return (
     <div className="app">
@@ -492,8 +542,25 @@ const AppContent = () => {
 
             <Route path="/login" element={<Login />} />
 
-            <Route path="/parent-login" element={<ParentLogin />} />
-            <Route path="/parent-register" element={<ParentRegister />} />
+            {/* PARENT PUBLIC HOME */}
+
+            <Route
+              path="/parent"
+              element={<ParentHome />}
+            />
+
+            {/* PARENT AUTHENTICATION */}
+
+            <Route
+              path="/parent-login"
+              element={<ParentLogin />}
+            />
+
+            <Route
+              path="/parent-register"
+              element={<ParentRegister />}
+            />
+
             <Route path="/register" element={<Register />} />
 
             {/* PUBLIC ROUTES */}
@@ -660,14 +727,22 @@ const AppContent = () => {
 
             <Route
               path="/parent/dashboard"
-              element={<ParentDashboard />}
+              element={
+                <ParentRoute>
+                  <ParentDashboard />
+                </ParentRoute>
+              }
             />
 
             {/* PARENT SESSION RECORDINGS */}
 
             <Route
               path="/parent/session-recordings"
-              element={<SessionRecordings />}
+              element={
+                <ParentRoute>
+                  <SessionRecordings />
+                </ParentRoute>
+              }
             />
 
             {/* STUDENT SESSION RECORDINGS */}

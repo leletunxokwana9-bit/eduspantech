@@ -88,7 +88,7 @@ const ParentHome = () => {
     <main className="parent-home">
 
       {/* =====================================================
-          HERO SECTION — NO RIGHT-SIDE CARD
+          HERO SECTION
       ===================================================== */}
 
       <section className="parent-hero">
@@ -103,6 +103,8 @@ const ParentHome = () => {
           <div className="parent-hero-overlay" />
 
           <div className="parent-hero-content">
+
+            {/* HERO TEXT ONLY — NO RIGHT-SIDE CARD */}
 
             <div className="parent-hero-copy">
 
@@ -123,7 +125,6 @@ const ParentHome = () => {
               </p>
 
               <div className="parent-hero-actions">
-
                 <Link
                   to="/parent-register"
                   className="parent-primary-btn"
@@ -138,7 +139,6 @@ const ParentHome = () => {
                 >
                   Parent Login
                 </Link>
-
               </div>
 
               <div className="parent-hero-trust">
@@ -161,7 +161,6 @@ const ParentHome = () => {
       <section className="parent-intro">
 
         <div className="parent-section-heading">
-
           <span className="parent-section-label">
             SUPPORTING YOUR CHILD
           </span>
@@ -174,17 +173,14 @@ const ParentHome = () => {
             EduSpantech helps parents and guardians remain connected
             to the important aspects of their child's education.
           </p>
-
         </div>
 
         <div className="parent-feature-grid">
-
           {features.map((feature, index) => (
             <article
               className="parent-feature-card"
               key={feature.title}
             >
-
               <div className="parent-feature-icon">
                 {feature.icon}
               </div>
@@ -196,10 +192,8 @@ const ParentHome = () => {
               <span className="parent-feature-number">
                 {String(index + 1).padStart(2, '0')}
               </span>
-
             </article>
           ))}
-
         </div>
 
       </section>
@@ -233,14 +227,12 @@ const ParentHome = () => {
           </p>
 
           <ul className="parent-benefits-list">
-
             {benefits.map((benefit) => (
               <li key={benefit}>
                 <CheckCircle2 size={17} />
                 <span>{benefit}</span>
               </li>
             ))}
-
           </ul>
 
           <Link

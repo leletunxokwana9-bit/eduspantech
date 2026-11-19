@@ -711,3 +711,88 @@
     animation-duration: 0.01ms !important;
   }
 }
+
+/* =====================================================
+   PUBLIC PARENT ACTIONS — LOGGED OUT
+===================================================== */
+
+.parent-public-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.parent-login-link,
+.parent-register-link {
+  min-height: 39px;
+  padding: 0 13px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  border-radius: 8px;
+  font-size: 12px;
+  font-weight: 700;
+  text-decoration: none;
+  white-space: nowrap;
+  transition: 0.2s ease;
+}
+
+.parent-login-link {
+  color: #c4d3eb;
+  background: transparent;
+  border: 1px solid #293e5e;
+}
+
+.parent-login-link:hover {
+  color: #ffffff;
+  background: #142541;
+  border-color: #456da7;
+}
+
+.parent-register-link {
+  color: #ffffff;
+  background: #2867d8;
+  border: 1px solid #2867d8;
+}
+
+.parent-register-link:hover {
+  background: #3478ed;
+  border-color: #3478ed;
+}
+
+/* =====================================================
+   PUBLIC ACTIONS — MOBILE
+===================================================== */
+
+@media (max-width: 900px) {
+  .parent-public-actions {
+    gap: 7px;
+  }
+
+  .parent-login-link,
+  .parent-register-link {
+    min-height: 36px;
+    padding: 0 9px;
+    font-size: 11px;
+  }
+}
+
+@media (max-width: 480px) {
+  .parent-public-actions {
+    gap: 5px;
+  }
+
+  .parent-login-link,
+  .parent-register-link {
+    min-height: 34px;
+    padding: 0 7px;
+    gap: 4px;
+    font-size: 10px;
+  }
+
+  .parent-public-actions svg {
+    width: 14px;
+    height: 14px;
+  }
+}

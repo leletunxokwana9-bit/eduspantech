@@ -1,10 +1,6 @@
 
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import {
-  Link,
-  useLocation,
-  useNavigate
-} from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 
 import {
   Home,
@@ -16,60 +12,49 @@ import {
   Target,
   LayoutDashboard,
   User,
-  UserRound,
   Settings,
   LogOut,
   Search,
   Menu,
   X,
   ChevronDown,
-  ShieldCheck,
   CreditCard,
   BarChart3,
   FileText,
   Wallet,
   HelpCircle,
-  Bell,
-  BriefcaseBusiness,
-  ClipboardList,
   Activity,
   Languages,
   BookMarked
 } from 'lucide-react';
 
-import { useHomeData } from '../context/HomeDataContext';
 import { useLanguage } from '../context/LanguageContext';
 import { useSound } from '../context/SoundContext';
-
 import { authService } from '../services/authService';
 
 import NotificationBell from './NotificationBell';
 import ParentNavbar from './ParentNavbar';
 
 import './Navbar.css';
-
 import logo from '../assets/EduspanLogo.png';
-
 
 const Navbar = () => {
   const location = useLocation();
   const navigate = useNavigate();
 
-  const { data } = useHomeData();
   const {
     currentLanguage,
     changeLanguage,
-    t,
     languages
   } = useLanguage();
 
   const { playClick } = useSound();
 
   const searchInputRef = useRef(null);
-  const searchTimerRef = useRef(null);
 
   const [user, setUser] = useState(null);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [loadingUser, setLoadingUser] = useState(true);
 
   const [userMenuOpen, setUserMenuOpen] = useState(false);
   const [languageOpen, setLanguageOpen] = useState(false);
@@ -79,11 +64,8 @@ const Navbar = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState([]);
 
-  const [loadingUser, setLoadingUser] = useState(true);
-
-
   // =========================================================
-  // GENERAL HELPERS
+  // HELPERS
   // =========================================================
 
   const getToken = () => {
@@ -93,25 +75,19 @@ const Navbar = () => {
       localStorage.getItem('authToken')
     ];
 
-    return candidates.find(
-      token =>
-        typeof token === 'string' &&
-        token.trim() !== '' &&
-        token !== 'undefined' &&
-        token !== 'null'
+    return candidates.find(token =>
+      typeof token === 'string' &&
+      token.trim() !== '' &&
+      token !== 'undefined' &&
+      token !== 'null'
     );
   };
-
 
   const normalizeRole = value => {
     if (typeof value !== 'string') return '';
 
-    return value
-      .trim()
-      .toLowerCase()
-      .replace(/[\s-]+/g, '_');
+    return value.trim().toLowerCase().replace(/[\s-]+/g, '_');
   };
-
 
   const getUserRole = currentUser => {
     if (!currentUser) {
@@ -126,9 +102,7 @@ const Navbar = () => {
       currentUser.user_type ||
       currentUser.type;
 
-    if (explicitRole) {
-      return normalizeRole(explicitRole);
-    }
+    if (explicitRole) return normalizeRole(explicitRole);
 
     if (currentUser.is_parent === true || currentUser.isParent === true) {
       return 'parent';
@@ -152,13 +126,10 @@ const Navbar = () => {
 
     const adminRole = normalizeRole(currentUser.admin_role);
 
-    if (adminRole && adminRole !== 'none') {
-      return 'admin';
-    }
+    if (adminRole && adminRole !== 'none') return 'admin';
 
     return normalizeRole(localStorage.getItem('userRole')) || 'student';
   };
-
 
   const role = getUserRole(user);
 
@@ -166,11 +137,8 @@ const Navbar = () => {
   const isTutor = role === 'tutor';
   const isParent = role === 'parent';
 
-
   const isActive = path => {
-    if (path === '/') {
-      return location.pathname === '/';
-    }
+    if (path === '/') return location.pathname === '/';
 
     return (
       location.pathname === path ||
@@ -178,20 +146,15 @@ const Navbar = () => {
     );
   };
 
-
   const handleClick = () => {
-    if (typeof playClick === 'function') {
-      playClick();
-    }
+    if (typeof playClick === 'function') playClick();
   };
-
 
   const closeAllMenus = () => {
     setUserMenuOpen(false);
     setLanguageOpen(false);
     setMobileMenuOpen(false);
   };
-
 
   // =========================================================
   // AUTHENTICATION
@@ -201,8 +164,6 @@ const Navbar = () => {
     let mounted = true;
 
     const loadUser = async () => {
-      setLoadingUser(true);
-
       try {
         const token = getToken();
 
@@ -211,7 +172,6 @@ const Navbar = () => {
             setUser(null);
             setIsAuthenticated(false);
           }
-
           return;
         }
 
@@ -241,7 +201,7 @@ const Navbar = () => {
           if (mounted && currentUser) {
             setUser(currentUser);
             setIsAuthenticated(true);
-          } else if (mounted && !storedUser) {
+          } else if (mounted) {
             setUser(null);
             setIsAuthenticated(false);
           }
@@ -254,9 +214,7 @@ const Navbar = () => {
           }
         }
       } finally {
-        if (mounted) {
-          setLoadingUser(false);
-        }
+        if (mounted) setLoadingUser(false);
       }
     };
 
@@ -271,6 +229,7 @@ const Navbar = () => {
       if (loggedInUser) {
         setUser(loggedInUser);
         setIsAuthenticated(true);
+        setLoadingUser(false);
       } else {
         loadUser();
       }
@@ -280,6 +239,7 @@ const Navbar = () => {
       setUser(null);
       setIsAuthenticated(false);
       closeAllMenus();
+      setLoadingUser(false);
     };
 
     const handleStorageChange = event => {
@@ -307,7 +267,6 @@ const Navbar = () => {
     };
   }, []);
 
-
   const handleLogout = async () => {
     handleClick();
     closeAllMenus();
@@ -330,124 +289,40 @@ const Navbar = () => {
       setIsAuthenticated(false);
 
       window.dispatchEvent(new Event('auth:logout'));
-
       navigate('/login');
     }
   };
 
-
   // =========================================================
-  // ROLE-BASED NAVIGATION
+  // NAVIGATION LINKS
   // =========================================================
 
   const studentLinks = [
-    {
-      label: 'Home',
-      path: '/',
-      icon: <Home size={17} />
-    },
-    {
-      label: 'Subjects',
-      path: '/subjects',
-      icon: <BookOpen size={17} />
-    },
-    {
-      label: 'Curriculum',
-      path: '/curriculum',
-      icon: <GraduationCap size={17} />
-    },
-    {
-      label: 'Tutors',
-      path: '/tutors',
-      icon: <Users size={17} />
-    },
-    {
-      label: 'Pricing',
-      path: '/pricing',
-      icon: <CreditCard size={17} />
-    },
-    {
-      label: 'Resources',
-      path: '/resources',
-      icon: <Library size={17} />
-    },
-    {
-      label: 'Our Mission',
-      path: '/mission',
-      icon: <Target size={17} />
-    }
+    { label: 'Home', path: '/', icon: <Home size={17} /> },
+    { label: 'Subjects', path: '/subjects', icon: <BookOpen size={17} /> },
+    { label: 'Curriculum', path: '/curriculum', icon: <GraduationCap size={17} /> },
+    { label: 'Tutors', path: '/tutors', icon: <Users size={17} /> },
+    { label: 'Pricing', path: '/pricing', icon: <CreditCard size={17} /> },
+    { label: 'Resources', path: '/resources', icon: <Library size={17} /> },
+    { label: 'Our Mission', path: '/mission', icon: <Target size={17} /> }
   ];
-
 
   const tutorLinks = [
-    {
-      label: 'Home',
-      path: '/',
-      icon: <Home size={17} />
-    },
-    {
-      label: 'Dashboard',
-      path: '/tutor/dashboard',
-      icon: <LayoutDashboard size={17} />
-    },
-    {
-      label: 'Sessions',
-      path: '/my-sessions',
-      icon: <CalendarDays size={17} />
-    },
-    {
-      label: 'Resources',
-      path: '/resources',
-      icon: <Library size={17} />
-    }
+    { label: 'Home', path: '/', icon: <Home size={17} /> },
+    { label: 'Dashboard', path: '/tutor/dashboard', icon: <LayoutDashboard size={17} /> },
+    { label: 'Sessions', path: '/my-sessions', icon: <CalendarDays size={17} /> },
+    { label: 'Resources', path: '/resources', icon: <Library size={17} /> }
   ];
-
 
   const adminLinks = [
-    {
-      label: 'Dashboard',
-      path: '/admin/dashboard',
-      icon: <LayoutDashboard size={17} />,
-      admin: true
-    },
-    {
-      label: 'Users',
-      path: '/admin/users',
-      icon: <Users size={17} />,
-      admin: true
-    },
-    {
-      label: 'Tutors',
-      path: '/admin/tutors',
-      icon: <GraduationCap size={17} />,
-      admin: true
-    },
-    {
-      label: 'Content',
-      path: '/admin/content',
-      icon: <FileText size={17} />,
-      admin: true
-    },
-    {
-      label: 'Payments',
-      path: '/admin/payments',
-      icon: <Wallet size={17} />,
-      admin: true
-    },
-    {
-      label: 'Analytics',
-      path: '/admin/analytics',
-      icon: <BarChart3 size={17} />,
-      admin: true
-    },
-    {
-      label: 'Settings',
-      path: '/admin/settings',
-      icon: <Settings size={17} />,
-      admin: true
-    }
+    { label: 'Dashboard', path: '/admin/dashboard', icon: <LayoutDashboard size={17} /> },
+    { label: 'Users', path: '/admin/users', icon: <Users size={17} /> },
+    { label: 'Tutors', path: '/admin/tutors', icon: <GraduationCap size={17} /> },
+    { label: 'Content', path: '/admin/content', icon: <FileText size={17} /> },
+    { label: 'Payments', path: '/admin/payments', icon: <Wallet size={17} /> },
+    { label: 'Analytics', path: '/admin/analytics', icon: <BarChart3 size={17} /> },
+    { label: 'Settings', path: '/admin/settings', icon: <Settings size={17} /> }
   ];
-
 
   const navigationLinks = isAdmin
     ? adminLinks
@@ -455,116 +330,42 @@ const Navbar = () => {
       ? tutorLinks
       : studentLinks;
 
-
   // =========================================================
-  // USER DROPDOWN LINKS
+  // ACCOUNT LINKS
   // =========================================================
 
   const getAccountLinks = () => {
     if (isAdmin) {
       return [
-        {
-          label: 'Admin Dashboard',
-          path: '/admin/dashboard',
-          icon: <LayoutDashboard size={17} />
-        },
-        {
-          label: 'Manage Users',
-          path: '/admin/users',
-          icon: <Users size={17} />
-        },
-        {
-          label: 'Activity Logs',
-          path: '/admin/activity',
-          icon: <Activity size={17} />
-        },
-        {
-          label: 'My Profile',
-          path: '/admin/profile',
-          icon: <User size={17} />
-        },
-        {
-          label: 'Account Settings',
-          path: '/admin/settings',
-          icon: <Settings size={17} />
-        }
+        { label: 'Admin Dashboard', path: '/admin/dashboard', icon: <LayoutDashboard size={17} /> },
+        { label: 'Manage Users', path: '/admin/users', icon: <Users size={17} /> },
+        { label: 'Activity Logs', path: '/admin/activity', icon: <Activity size={17} /> },
+        { label: 'My Profile', path: '/admin/profile', icon: <User size={17} /> },
+        { label: 'Account Settings', path: '/admin/settings', icon: <Settings size={17} /> }
       ];
     }
 
     if (isTutor) {
       return [
-        {
-          label: 'My Profile',
-          path: '/tutor/profile',
-          icon: <User size={17} />
-        },
-        {
-          label: 'Tutor Dashboard',
-          path: '/tutor/dashboard',
-          icon: <LayoutDashboard size={17} />
-        },
-        {
-          label: 'My Students',
-          path: '/tutor/students',
-          icon: <Users size={17} />
-        },
-        {
-          label: 'My Sessions',
-          path: '/my-sessions',
-          icon: <CalendarDays size={17} />
-        },
-        {
-          label: 'My Earnings',
-          path: '/tutor/earnings',
-          icon: <Wallet size={17} />
-        },
-        {
-          label: 'Account Settings',
-          path: '/settings',
-          icon: <Settings size={17} />
-        },
-        {
-          label: 'Help Centre',
-          path: '/help',
-          icon: <HelpCircle size={17} />
-        }
+        { label: 'My Profile', path: '/tutor/profile', icon: <User size={17} /> },
+        { label: 'Tutor Dashboard', path: '/tutor/dashboard', icon: <LayoutDashboard size={17} /> },
+        { label: 'My Students', path: '/tutor/students', icon: <Users size={17} /> },
+        { label: 'My Sessions', path: '/my-sessions', icon: <CalendarDays size={17} /> },
+        { label: 'My Earnings', path: '/tutor/earnings', icon: <Wallet size={17} /> },
+        { label: 'Account Settings', path: '/settings', icon: <Settings size={17} /> },
+        { label: 'Help Centre', path: '/help', icon: <HelpCircle size={17} /> }
       ];
     }
 
     return [
-      {
-        label: 'My Profile',
-        path: '/profile',
-        icon: <User size={17} />
-      },
-      {
-        label: 'My Dashboard',
-        path: '/dashboard',
-        icon: <LayoutDashboard size={17} />
-      },
-      {
-        label: 'My Courses',
-        path: '/my-courses',
-        icon: <BookMarked size={17} />
-      },
-      {
-        label: 'My Sessions',
-        path: '/my-sessions',
-        icon: <CalendarDays size={17} />
-      },
-      {
-        label: 'Account Settings',
-        path: '/settings',
-        icon: <Settings size={17} />
-      },
-      {
-        label: 'Help Centre',
-        path: '/help',
-        icon: <HelpCircle size={17} />
-      }
+      { label: 'My Profile', path: '/profile', icon: <User size={17} /> },
+      { label: 'My Dashboard', path: '/dashboard', icon: <LayoutDashboard size={17} /> },
+      { label: 'My Courses', path: '/my-courses', icon: <BookMarked size={17} /> },
+      { label: 'My Sessions', path: '/my-sessions', icon: <CalendarDays size={17} /> },
+      { label: 'Account Settings', path: '/settings', icon: <Settings size={17} /> },
+      { label: 'Help Centre', path: '/help', icon: <HelpCircle size={17} /> }
     ];
   };
-
 
   // =========================================================
   // SEARCH
@@ -590,24 +391,24 @@ const Navbar = () => {
         items.push({
           title,
           category,
-          path:
-            item.slug
-              ? `${route}/${item.slug}`
-              : item.id
-                ? `${route}/${item.id}`
-                : route
+          path: item.slug
+            ? `${route}/${item.slug}`
+            : item.id
+              ? `${route}/${item.id}`
+              : route
         });
       });
     };
 
-    addItems(data?.subjects?.items, 'Subject', '/subjects');
-    addItems(data?.tutors?.shifts, 'Tutor', '/tutors');
-    addItems(data?.curriculum?.items, 'Curriculum', '/curriculum');
-    addItems(data?.resources?.vaults, 'Resource', '/resources');
+    // Search is independent of HomeDataContext.
+    // Static navigation destinations remain searchable.
+    addItems(studentLinks.map(link => ({
+      title: link.label,
+      path: link.path
+    })), 'Page', '');
 
     return items;
-  }, [data]);
-
+  }, []);
 
   useEffect(() => {
     if (!searchOpen) return;
@@ -619,12 +420,7 @@ const Navbar = () => {
     return () => clearTimeout(timer);
   }, [searchOpen]);
 
-
   useEffect(() => {
-    if (searchTimerRef.current) {
-      clearTimeout(searchTimerRef.current);
-    }
-
     const query = searchQuery.trim();
 
     if (query.length < 2) {
@@ -632,7 +428,7 @@ const Navbar = () => {
       return;
     }
 
-    searchTimerRef.current = setTimeout(() => {
+    const timer = setTimeout(() => {
       const results = searchableItems
         .filter(item =>
           item.title.toLowerCase().includes(query.toLowerCase())
@@ -642,13 +438,8 @@ const Navbar = () => {
       setSearchResults(results);
     }, 250);
 
-    return () => {
-      if (searchTimerRef.current) {
-        clearTimeout(searchTimerRef.current);
-      }
-    };
+    return () => clearTimeout(timer);
   }, [searchQuery, searchableItems]);
-
 
   const openSearch = () => {
     handleClick();
@@ -658,32 +449,27 @@ const Navbar = () => {
     setSearchResults([]);
   };
 
-
   const closeSearch = () => {
     setSearchOpen(false);
     setSearchQuery('');
     setSearchResults([]);
   };
 
-
   const handleSearchSubmit = event => {
     event.preventDefault();
 
     const query = searchQuery.trim();
-
     if (!query) return;
 
     closeSearch();
     navigate(`/search?q=${encodeURIComponent(query)}`);
   };
 
-
   // =========================================================
-  // LANGUAGE SELECTOR
+  // LANGUAGE
   // =========================================================
 
   const languageOptions = Object.values(languages || {});
-
 
   const handleLanguageChange = language => {
     handleClick();
@@ -695,9 +481,8 @@ const Navbar = () => {
     setLanguageOpen(false);
   };
 
-
   // =========================================================
-  // MENU TOGGLES
+  // MENU CONTROLS
   // =========================================================
 
   const toggleUserMenu = () => {
@@ -706,13 +491,11 @@ const Navbar = () => {
     setLanguageOpen(false);
   };
 
-
   const toggleLanguageMenu = () => {
     handleClick();
     setLanguageOpen(previous => !previous);
     setUserMenuOpen(false);
   };
-
 
   const toggleMobileMenu = () => {
     handleClick();
@@ -721,9 +504,8 @@ const Navbar = () => {
     setLanguageOpen(false);
   };
 
-
   // =========================================================
-  // ROUTE PROTECTION / ROLE NAVBAR
+  // ROLE-BASED NAVBAR
   // =========================================================
 
   if (location.pathname.startsWith('/admin') && !isAdmin) {
@@ -731,14 +513,8 @@ const Navbar = () => {
   }
 
   if (isParent && isAuthenticated) {
-    return (
-      <ParentNavbar
-        user={user}
-        onLogout={handleLogout}
-      />
-    );
+    return <ParentNavbar user={user} onLogout={handleLogout} />;
   }
-
 
   // =========================================================
   // USER DETAILS
@@ -752,7 +528,6 @@ const Navbar = () => {
     'My Account';
 
   const userEmail = user?.email || '';
-
   const userInitial = userName.charAt(0).toUpperCase();
 
   const avatarUrl =
@@ -768,7 +543,6 @@ const Navbar = () => {
       ? 'Tutor'
       : 'Student';
 
-
   // =========================================================
   // RENDER
   // =========================================================
@@ -778,34 +552,18 @@ const Navbar = () => {
       <nav className="navbar">
         <div className="navbar-container">
 
-          {/* LOGO */}
-
-          <Link
-            to="/"
-            className="logo"
-            onClick={handleClick}
-          >
+          <Link to="/" className="logo" onClick={handleClick}>
             <div className="logo-icon">
-              <img
-                src={logo}
-                alt="EduSpantech"
-                className="logo-image"
-              />
+              <img src={logo} alt="EduSpantech" className="logo-image" />
             </div>
 
             <div className="logo-content">
-              <span className="logo-title">
-                EduSpantech
-              </span>
-
+              <span className="logo-title">EduSpantech</span>
               <span className="logo-subtitle">
                 Education for the love of your life
               </span>
             </div>
           </Link>
-
-
-          {/* DESKTOP NAVIGATION */}
 
           <div className="navbar-links">
             {navigationLinks.map(link => (
@@ -820,21 +578,13 @@ const Navbar = () => {
                 ].filter(Boolean).join(' ')}
                 onClick={handleClick}
               >
-                <span className="nav-icon">
-                  {link.icon}
-                </span>
-
+                <span className="nav-icon">{link.icon}</span>
                 {link.label}
               </Link>
             ))}
           </div>
 
-
-          {/* NAVBAR ACTIONS */}
-
           <div className="navbar-actions">
-
-            {/* SEARCH */}
 
             <button
               type="button"
@@ -845,9 +595,6 @@ const Navbar = () => {
               <Search size={19} />
             </button>
 
-
-            {/* NOTIFICATIONS */}
-
             {isAuthenticated && (
               <NotificationBell
                 isActive={
@@ -856,9 +603,6 @@ const Navbar = () => {
                 }
               />
             )}
-
-
-            {/* LANGUAGE */}
 
             <div className="language-container">
               <button
@@ -879,9 +623,7 @@ const Navbar = () => {
                 />
               </button>
 
-              <div
-                className={`language-dropdown ${languageOpen ? 'open' : ''}`}
-              >
+              <div className={`language-dropdown ${languageOpen ? 'open' : ''}`}>
                 {languageOptions.map(language => (
                   <button
                     type="button"
@@ -891,30 +633,21 @@ const Navbar = () => {
                     }`}
                     onClick={() => handleLanguageChange(language)}
                   >
-                    <span className="lang-flag">
-                      {language.flag}
-                    </span>
-
+                    <span className="lang-flag">{language.flag}</span>
                     <span className="lang-name">
                       {language.nativeName || language.name}
                     </span>
-
                     <span className="lang-code">
                       {language.code?.toUpperCase()}
                     </span>
 
                     {currentLanguage === language.code && (
-                      <span className="lang-check">
-                        ✓
-                      </span>
+                      <span className="lang-check">✓</span>
                     )}
                   </button>
                 ))}
               </div>
             </div>
-
-
-            {/* AUTHENTICATED USER */}
 
             {isAuthenticated && user ? (
               <div className="user-menu">
@@ -946,15 +679,11 @@ const Navbar = () => {
                     )}
 
                     {isAdmin && (
-                      <span className="admin-badge-avatar">
-                        ★
-                      </span>
+                      <span className="admin-badge-avatar">★</span>
                     )}
 
                     {isTutor && (
-                      <span className="tutor-badge">
-                        ✓
-                      </span>
+                      <span className="tutor-badge">✓</span>
                     )}
 
                     <span className="avatar-chevron">
@@ -962,22 +691,12 @@ const Navbar = () => {
                     </span>
                   </div>
 
-                  <span className="user-name">
-                    {userName}
-                  </span>
+                  <span className="user-name">{userName}</span>
                 </button>
 
-
-                {/* USER DROPDOWN */}
-
-                <div
-                  className={`user-dropdown ${
-                    userMenuOpen ? 'open' : ''
-                  }`}
-                >
+                <div className={`user-dropdown ${userMenuOpen ? 'open' : ''}`}>
                   <div className="dropdown-header">
                     <div className="dropdown-user-info">
-
                       <div className="dropdown-avatar">
                         {avatarUrl ? (
                           <img
@@ -993,13 +712,8 @@ const Navbar = () => {
                       </div>
 
                       <div className="dropdown-user-details">
-                        <span className="dropdown-user-name">
-                          {userName}
-                        </span>
-
-                        <span className="dropdown-user-email">
-                          {userEmail}
-                        </span>
+                        <span className="dropdown-user-name">{userName}</span>
+                        <span className="dropdown-user-email">{userEmail}</span>
 
                         <span
                           className={`dropdown-user-tier ${
@@ -1013,16 +727,12 @@ const Navbar = () => {
                           {roleLabel}
                         </span>
                       </div>
-
                     </div>
                   </div>
 
-
-                  <div
-                    className={`dropdown-items ${
-                      isAdmin ? 'admin-dropdown-items' : ''
-                    }`}
-                  >
+                  <div className={`dropdown-items ${
+                    isAdmin ? 'admin-dropdown-items' : ''
+                  }`}>
                     {getAccountLinks().map(item => (
                       <Link
                         key={item.path}
@@ -1033,10 +743,7 @@ const Navbar = () => {
                           closeAllMenus();
                         }}
                       >
-                        <span className="dropdown-icon">
-                          {item.icon}
-                        </span>
-
+                        <span className="dropdown-icon">{item.icon}</span>
                         {item.label}
                       </Link>
                     ))}
@@ -1051,36 +758,22 @@ const Navbar = () => {
                       <span className="dropdown-icon">
                         <LogOut size={17} />
                       </span>
-
                       Sign Out
                     </button>
                   </div>
                 </div>
               </div>
             ) : (
-              /* PUBLIC AUTH BUTTONS */
-
               <div className="auth-buttons">
-                <Link
-                  to="/login"
-                  className="login-button"
-                  onClick={handleClick}
-                >
+                <Link to="/login" className="login-button" onClick={handleClick}>
                   Login
                 </Link>
 
-                <Link
-                  to="/register"
-                  className="signup-button"
-                  onClick={handleClick}
-                >
+                <Link to="/register" className="signup-button" onClick={handleClick}>
                   Get Started
                 </Link>
               </div>
             )}
-
-
-            {/* MOBILE MENU BUTTON */}
 
             <button
               type="button"
@@ -1089,21 +782,14 @@ const Navbar = () => {
               aria-label="Open navigation menu"
               aria-expanded={mobileMenuOpen}
             >
-              {mobileMenuOpen ? (
-                <X size={22} />
-              ) : (
-                <Menu size={22} />
-              )}
+              {mobileMenuOpen ? <X size={22} /> : <Menu size={22} />}
             </button>
 
           </div>
         </div>
       </nav>
 
-
-      {/* =====================================================
-          SEARCH OVERLAY
-      ===================================================== */}
+      {/* SEARCH OVERLAY */}
 
       {searchOpen && (
         <div className="mobile-menu-backdrop" onClick={closeSearch}>
@@ -1124,10 +810,7 @@ const Navbar = () => {
               </button>
             </div>
 
-            <form
-              className="search-overlay-form"
-              onSubmit={handleSearchSubmit}
-            >
+            <form className="search-overlay-form" onSubmit={handleSearchSubmit}>
               <Search size={20} />
 
               <input
@@ -1153,7 +836,6 @@ const Navbar = () => {
                       <div className="search-overlay-result-title">
                         {result.title}
                       </div>
-
                       <span>{result.category}</span>
                     </div>
 
@@ -1163,12 +845,11 @@ const Navbar = () => {
               </div>
             )}
 
-            {searchQuery.trim().length >= 2 &&
-              searchResults.length === 0 && (
-                <div className="search-overlay-empty">
-                  No matching results found.
-                </div>
-              )}
+            {searchQuery.trim().length >= 2 && searchResults.length === 0 && (
+              <div className="search-overlay-empty">
+                No matching results found.
+              </div>
+            )}
 
             <button
               type="button"
@@ -1182,10 +863,7 @@ const Navbar = () => {
         </div>
       )}
 
-
-      {/* =====================================================
-          MOBILE MENU BACKDROP
-      ===================================================== */}
+      {/* MOBILE MENU BACKDROP */}
 
       {mobileMenuOpen && (
         <div
@@ -1194,24 +872,17 @@ const Navbar = () => {
         />
       )}
 
+      {/* MOBILE MENU */}
 
-      {/* =====================================================
-          MOBILE MENU
-      ===================================================== */}
-
-      <div
-        className={`mobile-menu-overlay ${
-          mobileMenuOpen ? 'open' : ''
-        }`}
-      >
+      <div className={`mobile-menu-overlay ${
+        mobileMenuOpen ? 'open' : ''
+      }`}>
         <div
           className="mobile-menu-sheet"
           onClick={event => event.stopPropagation()}
         >
           <div className="mobile-menu-header">
-            <span className="mobile-menu-title">
-              Navigation
-            </span>
+            <span className="mobile-menu-title">Navigation</span>
 
             <button
               type="button"
@@ -1222,9 +893,6 @@ const Navbar = () => {
               <X size={20} />
             </button>
           </div>
-
-
-          {/* MAIN MOBILE LINKS */}
 
           <div className="mobile-nav-links">
             {navigationLinks.map(link => (
@@ -1242,24 +910,18 @@ const Navbar = () => {
                   setMobileMenuOpen(false);
                 }}
               >
-                <span className="mobile-nav-icon">
-                  {link.icon}
-                </span>
-
+                <span className="mobile-nav-icon">{link.icon}</span>
                 {link.label}
               </Link>
             ))}
           </div>
-
 
           {isAuthenticated && (
             <>
               <div className="mobile-divider" />
 
               <div className="mobile-section">
-                <span className="mobile-section-label">
-                  My Account
-                </span>
+                <span className="mobile-section-label">My Account</span>
 
                 {getAccountLinks().map(item => (
                   <Link
@@ -1289,7 +951,6 @@ const Navbar = () => {
             </>
           )}
 
-
           {!isAuthenticated && (
             <>
               <div className="mobile-divider" />
@@ -1314,17 +975,12 @@ const Navbar = () => {
             </>
           )}
 
-
-          {/* MOBILE LANGUAGE OPTIONS */}
-
           {languageOptions.length > 0 && (
             <>
               <div className="mobile-divider" />
 
               <div className="mobile-section">
-                <span className="mobile-section-label">
-                  Language
-                </span>
+                <span className="mobile-section-label">Language</span>
 
                 <div className="mobile-lang-grid">
                   {languageOptions.map(language => (
@@ -1340,16 +996,13 @@ const Navbar = () => {
                       }}
                     >
                       <span>{language.flag}</span>
-                      <span>
-                        {language.nativeName || language.name}
-                      </span>
+                      <span>{language.nativeName || language.name}</span>
                     </button>
                   ))}
                 </div>
               </div>
             </>
           )}
-
         </div>
       </div>
     </>

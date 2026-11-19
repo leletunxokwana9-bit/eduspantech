@@ -21,37 +21,31 @@ const API_URL =
 const ParentHome = () => {
   const [heroImage, setHeroImage] = useState('');
 
-  // ============================================
-  // LOAD PARENT HERO IMAGE
-  // ============================================
-
   useEffect(() => {
     const controller = new AbortController();
 
-    const loadHeroImage = async () => {
+    const fetchHeroImage = async () => {
       try {
         const response = await fetch(
           `${API_URL}/login-hero/active?type=parent`,
           { signal: controller.signal }
         );
 
-        if (!response.ok) {
-          return;
-        }
+        if (!response.ok) return;
 
         const result = await response.json();
 
-        if (result.success && result.image?.url) {
+        if (result?.image?.url) {
           setHeroImage(result.image.url);
         }
       } catch (error) {
         if (error.name !== 'AbortError') {
-          console.error('Parent home hero image error:', error);
+          console.error('Unable to load parent hero image:', error);
         }
       }
     };
 
-    loadHeroImage();
+    fetchHeroImage();
 
     return () => controller.abort();
   }, []);
@@ -59,68 +53,69 @@ const ParentHome = () => {
   const features = [
     {
       icon: <TrendingUp size={23} />,
-      title: 'Track academic progress',
+      title: 'Academic progress',
       description:
-        'Follow your child’s learning journey and understand how they are progressing across their subjects.'
+        "Follow your child's academic development and stay informed about their learning journey."
     },
     {
       icon: <ClipboardCheck size={23} />,
-      title: 'View learning reports',
+      title: 'Learning reports',
       description:
-        'Access academic reports and important learning updates to stay informed about your child’s development.'
+        "Access updates and reports that help you understand your child's performance."
     },
     {
       icon: <CalendarDays size={23} />,
-      title: 'Manage tutoring sessions',
+      title: 'Tutoring sessions',
       description:
-        'Keep track of tutoring sessions and stay connected with your child’s learning schedule.'
+        'Keep track of tutoring sessions, schedules and important learning activities.'
     },
     {
       icon: <BookOpen size={23} />,
-      title: 'Explore learning resources',
+      title: 'Learning resources',
       description:
-        'Discover educational resources that support learning, revision and academic confidence.'
+        'Stay connected to the resources and learning opportunities supporting your child.'
     }
   ];
 
   const benefits = [
-    'Stay informed about academic progress',
-    'Keep track of tutoring sessions',
-    'Access learning reports in one place',
-    'Stay involved in your child’s education'
+    'Stay informed about your child’s academic progress',
+    'Keep track of tutoring sessions and learning activities',
+    'Access learning reports and important updates',
+    'Remain actively involved in your child’s education'
   ];
 
   return (
     <main className="parent-home">
 
-      {/* ========================================
+      {/* =====================================================
           HERO SECTION
-      ======================================== */}
+      ===================================================== */}
 
       <section className="parent-hero">
-
         <div
           className={`parent-hero-visual ${heroImage ? 'has-image' : ''}`}
           style={
             heroImage
-              ? { backgroundImage: `url("${heroImage}")` }
-              : undefined
+              ? { backgroundImage: `url(${heroImage})` }
+              : {}
           }
         >
-          <div className="parent-hero-overlay"></div>
+          <div className="parent-hero-overlay" />
 
           <div className="parent-hero-content">
+
+            {/* HERO TEXT ONLY — NO RIGHT-SIDE CARD */}
 
             <div className="parent-hero-copy">
 
               <div className="parent-eyebrow">
-                <ShieldCheck size={16} />
-                <span>THE PARENT & GUARDIAN EXPERIENCE</span>
+                <ShieldCheck size={15} />
+                THE PARENT &amp; GUARDIAN EXPERIENCE
               </div>
 
               <h1>
                 Be part of your child's
-                <span> learning journey.</span>
+                <span>learning journey.</span>
               </h1>
 
               <p className="parent-hero-description">
@@ -130,13 +125,12 @@ const ParentHome = () => {
               </p>
 
               <div className="parent-hero-actions">
-
                 <Link
                   to="/parent-register"
                   className="parent-primary-btn"
                 >
                   Get Started
-                  <ArrowRight size={18} />
+                  <ArrowRight size={17} />
                 </Link>
 
                 <Link
@@ -145,11 +139,10 @@ const ParentHome = () => {
                 >
                   Parent Login
                 </Link>
-
               </div>
 
               <div className="parent-hero-trust">
-                <ShieldCheck size={17} />
+                <CheckCircle2 size={16} />
                 <span>
                   A dedicated space for parents and guardians
                 </span>
@@ -159,39 +152,34 @@ const ParentHome = () => {
 
           </div>
         </div>
-
       </section>
 
-      {/* ========================================
+      {/* =====================================================
           INTRODUCTION
-      ======================================== */}
+      ===================================================== */}
 
       <section className="parent-intro">
 
         <div className="parent-section-heading">
-
           <span className="parent-section-label">
-            SUPPORT EVERY STEP
+            SUPPORTING YOUR CHILD
           </span>
 
           <h2>
-            A better way to stay involved.
+            Everything you need to stay involved.
           </h2>
 
           <p>
-            Your involvement matters. EduSpantech brings important
-            aspects of your child's educational journey together
-            so you can stay informed and involved.
+            EduSpantech helps parents and guardians remain connected
+            to the important aspects of their child's education.
           </p>
-
         </div>
 
         <div className="parent-feature-grid">
-
           {features.map((feature, index) => (
             <article
               className="parent-feature-card"
-              key={index}
+              key={feature.title}
             >
               <div className="parent-feature-icon">
                 {feature.icon}
@@ -201,19 +189,18 @@ const ParentHome = () => {
 
               <p>{feature.description}</p>
 
-              <div className="parent-feature-number">
-                0{index + 1}
-              </div>
+              <span className="parent-feature-number">
+                {String(index + 1).padStart(2, '0')}
+              </span>
             </article>
           ))}
-
         </div>
 
       </section>
 
-      {/* ========================================
-          PARENT PARTNERSHIP SECTION
-      ======================================== */}
+      {/* =====================================================
+          PARTNERSHIP SECTION
+      ===================================================== */}
 
       <section className="parent-partnership">
 
@@ -224,24 +211,25 @@ const ParentHome = () => {
           </div>
 
           <span className="parent-section-label">
-            EDUCATION WORKS BETTER TOGETHER
+            A STRONGER LEARNING PARTNERSHIP
           </span>
 
           <h2>
-            Your support can make
-            <span> a lasting difference.</span>
+            Your involvement
+            <span>makes a difference.</span>
           </h2>
 
           <p>
-            When parents, learners and educators work together,
-            learners have a stronger support system. Be part of
-            that partnership with EduSpantech.
+            A child's educational journey is strengthened when
+            parents, tutors and learners work together. EduSpantech
+            gives you a dedicated space to stay informed and
+            participate in that journey.
           </p>
 
           <ul className="parent-benefits-list">
-            {benefits.map((benefit, index) => (
-              <li key={index}>
-                <CheckCircle2 size={18} />
+            {benefits.map((benefit) => (
+              <li key={benefit}>
+                <CheckCircle2 size={17} />
                 <span>{benefit}</span>
               </li>
             ))}
@@ -251,26 +239,26 @@ const ParentHome = () => {
             to="/parent-register"
             className="parent-partnership-link"
           >
-            Create your parent account
-            <ArrowRight size={18} />
+            Join EduSpantech
+            <ArrowRight size={17} />
           </Link>
 
         </div>
 
         <div className="parent-partnership-visual">
 
-          <div className="parent-partnership-decoration decoration-one"></div>
-          <div className="parent-partnership-decoration decoration-two"></div>
+          <div className="parent-partnership-decoration decoration-one" />
+          <div className="parent-partnership-decoration decoration-two" />
 
           <div className="parent-partnership-illustration">
 
             <div className="parent-illustration-circle">
-              <GraduationCap size={76} strokeWidth={1.3} />
+              <GraduationCap size={82} strokeWidth={1.4} />
             </div>
 
             <div className="parent-illustration-caption">
-              <span>EduSpantech</span>
-              <strong>Supporting every learner.</strong>
+              <span>EDUSPANTECH</span>
+              <strong>Supporting every learning journey</strong>
             </div>
 
           </div>
@@ -279,27 +267,26 @@ const ParentHome = () => {
 
       </section>
 
-      {/* ========================================
-          FINAL CTA
-      ======================================== */}
+      {/* =====================================================
+          FINAL CALL TO ACTION
+      ===================================================== */}
 
       <section className="parent-final-cta">
 
         <div className="parent-final-cta-content">
 
           <span className="parent-section-label">
-            YOUR CHILD'S JOURNEY STARTS HERE
+            YOUR CHILD'S FUTURE MATTERS
           </span>
 
           <h2>
-            Stay connected.
-            <br />
-            Support their success.
+            Be part of every
+            learning milestone.
           </h2>
 
           <p>
-            Create your parent account and become an active part
-            of your child's learning experience.
+            Create your parent or guardian account and stay connected
+            to your child's educational progress with EduSpantech.
           </p>
 
           <div className="parent-final-actions">
@@ -309,14 +296,14 @@ const ParentHome = () => {
               className="parent-primary-btn"
             >
               Get Started
-              <ArrowRight size={18} />
+              <ArrowRight size={17} />
             </Link>
 
             <Link
               to="/parent-login"
               className="parent-final-login"
             >
-              Already registered? Sign in
+              Already have an account? Parent Login
             </Link>
 
           </div>

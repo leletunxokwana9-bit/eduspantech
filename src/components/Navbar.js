@@ -216,13 +216,16 @@ const checkIsParent = (userData) => {
 // ROUTE HELPERS
 // ======================================================
 
-const isParentAreaPath = (pathname) =>
-  pathname === "/parent" ||
-  pathname.startsWith("/parent/");
+const isParentAreaPath = (pathname) => {
+  const path = pathname.replace(/\/+$/, "") || "/";
 
-const isParentAuthenticationPath = (pathname) =>
-  pathname === "/parent-login" ||
-  pathname === "/parent-register";
+  return (
+    path === "/parent" ||
+    path === "/parent-login" ||
+    path === "/parent-register" ||
+    path.startsWith("/parent/")
+  );
+};
 
 // ======================================================
 // NAVBAR
@@ -243,15 +246,13 @@ function Navbar() {
   // ROUTE STATE
   // ------------------------------------------------------
 
-  const isParentRoute =
-    isParentAreaPath(location.pathname);
+  const isParentRoute = isParentAreaPath(location.pathname);
 
-  const isParentAuthPage =
-    isParentAuthenticationPath(location.pathname);
+  // Parent routes always use ParentNavbar.
+  // This includes public parent pages and authentication pages.
+  const shouldShowParentNavbar = isParentRoute;
 
-  const shouldShowParentNavbar =
-    isParentRoute &&
-    !isParentAuthPage;
+  const isAdminRoute = location.pathname.startsWith("/admin");
 
   // ------------------------------------------------------
   // UI STATE
@@ -334,13 +335,9 @@ function Navbar() {
       !tutor &&
       checkIsParent(userData);
 
-    console.log("🔎 Navbar authentication state:", {
-      name: data?.name,
-      email: data?.email,
-      backendRole: data?.role,
-      backendIsTutor: data?.is_tutor,
-      backendIsParent: data?.is_parent,
-      storedRole: localStorage.getItem("userRole"),
+    // Do not log authentication tokens or sensitive session data.
+    console.log("Navbar authentication state:", {
+      role: data?.role,
       isAuthenticated: true,
       isAdmin: admin,
       isTutor: tutor,
@@ -1132,7 +1129,7 @@ function Navbar() {
     navLinks = studentNavLinks;
   }
 
-  console.log("📍 Navbar navigation selected:", {
+  console.log("Navbar navigation selected:", {
     pathname: location.pathname,
     isParentRoute,
     shouldShowParentNavbar,
@@ -1207,25 +1204,18 @@ function Navbar() {
   // ADMIN ROUTES
   // ======================================================
 
-  const isAdminRoute =
-    location.pathname.startsWith("/admin");
-
   if (isAdminRoute) return null;
 
   // ======================================================
   // PARENT NAVBAR
-  // PUBLIC PARENT HOME + AUTHENTICATED PARENT AREA
+  // PUBLIC HOME, LOGIN, REGISTER AND AUTHENTICATED AREA
   // ======================================================
 
-  if (shouldShowParentNavbar && !isAdmin && !isTutor) {
+  if (shouldShowParentNavbar) {
     return (
       <ParentNavbar
-        user={isAuthenticated && isParent ? user : null}
-        onLogout={
-          isAuthenticated && isParent
-            ? handleLogout
-            : undefined
-        }
+        user={isAuthenticated ? user : null}
+        onLogout={isAuthenticated ? handleLogout : undefined}
       />
     );
   }

@@ -100,9 +100,6 @@ const getStoredUser = () => {
 
     if (!storedUser) return null;
 
-    // Support both:
-    // { id, role, ... }
-    // { user: { id, role, ... } }
     return storedUser.user || storedUser;
   } catch (error) {
     console.error('Unable to read stored user:', error);
@@ -502,20 +499,21 @@ const AppContent = () => {
   const isVerifyEmailRoute =
     currentPath === '/verify-email';
 
-  // Parent login and registration are standalone pages.
-  // The public Parent Home and Parent Dashboard must
-  // retain the parent-specific navbar.
-  const isParentAuthRoute =
-    currentPath === '/parent-login' ||
-    currentPath === '/parent-register';
-
   const isStandaloneSessionRecordings =
     currentPath === '/session-recordings';
+
+  // ============================================
+  // NAVIGATION VISIBILITY
+  // ============================================
+
+  // IMPORTANT:
+  // Do NOT hide navigation on parent login/register.
+  // Navbar.js detects these parent routes and renders
+  // ParentNavbar automatically.
 
   const hideNavigation =
     isAdminRoute ||
     isVerifyEmailRoute ||
-    isParentAuthRoute ||
     isStandaloneSessionRecordings;
 
   return (
@@ -601,7 +599,7 @@ const AppContent = () => {
             {/* ========================================
                 PARENT PUBLIC HOME
                 No authentication required.
-                Parent navbar must remain visible.
+                Parent navbar remains visible.
             ======================================== */}
 
             <Route
@@ -611,7 +609,7 @@ const AppContent = () => {
 
             {/* ========================================
                 PARENT AUTHENTICATION
-                Navbar is hidden on these routes.
+                Parent navbar remains visible.
             ======================================== */}
 
             <Route

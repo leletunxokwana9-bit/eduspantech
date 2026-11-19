@@ -7,7 +7,6 @@ import {
   TrendingUp,
   CalendarDays,
   BookOpen,
-  ChartNoAxesCombined,
   Users,
   CheckCircle2,
   GraduationCap,
@@ -151,70 +150,9 @@ const ParentHome = () => {
 
               <div className="parent-hero-trust">
                 <ShieldCheck size={17} />
-                <span>A dedicated space for parents and guardians</span>
-              </div>
-
-            </div>
-
-            <div className="parent-hero-card">
-
-              <div className="parent-preview-top">
-                <div className="parent-preview-icon">
-                  <GraduationCap size={22} />
-                </div>
-
-                <div>
-                  <span className="parent-preview-label">
-                    YOUR CHILD'S EDUCATION
-                  </span>
-                  <strong>Stay connected</strong>
-                </div>
-              </div>
-
-              <div className="parent-preview-divider"></div>
-
-              <div className="parent-preview-item">
-                <div className="parent-preview-item-icon progress">
-                  <ChartNoAxesCombined size={19} />
-                </div>
-
-                <div>
-                  <strong>Academic progress</strong>
-                  <span>Follow learning development</span>
-                </div>
-
-                <CheckCircle2 size={18} className="parent-preview-check" />
-              </div>
-
-              <div className="parent-preview-item">
-                <div className="parent-preview-item-icon sessions">
-                  <CalendarDays size={19} />
-                </div>
-
-                <div>
-                  <strong>Tutoring sessions</strong>
-                  <span>Stay up to date with sessions</span>
-                </div>
-
-                <CheckCircle2 size={18} className="parent-preview-check" />
-              </div>
-
-              <div className="parent-preview-item">
-                <div className="parent-preview-item-icon reports">
-                  <ClipboardCheck size={19} />
-                </div>
-
-                <div>
-                  <strong>Learning reports</strong>
-                  <span>Keep informed about progress</span>
-                </div>
-
-                <CheckCircle2 size={18} className="parent-preview-check" />
-              </div>
-
-              <div className="parent-preview-footer">
-                <ShieldCheck size={15} />
-                <span>One place to support their success</span>
+                <span>
+                  A dedicated space for parents and guardians
+                </span>
               </div>
 
             </div>
@@ -231,6 +169,7 @@ const ParentHome = () => {
       <section className="parent-intro">
 
         <div className="parent-section-heading">
+
           <span className="parent-section-label">
             SUPPORT EVERY STEP
           </span>
@@ -244,6 +183,7 @@ const ParentHome = () => {
             aspects of your child's educational journey together
             so you can stay informed and involved.
           </p>
+
         </div>
 
         <div className="parent-feature-grid">
@@ -318,10 +258,12 @@ const ParentHome = () => {
         </div>
 
         <div className="parent-partnership-visual">
+
           <div className="parent-partnership-decoration decoration-one"></div>
           <div className="parent-partnership-decoration decoration-two"></div>
 
           <div className="parent-partnership-illustration">
+
             <div className="parent-illustration-circle">
               <GraduationCap size={76} strokeWidth={1.3} />
             </div>
@@ -330,7 +272,9 @@ const ParentHome = () => {
               <span>EduSpantech</span>
               <strong>Supporting every learner.</strong>
             </div>
+
           </div>
+
         </div>
 
       </section>
@@ -342,6 +286,7 @@ const ParentHome = () => {
       <section className="parent-final-cta">
 
         <div className="parent-final-cta-content">
+
           <span className="parent-section-label">
             YOUR CHILD'S JOURNEY STARTS HERE
           </span>
@@ -375,6 +320,7 @@ const ParentHome = () => {
             </Link>
 
           </div>
+
         </div>
 
       </section>

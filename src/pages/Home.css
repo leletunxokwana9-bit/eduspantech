@@ -390,99 +390,81 @@
 }
 
 /* ============================================================
-   NEW — STUDENT HERO IMAGE — gradient blend into dark UI
+   STUDENT HERO — full-bleed background image + gradient overlay
+   Mirrors ParentHome's blend technique exactly.
    ============================================================ */
 
-/* Wrapper: soft radial glow behind the image so the edge
-   between the image and the hero background dissolves. */
 .home-hero-visual {
   position: relative;
+  isolation: isolate;
+  flex: 1;
+  min-height: 620px;
   display: flex;
   align-items: center;
   justify-content: center;
-  isolation: isolate;
+  overflow: hidden;
+  border-radius: 22px;
+
+  /* Fallback gradient when no image is loaded */
+  background:
+    radial-gradient(
+      circle at 78% 18%,
+      rgba(65, 112, 230, 0.18),
+      transparent 34%
+    ),
+    linear-gradient(
+      115deg,
+      #101d34 0%,
+      #101a2e 50%,
+      #172747 100%
+    );
+
+  background-position: center;
+  background-size: cover;
+  background-repeat: no-repeat;
+
+  /* Optional: subtle border like ParentHome */
+  border: 1px solid rgba(158, 181, 221, 0.13);
 }
 
-.home-hero-visual::before {
-  content: "";
+.home-hero-visual.has-image {
+  background-size: cover;
+  background-position: center;
+}
+
+/* Gradient overlay — identical blend to ParentHome's .parent-hero-overlay */
+.home-hero-overlay {
   position: absolute;
-  inset: -8%;
+  inset: 0;
   z-index: 0;
-  border-radius: 50%;
-  background: radial-gradient(
-    ellipse at center,
-    rgba(79, 70, 229, 0.35) 0%,
-    rgba(79, 70, 229, 0.15) 35%,
-    transparent 70%
-  );
-  filter: blur(40px);
   pointer-events: none;
+
+  background:
+    linear-gradient(
+      90deg,
+      rgba(15, 23, 42, 0.96) 0%,
+      rgba(15, 23, 42, 0.92) 37%,
+      rgba(15, 23, 42, 0.78) 65%,
+      rgba(15, 23, 42, 0.45) 100%
+    );
 }
 
-/* The image itself: fade the edges into the hero gradient
-   with a mask, plus a subtle inner shadow so the corners
-   melt into the background rather than cut off. */
-.home-hero-image {
-  position: relative;
-  z-index: 1;
-  display: block;
-  width: 100%;
-  max-width: 560px;
-  height: auto;
-  border-radius: 24px;
-  object-fit: cover;
-
-  /* Edge fade — the key ingredient */
-  -webkit-mask-image: radial-gradient(
-    ellipse 75% 75% at 50% 50%,
-    #000 55%,
-    rgba(0, 0, 0, 0.6) 75%,
-    transparent 100%
-  );
-  mask-image: radial-gradient(
-    ellipse 75% 75% at 50% 50%,
-    #000 55%,
-    rgba(0, 0, 0, 0.6) 75%,
-    transparent 100%
-  );
-
-  /* Soft shadow so the blend feels natural */
-  box-shadow:
-    0 40px 80px -20px rgba(79, 70, 229, 0.35),
-    0 20px 40px -12px rgba(0, 0, 0, 0.5);
-
-  /* Blend the image's dark pixels into the hero gradient */
-  mix-blend-mode: screen;
-
-  transition: transform 0.4s ease;
-}
-
-.home-hero-image:hover {
-  transform: scale(1.02);
-}
-
-/* Light theme adjustments */
-[data-theme="light"] .home-hero-visual::before {
-  background: radial-gradient(
-    ellipse at center,
-    rgba(79, 70, 229, 0.18) 0%,
-    rgba(79, 70, 229, 0.08) 35%,
-    transparent 70%
-  );
-}
-
-[data-theme="light"] .home-hero-image {
-  mix-blend-mode: multiply;
-  box-shadow:
-    0 40px 80px -20px rgba(79, 70, 229, 0.25),
-    0 20px 40px -12px rgba(15, 23, 42, 0.15);
-}
-
-/* Mobile: keep the blend but soften the max-width */
-@media (max-width: 768px) {
-  .home-hero-image {
-    max-width: 100%;
+/* Mobile: keep the effect, drop the radius */
+@media (max-width: 800px) {
+  .home-hero-visual {
+    min-height: 420px;
     border-radius: 16px;
+  }
+
+  .home-hero-overlay {
+    background: rgba(15, 23, 42, 0.82);
+  }
+}
+
+@media (max-width: 560px) {
+  .home-hero-visual {
+    min-height: 340px;
+    border-radius: 12px;
   }
 }
 

@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { authService } from '../services/authService';
@@ -1258,16 +1257,14 @@ function Home() {
           </div>
         </div>
 
-        {/* Student homepage image replaces the mathematical orbit. */}
-        <div className="hero-visual home-hero-visual">
-          {homeHeroImage && (
-            <img
-              src={homeHeroImage}
-              alt="Student experiencing online learning using a computer and smartphone"
-              className="home-hero-image"
-              loading="eager"
-            />
-          )}
+        {/* Student homepage hero — full-bleed background image, no card */}
+        <div
+          className={`hero-visual home-hero-visual ${homeHeroImage ? 'has-image' : ''}`}
+          style={homeHeroImage ? { backgroundImage: `url(${homeHeroImage})` } : {}}
+          role="img"
+          aria-label="Student experiencing online learning using a computer and smartphone"
+        >
+          <div className="home-hero-overlay" />
         </div>
       </section>
 

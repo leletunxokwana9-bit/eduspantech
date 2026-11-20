@@ -1058,7 +1058,7 @@ function Home() {
   // ============================================
   return (
     <div className="home-page">
-      <section className="hero-section">
+      <section className="hero-section student-home-hero">
         <div className="hero-content">
           {isAuthenticated ? (
             <>

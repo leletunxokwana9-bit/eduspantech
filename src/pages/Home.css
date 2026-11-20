@@ -390,41 +390,81 @@
 }
 
 /* ============================================================
-   STUDENT HERO — full-bleed background image + gradient overlay
-   Mirrors ParentHome's blend technique exactly.
+   STUDENT HERO — seamless full-bleed image blend
+   No card frame, no rounded container, no visible image boundary.
+   The image fades naturally into the surrounding hero background.
    ============================================================ */
 
 .home-hero-visual {
   position: relative;
   isolation: isolate;
   flex: 1;
+  min-width: 0;
   min-height: 620px;
   display: flex;
   align-items: center;
   justify-content: center;
-  overflow: hidden;
-  border-radius: 22px;
+  overflow: visible;
 
-  /* Fallback gradient when no image is loaded */
-  background:
-    radial-gradient(
-      circle at 78% 18%,
-      rgba(65, 112, 230, 0.18),
-      transparent 34%
-    ),
-    linear-gradient(
-      115deg,
-      #101d34 0%,
-      #101a2e 50%,
-      #172747 100%
-    );
+  /* No card appearance */
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
+  background: transparent;
 
   background-position: center;
   background-size: cover;
   background-repeat: no-repeat;
 
-  /* Optional: subtle border like ParentHome */
-  border: 1px solid rgba(158, 181, 221, 0.13);
+  /*
+    Soft multi-edge mask:
+    - dissolves the left edge into the hero copy
+    - softens the top and bottom edges
+    - gently fades the far right edge
+    This avoids a visible rectangular image start/end.
+  */
+  -webkit-mask-image:
+    linear-gradient(
+      to right,
+      transparent 0%,
+      rgba(0, 0, 0, 0.10) 5%,
+      rgba(0, 0, 0, 0.48) 17%,
+      #000 34%,
+      #000 82%,
+      rgba(0, 0, 0, 0.88) 91%,
+      transparent 100%
+    ),
+    linear-gradient(
+      to bottom,
+      transparent 0%,
+      rgba(0, 0, 0, 0.35) 8%,
+      #000 23%,
+      #000 77%,
+      rgba(0, 0, 0, 0.35) 92%,
+      transparent 100%
+    );
+  -webkit-mask-composite: source-in;
+  mask-image:
+    linear-gradient(
+      to right,
+      transparent 0%,
+      rgba(0, 0, 0, 0.10) 5%,
+      rgba(0, 0, 0, 0.48) 17%,
+      #000 34%,
+      #000 82%,
+      rgba(0, 0, 0, 0.88) 91%,
+      transparent 100%
+    ),
+    linear-gradient(
+      to bottom,
+      transparent 0%,
+      rgba(0, 0, 0, 0.35) 8%,
+      #000 23%,
+      #000 77%,
+      rgba(0, 0, 0, 0.35) 92%,
+      transparent 100%
+    );
+  mask-composite: intersect;
 }
 
 .home-hero-visual.has-image {
@@ -432,42 +472,85 @@
   background-position: center;
 }
 
-/* Gradient overlay — identical blend to ParentHome's .parent-hero-overlay */
+/* Keep the overlay completely subtle; the mask performs the fade. */
 .home-hero-overlay {
   position: absolute;
   inset: 0;
   z-index: 0;
   pointer-events: none;
-
+  border: 0;
+  border-radius: 0;
   background:
-    linear-gradient(
-      90deg,
-      rgba(15, 23, 42, 0.96) 0%,
-      rgba(15, 23, 42, 0.92) 37%,
-      rgba(15, 23, 42, 0.78) 65%,
-      rgba(15, 23, 42, 0.45) 100%
+    radial-gradient(
+      ellipse at 58% 48%,
+      rgba(15, 23, 42, 0.02) 0%,
+      rgba(15, 23, 42, 0.00) 58%,
+      rgba(15, 23, 42, 0.10) 100%
     );
 }
 
-/* Mobile: keep the effect, drop the radius */
+/* Mobile: retain the seamless edge fade without a card frame. */
 @media (max-width: 800px) {
   .home-hero-visual {
     min-height: 420px;
-    border-radius: 16px;
+    border: 0;
+    border-radius: 0;
+    box-shadow: none;
+    -webkit-mask-image:
+      linear-gradient(
+        to right,
+        transparent 0%,
+        rgba(0, 0, 0, 0.35) 8%,
+        #000 24%,
+        #000 88%,
+        transparent 100%
+      ),
+      linear-gradient(
+        to bottom,
+        transparent 0%,
+        #000 18%,
+        #000 82%,
+        transparent 100%
+      );
+    -webkit-mask-composite: source-in;
+    mask-image:
+      linear-gradient(
+        to right,
+        transparent 0%,
+        rgba(0, 0, 0, 0.35) 8%,
+        #000 24%,
+        #000 88%,
+        transparent 100%
+      ),
+      linear-gradient(
+        to bottom,
+        transparent 0%,
+        #000 18%,
+        #000 82%,
+        transparent 100%
+      );
+    mask-composite: intersect;
   }
 
   .home-hero-overlay {
-    background: rgba(15, 23, 42, 0.82);
+    background: transparent;
   }
 }
 
 @media (max-width: 560px) {
   .home-hero-visual {
     min-height: 340px;
-    border-radius: 12px;
   }
 }
 
+/* Respect reduced-motion preferences; the image fade is static. */
+@media (prefers-reduced-motion: reduce) {
+  .home-hero-visual,
+  .home-hero-overlay {
+    transition: none !important;
+    animation: none !important;
+  }
+}
 /* ============================================================
    MATHEMATICAL ORBIT — 3D blueprint style
    ============================================================ */

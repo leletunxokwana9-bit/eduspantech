@@ -1782,83 +1782,240 @@
   .compliance-badges { flex-direction: column; align-items: center; gap: 4px; }
   .footer-legal-links { flex-wrap: wrap; justify-content: center; }
 }
-/* ============================================
-   EDUSPANTECH — STUDENT HOMEPAGE HERO IMAGE
-============================================ */
 
-.home-hero-visual {
+/* =========================================================
+   EDUSPANTECH — STUDENT HOMEPAGE HERO IMAGE
+   Premium dark-theme integration
+   Tutor MathematicalOrbit remains unchanged.
+========================================================= */
+
+/* Student hero background */
+.student-home-hero {
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+
+  background:
+    linear-gradient(
+      115deg,
+      #0a0e1a 0%,
+      #0c1424 42%,
+      #101b30 75%,
+      #111e34 100%
+    ) !important;
+}
+
+/* Keep student hero content above the image */
+.student-home-hero .hero-content {
+  position: relative;
+  z-index: 3;
+}
+
+/* Student hero image container */
+.student-home-hero .home-hero-visual {
   position: absolute;
   top: 0;
   right: 0;
-  width: 62%;
+
+  width: 64%;
   height: 100%;
+
+  min-height: 0;
+  flex: none;
+
+  display: block;
   overflow: hidden;
   pointer-events: none;
-  z-index: 0;
-  background: #ffffff;
+
+  z-index: 1;
+
+  background: #101b30;
 }
 
-.home-hero-image {
+/* Actual image loaded dynamically from the backend */
+.student-home-hero .home-hero-image {
   position: absolute;
   inset: 0;
+
+  display: block;
   width: 100%;
   height: 100%;
+
   object-fit: cover;
   object-position: center right;
+
+  opacity: 0.94;
+
+  filter: saturate(0.88) brightness(0.86);
 }
 
-/* Smooth white fade behind the hero text and buttons */
-.home-hero-visual::before {
+/* Main dark fade — blends image into the left text area */
+.student-home-hero .home-hero-visual::before {
   content: "";
   position: absolute;
   inset: 0;
-  z-index: 1;
-  background: linear-gradient(
-    to right,
-    #ffffff 0%,
-    rgba(255, 255, 255, 0.98) 10%,
-    rgba(255, 255, 255, 0.88) 23%,
-    rgba(255, 255, 255, 0.58) 38%,
-    rgba(255, 255, 255, 0.16) 55%,
-    rgba(255, 255, 255, 0) 72%
-  );
-}
 
-/* Keep hero content above the background image */
-.hero-section {
-  position: relative;
-}
-
-.hero-content {
-  position: relative;
   z-index: 2;
-}
+  pointer-events: none;
 
-@media (max-width: 900px) {
-  .home-hero-visual {
-    width: 100%;
-    opacity: 0.28;
-  }
-
-  .home-hero-visual::before {
-    background: linear-gradient(
+  background:
+    linear-gradient(
       to right,
-      #ffffff 0%,
-      rgba(255, 255, 255, 0.94) 45%,
-      rgba(255, 255, 255, 0.65) 100%
+      #0a0e1a 0%,
+      rgba(10, 14, 26, 0.98) 7%,
+      rgba(10, 14, 26, 0.91) 19%,
+      rgba(10, 14, 26, 0.72) 34%,
+      rgba(10, 14, 26, 0.40) 49%,
+      rgba(10, 14, 26, 0.12) 66%,
+      rgba(10, 14, 26, 0) 82%
     );
+}
+
+/* Subtle top and bottom blending */
+.student-home-hero .home-hero-visual::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+
+  z-index: 2;
+  pointer-events: none;
+
+  background:
+    linear-gradient(
+      to bottom,
+      rgba(10, 14, 26, 0.42) 0%,
+      transparent 19%,
+      transparent 77%,
+      rgba(10, 14, 26, 0.55) 100%
+    );
+}
+
+/* Keep all hero text and actions readable */
+.student-home-hero .hero-title,
+.student-home-hero .hero-title-refined,
+.student-home-hero .hero-subtitle,
+.student-home-hero .hero-subtitle-refined,
+.student-home-hero .hero-stats,
+.student-home-hero .hero-stats-refined,
+.student-home-hero .action-actions {
+  position: relative;
+  z-index: 3;
+}
+
+/* Keep the refined heading consistent with the dark theme */
+.student-home-hero .hero-title-refined {
+  color: #ffffff !important;
+}
+
+.student-home-hero .hero-subtitle-refined {
+  color: rgba(255, 255, 255, 0.72) !important;
+}
+
+/* Preserve the existing accent treatment */
+.student-home-hero .hero-title-refined .accent {
+  color: #65a9ff;
+}
+
+/* =========================================================
+   RESPONSIVE — TABLET
+========================================================= */
+
+@media (max-width: 1024px) {
+  .student-home-hero .home-hero-visual {
+    width: 67%;
+  }
+
+  .student-home-hero .home-hero-image {
+    object-position: 65% center;
+  }
+
+  .student-home-hero .home-hero-visual::before {
+    background:
+      linear-gradient(
+        to right,
+        #0a0e1a 0%,
+        rgba(10, 14, 26, 0.96) 15%,
+        rgba(10, 14, 26, 0.82) 34%,
+        rgba(10, 14, 26, 0.42) 58%,
+        rgba(10, 14, 26, 0.10) 100%
+      );
   }
 }
 
-@media (max-width: 600px) {
-  .home-hero-visual {
+/* =========================================================
+   RESPONSIVE — MOBILE
+========================================================= */
+
+@media (max-width: 768px) {
+  .student-home-hero {
+    min-height: 760px;
+  }
+
+  .student-home-hero .home-hero-visual {
     width: 100%;
-    opacity: 0.18;
+    height: 100%;
+
+    opacity: 0.48;
+  }
+
+  .student-home-hero .home-hero-image {
+    object-position: 68% center;
+    filter: saturate(0.82) brightness(0.72);
+  }
+
+  .student-home-hero .home-hero-visual::before {
+    background:
+      linear-gradient(
+        to right,
+        rgba(10, 14, 26, 0.97) 0%,
+        rgba(10, 14, 26, 0.88) 38%,
+        rgba(10, 14, 26, 0.64) 72%,
+        rgba(10, 14, 26, 0.40) 100%
+      );
+  }
+
+  .student-home-hero .home-hero-visual::after {
+    background:
+      linear-gradient(
+        to bottom,
+        rgba(10, 14, 26, 0.42) 0%,
+        rgba(10, 14, 26, 0.12) 35%,
+        rgba(10, 14, 26, 0.38) 72%,
+        #0a0e1a 100%
+      );
   }
 }
 
+/* =========================================================
+   RESPONSIVE — SMALL MOBILE
+========================================================= */
 
+@media (max-width: 480px) {
+  .student-home-hero {
+    min-height: 780px;
+  }
 
+  .student-home-hero .home-hero-visual {
+    width: 100%;
+    opacity: 0.38;
+  }
 
+  .student-home-hero .home-hero-image {
+    object-position: 70% center;
+    filter: saturate(0.78) brightness(0.68);
+  }
 
+  .student-home-hero .hero-content {
+    z-index: 3;
+  }
 
+  .student-home-hero .home-hero-visual::before {
+    background:
+      linear-gradient(
+        to right,
+        rgba(10, 14, 26, 0.96) 0%,
+        rgba(10, 14, 26, 0.85) 48%,
+        rgba(10, 14, 26, 0.58) 100%
+      );
+  }
+}

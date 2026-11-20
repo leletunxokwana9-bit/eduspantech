@@ -152,10 +152,10 @@ const EnhancedFooter = ({ siteConfig, footerLinks }) => {
                   <span className="brand-name">{siteConfig.site_name || 'EduSpantech'}</span>
                 </div>
                 <p className="brand-tagline">
-                  {siteConfig.site_tagline || 'Education for the love of my life ❤️'}
+                  {siteConfig.site_tagline || 'Education for the love of my life'}
                 </p>
                 <p className="brand-subtagline">
-                  {siteConfig.site_subtagline || 'From Grade 8 to 2nd-Year Tertiary Success'}
+                  {siteConfig.site_subtagline || 'From Grade 7 to 2nd-Year Tertiary Success'}
                 </p>
                 <div className="brand-contact">
                   {siteConfig.contact_email && (

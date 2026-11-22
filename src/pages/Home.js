@@ -76,16 +76,10 @@ const MathematicalOrbit = () => {
 // ============================================
 // ENHANCED FOOTER COMPONENT
 // ============================================
-const EnhancedFooter = ({ siteConfig, footerLinks }) => {
+const EnhancedFooter = ({ siteConfig }) => {
   const [email, setEmail] = useState('');
   const [subscribed, setSubscribed] = useState(false);
   const [selectedRegion, setSelectedRegion] = useState('Global');
-
-  const groupedLinks = footerLinks.reduce((acc, link) => {
-    if (!acc[link.category]) acc[link.category] = [];
-    acc[link.category].push(link);
-    return acc;
-  }, {});
 
   const handleSubscribe = (e) => {
     e.preventDefault();
@@ -255,7 +249,7 @@ const EnhancedFooter = ({ siteConfig, footerLinks }) => {
             </div>
           </div>
 
-          {/* ===== SOCIAL CONNECT — real brand icons ===== */}
+          {/* ===== SOCIAL CONNECT — real brand icons (single row) ===== */}
           <div className="footer-social-section">
             <div className="social-grid">
               <a href={siteConfig.social_facebook} target="_blank" rel="noopener noreferrer" className="social-link" title="Facebook">
@@ -280,18 +274,6 @@ const EnhancedFooter = ({ siteConfig, footerLinks }) => {
               </a>
             </div>
           </div>
-
-          {groupedLinks.connect && groupedLinks.connect.length > 0 && (
-            <div className="footer-social-section" style={{ borderTop: 'none', marginTop: -8 }}>
-              <div className="social-grid">
-                {groupedLinks.connect.map((link) => (
-                  <a key={link.id} href={link.url} target="_blank" rel="noopener noreferrer" className="social-link" title={link.label}>
-                    <span className="social-label">{link.label}</span>
-                  </a>
-                ))}
-              </div>
-            </div>
-          )}
         </div>
       </div>
 
@@ -418,8 +400,6 @@ function Home() {
     compliance_text: 'POPIA • GDPR • CPA Compliant'
   });
 
-  const [footerLinks, setFooterLinks] = useState([]);
-
   const checkIsAdmin = (userData) => {
     if (!userData) return false;
     return (
@@ -478,6 +458,7 @@ function Home() {
     fetchHomeHeroImage();
   }, []);
 
+  // Site config (contact details, social links, taglines)
   useEffect(() => {
     const fetchSiteData = async () => {
       try {
@@ -491,16 +472,6 @@ function Home() {
             configObj[item.config_key] = item.config_value;
           });
           setSiteConfig(prev => ({ ...prev, ...configObj }));
-        }
-
-        const { data: linksData, error: linksError } = await supabase
-          .from('footer_links')
-          .select('*')
-          .eq('is_active', true)
-          .order('sort_order', { ascending: true });
-
-        if (!linksError && linksData) {
-          setFooterLinks(linksData);
         }
       } catch (error) {
         console.error('Failed to fetch site data:', error);
@@ -561,6 +532,7 @@ function Home() {
     };
 
     checkAuth();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const fetchTutorStats = async () => {
@@ -814,7 +786,7 @@ function Home() {
               <p>Everything you need to manage your tutoring business</p>
             </div>
 
-            <div className="action-actions" style={{ gridTemplateColumns: 'repeat(auto-fit,minmax(260px,1fr))' }}>
+            <div className="action-actions">
               <button className="action-card earnings" onClick={() => navigate('/tutor/students')}>
                 <span className="tile">
                   <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -1020,7 +992,6 @@ function Home() {
 
               <button
                 className="action-cta"
-                style={{ maxWidth: 380, margin: '0 auto' }}
                 onClick={() => navigate('/tutor/dashboard')}
               >
                 <span className="action-cta-left">
@@ -1047,7 +1018,7 @@ function Home() {
           </div>
         </section>
 
-        <EnhancedFooter siteConfig={siteConfig} footerLinks={footerLinks} />
+        <EnhancedFooter siteConfig={siteConfig} />
       </div>
     );
   }
@@ -1075,7 +1046,7 @@ function Home() {
             <>
               <h1 className="hero-title-refined">
                 Education for the<br />
-                <em className="accent">love of my life</em> 
+                <em className="accent">love of my life</em>
               </h1>
 
               <p className="hero-subtitle-refined">
@@ -1088,27 +1059,21 @@ function Home() {
           <div className="action-actions" style={{ maxWidth: 420, marginTop: 34 }}>
             {isAuthenticated ? (
               <>
-                <button
-                  className="action-cta"
-                  onClick={() => navigate('/subjects')}
-                >
-                  <span className="action-cta-left">
-                    <span className="icon">
-                      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                        <path d="M4 19.5A2.5 2.5 0 016.5 17H20"/>
-                        <path d="M6.5 2H20v20H6.5A2.5 2.5 0 014 19.5v-15A2.5 2.5 0 016.5 2z"/>
-                      </svg>
-                    </span>
-                    <span>
-                      <div className="label">Continue Learning</div>
-                      <div className="sub">Browse your subjects and resources</div>
-                    </span>
-                  </span>
-                  <span className="arrow">
-                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                      <path d="M5 12h14M13 6l6 6-6 6"/>
+                {/* Continue Learning — same card style as the others, no blue gradient, no arrow circle */}
+                <button className="action-card learn" onClick={() => navigate('/subjects')}>
+                  <span className="tile">
+                    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M4 19.5A2.5 2.5 0 016.5 17H20"/>
+                      <path d="M6.5 2H20v20H6.5A2.5 2.5 0 014 19.5v-15A2.5 2.5 0 016.5 2z"/>
                     </svg>
                   </span>
+                  <span className="text">
+                    <div className="label">Continue Learning</div>
+                    <div className="sub">Browse your subjects and resources</div>
+                  </span>
+                  <svg className="chev" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M9 6l6 6-6 6"/>
+                  </svg>
                 </button>
 
                 <button className="action-card earnings" onClick={() => navigate('/profile')}>
@@ -1271,7 +1236,7 @@ function Home() {
       {isAuthenticated && !isTutor && (
         <section className="quick-actions-section">
           <div className="container">
-            <div className="action-actions" style={{ gridTemplateColumns: 'repeat(auto-fit,minmax(240px,1fr))' }}>
+            <div className="action-actions">
               <button className="action-card earnings" onClick={() => navigate('/subjects')}>
                 <span className="tile">
                   <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -1282,23 +1247,6 @@ function Home() {
                 <span className="text">
                   <div className="label">Browse Subjects</div>
                   <div className="sub">Explore available topics</div>
-                </span>
-                <svg className="chev" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M9 6l6 6-6 6"/>
-                </svg>
-              </button>
-
-              <button className="action-card sessions" onClick={() => navigate('/tutors')}>
-                <span className="tile">
-                  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                    <path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/>
-                    <circle cx="9" cy="7" r="4"/>
-                    <path d="M23 21v-2a4 4 0 00-3-3.87"/>
-                  </svg>
-                </span>
-                <span className="text">
-                  <div className="label">Find a Tutor</div>
-                  <div className="sub">Connect with expert educators</div>
                 </span>
                 <svg className="chev" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                   <path d="M9 6l6 6-6 6"/>
@@ -1532,28 +1480,20 @@ function Home() {
                 <h2>Ready for your next <br />session?</h2>
                 <p>Continue your learning journey with your personalized tutor matching.</p>
 
-                <button
-                  className="action-cta"
-                  style={{ maxWidth: 380, margin: '0 auto' }}
-                  onClick={() => navigate('/subjects')}
-                >
-                  <span className="action-cta-left">
-                    <span className="icon">
-                      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                        <path d="M4 19.5A2.5 2.5 0 016.5 17H20"/>
-                        <path d="M6.5 2H20v20H6.5A2.5 2.5 0 014 19.5v-15A2.5 2.5 0 016.5 2z"/>
-                      </svg>
-                    </span>
-                    <span>
-                      <div className="label">Browse Subjects</div>
-                      <div className="sub">Continue where you left off</div>
-                    </span>
-                  </span>
-                  <span className="arrow">
-                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                      <path d="M5 12h14M13 6l6 6-6 6"/>
+                <button className="action-card learn" onClick={() => navigate('/subjects')}>
+                  <span className="tile">
+                    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M4 19.5A2.5 2.5 0 016.5 17H20"/>
+                      <path d="M6.5 2H20v20H6.5A2.5 2.5 0 014 19.5v-15A2.5 2.5 0 016.5 2z"/>
                     </svg>
                   </span>
+                  <span className="text">
+                    <div className="label">Browse Subjects</div>
+                    <div className="sub">Continue where you left off</div>
+                  </span>
+                  <svg className="chev" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M9 6l6 6-6 6"/>
+                  </svg>
                 </button>
               </>
             ) : (
@@ -1563,7 +1503,6 @@ function Home() {
 
                 <button
                   className="action-cta"
-                  style={{ maxWidth: 380, margin: '0 auto' }}
                   onClick={() => navigate('/register')}
                 >
                   <span className="action-cta-left">
@@ -1591,7 +1530,7 @@ function Home() {
         </div>
       </section>
 
-      <EnhancedFooter siteConfig={siteConfig} footerLinks={footerLinks} />
+      <EnhancedFooter siteConfig={siteConfig} />
     </div>
   );
 }

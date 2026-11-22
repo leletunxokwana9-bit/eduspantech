@@ -1,4 +1,3 @@
-
 // src/App.js
 // COMPLETE APP ROUTING
 // Parent Home, Parent Navbar, Parent Profile, Parent Help Centre,
@@ -529,6 +528,46 @@ const StudentRoute = ({ children }) => {
 };
 
 // =====================================================
+// LIVE SESSION ROUTE
+// Allows authenticated students AND tutors.
+// Parents and administrators cannot enter live sessions.
+// =====================================================
+
+const SessionRoute = ({ children }) => {
+  const user = getStoredUser();
+
+  if (!user) {
+    return (
+      <Navigate
+        to="/login"
+        replace
+      />
+    );
+  }
+
+  if (isParentAccount(user)) {
+    return (
+      <Navigate
+        to="/parent/dashboard"
+        replace
+      />
+    );
+  }
+
+  if (isAdminAccount(user)) {
+    return (
+      <Navigate
+        to="/admin/dashboard"
+        replace
+      />
+    );
+  }
+
+  // Both tutors and students are allowed to enter.
+  return children;
+};
+
+// =====================================================
 // PARENT PROTECTED ROUTE
 // =====================================================
 
@@ -1015,12 +1054,17 @@ const AppContent = () => {
               }
             />
 
+            {/* =====================================
+                LIVE TUTORING SESSION
+                Both students and tutors can enter.
+            ===================================== */}
+
             <Route
               path="/session/:sessionId"
               element={
-                <StudentRoute>
+                <SessionRoute>
                   <TutorSession />
-                </StudentRoute>
+                </SessionRoute>
               }
             />
 

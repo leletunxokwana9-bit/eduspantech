@@ -1261,6 +1261,11 @@ function Navbar() {
               </span>
             </div>
 
+            {/* Mobile-only brand text — shown on small screens */}
+            <span className="logo-mobile-title">
+              EduSpantech
+            </span>
+
             {isAdmin && (
               <span className="admin-badge">
                 ADMIN

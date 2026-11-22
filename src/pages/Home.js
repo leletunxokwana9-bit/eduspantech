@@ -327,7 +327,7 @@ const EnhancedFooter = ({ siteConfig, footerLinks }) => {
                 © {currentYear} {siteConfig.site_name || 'EduSpantech'}
               </p>
               <p className="copyright-tagline">
-                {siteConfig.site_tagline || 'Education for the love of my life ❤️'}
+                {siteConfig.site_tagline || 'Education for the love of my life'}
               </p>
             </div>
 

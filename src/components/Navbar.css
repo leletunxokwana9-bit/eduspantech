@@ -924,6 +924,9 @@
   letter-spacing: 0.5px;
   color: var(--text-muted, rgba(255, 255, 255, 0.4));
   padding: 8px 16px 4px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
 }
 
 .mobile-section a {
@@ -957,36 +960,50 @@
 }
 
 /* ============================================================
-   MOBILE LANGUAGE GRID
+   MOBILE LANGUAGE GRID — high-contrast, clearly visible
    ============================================================ */
 
 .mobile-lang-grid {
   display: grid;
   grid-template-columns: repeat(2, 1fr);
-  gap: 6px;
-  padding: 0 8px;
+  gap: 8px;
+  padding: 4px 8px 0;
 }
 
 .mobile-language-option {
   display: flex;
   align-items: center;
-  gap: 8px;
-  padding: 10px 12px;
-  background: rgba(255, 255, 255, 0.03);
-  border: 1px solid var(--border-color, rgba(255, 255, 255, 0.05));
-  border-radius: 8px;
-  color: var(--text-secondary, rgba(255, 255, 255, 0.7));
-  font-size: 13px;
+  gap: 10px;
+  padding: 12px 14px;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 10px;
+  color: var(--text-primary, #ffffff);
+  font-size: 14px;
+  font-weight: 600;
   cursor: pointer;
   transition: all 0.15s ease;
   text-align: left;
+  min-width: 0;
 }
 
-.mobile-language-option:hover,
+.mobile-language-option span:last-child {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.mobile-language-option:hover {
+  background: rgba(79, 70, 229, 0.18);
+  border-color: rgba(129, 140, 248, 0.5);
+  color: #ffffff;
+}
+
 .mobile-language-option.active {
-  background: rgba(79, 70, 229, 0.1);
-  border-color: rgba(79, 70, 229, 0.3);
-  color: #818cf8;
+  background: rgba(79, 70, 229, 0.25);
+  border-color: #818cf8;
+  color: #ffffff;
+  box-shadow: 0 0 0 1px #818cf8 inset;
 }
 
 /* ============================================================
@@ -1076,7 +1093,12 @@
     display: flex !important;
   }
 
-  /* Show compact brand text, hide full logo content */
+  /* On mobile: hide the logo icon and the full logo block;
+     show only the app name text */
+  .navbar .logo .logo-icon {
+    display: none;
+  }
+
   .logo-content {
     display: none;
   }
@@ -1114,16 +1136,6 @@
 
   .logo-subtitle {
     display: none;
-  }
-
-  .navbar .logo .logo-icon {
-    width: 36px;
-    height: 36px;
-  }
-
-  .navbar .logo .logo-image {
-    width: 24px;
-    height: 24px;
   }
 
   .auth-buttons {
@@ -1193,7 +1205,7 @@
 
 /* ============================================================
    EXTRA SMALL MOBILE
-   Keep the brand text visible on tiny screens.
+   Keep the app name text visible on tiny screens.
    ============================================================ */
 
 @media (max-width: 380px) {
@@ -1379,20 +1391,26 @@
 }
 
 [data-theme="light"] .mobile-section-label {
-  color: rgba(0, 0, 0, 0.4);
+  color: rgba(0, 0, 0, 0.45);
 }
 
 [data-theme="light"] .mobile-language-option {
-  background: rgba(0, 0, 0, 0.02);
-  border-color: rgba(0, 0, 0, 0.05);
-  color: rgba(0, 0, 0, 0.7);
+  background: rgba(0, 0, 0, 0.04);
+  border-color: rgba(0, 0, 0, 0.14);
+  color: #0f172a;
 }
 
-[data-theme="light"] .mobile-language-option:hover,
-[data-theme="light"] .mobile-language-option.active {
-  background: rgba(79, 70, 229, 0.08);
-  border-color: rgba(79, 70, 229, 0.2);
+[data-theme="light"] .mobile-language-option:hover {
+  background: rgba(79, 70, 229, 0.12);
+  border-color: rgba(79, 70, 229, 0.4);
   color: #4f46e5;
+}
+
+[data-theme="light"] .mobile-language-option.active {
+  background: rgba(79, 70, 229, 0.18);
+  border-color: #4f46e5;
+  color: #3730a3;
+  box-shadow: 0 0 0 1px #4f46e5 inset;
 }
 
 [data-theme="light"] .login-button {

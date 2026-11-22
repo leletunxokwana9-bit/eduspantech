@@ -18,7 +18,9 @@ const SECTIONS = [
 
 const DEFAULT_COLORS = ['#4f46e5','#7c3aed','#06b6d4','#10b981','#f59e0b','#ef4444','#ec4899','#8b5cf6','#14b8a6','#f97316'];
 
-// ✅ FIXED: Individual grades instead of buckets
+const MAX_UPLOAD_BYTES = 50 * 1024 * 1024; // 50MB
+
+// Individual grades instead of buckets
 const HIGHSCHOOL_GRADES = [
   { key: 'grade-8',   label: 'Grade 8',   tier: '8' },
   { key: 'grade-9',   label: 'Grade 9',   tier: '9' },
@@ -62,6 +64,125 @@ const initialResourceDraft = () => ({
 });
 
 const normGrade = (k) => String(k || '').toLowerCase().replace(/[^a-z0-9]/g, '');
+
+const getToken = () => localStorage.getItem('accessToken');
+
+const isPdfFile = (file) =>
+  file && (file.type === 'application/pdf' || /\.pdf$/i.test(file.name || ''));
+
+// Refresh the access token. Returns true on success.
+const refreshAccessToken = async () => {
+  const rt = localStorage.getItem('refreshToken');
+  if (!rt) return false;
+  try {
+    const r = await fetch(`${API_URL}/auth/refresh`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ refreshToken: rt }),
+    });
+    if (!r.ok) return false;
+    const d = await r.json();
+    if (!d.accessToken) return false;
+    localStorage.setItem('accessToken', d.accessToken);
+    if (d.refreshToken) localStorage.setItem('refreshToken', d.refreshToken);
+    return true;
+  } catch {
+    return false;
+  }
+};
+
+// ============================================================
+// Upload a file to the backend.
+// - Does NOT set Content-Type (browser must set the multipart boundary)
+// - Refreshes an expired token once and retries
+// - Accepts several response shapes for the returned URL
+// - Gives a specific error message instead of a generic one
+// ============================================================
+const uploadFileToBackend = async (file, folder = 'content') => {
+  const send = () => {
+    const body = new FormData();
+    body.append('file', file);
+    body.append('folder', folder);
+    return fetch(`${API_URL}/upload`, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${getToken()}` }, // no Content-Type here
+      body,
+    });
+  };
+
+  let res;
+  try {
+    res = await send();
+  } catch (err) {
+    throw new Error("We couldn't reach the server. Check your connection (the server may also be waking up — wait 30 seconds and try again).");
+  }
+
+  if (res.status === 401) {
+    const refreshed = await refreshAccessToken();
+    if (!refreshed) throw new Error('SESSION_EXPIRED');
+    try {
+      res = await send();
+    } catch {
+      throw new Error("We couldn't reach the server. Please try again.");
+    }
+  }
+
+  let data = {};
+  try { data = await res.json(); } catch { /* non-JSON response */ }
+
+  if (!res.ok) {
+    if (res.status === 401 || res.status === 403) {
+      throw new Error(data.error || data.message || 'You do not have permission to upload files. Please log in again as an admin.');
+    }
+    if (res.status === 413) {
+      throw new Error('The file is too large for the server. Try a smaller PDF.');
+    }
+    if (res.status === 404) {
+      throw new Error('The upload endpoint was not found on the server (/upload).');
+    }
+    throw new Error(data.error || data.message || `Upload failed (server error ${res.status}).`);
+  }
+
+  const url =
+    data.url || data.publicUrl || data.public_url ||
+    data.file?.url || data.file?.publicUrl || data.file?.public_url ||
+    data.data?.url || data.data?.publicUrl || data.data?.public_url;
+
+  if (!url) {
+    throw new Error('The upload finished but the server did not return a file link.');
+  }
+  return url;
+};
+
+// ============================================================
+// Modal — defined OUTSIDE the component so it is not re-created
+// on every render (that was remounting inputs and the file picker).
+// ============================================================
+const PromptModal = ({ open, icon, title, children, buttons, onClose }) => {
+  if (!open) return null;
+  return (
+    <div className="login-prompt-overlay" onClick={onClose}>
+      <div className="login-prompt-modal" onClick={(e) => e.stopPropagation()}>
+        {onClose && <button className="login-prompt-close" onClick={onClose}>×</button>}
+        <div className="login-prompt-icon">{icon}</div>
+        <h3>{title}</h3>
+        <div style={{ marginBottom: 20, whiteSpace: 'pre-line' }}>{children}</div>
+        <div className="login-prompt-actions">
+          {buttons.map((btn, i) => (
+            <button
+              key={i}
+              className={btn.variant === 'ghost' ? 'login-prompt-cancel' : 'login-prompt-btn'}
+              onClick={btn.onClick}
+              disabled={btn.disabled}
+            >
+              {btn.label}
+            </button>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+};
 
 const AdminContent = () => {
   const navigate = useNavigate();
@@ -112,39 +233,11 @@ const AdminContent = () => {
   const [newTopicName, setNewTopicName] = useState('');
   const [newTopicDesc, setNewTopicDesc] = useState('');
 
-  const token = () => localStorage.getItem('accessToken');
-
-  const PromptModal = ({ open, icon, title, children, buttons, onClose }) => {
-    if (!open) return null;
-    return (
-      <div className="login-prompt-overlay" onClick={onClose}>
-        <div className="login-prompt-modal" onClick={(e) => e.stopPropagation()}>
-          {onClose && <button className="login-prompt-close" onClick={onClose}>×</button>}
-          <div className="login-prompt-icon">{icon}</div>
-          <h3>{title}</h3>
-          <div style={{ marginBottom: 20, whiteSpace: 'pre-line' }}>{children}</div>
-          <div className="login-prompt-actions">
-            {buttons.map((btn, i) => (
-              <button
-                key={i}
-                className={btn.variant === 'ghost' ? 'login-prompt-cancel' : 'login-prompt-btn'}
-                onClick={btn.onClick}
-                disabled={btn.disabled}
-              >
-                {btn.label}
-              </button>
-            ))}
-          </div>
-        </div>
-      </div>
-    );
-  };
-
   const authFetch = useCallback(async (url, options = {}, retry = true) => {
     const headers = {
       'Content-Type': 'application/json',
       ...(options.headers || {}),
-      Authorization: `Bearer ${token()}`,
+      Authorization: `Bearer ${getToken()}`,
     };
     let res;
     try {
@@ -154,22 +247,8 @@ const AdminContent = () => {
     }
 
     if (res.status === 401 && retry) {
-      const rt = localStorage.getItem('refreshToken');
-      if (rt) {
-        try {
-          const r = await fetch(`${API_URL}/auth/refresh`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ refreshToken: rt }),
-          });
-          if (r.ok) {
-            const d = await r.json();
-            localStorage.setItem('accessToken', d.accessToken);
-            if (d.refreshToken) localStorage.setItem('refreshToken', d.refreshToken);
-            return authFetch(url, options, false);
-          }
-        } catch { /* ignore */ }
-      }
+      const ok = await refreshAccessToken();
+      if (ok) return authFetch(url, options, false);
       throw new Error('SESSION_EXPIRED');
     }
     return res;
@@ -179,7 +258,7 @@ const AdminContent = () => {
     try {
       setLoading(true);
 
-      if (!token()) {
+      if (!getToken()) {
         showError('Please log in again to continue.');
         setTimeout(() => { window.location.href = '/admin/login'; }, 1500);
         setLoading(false);
@@ -270,6 +349,7 @@ const AdminContent = () => {
     }
   };
 
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => { fetchInitialData(); }, []);
 
   useEffect(() => {
@@ -329,40 +409,24 @@ const AdminContent = () => {
   const errorCount = missingFields.length + otherIssues.filter((i) => i.level === 'error').length;
   const completeness = Math.max(0, 5 - errorCount) * 20;
 
-  // ✅ FIXED: Use the Render Backend for PDF uploads (like BecomeATutor)
-  const uploadFile = async (file, folder = 'content') => {
-    const formData = new FormData();
-    formData.append('file', file);
-    formData.append('folder', folder);
-
-    const res = await fetch(`${API_URL}/upload`, {
-      method: 'POST',
-      headers: {
-        Authorization: `Bearer ${token()}`
-      },
-      body: formData
-    });
-
-    if (!res.ok) {
-      const errorData = await res.json().catch(() => ({}));
-      throw new Error(errorData.error || 'The file could not be uploaded. Please try again.');
+  // Handles errors from uploads (incl. expired session)
+  const handleUploadError = (err) => {
+    if (err.message === 'SESSION_EXPIRED') {
+      showError('Your session expired. Please log in again, then retry the upload.');
+      setTimeout(() => { window.location.href = '/admin/login'; }, 2000);
+    } else {
+      showError(err.message || 'The file could not be uploaded. Please try again.');
     }
-
-    const data = await res.json();
-    if (!data.success || !data.url) {
-      throw new Error('Upload succeeded but no URL was returned.');
-    }
-    
-    return data.url;
   };
 
   const handleFileUpload = async (e, type, index) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    if (file.type !== 'application/pdf') { showError('Please choose a PDF file.'); return; }
+    if (!isPdfFile(file)) { showError('Please choose a PDF file.'); e.target.value = ''; return; }
+    if (file.size > MAX_UPLOAD_BYTES) { showError('The PDF must be smaller than 50MB.'); e.target.value = ''; return; }
     try {
       setUploading(true);
-      const publicUrl = await uploadFile(file);
+      const publicUrl = await uploadFileToBackend(file, 'content');
       const update = (setter) => setter((prev) => {
         const copy = [...prev];
         if (!copy[index]) return copy;
@@ -371,13 +435,11 @@ const AdminContent = () => {
         copy[index] = { ...copy[index], [field]: publicUrl, [nameField]: file.name };
         return copy;
       });
-      if (type === 'paper_qp') update(setBuilderPapers);
-      if (type === 'paper_memo') update(setBuilderPapers);
-      if (type === 'mock_qp') update(setBuilderMocks);
-      if (type === 'mock_memo') update(setBuilderMocks);
+      if (type === 'paper_qp' || type === 'paper_memo') update(setBuilderPapers);
+      if (type === 'mock_qp' || type === 'mock_memo') update(setBuilderMocks);
       showSuccess(`${file.name} uploaded.`);
     } catch (err) {
-      showError(err.message);
+      handleUploadError(err);
     } finally {
       setUploading(false);
       e.target.value = '';
@@ -387,16 +449,16 @@ const AdminContent = () => {
   const handleResourceFileUpload = async (e) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    if (file.type !== 'application/pdf') { showError('Please choose a PDF file.'); return; }
-    if (file.size > 50 * 1024 * 1024) { showError('The PDF must be smaller than 50MB.'); return; }
+    if (!isPdfFile(file)) { showError('Please choose a PDF file.'); e.target.value = ''; return; }
+    if (file.size > MAX_UPLOAD_BYTES) { showError('The PDF must be smaller than 50MB.'); e.target.value = ''; return; }
     try {
       setResourceUploading(true);
-      const publicUrl = await uploadFile(file, 'resources');
+      const publicUrl = await uploadFileToBackend(file, 'resources');
       setResourceDraft((prev) => ({ ...prev, url: publicUrl, name: prev.name || file.name.replace(/\.pdf$/i, '') }));
       setResourceFileName(file.name);
       showSuccess(`${file.name} uploaded.`);
     } catch (err) {
-      showError(err.message);
+      handleUploadError(err);
     } finally {
       setResourceUploading(false);
       e.target.value = '';
@@ -703,12 +765,14 @@ const AdminContent = () => {
     return <span className="tier-badge" style={{ background: color }}>{g.label}</span>;
   };
 
+  // Feedback popup. Rendered LAST in each view with a high z-index so it is
+  // never hidden behind the "Add resource" popup (which hid upload errors).
   const renderFeedback = () => {
     if (!feedback) return null;
     const iconChar = feedback.type === 'success' ? '✅' : feedback.type === 'error' ? '⚠️' : 'ℹ️';
 
     return (
-      <div className="login-prompt-overlay" onClick={closeFeedback}>
+      <div className="login-prompt-overlay" style={{ zIndex: 10000 }} onClick={closeFeedback}>
         <div className="login-prompt-modal" onClick={(e) => e.stopPropagation()}>
           <button className="login-prompt-close" onClick={closeFeedback}>×</button>
           <div className="login-prompt-icon">{iconChar}</div>
@@ -730,8 +794,6 @@ const AdminContent = () => {
 
     return (
       <div className="admin-content">
-        {renderFeedback()}
-
         <div className="content-header">
           <div className="header-left">
             <h2>📚 Content Management</h2>
@@ -834,14 +896,14 @@ const AdminContent = () => {
             {toggleTarget.is_active ? "Students won't be able to see it." : 'Students will be able to see it again.'}
           </PromptModal>
         )}
+
+        {renderFeedback()}
       </div>
     );
   }
 
   return (
     <div className="ac-builder-page">
-      {renderFeedback()}
-
       <header className="ac-builder-header">
         <div>
           <div className="ac-breadcrumb">Admin / {contentTab === 'tertiary' ? 'Tertiary' : 'Highschool'} / <span>{editingSubject ? 'Edit subject' : 'Add subject'}</span></div>
@@ -917,7 +979,7 @@ const AdminContent = () => {
                   <label>Accent colour</label>
                   <div className="ac-colors">
                     {DEFAULT_COLORS.map((c) => (
-                      <button key={c} className={`ac-color-swatch ${formData.color === c ? 'active' : ''}`} style={{ background: c }} onClick={() => setFormData({ ...formData, color: c })} />
+                      <button key={c} type="button" className={`ac-color-swatch ${formData.color === c ? 'active' : ''}`} style={{ background: c }} onClick={() => setFormData({ ...formData, color: c })} />
                     ))}
                   </div>
                 </div>
@@ -932,26 +994,26 @@ const AdminContent = () => {
               <div className="ac-inline-add">
                 <input value={newTopicName} onChange={(e) => setNewTopicName(e.target.value)} placeholder="Topic name" />
                 <input value={newTopicDesc} onChange={(e) => setNewTopicDesc(e.target.value)} placeholder="Description (optional)" />
-                <button className="ac-btn-primary" onClick={addTopicToBuilder} style={{ padding: '0 16px' }}>➕ Add</button>
+                <button type="button" className="ac-btn-primary" onClick={addTopicToBuilder} style={{ padding: '0 16px' }}>➕ Add</button>
               </div>
               <div className="ac-list">
                 {builderTopics.map((t, i) => (
                   <div key={t.id} className="ac-list-row">
                     <span className="ac-row-num">{i + 1}</span>
                     <span>{t.name} {t.description && <small style={{ color: '#9a9ab8' }}>— {t.description}</small>}</span>
-                    <button className="ac-btn-icon" onClick={() => removeTopicFromBuilder(t.id)}>✕</button>
+                    <button type="button" className="ac-btn-icon" onClick={() => removeTopicFromBuilder(t.id)}>✕</button>
                   </div>
                 ))}
                 {builderTopics.length === 0 && <p className="ac-muted-text">No topics yet.</p>}
               </div>
-              <button className="ac-btn-dashed" onClick={openResourcePopup}>➕ Add resource (PDF / Video)</button>
+              <button type="button" className="ac-btn-dashed" onClick={openResourcePopup}>➕ Add resource (PDF / Video)</button>
               <div className="ac-list" style={{ marginTop: 12 }}>
                 {builderResources.map((r) => (
                   <div key={r.id} className="ac-list-row">
                     <span>{getResourceIcon(r.type)}</span>
                     <span>{r.name}</span>
                     <span className="ac-builder-tag">{r.type}</span>
-                    <button className="ac-btn-icon" onClick={() => setBuilderResources((prev) => prev.filter((x) => x.id !== r.id))}>✕</button>
+                    <button type="button" className="ac-btn-icon" onClick={() => setBuilderResources((prev) => prev.filter((x) => x.id !== r.id))}>✕</button>
                   </div>
                 ))}
               </div>
@@ -973,14 +1035,14 @@ const AdminContent = () => {
                     <div className="ac-upload-group">
                       <label className={`ac-upload-btn ${p.paper_url ? 'uploaded' : ''}`}>
                         {p.paper_url ? `✅ ${p.paper_name || 'QP uploaded'}` : (uploading ? '⏳ Uploading…' : '📤 Upload QP')}
-                        <input type="file" accept="application/pdf" onChange={(e) => handleFileUpload(e, 'paper_qp', i)} hidden />
+                        <input type="file" accept="application/pdf,.pdf" disabled={uploading} onChange={(e) => handleFileUpload(e, 'paper_qp', i)} hidden />
                       </label>
                       <label className={`ac-upload-btn ${p.memo_url ? 'uploaded' : ''}`}>
                         {p.memo_url ? `✅ ${p.memo_name || 'Memo uploaded'}` : (uploading ? '⏳ Uploading…' : '📤 Upload Memo')}
-                        <input type="file" accept="application/pdf" onChange={(e) => handleFileUpload(e, 'paper_memo', i)} hidden />
+                        <input type="file" accept="application/pdf,.pdf" disabled={uploading} onChange={(e) => handleFileUpload(e, 'paper_memo', i)} hidden />
                       </label>
                       {(p.paper_url || p.memo_url) && (
-                        <button className="ac-btn-icon" title="Clear files" onClick={() => {
+                        <button type="button" className="ac-btn-icon" title="Clear files" onClick={() => {
                           updateArrayItem(setBuilderPapers, i, 'paper_url', '');
                           updateArrayItem(setBuilderPapers, i, 'memo_url', '');
                           updateArrayItem(setBuilderPapers, i, 'paper_name', '');
@@ -988,11 +1050,11 @@ const AdminContent = () => {
                         }}>🗑️</button>
                       )}
                     </div>
-                    <button className="ac-btn-icon danger" onClick={() => setBuilderPapers(builderPapers.filter((_, idx) => idx !== i))}>✕</button>
+                    <button type="button" className="ac-btn-icon danger" onClick={() => setBuilderPapers(builderPapers.filter((_, idx) => idx !== i))}>✕</button>
                   </div>
                 ))}
               </div>
-              <button className="ac-btn-dashed" onClick={() => setBuilderPapers([...builderPapers, { year: '2024', session: 'Nov', paper: 'P1', paper_url: '', memo_url: '', paper_name: '', memo_name: '' }])}>➕ Add past paper</button>
+              <button type="button" className="ac-btn-dashed" onClick={() => setBuilderPapers([...builderPapers, { year: '2024', session: 'Nov', paper: 'P1', paper_url: '', memo_url: '', paper_name: '', memo_name: '' }])}>➕ Add past paper</button>
             </div>
           )}
 
@@ -1007,19 +1069,19 @@ const AdminContent = () => {
                       <input value={m.title} onChange={(e) => updateArrayItem(setBuilderMocks, i, 'title', e.target.value)} placeholder="Mock Title" style={{ flex: 1 }} />
                       <input type="number" value={m.duration} onChange={(e) => updateArrayItem(setBuilderMocks, i, 'duration', e.target.value)} placeholder="Mins" style={{ maxWidth: '80px' }} />
                       <input type="number" value={m.marks} onChange={(e) => updateArrayItem(setBuilderMocks, i, 'marks', e.target.value)} placeholder="Marks" style={{ maxWidth: '80px' }} />
-                      <button className="ac-btn-icon danger" onClick={() => setBuilderMocks(builderMocks.filter((_, idx) => idx !== i))}>✕</button>
+                      <button type="button" className="ac-btn-icon danger" onClick={() => setBuilderMocks(builderMocks.filter((_, idx) => idx !== i))}>✕</button>
                     </div>
                     <div className="ac-upload-group" style={{ marginTop: '10px' }}>
                       <label className={`ac-upload-btn ${m.paper_url ? 'uploaded' : ''}`}>
                         {m.paper_url ? `✅ ${m.paper_name || 'Paper uploaded'}` : (uploading ? '⏳ Uploading…' : '📤 Upload Paper')}
-                        <input type="file" accept="application/pdf" onChange={(e) => handleFileUpload(e, 'mock_qp', i)} hidden />
+                        <input type="file" accept="application/pdf,.pdf" disabled={uploading} onChange={(e) => handleFileUpload(e, 'mock_qp', i)} hidden />
                       </label>
                       <label className={`ac-upload-btn ${m.memo_url ? 'uploaded' : ''}`}>
                         {m.memo_url ? `✅ ${m.memo_name || 'Memo uploaded'}` : (uploading ? '⏳ Uploading…' : '📤 Upload Memo')}
-                        <input type="file" accept="application/pdf" onChange={(e) => handleFileUpload(e, 'mock_memo', i)} hidden />
+                        <input type="file" accept="application/pdf,.pdf" disabled={uploading} onChange={(e) => handleFileUpload(e, 'mock_memo', i)} hidden />
                       </label>
                       {(m.paper_url || m.memo_url) && (
-                        <button className="ac-btn-icon" title="Clear files" onClick={() => {
+                        <button type="button" className="ac-btn-icon" title="Clear files" onClick={() => {
                           updateArrayItem(setBuilderMocks, i, 'paper_url', '');
                           updateArrayItem(setBuilderMocks, i, 'memo_url', '');
                           updateArrayItem(setBuilderMocks, i, 'paper_name', '');
@@ -1030,7 +1092,7 @@ const AdminContent = () => {
                   </div>
                 ))}
               </div>
-              <button className="ac-btn-dashed" onClick={() => setBuilderMocks([...builderMocks, { title: '', duration: 150, marks: 150, paper_url: '', memo_url: '', paper_name: '', memo_name: '' }])}>➕ Add mock exam</button>
+              <button type="button" className="ac-btn-dashed" onClick={() => setBuilderMocks([...builderMocks, { title: '', duration: 150, marks: 150, paper_url: '', memo_url: '', paper_name: '', memo_name: '' }])}>➕ Add mock exam</button>
             </div>
           )}
 
@@ -1102,8 +1164,8 @@ const AdminContent = () => {
           )}
 
           <div className="ac-pager">
-            <button className="ac-btn-secondary" disabled={activeSection === 'basics'} onClick={() => setActiveSection(SECTIONS[SECTIONS.findIndex((s) => s.id === activeSection) - 1].id)}>Back</button>
-            <button className="ac-btn-secondary" disabled={activeSection === 'review'} onClick={() => setActiveSection(SECTIONS[SECTIONS.findIndex((s) => s.id === activeSection) + 1].id)}>Next</button>
+            <button type="button" className="ac-btn-secondary" disabled={activeSection === 'basics'} onClick={() => setActiveSection(SECTIONS[SECTIONS.findIndex((s) => s.id === activeSection) - 1].id)}>Back</button>
+            <button type="button" className="ac-btn-secondary" disabled={activeSection === 'review'} onClick={() => setActiveSection(SECTIONS[SECTIONS.findIndex((s) => s.id === activeSection) + 1].id)}>Next</button>
           </div>
         </main>
 
@@ -1111,8 +1173,8 @@ const AdminContent = () => {
           <div className="ac-preview-header">
             <h3>Live preview</h3>
             <div className="ac-toggle-group">
-              <button className={`ac-toggle-btn ${previewMode === 'open' ? 'active' : ''}`} onClick={() => setPreviewMode('open')}>Plan includes it</button>
-              <button className={`ac-toggle-btn ${previewMode === 'locked' ? 'active' : ''}`} onClick={() => setPreviewMode('locked')}>Locked view</button>
+              <button type="button" className={`ac-toggle-btn ${previewMode === 'open' ? 'active' : ''}`} onClick={() => setPreviewMode('open')}>Plan includes it</button>
+              <button type="button" className={`ac-toggle-btn ${previewMode === 'locked' ? 'active' : ''}`} onClick={() => setPreviewMode('locked')}>Locked view</button>
             </div>
           </div>
 
@@ -1208,7 +1270,7 @@ const AdminContent = () => {
             </label>
 
             {resourceDraft.type === 'pdf' && (
-              <label style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
                 <span style={{ fontSize: 12, fontWeight: 600, color: 'rgba(255,255,255,0.7)' }}>PDF file *</span>
                 <div
                   className={`resource-upload-zone ${resourceDraft.url ? 'has-file' : ''}`}
@@ -1217,7 +1279,7 @@ const AdminContent = () => {
                   <input
                     ref={resourceFileRef}
                     type="file"
-                    accept="application/pdf"
+                    accept="application/pdf,.pdf"
                     onChange={handleResourceFileUpload}
                     disabled={resourceUploading}
                     style={{ display: 'none' }}
@@ -1226,7 +1288,7 @@ const AdminContent = () => {
                     : resourceDraft.url ? <span>✅ {resourceFileName || 'PDF'} uploaded — click to replace</span>
                     : <span>📤 Click to upload a PDF (max 50MB)</span>}
                 </div>
-              </label>
+              </div>
             )}
 
             {resourceDraft.type === 'video' && (
@@ -1243,6 +1305,8 @@ const AdminContent = () => {
           </div>
         </PromptModal>
       )}
+
+      {renderFeedback()}
     </div>
   );
 };

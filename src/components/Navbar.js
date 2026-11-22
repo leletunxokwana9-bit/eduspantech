@@ -235,7 +235,6 @@ function Navbar() {
   const navigate = useNavigate();
 
   const menuRef = useRef(null);
-  const languageRef = useRef(null);
   const userDropdownRef = useRef(null);
   const searchOverlayInputRef = useRef(null);
 
@@ -259,7 +258,6 @@ function Navbar() {
 
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isSearchOpen, setIsSearchOpen] = useState(false);
-  const [isLanguageOpen, setIsLanguageOpen] = useState(false);
   const [isUserDropdownOpen, setIsUserDropdownOpen] = useState(false);
 
   const [searchQuery, setSearchQuery] = useState("");
@@ -695,7 +693,6 @@ function Navbar() {
   const toggleMenu = () => {
     setIsMenuOpen((value) => !value);
     setIsSearchOpen(false);
-    setIsLanguageOpen(false);
     setIsUserDropdownOpen(false);
 
     playClick();
@@ -708,7 +705,6 @@ function Navbar() {
   const toggleUserDropdown = () => {
     setIsUserDropdownOpen((value) => !value);
     setIsSearchOpen(false);
-    setIsLanguageOpen(false);
 
     playClick();
   };
@@ -719,7 +715,6 @@ function Navbar() {
 
   const openSearch = () => {
     setIsSearchOpen(true);
-    setIsLanguageOpen(false);
     setIsUserDropdownOpen(false);
     setIsMenuOpen(false);
 
@@ -737,16 +732,8 @@ function Navbar() {
     setShowSuggestions(false);
   };
 
-  const toggleLanguage = () => {
-    setIsLanguageOpen((value) => !value);
-    setIsUserDropdownOpen(false);
-
-    playClick();
-  };
-
   const handleLanguageChange = (langCode) => {
     changeLanguage(langCode);
-    setIsLanguageOpen(false);
 
     playClick();
   };
@@ -781,13 +768,6 @@ function Navbar() {
       ) {
         setIsUserDropdownOpen(false);
       }
-
-      if (
-        languageRef.current &&
-        !languageRef.current.contains(event.target)
-      ) {
-        setIsLanguageOpen(false);
-      }
     };
 
     document.addEventListener("mousedown", onDown);
@@ -806,7 +786,6 @@ function Navbar() {
   useEffect(() => {
     setIsMenuOpen(false);
     setIsUserDropdownOpen(false);
-    setIsLanguageOpen(false);
 
     closeSearch();
   }, [location.pathname]);
@@ -820,7 +799,6 @@ function Navbar() {
       if (event.key === "Escape") {
         setIsMenuOpen(false);
         setIsUserDropdownOpen(false);
-        setIsLanguageOpen(false);
 
         closeSearch();
       }
@@ -1316,73 +1294,6 @@ function Navbar() {
                 <Search size={20} />
               </button>
             )}
-
-            {/* LANGUAGE */}
-
-            <div
-              className="language-container"
-              ref={languageRef}
-            >
-              <button
-                className={`language-button ${
-                  isLanguageOpen ? "active" : ""
-                }`}
-                aria-label="Language"
-                aria-expanded={isLanguageOpen}
-                onClick={toggleLanguage}
-              >
-                <Globe size={18} />
-
-                <span className="language-code-label">
-                  {currentLanguage.toUpperCase()}
-                </span>
-
-                <ChevronDown
-                  size={14}
-                  className={`language-arrow ${
-                    isLanguageOpen ? "open" : ""
-                  }`}
-                />
-              </button>
-
-              <div
-                className={`language-dropdown ${
-                  isLanguageOpen ? "open" : ""
-                }`}
-              >
-                {Object.values(languages).map((lang) => (
-                  <button
-                    key={lang.code}
-                    className={`language-option ${
-                      currentLanguage === lang.code
-                        ? "active"
-                        : ""
-                    }`}
-                    onClick={() =>
-                      handleLanguageChange(lang.code)
-                    }
-                  >
-                    <span className="lang-flag">
-                      {lang.flag}
-                    </span>
-
-                    <span className="lang-name">
-                      {lang.nativeName}
-                    </span>
-
-                    <span className="lang-code">
-                      {lang.code.toUpperCase()}
-                    </span>
-
-                    {currentLanguage === lang.code && (
-                      <span className="lang-check">
-                        ✓
-                      </span>
-                    )}
-                  </button>
-                ))}
-              </div>
-            </div>
 
             {/* NOTIFICATIONS */}
 

@@ -404,7 +404,7 @@ function Home() {
 
   const [siteConfig, setSiteConfig] = useState({
     site_name: 'EduSpantech',
-    site_tagline: 'Education for the love of my life ❤️',
+    site_tagline: 'Education for the love of my life',
     site_subtagline: 'From Grade 8 to 2nd-Year Tertiary Success',
     social_facebook: 'https://web.facebook.com/profile.php?id=61593114256334',
     social_instagram: 'https://instagram.com/eduspantech',
@@ -1075,7 +1075,7 @@ function Home() {
             <>
               <h1 className="hero-title-refined">
                 Education for the<br />
-                <em className="accent">love of my life</em> ❤️
+                <em className="accent">love of my life</em> 
               </h1>
 
               <p className="hero-subtitle-refined">

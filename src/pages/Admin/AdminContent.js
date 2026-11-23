@@ -93,61 +93,48 @@ const refreshAccessToken = async () => {
 
 // ============================================================
 // Upload a file to the backend.
-// - Does NOT set Content-Type (browser must set the multipart boundary)
-// - Refreshes an expired token once and retries
-// - Accepts several response shapes for the returned URL
-// - Gives a specific error message instead of a generic one
+// Uses the same working route as the tutor application form:
+//   POST /tutors/upload  { filename, contentType, data (base64 data URL), folder }
+// and reads { success, url, error } from the reply.
 // ============================================================
+const fileToDataUrl = (file) =>
+  new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(reader.result);
+    reader.onerror = () => reject(new Error('Could not read the file from your device.'));
+    reader.readAsDataURL(file);
+  });
+
 const uploadFileToBackend = async (file, folder = 'content') => {
-  const send = () => {
-    const body = new FormData();
-    body.append('file', file);
-    body.append('folder', folder);
-    return fetch(`${API_URL}/upload`, {
-      method: 'POST',
-      headers: { Authorization: `Bearer ${getToken()}` }, // no Content-Type here
-      body,
-    });
-  };
+  const data = await fileToDataUrl(file);
 
   let res;
   try {
-    res = await send();
+    res = await fetch(`${API_URL}/tutors/upload`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        filename: file.name,
+        contentType: file.type || 'application/pdf',
+        data,
+        folder,
+      }),
+    });
   } catch (err) {
     throw new Error("We couldn't reach the server. Check your connection (the server may also be waking up — wait 30 seconds and try again).");
   }
 
-  if (res.status === 401) {
-    const refreshed = await refreshAccessToken();
-    if (!refreshed) throw new Error('SESSION_EXPIRED');
-    try {
-      res = await send();
-    } catch {
-      throw new Error("We couldn't reach the server. Please try again.");
-    }
+  let json = {};
+  try { json = await res.json(); } catch { /* non-JSON response */ }
+
+  if (res.status === 413) {
+    throw new Error('The file is too large for the server. Try a smaller PDF.');
+  }
+  if (!res.ok || json.success === false) {
+    throw new Error(json.error || json.message || `Upload failed (server error ${res.status}).`);
   }
 
-  let data = {};
-  try { data = await res.json(); } catch { /* non-JSON response */ }
-
-  if (!res.ok) {
-    if (res.status === 401 || res.status === 403) {
-      throw new Error(data.error || data.message || 'You do not have permission to upload files. Please log in again as an admin.');
-    }
-    if (res.status === 413) {
-      throw new Error('The file is too large for the server. Try a smaller PDF.');
-    }
-    if (res.status === 404) {
-      throw new Error('The upload endpoint was not found on the server (/upload).');
-    }
-    throw new Error(data.error || data.message || `Upload failed (server error ${res.status}).`);
-  }
-
-  const url =
-    data.url || data.publicUrl || data.public_url ||
-    data.file?.url || data.file?.publicUrl || data.file?.public_url ||
-    data.data?.url || data.data?.publicUrl || data.data?.public_url;
-
+  const url = json.url || json.publicUrl || json.public_url || json.data?.url || json.file?.url;
   if (!url) {
     throw new Error('The upload finished but the server did not return a file link.');
   }

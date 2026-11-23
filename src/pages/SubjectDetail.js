@@ -505,464 +505,295 @@ const SubjectDetail = () => {
     );
   }
 
+  const resourceCount = contentTree.topics.reduce((total, topic) =>
+    total + (topic.resources?.length || 0) +
+    (topic.subtopics?.reduce((subTotal, sub) => subTotal + (sub.resources?.length || 0), 0) || 0), 0
+  ) + contentTree.subjectResources.length;
+
+  const topicCount = contentTree.topics.length;
+
   return (
-    <div className="subject-detail-container sd-revamp">
-      {/* Login Prompt Modal */}
+    <main className="subject-detail-container sd-redesign">
       {showLoginPrompt && <LoginPrompt />}
 
-      {/* Subject hero: existing subject, tier, region, AWS hub and actions */}
-      <section className="sd-hero">
-        <div className="sd-hero-copy">
-          <button
-            type="button"
-            className="sd-back-link"
-            onClick={() => { playClick(); navigate('/subjects'); }}
-          >
-            <span aria-hidden="true">←</span> Back to Subjects
-          </button>
+      <div className="sd-page-shell">
+        <div className="sd-breadcrumbs">
+          <button type="button" onClick={() => navigate('/subjects')}>Subjects</button>
+          <span>/</span>
+          <span>{subject.name}</span>
+        </div>
 
-          <div className="sd-hero-status">
-            <span className="sd-status-dot" />
-            {user ? 'Your learning space' : 'Explore this subject'}
+        <section className="sd-hero">
+          <div className="sd-hero-copy">
+            <div className="sd-eyebrow">YOUR LEARNING SPACE</div>
+            <h1>{subject.name}</h1>
+            <p>{subject.longDescription || subject.description || 'Explore the learning materials and curriculum for this subject.'}</p>
+            <div className="sd-hero-meta">
+              <span>{getCohortTier()}</span>
+              <span>{getRegion()}</span>
+              <span>{getAWSRegion()}</span>
+            </div>
           </div>
-
-          <h1>{subject.icon} {subject.name}</h1>
-
-          <div className="subject-meta-tags sd-hero-meta">
-            <span className="tag cohort-tier">{getCohortTier()}</span>
-            <span className="tag region">🌍 {getRegion()}</span>
-            <span className="tag aws-region">☁️ {getAWSRegion()}</span>
-          </div>
-
-          <p className="sd-hero-description">
-            {subject.longDescription || subject.description}
-          </p>
-
-          <div className="subject-actions sd-hero-actions">
+          <div className="sd-hero-actions">
             <button
-              className={`btn btn-primary ${isEnrolling ? 'loading' : ''}`}
+              type="button"
+              className="sd-enrol-button"
               onClick={handleEnroll}
               disabled={isEnrolling}
             >
-              {isEnrolling ? '⏳ Enrolling...' : '📚 Enroll Now'}
+              {isEnrolling ? 'Enrolling…' : 'Enrol in subject'}
+              <span aria-hidden="true">→</span>
             </button>
             <button
-              className="btn btn-secondary"
-              onClick={() => { playClick(); }}
+              type="button"
+              className="sd-back-button"
+              onClick={() => { playClick(); navigate('/subjects'); }}
             >
-              📝 View Syllabus
+              Browse subjects
             </button>
           </div>
-        </div>
+          <div className="sd-hero-mark" aria-hidden="true">{subject.icon || '✦'}</div>
+        </section>
 
-        <div className="sd-hero-art" aria-hidden="true">
-          <div className="sd-orbit sd-orbit-one" />
-          <div className="sd-orbit sd-orbit-two" />
-          <div className="sd-hero-symbol">✦</div>
-          <div className="sd-hero-subject-mark">{subject.icon || '📚'}</div>
-          <span className="sd-hero-art-label">EDUSPANTECH · SUBJECT LEARNING</span>
-        </div>
-      </section>
-
-      {/* Existing enrollment feedback */}
-      {enrollmentStatus && (
-        <div className={`enrollment-status ${enrollmentStatus.type}`}>
-          <p>{enrollmentStatus.message}</p>
-          {(enrollmentStatus.action === 'upgrade' ||
-            enrollmentStatus.action === 'login' ||
-            enrollmentStatus.action === 'schedule' ||
-            enrollmentStatus.action === 'dashboard' ||
-            enrollmentStatus.action === 'subjects' ||
-            enrollmentStatus.action === 'retry') && (
-              <button
-                className="enrollment-action-btn"
-                onClick={handleEnrollmentAction}
-              >
-                {enrollmentStatus.action === 'upgrade' && 'Upgrade Plan →'}
-                {enrollmentStatus.action === 'login' && 'Login →'}
-                {enrollmentStatus.action === 'schedule' && 'View Schedule →'}
-                {enrollmentStatus.action === 'dashboard' && 'Go to Dashboard →'}
-                {enrollmentStatus.action === 'subjects' && 'Browse Subjects →'}
-                {enrollmentStatus.action === 'retry' && 'Try Again →'}
+        {enrollmentStatus && (
+          <div className={`enrollment-status ${enrollmentStatus.type}`} role="status">
+            <p>{enrollmentStatus.message}</p>
+            {(enrollmentStatus.action === 'upgrade' || enrollmentStatus.action === 'login' ||
+              enrollmentStatus.action === 'schedule' || enrollmentStatus.action === 'dashboard' ||
+              enrollmentStatus.action === 'subjects' || enrollmentStatus.action === 'retry') && (
+              <button type="button" className="enrollment-action-btn" onClick={handleEnrollmentAction}>
+                {enrollmentStatus.action === 'upgrade' && 'Upgrade plan →'}
+                {enrollmentStatus.action === 'login' && 'Log in →'}
+                {enrollmentStatus.action === 'schedule' && 'View schedule →'}
+                {enrollmentStatus.action === 'dashboard' && 'Go to dashboard →'}
+                {enrollmentStatus.action === 'subjects' && 'Browse subjects →'}
+                {enrollmentStatus.action === 'retry' && 'Try again →'}
               </button>
             )}
-        </div>
-      )}
-
-      {/* Existing subscription information */}
-      {user && subscription && (
-        <div className="subscription-banner">
-          <span className="subscription-tier">📊 {subscription.tier || subscription.subscriptionTier}</span>
-          <span className="subscription-status">{subscription.status || subscription.subscriptionStatus || 'Active'}</span>
-          {(subscription.tier === 'TIER_SILVER' || subscription.tier === 'Silver' || subscription.tier === 'Tier_Silver') && (
-            <span className="subscription-note">💡 Upgrade to Gold for live sessions</span>
-          )}
-        </div>
-      )}
-
-      {!user && !isCheckingAuth && (
-        <div className="login-prompt-hint">
-          <p>🔐 Please <button className="login-link" onClick={() => { playClick(); setShowLoginPrompt(true); }}>login</button> to enroll in this subject.</p>
-        </div>
-      )}
-
-      {/* Main learning workspace */}
-      <div className="sd-workspace">
-        <aside className="sd-sidebar">
-          <section className="sd-panel sd-about-panel">
-            <div className="sd-panel-heading">
-              <span className="sd-panel-icon">📖</span>
-              <div>
-                <h2>About this subject</h2>
-                <p>Subject information</p>
-              </div>
-            </div>
-            <p className="sd-about-copy">
-              {subject.longDescription || subject.description}
-            </p>
-            <div className="sd-detail-list">
-              <div className="sd-detail-row">
-                <span>Subject</span>
-                <strong>{subject.name}</strong>
-              </div>
-              <div className="sd-detail-row">
-                <span>Tier</span>
-                <strong>{getCohortTier()}</strong>
-              </div>
-              <div className="sd-detail-row">
-                <span>Region</span>
-                <strong>{getRegion()}</strong>
-              </div>
-              <div className="sd-detail-row">
-                <span>AWS Hub</span>
-                <strong>{getAWSRegion()}</strong>
-              </div>
-            </div>
-          </section>
-
-          <section className="sd-panel">
-            <div className="sd-panel-heading">
-              <span className="sd-panel-icon">🎯</span>
-              <div>
-                <h2>Curriculum structure</h2>
-                <p>Curriculum mapping</p>
-              </div>
-            </div>
-            <div className="sd-detail-list">
-              <div className="sd-detail-row">
-                <span>Tier</span>
-                <strong>{getCohortTier()}</strong>
-              </div>
-              <div className="sd-detail-row">
-                <span>Region</span>
-                <strong>{getRegion()}</strong>
-              </div>
-              <div className="sd-detail-row">
-                <span>AWS Hub</span>
-                <strong>{getAWSRegion()}</strong>
-              </div>
-            </div>
-          </section>
-
-          <section className="sd-panel sd-grade-panel">
-            <div className="sd-panel-heading">
-              <span className="sd-panel-icon">🌍</span>
-              <div>
-                <h2>Grade mapping</h2>
-                <p>Academic alignment</p>
-              </div>
-            </div>
-            <div className="sd-mapping-line">
-              <span>🇿🇦 South Africa</span>
-              <strong>Grades 8–12</strong>
-            </div>
-            <div className="sd-mapping-line">
-              <span>🌐 International</span>
-              <strong>Equivalent</strong>
-            </div>
-            <p className="curriculum-adjustment">
-              ⚠️ <strong>Adjustment:</strong> {subject.name} may be introduced earlier in accelerated curricula.
-            </p>
-          </section>
-
-          <section className="sd-panel sd-tutor-panel">
-            <div className="sd-panel-heading">
-              <span className="sd-panel-icon">👨‍🏫</span>
-              <div>
-                <h2>Tutor assignment</h2>
-                <p>24/7 Centralised South African Tutors</p>
-              </div>
-            </div>
-            <div className="tutors-list">
-              <span className="tutor-tag">🇿🇦 Tutor A (Tier 1)</span>
-              <span className="tutor-tag">🇿🇦 Tutor B (Tier 2)</span>
-              <span className="tutor-tag">🇿🇦 Tutor C (Tier 3)</span>
-            </div>
-          </section>
-
-          <div className="sd-archive-note">
-            <span aria-hidden="true">✏️</span>
-            <p>Whiteboard archives available for Tier_Silver and above</p>
           </div>
-        </aside>
+        )}
 
-        <main className="sd-main-column">
-          <section className="topics-section sd-learning-panel">
-            <div className="sd-learning-heading">
+        {user && subscription && (
+          <section className="sd-account-strip">
+            <div className="sd-account-indicator"><span /> ACCOUNT PLAN</div>
+            <strong>{subscription.tier || subscription.subscriptionTier || 'Subscription'}</strong>
+            <span>{subscription.status || subscription.subscriptionStatus || 'Active'}</span>
+            {(subscription.tier === 'TIER_SILVER' || subscription.tier === 'Silver' || subscription.tier === 'Tier_Silver') && (
+              <button type="button" onClick={() => navigate('/pricing')}>Explore live-session plans</button>
+            )}
+          </section>
+        )}
+
+        {!user && !isCheckingAuth && (
+          <div className="sd-signin-note">
+            <span>Already have an account?</span>
+            <button type="button" onClick={() => { playClick(); setShowLoginPrompt(true); }}>Log in to enrol</button>
+          </div>
+        )}
+
+        <section className="sd-learning-overview">
+          <div className="sd-section-heading">
+            <div>
+              <span className="sd-section-kicker">SUBJECT AT A GLANCE</span>
+              <h2>Build your understanding</h2>
+              <p>Everything published for this subject, organised in one learning space.</p>
+            </div>
+            <span className="sd-active-label"><i /> Subject page</span>
+          </div>
+
+          <div className="sd-stat-grid">
+            <article className="sd-stat-card">
+              <span className="sd-stat-icon">01</span>
+              <div><strong>{contentLoading ? '—' : topicCount}</strong><span>Learning topics</span></div>
+            </article>
+            <article className="sd-stat-card">
+              <span className="sd-stat-icon">02</span>
+              <div><strong>{contentLoading ? '—' : resourceCount}</strong><span>Published resources</span></div>
+            </article>
+            <article className="sd-stat-card">
+              <span className="sd-stat-icon">03</span>
+              <div><strong>{getCohortTier()}</strong><span>Learning tier</span></div>
+            </article>
+            <article className="sd-stat-card">
+              <span className="sd-stat-icon">04</span>
+              <div><strong>{getRegion()}</strong><span>Learning region</span></div>
+            </article>
+          </div>
+        </section>
+
+        <section className="sd-workspace">
+          <div className="sd-workspace-main">
+            <div className="sd-tabs-header">
               <div>
-                <span className="sd-eyebrow">YOUR SUBJECT SPACE</span>
-                <h2>Explore {subject.name}</h2>
-                <p>Access the subject overview, topics, learning materials and schedule.</p>
+                <span className="sd-section-kicker">COURSE WORKSPACE</span>
+                <h2>Explore this subject</h2>
               </div>
-              <div className="sd-content-counts">
-                <div>
-                  <strong>{contentTree.topics.length}</strong>
-                  <span>Topics</span>
-                </div>
-                <div>
-                  <strong>{
-                    contentTree.topics.reduce((a, t) =>
-                      a + (t.resources?.length || 0) +
-                      (t.subtopics?.reduce((b, s) => b + (s.resources?.length || 0), 0) || 0), 0
-                    ) + contentTree.subjectResources.length
-                  }</strong>
-                  <span>Resources</span>
-                </div>
-              </div>
-            </div>
-
-            <div className="tab-navigation sd-tabs">
-              {tabs.map((tab) => (
-                <button
-                  key={tab.id}
-                  className={`tab-btn ${activeTab === tab.id ? 'active' : ''}`}
-                  onClick={() => handleTabSwitch(tab.id)}
-                >
-                  {tab.label}
-                </button>
-              ))}
-            </div>
-
-            <div className="tab-content sd-tab-content">
-              {activeTab === 'overview' && (
-                <div className="sd-overview-tab">
-                  <div className="sd-section-title">
-                    <span>📋</span>
-                    <div>
-                      <h3>Subject overview</h3>
-                      <p>Key information about this learning area.</p>
-                    </div>
-                  </div>
-                  <p className="sd-overview-description">
-                    {subject.longDescription || subject.description}
-                  </p>
-                  <div className="overview-details sd-overview-details">
-                    <p><strong>📚 Subject:</strong> {subject.name}</p>
-                    <p><strong>🎯 Tier:</strong> {getCohortTier()}</p>
-                    <p><strong>🌍 Region:</strong> {getRegion()}</p>
-                    <p><strong>☁️ AWS Hub:</strong> {getAWSRegion()}</p>
-                    <p><strong>📖 Topics:</strong> {contentTree.topics.length}</p>
-                    <p><strong>📄 Resources:</strong> {
-                      contentTree.topics.reduce((a, t) =>
-                        a + (t.resources?.length || 0) +
-                        (t.subtopics?.reduce((b, s) => b + (s.resources?.length || 0), 0) || 0), 0
-                      ) + contentTree.subjectResources.length
-                    }</p>
-                  </div>
+              <nav className="sd-tabs" aria-label="Subject sections">
+                {tabs.map(tab => (
                   <button
                     type="button"
-                    className="sd-inline-action"
-                    onClick={() => handleTabSwitch('topics')}
+                    key={tab.id}
+                    className={activeTab === tab.id ? 'active' : ''}
+                    onClick={() => handleTabSwitch(tab.id)}
                   >
-                    Explore topics and content <span>→</span>
+                    {tab.id === 'overview' ? 'Overview' : tab.id === 'topics' ? 'Curriculum & resources' : 'Schedule'}
                   </button>
+                ))}
+              </nav>
+            </div>
+
+            <div className="sd-tab-panel">
+              {activeTab === 'overview' && (
+                <div className="sd-overview-panel">
+                  <div className="sd-overview-intro">
+                    <span className="sd-panel-index">01 / OVERVIEW</span>
+                    <h3>{subject.name}</h3>
+                    <p>{subject.longDescription || subject.description || 'Learning information for this subject will appear here as it is published.'}</p>
+                  </div>
+                  <div className="sd-overview-facts">
+                    <div><span>Subject</span><strong>{subject.name}</strong></div>
+                    <div><span>Learning tier</span><strong>{getCohortTier()}</strong></div>
+                    <div><span>Region</span><strong>{getRegion()}</strong></div>
+                    <div><span>Infrastructure region</span><strong>{getAWSRegion()}</strong></div>
+                  </div>
+                  <div className="sd-overview-callout">
+                    <div className="sd-callout-symbol">↗</div>
+                    <div><strong>Continue into the curriculum</strong><p>Open the curriculum and resources tab to explore topics, lessons and materials published for this subject.</p></div>
+                    <button type="button" onClick={() => handleTabSwitch('topics')}>Explore curriculum</button>
+                  </div>
                 </div>
               )}
 
               {activeTab === 'topics' && (
-                <>
-                  <div className="sd-section-title">
-                    <span>📚</span>
-                    <div>
-                      <h3>Topics &amp; content</h3>
-                      <p>Explore all topics, study materials and resources for this subject.</p>
-                    </div>
+                <div className="sd-curriculum-panel">
+                  <div className="sd-panel-heading">
+                    <div><span className="sd-panel-index">02 / LEARNING CONTENT</span><h3>Curriculum & resources</h3></div>
+                    <span>{contentLoading ? 'Loading…' : `${topicCount} topics · ${resourceCount} resources`}</span>
                   </div>
                   {contentLoading ? (
-                    <div className="loading-spinner-small">
-                      <div className="loading-spinner"></div>
-                      <p>Loading content...</p>
-                    </div>
+                    <div className="sd-content-loading"><div className="loading-spinner" /><p>Loading published learning content…</p></div>
                   ) : (contentTree.topics.length === 0 && contentTree.subjectResources.length === 0) ? (
-                    <div className="no-resources">
-                      <span>📚</span>
-                      <p>No content published yet for this subject.</p>
-                      <p className="no-resources-sub">Content will be added soon.</p>
+                    <div className="sd-empty-content">
+                      <div className="sd-empty-symbol">＋</div>
+                      <h4>Learning content is being prepared</h4>
+                      <p>There are no published topics or resources for this subject yet. New material will appear here when it is published.</p>
                     </div>
                   ) : (
                     <div className="sd-topic-tree">
                       {contentTree.subjectResources.length > 0 && (
-                        <div className="sd-topic-block">
-                          <h4 className="sd-topic-title">📌 General Resources</h4>
+                        <section className="sd-topic-block sd-general-resources">
+                          <div className="sd-topic-block-heading"><div><span>FOUNDATION</span><h4>Subject resources</h4></div><small>{contentTree.subjectResources.length} items</small></div>
                           <div className="sd-resource-list">
                             {contentTree.subjectResources.map(r => (
-                              <div
-                                key={r.id}
-                                className="sd-resource-card"
-                                onClick={() => handleResourceClick(r)}
-                              >
+                              <button type="button" key={r.id} className="sd-resource-card" onClick={() => handleResourceClick(r)}>
                                 <span className="sd-res-icon">{getResourceIcon(r.type)}</span>
-                                <div className="sd-res-body">
-                                  <div className="sd-res-name">{r.name}</div>
-                                  {r.description && <div className="sd-res-desc">{r.description}</div>}
-                                </div>
+                                <span className="sd-res-body"><strong className="sd-res-name">{r.name}</strong>{r.description && <span className="sd-res-desc">{r.description}</span>}</span>
                                 {r.is_free && <span className="sd-res-free">FREE</span>}
-                                <span className="sd-res-open">Open resource ↗</span>
-                              </div>
+                                <span className="sd-resource-arrow">↗</span>
+                              </button>
                             ))}
                           </div>
-                        </div>
+                        </section>
                       )}
 
-                      {contentTree.topics.map(topic => {
+                      {contentTree.topics.map((topic, index) => {
                         const isExpanded = expandedTopics[topic.id] !== false;
-                        const topicResCount =
-                          (topic.resources?.length || 0) +
-                          (topic.subtopics?.reduce((a, s) => a + (s.resources?.length || 0), 0) || 0);
-
+                        const topicResCount = (topic.resources?.length || 0) +
+                          (topic.subtopics?.reduce((total, sub) => total + (sub.resources?.length || 0), 0) || 0);
                         return (
-                          <div key={topic.id} className="sd-topic-block">
-                            <h4
-                              className="sd-topic-title clickable"
-                              onClick={() => toggleTopic(topic.id)}
-                              role="button"
-                              tabIndex={0}
-                              onKeyDown={(event) => {
-                                if (event.key === 'Enter' || event.key === ' ') {
-                                  event.preventDefault();
-                                  toggleTopic(topic.id);
-                                }
-                              }}
-                            >
-                              <span className="sd-toggle">{isExpanded ? '▾' : '▸'}</span>
-                              <span>📖 {topic.name}</span>
+                          <section key={topic.id} className="sd-topic-block">
+                            <button type="button" className="sd-topic-title" onClick={() => toggleTopic(topic.id)} aria-expanded={isExpanded}>
+                              <span className="sd-topic-number">{String(index + 1).padStart(2, '0')}</span>
+                              <span className="sd-topic-title-copy"><strong>{topic.name}</strong>{topic.description && <small>{topic.description}</small>}</span>
                               <span className="sd-topic-count">{topicResCount} resources</span>
-                            </h4>
-                            {topic.description && <p className="sd-topic-desc">{topic.description}</p>}
-
+                              <span className={`sd-toggle ${isExpanded ? 'expanded' : ''}`}>⌄</span>
+                            </button>
                             {isExpanded && (
-                              <>
+                              <div className="sd-topic-content">
                                 {topic.resources?.length > 0 && (
                                   <div className="sd-resource-list">
                                     {topic.resources.map(r => (
-                                      <div
-                                        key={r.id}
-                                        className="sd-resource-card"
-                                        onClick={() => handleResourceClick(r)}
-                                      >
+                                      <button type="button" key={r.id} className="sd-resource-card" onClick={() => handleResourceClick(r)}>
                                         <span className="sd-res-icon">{getResourceIcon(r.type)}</span>
-                                        <div className="sd-res-body">
-                                          <div className="sd-res-name">{r.name}</div>
-                                          {r.description && <div className="sd-res-desc">{r.description}</div>}
-                                        </div>
+                                        <span className="sd-res-body"><strong className="sd-res-name">{r.name}</strong>{r.description && <span className="sd-res-desc">{r.description}</span>}</span>
                                         {r.is_free && <span className="sd-res-free">FREE</span>}
-                                        <span className="sd-res-open">Open resource ↗</span>
-                                      </div>
+                                        <span className="sd-resource-arrow">↗</span>
+                                      </button>
                                     ))}
                                   </div>
                                 )}
-
                                 {topic.subtopics?.map(sub => (
                                   <div key={sub.id} className="sd-subtopic-block">
-                                    <h5 className="sd-subtopic-title">↳ {sub.name}</h5>
-                                    {sub.description && <p className="sd-subtopic-desc">{sub.description}</p>}
+                                    <div className="sd-subtopic-heading"><strong>{sub.name}</strong>{sub.description && <span>{sub.description}</span>}</div>
                                     {sub.resources?.length > 0 && (
                                       <div className="sd-resource-list">
                                         {sub.resources.map(r => (
-                                          <div
-                                            key={r.id}
-                                            className="sd-resource-card"
-                                            onClick={() => handleResourceClick(r)}
-                                          >
+                                          <button type="button" key={r.id} className="sd-resource-card" onClick={() => handleResourceClick(r)}>
                                             <span className="sd-res-icon">{getResourceIcon(r.type)}</span>
-                                            <div className="sd-res-body">
-                                              <div className="sd-res-name">{r.name}</div>
-                                              {r.description && <div className="sd-res-desc">{r.description}</div>}
-                                            </div>
+                                            <span className="sd-res-body"><strong className="sd-res-name">{r.name}</strong>{r.description && <span className="sd-res-desc">{r.description}</span>}</span>
                                             {r.is_free && <span className="sd-res-free">FREE</span>}
-                                            <span className="sd-res-open">Open resource ↗</span>
-                                          </div>
+                                            <span className="sd-resource-arrow">↗</span>
+                                          </button>
                                         ))}
                                       </div>
                                     )}
                                   </div>
                                 ))}
-                              </>
+                              </div>
                             )}
-                          </div>
+                          </section>
                         );
                       })}
                     </div>
                   )}
-                </>
+                </div>
               )}
 
               {activeTab === 'schedule' && (
-                <>
-                  <div className="sd-section-title">
-                    <span>🕐</span>
-                    <div>
-                      <h3>Learning schedule</h3>
-                      <p>Centralised tutor coverage across the listed learning windows.</p>
-                    </div>
+                <div className="sd-schedule-panel">
+                  <span className="sd-panel-index">03 / YOUR SESSIONS</span>
+                  <h3>Learning schedule</h3>
+                  <div className="sd-empty-content">
+                    <div className="sd-empty-symbol">◷</div>
+                    <h4>Your subject sessions belong here</h4>
+                    <p>Session times should be shown from your actual bookings. Visit your dashboard to view and manage scheduled tutoring sessions.</p>
+                    <button type="button" className="sd-inline-action" onClick={() => navigate('/dashboard')}>Open learner dashboard →</button>
                   </div>
-                  <div className="schedule-info">
-                    <div className="schedule-item">
-                      <h4>🌏 Asia-Pacific Window</h4>
-                      <p><strong>Time:</strong> 08:00 – 15:00 SAST</p>
-                      <p><strong>Tutor:</strong> 🇿🇦 Tutor A (Tier 1)</p>
-                      <p><strong>Hubs:</strong> Sydney, Tokyo</p>
-                    </div>
-                    <div className="schedule-item">
-                      <h4>🌏 South Asian / Indian Corridor</h4>
-                      <p><strong>Time:</strong> 12:00 – 19:30 SAST</p>
-                      <p><strong>Tutor:</strong> 🇿🇦 Tutor B (Tier 2)</p>
-                      <p><strong>Hubs:</strong> Singapore, Mumbai</p>
-                    </div>
-                    <div className="schedule-item">
-                      <h4>🌍 Africa / Europe Core</h4>
-                      <p><strong>Time:</strong> 16:00 – 23:00 SAST</p>
-                      <p><strong>Tutor:</strong> 🇿🇦 Tutor C (Tier 3)</p>
-                      <p><strong>Hubs:</strong> Cape Town, Ireland</p>
-                    </div>
-                    <div className="schedule-item">
-                      <h4>🌎 Pan-American Axis</h4>
-                      <p><strong>Time:</strong> 21:00 – 04:00 SAST</p>
-                      <p><strong>Tutor:</strong> 🇿🇦 Tutor D (Tier 3)</p>
-                      <p><strong>Hubs:</strong> São Paulo, N. Virginia, Oregon</p>
-                    </div>
-                  </div>
-                </>
+                </div>
               )}
             </div>
-          </section>
-        </main>
+          </div>
+
+          <aside className="sd-workspace-aside">
+            <section className="sd-aside-card sd-about-card">
+              <span className="sd-section-kicker">SUBJECT DETAILS</span>
+              <h3>Learning profile</h3>
+              <div className="sd-aside-detail"><span>Subject tier</span><strong>{getCohortTier()}</strong></div>
+              <div className="sd-aside-detail"><span>Region</span><strong>{getRegion()}</strong></div>
+              <div className="sd-aside-detail"><span>Cloud hub</span><strong>{getAWSRegion()}</strong></div>
+              <div className="sd-aside-detail"><span>Published topics</span><strong>{contentLoading ? '—' : topicCount}</strong></div>
+            </section>
+            <section className="sd-aside-card sd-next-card">
+              <span className="sd-next-label">READY TO LEARN?</span>
+              <h3>Make progress, one topic at a time.</h3>
+              <p>Access the published learning material for {subject.name} in your curriculum workspace.</p>
+              <button type="button" onClick={() => handleTabSwitch('topics')}>View learning content <span>→</span></button>
+            </section>
+          </aside>
+        </section>
       </div>
 
-      {/* Existing resource viewer popup */}
       {activeResource && (
         <div className="sd-viewer-overlay" onClick={() => setActiveResource(null)}>
           <div className="sd-viewer" onClick={e => e.stopPropagation()}>
-            <button className="sd-viewer-close" onClick={() => setActiveResource(null)}>✕</button>
+            <button type="button" className="sd-viewer-close" onClick={() => setActiveResource(null)}>✕</button>
             <h2>{getResourceIcon(activeResource.type)} {activeResource.name}</h2>
-            {activeResource.description && (
-              <p className="sd-viewer-desc">{activeResource.description}</p>
-            )}
+            {activeResource.description && <p className="sd-viewer-desc">{activeResource.description}</p>}
             {renderResourceViewer(activeResource)}
           </div>
         </div>
       )}
-    </div>
+    </main>
   );
 };
 

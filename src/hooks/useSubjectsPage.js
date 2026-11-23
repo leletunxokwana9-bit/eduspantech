@@ -25,9 +25,63 @@ const PLAN_TIER_MAP = {
   TERTIARY: 'tertiary',
 };
 
+// Parse any grade key into the levels it covers.
+//   'grade-8' -> grades [8]        'grade-8-9' / 'grade8-9' -> grades [8, 9]
+//   'tertiary' -> any tertiary year   'tertiary-year-2' -> tertiary year 2
+const parseLevel = (raw) => {
+  if (raw == null || raw === '') return null;
+  const k = String(raw).trim().toLowerCase();
+  if (k.includes('tertiary')) {
+    const m = k.match(/(\d+)/);
+    return { tertiary: true, year: m ? parseInt(m[1], 10) : null, grades: [] };
+  }
+  const nums = (k.match(/\d+/g) || []).map((n) => parseInt(n, 10)).filter((n) => n >= 1 && n <= 12);
+  if (nums.length === 0) return null;
+  if (nums.length >= 2 && nums[1] > nums[0]) {
+    const range = [];
+    for (let n = nums[0]; n <= nums[1]; n++) range.push(n);
+    return { tertiary: false, year: null, grades: range };
+  }
+  return { tertiary: false, year: null, grades: [nums[0]] };
+};
+
+const levelsOverlap = (a, b) => {
+  if (!a || !b) return false;
+  if (a.tertiary !== b.tertiary) return false;
+  if (a.tertiary) return a.year === null || b.year === null || a.year === b.year;
+  return a.grades.some((g) => b.grades.includes(g));
+};
+
+const tierOfLevel = (level) => {
+  if (!level) return null;
+  if (level.tertiary) return 'tertiary';
+  const g = level.grades[0];
+  if (g === 8 || g === 9) return '8-9';
+  if (g === 10 || g === 11) return '10-11';
+  if (g === 12) return '12';
+  return null;
+};
+
+const TIER_TO_KEY = { '8-9': 'grade8-9', '10-11': 'grade10-11', '12': 'grade12', tertiary: 'tertiary' };
+const levelFromTier = (tier) => (tier ? parseLevel(TIER_TO_KEY[tier]) : null);
+
+// The learner's exact grade (8, 9 … 12) or tertiary year, if their profile says so.
+const levelFromUser = (user) => {
+  if (!user) return null;
+  const n = parseInt(user.grade, 10);
+  if (!isNaN(n) && n >= 1 && n <= 12) return { tertiary: false, year: null, grades: [n] };
+  const candidates = [user.grade, user.grade_key, user.gradeKey];
+  for (let i = 0; i < candidates.length; i++) {
+    const l = parseLevel(candidates[i]);
+    if (l && (l.tertiary || l.grades.length === 1)) return l;
+  }
+  return null;
+};
+
 const tierFromValue = (v) => {
   if (v == null || v === '') return null;
   const clean = String(v).trim().toLowerCase();
+  if (clean.includes('tertiary')) return 'tertiary';
   const normalised = clean.replace(/-/g, '');
   if (GRADE_TIER_MAP[normalised]) return GRADE_TIER_MAP[normalised];
   if (GRADE_TIER_MAP[clean]) return GRADE_TIER_MAP[clean];
@@ -54,10 +108,8 @@ const resolveTierFromUser = (user) => {
 };
 
 const gradeFromUser = (user) => {
-  if (!user) return null;
-  const n = parseInt(user.grade, 10);
-  if (!isNaN(n) && n >= 1 && n <= 12) return n;
-  return null;
+  const l = levelFromUser(user);
+  return l && !l.tertiary && l.grades.length === 1 ? l.grades[0] : null;
 };
 
 const getStoredUser = () => {
@@ -78,31 +130,6 @@ const isAuthenticated = () => {
   } catch {
     return false;
   }
-};
-
-// ✅ Robust tier matching for weird admin inputs like "g(8-9)"
-const tierForSubject = (s) => {
-  if (!s) return null;
-  const key = s.grade_key;
-  if (!key) return null;
-  
-  // Strip everything except letters and numbers
-  const clean = String(key).toLowerCase().replace(/[^a-z0-9]/g, '');
-  
-  if (clean.includes('89') || clean.includes('grade89') || clean === '8' || clean === '9' || clean.includes('g8') || clean.includes('g9')) {
-    return '8-9';
-  }
-  if (clean.includes('1011') || clean.includes('grade1011') || clean === '10' || clean === '11') {
-    return '10-11';
-  }
-  if (clean.includes('12') || clean.includes('grade12')) {
-    return '12';
-  }
-  if (clean.includes('tertiary') || clean.includes('year')) {
-    return 'tertiary';
-  }
-  
-  return null;
 };
 
 const KNOWN_SETTING_KEYS = new Set([
@@ -223,22 +250,30 @@ export function useSubjectsPage() {
       const storedUser = getStoredUser();
       const loggedIn = isAuthenticated();
 
+      const exactLevel = loggedIn
+        ? (levelFromUser(payload?.user) || levelFromUser(storedUser))
+        : null;
+
       const memberTier = loggedIn
         ? (
             tierFromValue(payload?.memberTier) ||
             resolveTierFromUser(payload?.user) ||
             resolveTierFromUser(storedUser) ||
+            tierOfLevel(exactLevel) ||
             null
           )
         : null;
 
-      const memberGrade = loggedIn
-        ? (gradeFromUser(payload?.user) || gradeFromUser(storedUser) || null)
+      // Exact grade / tertiary year when known, otherwise the tier's grades.
+      const memberLevel = loggedIn ? (exactLevel || levelFromTier(memberTier)) : null;
+
+      const memberGrade = memberLevel && !memberLevel.tertiary && memberLevel.grades.length === 1
+        ? memberLevel.grades[0]
         : null;
 
-      // Logged-in: scope to tier. Logged-out: all subjects (filtering happens in UI).
-      const scopedSubjects = (loggedIn && memberTier)
-        ? rawSubjects.filter((s) => tierForSubject(s) === memberTier)
+      // Logged-in: ONLY the learner's own grade / tertiary year. Logged-out: all subjects.
+      const scopedSubjects = (loggedIn && memberLevel)
+        ? rawSubjects.filter((s) => levelsOverlap(parseLevel(s.grade_key), memberLevel))
         : rawSubjects;
 
       const scopedCategories = normaliseCategories(rawCategories, scopedSubjects);
@@ -254,6 +289,7 @@ export function useSubjectsPage() {
         access:        payload?.access || {},
         memberTier,
         memberGrade,
+        memberLevel,
         loggedIn,
         otherTier:      null,
         otherTierLabel: null,

@@ -34,17 +34,6 @@ const canonicalGrade = (raw) => {
   return CANONICAL_GRADES[clean] || null;
 };
 
-// Dedicated levels (what the admin form saves) used for the grade pills.
-const DEDICATED_GRADES = [
-  { key: 'grade-8',  label: 'Grade 8' },
-  { key: 'grade-9',  label: 'Grade 9' },
-  { key: 'grade-10', label: 'Grade 10' },
-  { key: 'grade-11', label: 'Grade 11' },
-  { key: 'grade-12', label: 'Grade 12' },
-  { key: 'tertiary-year-1', label: 'Tertiary – Year 1' },
-  { key: 'tertiary-year-2', label: 'Tertiary – Year 2' },
-];
-
 // Parse any grade key into the levels it covers. Understands both the dedicated
 // keys and the old bucket keys:
 //   'grade-8'         -> grades [8]
@@ -171,17 +160,7 @@ const Subjects = () => {
   const access = data?.access || {};
   const loggedIn = !!data?.loggedIn;
 
-  // Use the grades from the server when they include dedicated levels
-  // (Grade 8, Grade 9 … Tertiary Year 1/2); otherwise fall back to the dedicated list.
-  const displayGrades = useMemo(() => {
-    const hasDedicated = grades.some((g) => {
-      const l = parseLevel(g.key);
-      return l && (l.tertiary ? l.year !== null : l.grades.length === 1);
-    });
-    if (hasDedicated) return grades;
-    const all = grades.find((g) => g.is_all) || { key: 'all', label: 'All', is_all: true };
-    return [all, ...DEDICATED_GRADES];
-  }, [grades]);
+  const displayGrades = grades;
 
   const categoryByKey = useMemo(() => {
     const map = {};
@@ -215,18 +194,23 @@ const Subjects = () => {
 
   const memberTier = data?.memberTier || null;
   const memberGrade = data?.memberGrade || null;
+  const memberLevel = data?.memberLevel || null;
 
   const allowedGrades = displayGrades;
 
-  // The level being shown: the grade the user picked, otherwise their own grade.
+  // Logged-in learners only ever see their own grade / tertiary year.
+  // Only guests (choosing a level) or accounts with cross-level access can switch.
+  const canSwitchLevel = !loggedIn || !!access?.crossLevel;
+
   const activeLevel = useMemo(() => {
-    if (selectedGrade) return parseLevel(selectedGrade);
+    if (selectedGrade && canSwitchLevel) return parseLevel(selectedGrade);
     if (!loggedIn) return null;
+    if (memberLevel) return memberLevel;
     if (memberGrade && memberGrade >= 1 && memberGrade <= 12) {
       return { tertiary: false, year: null, grades: [memberGrade] };
     }
     return memberTier ? parseLevel(TIER_TO_KEY[memberTier]) : null;
-  }, [selectedGrade, loggedIn, memberGrade, memberTier]);
+  }, [selectedGrade, canSwitchLevel, loggedIn, memberLevel, memberGrade, memberTier]);
 
   const effectiveTier = tierOfLevel(activeLevel);
 
@@ -241,6 +225,7 @@ const Subjects = () => {
       if (lbl) return lbl;
     }
     if (memberGrade && memberGrade >= 1 && memberGrade <= 12) return `Grade ${memberGrade}`;
+    if (memberLevel?.tertiary) return memberLevel.year ? `Tertiary – Year ${memberLevel.year}` : 'Tertiary';
     if (memberTier) {
       const g = grades.find(
         (x) => !x.is_all && (x.tier || canonicalGrade(x.key)?.tier) === memberTier
@@ -250,7 +235,7 @@ const Subjects = () => {
       if (meta?.label) return meta.label;
     }
     return null;
-  }, [loggedIn, selectedGrade, gradeByKey, memberGrade, memberTier, grades]);
+  }, [loggedIn, selectedGrade, gradeByKey, memberGrade, memberLevel, memberTier, grades]);
 
   const viewingPrefix = text('viewing_prefix') || "You're viewing";
 
@@ -492,6 +477,7 @@ const Subjects = () => {
           </label>
         </div>
 
+        {canSwitchLevel && (
         <div className="subjects-filter-group" role="group" aria-label="Filter by grade">
           <span className="subjects-filter-label">{gradeSectionTitle}</span>
           <div className="subjects-filter-pills">
@@ -511,6 +497,7 @@ const Subjects = () => {
             })}
           </div>
         </div>
+        )}
 
         {visibleCategories.length > 0 && (
           <div className="subjects-filter-group" role="group" aria-label="Filter by category">
@@ -724,6 +711,7 @@ const Subjects = () => {
         )}
       </section>
 
+      {canSwitchLevel && (
       <section className="subjects-other-levels" aria-labelledby="subjects-other-levels-title">
         <button
           type="button"
@@ -767,6 +755,7 @@ const Subjects = () => {
           )
         )}
       </section>
+      )}
     </div>
   );
 };

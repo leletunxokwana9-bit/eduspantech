@@ -233,9 +233,8 @@ const AdminContent = () => {
       throw new Error("We couldn't reach the server. Please check your connection.");
     }
 
-    if (res.status === 401 && retry) {
-      const ok = await refreshAccessToken();
-      if (ok) return authFetch(url, options, false);
+    if (res.status === 401) {
+      if (retry && (await refreshAccessToken())) return authFetch(url, options, false);
       throw new Error('SESSION_EXPIRED');
     }
     return res;
@@ -530,7 +529,7 @@ const AdminContent = () => {
         const d = await rRes.json();
         const resources = d.resources || d.data || [];
         setBuilderResources(resources.map((r) => ({
-          id: r.id, name: r.name, type: r.type || 'pdf', url: r.url || '',
+          saved: true, id: r.id, name: r.name, type: r.type || 'pdf', url: r.url || '',
           description: r.description || '', topicLocalId: r.topic_id || null,
           youtube_id: r.youtube_id || '', thumbnail_url: r.thumbnail_url || '',
           duration: r.duration || '', difficulty: r.difficulty || 'beginner',
@@ -543,12 +542,12 @@ const AdminContent = () => {
         const regular = papers.filter((p) => !p.is_mock);
         const mocks = papers.filter((p) => p.is_mock);
         setBuilderPapers(regular.map((p) => ({
-          id: p.id, year: p.year || '2024', session: p.session || 'Nov', paper: p.paper_number || 'P1',
+          saved: true, id: p.id, year: p.year || '2024', session: p.session || 'Nov', paper: p.paper_number || 'P1',
           paper_url: p.paper_url || '', memo_url: p.memo_url || '',
           paper_name: p.paper_url ? 'Uploaded' : '', memo_name: p.memo_url ? 'Uploaded' : '',
         })));
         setBuilderMocks(mocks.map((m) => ({
-          id: m.id, title: m.title || '', duration: m.duration_minutes || 150, marks: m.total_marks || 150,
+          saved: true, id: m.id, title: m.title || '', duration: m.duration_minutes || 150, marks: m.total_marks || 150,
           paper_url: m.paper_url || '', memo_url: m.memo_url || '',
           paper_name: m.paper_url ? 'Uploaded' : '', memo_name: m.memo_url ? 'Uploaded' : '',
         })));
@@ -600,20 +599,35 @@ const AdminContent = () => {
       const newId = data.subject?.id || data.data?.id || data.id || editingSubject?.id;
       if (!newId) { showError('Saved but ID missing.'); return; }
 
+      // The subject now exists. If the rest fails, a retry must update it, not create a second one.
+      if (!editingSubject) setEditingSubject(data.subject || data.data || { id: newId });
+
+      const failures = [];
+      const done = new Set();
+      const post = async (path, body, label) => {
+        const r = await authFetch(`${API_URL}/admin/content/${path}`, { method: 'POST', body: JSON.stringify(body) });
+        if (!r.ok) {
+          let msg = '';
+          try { const j = await r.json(); msg = j.error || j.message || ''; } catch { /* ignore */ }
+          failures.push(`${label}${msg ? ` (${msg})` : ''}`);
+          return null;
+        }
+        return r;
+      };
+
+      // Topics: remove only the ones the admin deleted, create only the new ones.
+      const topicIdMap = {};
+      const keptTopicIds = builderTopics.filter((t) => !String(t.id).startsWith('local-')).map((t) => t.id);
+      keptTopicIds.forEach((id) => { topicIdMap[id] = id; });
       if (editingSubject) {
         const { data: oldTopics } = await supabase.from('topics').select('id').eq('subject_id', newId);
-        if (Array.isArray(oldTopics) && oldTopics.length) {
-          await supabase.from('topics').delete().in('id', oldTopics.map((t) => t.id));
-        }
+        const removed = (Array.isArray(oldTopics) ? oldTopics : []).filter((t) => !keptTopicIds.includes(t.id));
+        if (removed.length) await supabase.from('topics').delete().in('id', removed.map((t) => t.id));
       }
-      const topicIdMap = {};
       for (const t of builderTopics) {
-        if (!t.name?.trim()) continue;
-        const r = await authFetch(`${API_URL}/admin/content/topics`, {
-          method: 'POST',
-          body: JSON.stringify({ subject_id: newId, name: t.name, description: t.description || '', display_order: t.display_order || 0, is_active: true }),
-        });
-        if (r.ok) {
+        if (!t.name?.trim() || !String(t.id).startsWith('local-')) continue;
+        const r = await post('topics', { subject_id: newId, name: t.name, description: t.description || '', display_order: t.display_order || 0, is_active: true }, `Topic "${t.name}"`);
+        if (r) {
           const d = await r.json();
           const tid = d.topic?.id || d.data?.id || d.id;
           if (tid) topicIdMap[t.id] = tid;
@@ -621,40 +635,46 @@ const AdminContent = () => {
       }
 
       for (const res2 of builderResources) {
-        await authFetch(`${API_URL}/admin/content/resources`, {
-          method: 'POST',
-          body: JSON.stringify({
-            subject_id: newId, topic_id: res2.topicLocalId ? (topicIdMap[res2.topicLocalId] || null) : null,
-            subtopic_id: null, name: res2.name, description: res2.description || '',
-            type: res2.type, url: res2.url || '',
-            youtube_id: res2.youtube_id || '', thumbnail_url: res2.thumbnail_url || '',
-            duration: res2.duration || '', difficulty: res2.difficulty || 'beginner',
-            content: { problems: [] }, is_free: !!res2.is_free, is_featured: false,
-            display_order: res2.display_order || 0, is_active: true,
-          }),
-        });
+        if (res2.saved) continue;
+        const okRes = await post('resources', {
+          subject_id: newId, topic_id: res2.topicLocalId ? (topicIdMap[res2.topicLocalId] || null) : null,
+          subtopic_id: null, name: res2.name, description: res2.description || '',
+          type: res2.type, url: res2.url || '',
+          youtube_id: res2.youtube_id || '', thumbnail_url: res2.thumbnail_url || '',
+          duration: res2.duration || '', difficulty: res2.difficulty || 'beginner',
+          content: { problems: [] }, is_free: !!res2.is_free, is_featured: false,
+          display_order: res2.display_order || 0, is_active: true,
+        }, `Resource "${res2.name}"`);
+        if (okRes) done.add(res2);
       }
 
       for (const p of builderPapers) {
-        if (!p.paper_url && !isDraft) continue;
-        await authFetch(`${API_URL}/admin/content/papers`, {
-          method: 'POST',
-          body: JSON.stringify({
-            subject_id: newId, year: p.year, session: p.session, paper_number: p.paper,
-            is_mock: false, paper_url: p.paper_url || null, memo_url: p.memo_url || null,
-          }),
-        });
+        if (p.saved || (!p.paper_url && !isDraft)) continue;
+        const okP = await post('papers', {
+          subject_id: newId, year: p.year, session: p.session, paper_number: p.paper,
+          is_mock: false, paper_url: p.paper_url || null, memo_url: p.memo_url || null,
+        }, `Past paper ${p.year} ${p.session} ${p.paper}`);
+        if (okP) done.add(p);
       }
       for (const m of builderMocks) {
-        if (!m.paper_url && !isDraft) continue;
-        await authFetch(`${API_URL}/admin/content/papers`, {
-          method: 'POST',
-          body: JSON.stringify({
-            subject_id: newId, is_mock: true, title: m.title,
-            duration_minutes: m.duration, total_marks: m.marks,
-            paper_url: m.paper_url || null, memo_url: m.memo_url || null,
-          }),
-        });
+        if (m.saved || (!m.paper_url && !isDraft)) continue;
+        const okM = await post('papers', {
+          subject_id: newId, is_mock: true, title: m.title,
+          duration_minutes: m.duration, total_marks: m.marks,
+          paper_url: m.paper_url || null, memo_url: m.memo_url || null,
+        }, `Mock exam "${m.title || 'untitled'}"`);
+        if (okM) done.add(m);
+      }
+
+      if (failures.length) {
+        // Remember what did save, so pressing Save again only retries the failures.
+        const mark = (list) => list.map((x) => (done.has(x) ? { ...x, saved: true } : x));
+        setBuilderResources((prev) => mark(prev).map((r) => (r.topicLocalId && topicIdMap[r.topicLocalId] ? { ...r, topicLocalId: topicIdMap[r.topicLocalId] } : r)));
+        setBuilderPapers((prev) => mark(prev));
+        setBuilderMocks((prev) => mark(prev));
+        setBuilderTopics((prev) => prev.map((t) => (topicIdMap[t.id] ? { ...t, id: topicIdMap[t.id] } : t)));
+        showError(`The subject was saved, but these items were NOT saved:\n\n${failures.map((f) => `• ${f}`).join('\n')}\n\nFix the problem and press Save again. Items already saved will not be duplicated.`);
+        return;
       }
 
       showSuccess(isDraft ? 'Draft saved.' : editingSubject ? 'Subject updated.' : 'Subject published.');

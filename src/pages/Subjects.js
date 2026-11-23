@@ -618,8 +618,8 @@ const Subjects = () => {
       <section className="subjects-jumpback" aria-labelledby="subjects-jumpback-title">
         <div className="subjects-section-header">
           <div>
-            <h2 id="subjects-jumpback-title">{text('jump_back_in_title') || 'Jump back in'}</h2>
-            <p>{text('jump_back_in_subtitle') || 'Pick up where you left off.'}</p>
+            <h2 id="subjects-jumpback-title">{text('jump_back_in_title') || 'Recently viewed'}</h2>
+            <p>{text('jump_back_in_subtitle') || 'Subjects and papers you have opened recently.'}</p>
           </div>
         </div>
         {jumpBackIn.length > 0 ? (
@@ -690,17 +690,21 @@ const Subjects = () => {
                       <span className="subjects-paper-meta">
                         <span className="subjects-paper-year">{p.year || ''}</span>
                         <span className="subjects-paper-session">{p.session || ''}</span>
-                        <span className="subjects-paper-number">{p.paper_number || ''}</span>
+                        <span className="subjects-paper-number">{p.paper_number || (p.is_mock ? p.title : '') || ''}</span>
                         {p.is_mock && <span className="subjects-paper-tag">{text('tag_mock') || 'Mock'}</span>}
                       </span>
                       <span className="subjects-paper-links">
-                        <a href={p.paper_url} className="subjects-paper-link">
-                          {text('paper_label') || 'Paper'}
-                        </a>
-                        <span className="subjects-paper-sep" aria-hidden="true">|</span>
-                        <a href={p.memo_url} className="subjects-paper-link">
-                          {text('memo_label') || 'Memo'}
-                        </a>
+                        {p.paper_url && (
+                          <a href={p.paper_url} target="_blank" rel="noopener noreferrer" className="subjects-paper-link">
+                            {text('paper_label') || 'Paper'}
+                          </a>
+                        )}
+                        {p.paper_url && p.memo_url && <span className="subjects-paper-sep" aria-hidden="true">|</span>}
+                        {p.memo_url && (
+                          <a href={p.memo_url} target="_blank" rel="noopener noreferrer" className="subjects-paper-link">
+                            {text('memo_label') || 'Memo'}
+                          </a>
+                        )}
                       </span>
                     </li>
                   ))}

@@ -199,13 +199,13 @@
   flex-wrap: wrap;
 }
 .subjects-search {
-  flex: 1 1 320px;
+  flex: 1 1 280px;
   min-width: 0;
   display: flex;
   align-items: center;
   gap: 10px;
-  height: 52px;
-  padding: 0 18px;
+  height: 50px;
+  padding: 0 16px;
   background: var(--surface-2);
   border: 1.5px solid var(--border);
   border-radius: 14px;
@@ -223,7 +223,11 @@
   color: var(--text);
   font-size: 15px;
 }
-.subjects-search input::placeholder { color: #6b7280; }
+.subjects-search input::placeholder { color: #6b7280; text-overflow: ellipsis; }
+/* Hide the browser's built-in clear "x" (we draw our own) */
+.subjects-search input[type="search"] { -webkit-appearance: none; appearance: none; }
+.subjects-search input[type="search"]::-webkit-search-cancel-button,
+.subjects-search input[type="search"]::-webkit-search-decoration { -webkit-appearance: none; display: none; }
 .subjects-search-clear {
   width: 26px;
   height: 26px;
@@ -242,7 +246,7 @@
 
 .subjects-sort-inline { display: inline-flex; align-items: center; gap: 8px; font-size: 13px; color: var(--muted); }
 .subjects-sort-inline select {
-  min-height: 52px;
+  min-height: 50px;
   padding: 0 14px;
   background: var(--surface-2);
   border: 1.5px solid var(--border);
@@ -684,9 +688,18 @@
   .subjects-filter-section { padding: 18px; gap: 18px; }
   .subjects-section-head { flex-direction: column; align-items: stretch; }
   .subjects-section-head-actions { justify-content: flex-start; }
-  .subjects-filter-search-row { flex-direction: column; }
-  .subjects-sort-inline { justify-content: space-between; }
-  .subjects-sort-inline select { flex: 1; }
+  /* Column layout: the 280px flex-basis would become a 280px HEIGHT, so reset it */
+  .subjects-filter-search-row { flex-direction: column; flex-wrap: nowrap; gap: 10px; }
+  .subjects-search {
+    flex: 0 0 auto;
+    width: 100%;
+    height: 46px;
+    padding: 0 14px;
+    border-radius: 12px;
+  }
+  .subjects-search input { font-size: 16px; } /* 16px stops iOS zooming in on focus */
+  .subjects-sort-inline { width: 100%; justify-content: space-between; }
+  .subjects-sort-inline select { flex: 1; min-height: 44px; border-radius: 12px; }
   .subjects-filter-group { flex-direction: column; align-items: stretch; gap: 10px; }
   .subjects-filter-label { min-width: auto; }
   .subjects-filter-pills {

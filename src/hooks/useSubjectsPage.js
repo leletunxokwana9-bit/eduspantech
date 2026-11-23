@@ -213,6 +213,55 @@ function deriveGrades(scopedSubjects, memberGrade, loggedIn) {
   return [{ key: 'all', label: 'All', is_all: true }, ...real];
 }
 
+async function fetchLiveStats(ids) {
+  const out = {};
+  if (!ids || ids.length === 0) return out;
+  const bucket = (id) => (out[id] = out[id] || { lessonCount: 0, paperCount: 0, mockCount: 0, topicsCovered: 0, years: [] });
+  const safe = async (fn, label) => {
+    try {
+      const r = await fn();
+      if (r?.error) { console.warn('[subjects] could not read', label, '->', r.error.message || r.error); return []; }
+      return r?.data || [];
+    } catch (e) { console.warn('[subjects] could not read', label, e); return []; }
+  };
+
+  const [resources, papers, topics] = await Promise.all([
+    safe(() => supabase.from('resources').select('subject_id,is_active').in('subject_id', ids), 'resources'),
+    safe(() => supabase.from('papers').select('subject_id,is_mock,year,is_active').in('subject_id', ids), 'papers'),
+    safe(() => supabase.from('topics').select('id,subject_id,is_active').in('subject_id', ids), 'topics'),
+  ]);
+
+  console.info('[subjects] live rows', { resources: resources.length, papers: papers.length, topics: topics.length });
+  resources.forEach((r) => { if (r.is_active !== false) bucket(r.subject_id).lessonCount += 1; });
+  papers.forEach((p) => {
+    if (p.is_active === false) return;
+    const b = bucket(p.subject_id);
+    if (p.is_mock) b.mockCount += 1;
+    else { b.paperCount += 1; if (p.year) b.years.push(Number(p.year)); }
+  });
+  topics.forEach((t) => { if (t.is_active !== false) bucket(t.subject_id).topicsCovered += 1; });
+  return out;
+}
+
+// Use the larger of the RPC number and the live number.
+function mergeStats(subject, live) {
+  if (!live) return subject;
+  const base = subject.stats || {};
+  const years = live.years.filter((y) => !isNaN(y));
+  return {
+    ...subject,
+    stats: {
+      ...base,
+      lessonCount: Math.max(base.lessonCount || 0, live.lessonCount),
+      paperCount:  Math.max(base.paperCount  || 0, live.paperCount),
+      mockCount:   Math.max(base.mockCount   || 0, live.mockCount),
+      topicsCovered: Math.max(base.topicsCovered || 0, live.topicsCovered),
+      paperYearMin: base.paperYearMin || (years.length ? Math.min(...years) : undefined),
+      paperYearMax: base.paperYearMax || (years.length ? Math.max(...years) : undefined),
+    },
+  };
+}
+
 export function useSubjectsPage() {
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -234,7 +283,7 @@ export function useSubjectsPage() {
     setLoading(true);
     setError(null);
 
-    supabase.rpc('get_subjects_page').then(({ data: payload, error: err }) => {
+    supabase.rpc('get_subjects_page').then(async ({ data: payload, error: err }) => {
       if (cancelled) return;
       if (err) {
         setError(err);
@@ -276,6 +325,12 @@ export function useSubjectsPage() {
         ? rawSubjects.filter((s) => levelsOverlap(parseLevel(s.grade_key), memberLevel))
         : rawSubjects;
 
+      // Live content counts straight from the tables, so a card never says
+      // "Content coming soon" when lessons/papers/mocks actually exist.
+      const liveStats = await fetchLiveStats(scopedSubjects.map((s) => s.id));
+      if (cancelled) return;
+      const subjectsWithStats = scopedSubjects.map((s) => mergeStats(s, liveStats[s.id]));
+
       const scopedCategories = normaliseCategories(rawCategories, scopedSubjects);
       const scopedGrades = deriveGrades(scopedSubjects, memberGrade, loggedIn);
 
@@ -283,7 +338,7 @@ export function useSubjectsPage() {
         settings:      sanitizeSettings(payload?.settings),
         categories:    scopedCategories,
         grades:        scopedGrades,
-        subjects:      scopedSubjects,
+        subjects:      subjectsWithStats,
         papers:        rawPapers,
         jumpBackIn:    Array.isArray(payload?.jumpBackIn) ? payload.jumpBackIn : [],
         access:        payload?.access || {},

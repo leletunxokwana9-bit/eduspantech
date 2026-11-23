@@ -34,20 +34,64 @@ const canonicalGrade = (raw) => {
   return CANONICAL_GRADES[clean] || null;
 };
 
-const tierForSubject = (subject) => {
-  if (!subject) return null;
-  const g = canonicalGrade(subject.grade_key);
-  if (g) return g.tier;
-  if (typeof subject.grade_key === 'string') {
-    const m = subject.grade_key.match(/(\d+)/);
-    if (m) {
-      const n = parseInt(m[1], 10);
-      if (n === 8 || n === 9) return '8-9';
-      if (n === 10 || n === 11) return '10-11';
-      if (n === 12) return '12';
-    }
+// Dedicated levels (what the admin form saves) used for the grade pills.
+const DEDICATED_GRADES = [
+  { key: 'grade-8',  label: 'Grade 8' },
+  { key: 'grade-9',  label: 'Grade 9' },
+  { key: 'grade-10', label: 'Grade 10' },
+  { key: 'grade-11', label: 'Grade 11' },
+  { key: 'grade-12', label: 'Grade 12' },
+  { key: 'tertiary-year-1', label: 'Tertiary – Year 1' },
+  { key: 'tertiary-year-2', label: 'Tertiary – Year 2' },
+];
+
+// Parse any grade key into the levels it covers. Understands both the dedicated
+// keys and the old bucket keys:
+//   'grade-8'         -> grades [8]
+//   'grade-8-9'       -> grades [8, 9]
+//   'tertiary'        -> tertiary, any year
+//   'tertiary-year-2' -> tertiary, year 2
+const parseLevel = (raw) => {
+  if (!raw) return null;
+  const k = String(raw).trim().toLowerCase();
+  if (k.includes('tertiary')) {
+    const m = k.match(/(\d+)/);
+    return { tertiary: true, year: m ? parseInt(m[1], 10) : null, grades: [] };
   }
+  const nums = (k.match(/\d+/g) || []).map((n) => parseInt(n, 10)).filter((n) => n >= 1 && n <= 12);
+  if (nums.length === 0) return null;
+  if (nums.length >= 2 && nums[1] > nums[0]) {
+    const range = [];
+    for (let n = nums[0]; n <= nums[1]; n++) range.push(n);
+    return { tertiary: false, year: null, grades: range };
+  }
+  return { tertiary: false, year: null, grades: [nums[0]] };
+};
+
+// A subject with no readable grade is kept (shown everywhere), as before.
+const levelsOverlap = (a, b) => {
+  if (!a || !b) return true;
+  if (a.tertiary !== b.tertiary) return false;
+  if (a.tertiary) return a.year === null || b.year === null || a.year === b.year;
+  return a.grades.some((g) => b.grades.includes(g));
+};
+
+const tierOfLevel = (level) => {
+  if (!level) return null;
+  if (level.tertiary) return 'tertiary';
+  const g = level.grades[0];
+  if (g === 8 || g === 9) return '8-9';
+  if (g === 10 || g === 11) return '10-11';
+  if (g === 12) return '12';
   return null;
+};
+
+const levelLabel = (raw) => {
+  const l = parseLevel(raw);
+  if (!l) return null;
+  if (l.tertiary) return l.year ? `Tertiary – Year ${l.year}` : 'Tertiary';
+  if (l.grades.length === 1) return `Grade ${l.grades[0]}`;
+  return `Grade ${l.grades[0]} – ${l.grades[l.grades.length - 1]}`;
 };
 
 const monogram = (name) => {
@@ -127,6 +171,18 @@ const Subjects = () => {
   const access = data?.access || {};
   const loggedIn = !!data?.loggedIn;
 
+  // Use the grades from the server when they include dedicated levels
+  // (Grade 8, Grade 9 … Tertiary Year 1/2); otherwise fall back to the dedicated list.
+  const displayGrades = useMemo(() => {
+    const hasDedicated = grades.some((g) => {
+      const l = parseLevel(g.key);
+      return l && (l.tertiary ? l.year !== null : l.grades.length === 1);
+    });
+    if (hasDedicated) return grades;
+    const all = grades.find((g) => g.is_all) || { key: 'all', label: 'All', is_all: true };
+    return [all, ...DEDICATED_GRADES];
+  }, [grades]);
+
   const categoryByKey = useMemo(() => {
     const map = {};
     categories.forEach((c) => { map[c.key] = c; });
@@ -141,9 +197,9 @@ const Subjects = () => {
 
   const gradeByKey = useMemo(() => {
     const map = {};
-    grades.forEach((g) => { map[g.key] = g; });
+    displayGrades.forEach((g) => { map[g.key] = g; });
     return map;
-  }, [grades]);
+  }, [displayGrades]);
 
   const heroSymbols = useMemo(
     () => (categories || [])
@@ -160,13 +216,19 @@ const Subjects = () => {
   const memberTier = data?.memberTier || null;
   const memberGrade = data?.memberGrade || null;
 
-  const allowedGrades = grades;
+  const allowedGrades = displayGrades;
 
-  const effectiveTier = (() => {
-    if (loggedIn) return memberTier;
-    if (selectedGrade) return canonicalGrade(selectedGrade)?.tier || null;
-    return null;
-  })();
+  // The level being shown: the grade the user picked, otherwise their own grade.
+  const activeLevel = useMemo(() => {
+    if (selectedGrade) return parseLevel(selectedGrade);
+    if (!loggedIn) return null;
+    if (memberGrade && memberGrade >= 1 && memberGrade <= 12) {
+      return { tertiary: false, year: null, grades: [memberGrade] };
+    }
+    return memberTier ? parseLevel(TIER_TO_KEY[memberTier]) : null;
+  }, [selectedGrade, loggedIn, memberGrade, memberTier]);
+
+  const effectiveTier = tierOfLevel(activeLevel);
 
   const viewingLabel = useMemo(() => {
     if (!loggedIn) return null;
@@ -175,6 +237,8 @@ const Subjects = () => {
       if (g?.label) return g.label;
       const meta = canonicalGrade(selectedGrade);
       if (meta?.label) return meta.label;
+      const lbl = levelLabel(selectedGrade);
+      if (lbl) return lbl;
     }
     if (memberGrade && memberGrade >= 1 && memberGrade <= 12) return `Grade ${memberGrade}`;
     if (memberTier) {
@@ -198,28 +262,22 @@ const Subjects = () => {
 
   const baseFiltered = useMemo(() => {
     return allSubjects.filter((s) => {
-      if (effectiveTier) {
-        const sTier = tierForSubject(s);
-        if (sTier && sTier !== effectiveTier) return false;
-      }
+      if (activeLevel && !levelsOverlap(parseLevel(s.grade_key), activeLevel)) return false;
       if (selectedCategory && subjectCategoryKey(s) !== selectedCategory) return false;
-      if (!matchesSearch(s, searchQuery, categories, grades)) return false;
+      if (!matchesSearch(s, searchQuery, categories, displayGrades)) return false;
       return true;
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [allSubjects, selectedCategory, searchQuery, effectiveTier, categoryById, categories, grades]);
+  }, [allSubjects, selectedCategory, searchQuery, activeLevel, categoryById, categories, displayGrades]);
 
   const countsBeforeCategory = useMemo(() => {
     return allSubjects.filter((s) => {
-      if (effectiveTier) {
-        const sTier = tierForSubject(s);
-        if (sTier && sTier !== effectiveTier) return false;
-      }
-      if (!matchesSearch(s, searchQuery, categories, grades)) return false;
+      if (activeLevel && !levelsOverlap(parseLevel(s.grade_key), activeLevel)) return false;
+      if (!matchesSearch(s, searchQuery, categories, displayGrades)) return false;
       return true;
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [allSubjects, searchQuery, effectiveTier, categories, grades]);
+  }, [allSubjects, searchQuery, activeLevel, categories, displayGrades]);
 
   const categoryCounts = useMemo(() => {
     const counts = {};
@@ -437,7 +495,7 @@ const Subjects = () => {
         <div className="subjects-filter-group" role="group" aria-label="Filter by grade">
           <span className="subjects-filter-label">{gradeSectionTitle}</span>
           <div className="subjects-filter-pills">
-            {(loggedIn ? allowedGrades : grades).map((g) => {
+            {allowedGrades.map((g) => {
               const active = g.is_all ? selectedGrade === null : selectedGrade === g.key;
               return (
                 <button
@@ -519,7 +577,7 @@ const Subjects = () => {
               const color = subject.color || cat?.color || '#7c3aed';
               const icon = subject.icon || cat?.icon || '';
               const grade = gradeByKey[subject.grade_key];
-              const gradeLabel = grade?.label || subject.grade_label || canonicalGrade(subject.grade_key)?.label;
+              const gradeLabel = grade?.label || subject.grade_label || canonicalGrade(subject.grade_key)?.label || levelLabel(subject.grade_key);
               const stats = subject.stats || {};
               const paperRange = formatYearRange(stats.paperYearMin, stats.paperYearMax);
               const empty = !stats.lessonCount && !stats.paperCount && !stats.mockCount;

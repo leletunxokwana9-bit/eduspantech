@@ -42,7 +42,7 @@ const SplashScreen = ({ isReady }) => {
         </div>
         
         <h1 className="splash-title">EduSpantech</h1>
-        <p className="splash-tagline">Education for the love of your life ❤️</p>
+        <p className="splash-tagline">Education for the love of my life</p>
         
         <div className="splash-loader-track">
           <div 

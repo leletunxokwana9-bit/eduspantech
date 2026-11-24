@@ -8,6 +8,9 @@ import './SubjectDetail.css';
 
 import { API_BASE_URL } from '../services/api';
 
+const slugify = (s) =>
+  String(s || '').toLowerCase().trim().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
+
 const SubjectDetail = () => {
   const { subjectName } = useParams();
   const navigate = useNavigate();
@@ -21,9 +24,18 @@ const SubjectDetail = () => {
   const [showLoginPrompt, setShowLoginPrompt] = useState(false);
   const [selectedSubject, setSelectedSubject] = useState(null);
 
+  // ===== SUBJECT LOOKUP STATE =====
+  // The home data may not contain every subject (e.g. grade-specific ones),
+  // so when the slug isn't found there we fetch the full subjects list.
+  const [fetchedSubjects, setFetchedSubjects] = useState([]);
+  const [lookedUpFor, setLookedUpFor] = useState(null);
+  const subjectLookupDone = lookedUpFor === subjectName;
+
   // ===== CONTENT TREE STATE =====
   const [contentTree, setContentTree] = useState({ topics: [], subjectResources: [] });
   const [contentLoading, setContentLoading] = useState(true);
+  const [contentError, setContentError] = useState(null);
+  const [contentReload, setContentReload] = useState(0);
   const [expandedTopics, setExpandedTopics] = useState({});
   const [activeResource, setActiveResource] = useState(null);
 
@@ -42,14 +54,20 @@ const SubjectDetail = () => {
   } = useSound();
 
   // Make sure subjects is always an array
-  const subjects = Array.isArray(data?.subjects) ? data.subjects : [];
+  const homeSubjects = Array.isArray(data?.subjects) ? data.subjects : [];
 
-  // Find subject - handles both slug and exact name
-  const subject = subjects.find((item) => {
-    if (!item?.name) return false;
-    const itemSlug = item.name.toLowerCase().replace(/\s+/g, '-');
-    return itemSlug === subjectName || item.name === subjectName;
-  });
+  // The real slug always wins. Name matching is only a fallback for old links.
+  // (Matching by name alone made "Physical Science Grade 8" and "Physical Science
+  // Grade 10" collide, and hid subjects whose slug includes grade or language.)
+  const findBySlug = (list) => list.find((item) => item?.slug && item.slug === subjectName);
+  const findByName = (list) =>
+    list.find((item) => item?.name && (slugify(item.name) === subjectName || item.name === subjectName));
+
+  const subject =
+    findBySlug(homeSubjects) ||
+    findBySlug(fetchedSubjects) ||
+    findByName(homeSubjects) ||
+    findByName(fetchedSubjects);
 
   // ===== HELPER: Get subscription from JWT token =====
   const getSubscriptionFromToken = () => {
@@ -117,36 +135,83 @@ const SubjectDetail = () => {
     checkAuth();
   }, []);
 
-  // ===== FETCH CONTENT TREE =====
+  // ===== LOOK UP THE SUBJECT IF THE HOME DATA DOESN'T HAVE IT =====
   useEffect(() => {
-    const fetchContentTree = async () => {
-      if (!subject?.id) return;
+    if (homeLoading) return undefined;
+
+    if (subject) {
+      setLookedUpFor(subjectName);
+      return undefined;
+    }
+
+    let cancelled = false;
+    (async () => {
       try {
-        setContentLoading(true);
-        const res = await fetch(`${API_BASE_URL}/content/subjects/${subject.id}/full`);
+        const token = localStorage.getItem('accessToken');
+        const res = await fetch(`${API_BASE_URL}/content/subjects`, {
+          headers: token ? { Authorization: `Bearer ${token}` } : {}
+        });
         const json = await res.json();
-        if (json.success) {
-          setContentTree({
-            topics: json.topics || [],
-            subjectResources: json.subjectResources || []
-          });
+        if (!cancelled && json.success && Array.isArray(json.subjects)) {
+          setFetchedSubjects(json.subjects);
         }
       } catch (err) {
-        console.error('Failed to fetch content tree:', err);
+        console.error('Failed to look up subject:', err);
       } finally {
-        setContentLoading(false);
+        if (!cancelled) setLookedUpFor(subjectName);
       }
-    };
-    fetchContentTree();
-  }, [subject?.id]);
+    })();
 
-  // If subject not found, redirect
+    return () => { cancelled = true; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [homeLoading, subjectName, homeSubjects.length, subject?.id]);
+
+  // ===== FETCH CONTENT TREE =====
   useEffect(() => {
-    if (!homeLoading && !subject && data) {
+    if (!subject?.id) return undefined;
+
+    let cancelled = false;
+    (async () => {
+      try {
+        setContentLoading(true);
+        setContentError(null);
+
+        const token = localStorage.getItem('accessToken');
+        const res = await fetch(`${API_BASE_URL}/content/subjects/${subject.id}/full`, {
+          headers: token ? { Authorization: `Bearer ${token}` } : {}
+        });
+        const json = await res.json().catch(() => ({}));
+        if (cancelled) return;
+
+        if (!res.ok || json.success === false) {
+          setContentError(json.error || json.message || `Could not load the content (error ${res.status}).`);
+          setContentTree({ topics: [], subjectResources: [] });
+          return;
+        }
+
+        const src = json.data || json;
+        setContentTree({
+          topics: src.topics || [],
+          subjectResources: src.subjectResources || src.subject_resources || []
+        });
+      } catch (err) {
+        console.error('Failed to fetch content tree:', err);
+        if (!cancelled) setContentError("We couldn't reach the server. Please check your connection.");
+      } finally {
+        if (!cancelled) setContentLoading(false);
+      }
+    })();
+
+    return () => { cancelled = true; };
+  }, [subject?.id, contentReload]);
+
+  // If subject not found (after we have really looked for it), redirect
+  useEffect(() => {
+    if (!homeLoading && subjectLookupDone && !subject) {
       playPageTransition();
       navigate('/subjects');
     }
-  }, [homeLoading, subject, data, navigate, playPageTransition]);
+  }, [homeLoading, subjectLookupDone, subject, navigate, playPageTransition]);
 
   const getCohortTier = () => {
     if (subject?.name === 'Algebra' || subject?.name === 'Geometry') return 'Tier 1';
@@ -470,7 +535,7 @@ const SubjectDetail = () => {
     { id: 'schedule', label: '🕐 Schedule' }
   ];
 
-  if (homeLoading || isCheckingAuth) {
+  if (homeLoading || isCheckingAuth || !subjectLookupDone) {
     return (
       <div className="subject-detail-container loading">
         <div className="loading-spinner"></div>
@@ -527,7 +592,7 @@ const SubjectDetail = () => {
           <div className="sd-hero-copy">
             <div className="sd-eyebrow">YOUR LEARNING SPACE</div>
             <h1>{subject.name}</h1>
-            <p>{subject.longDescription || subject.description || 'Explore the learning materials and curriculum for this subject.'}</p>
+            <p>{subject.longDescription || subject.long_description || subject.description || 'Explore the learning materials and curriculum for this subject.'}</p>
             <div className="sd-hero-meta">
               <span>{getCohortTier()}</span>
               <span>{getRegion()}</span>
@@ -648,7 +713,7 @@ const SubjectDetail = () => {
                   <div className="sd-overview-intro">
                     <span className="sd-panel-index">01 / OVERVIEW</span>
                     <h3>{subject.name}</h3>
-                    <p>{subject.longDescription || subject.description || 'Learning information for this subject will appear here as it is published.'}</p>
+                    <p>{subject.longDescription || subject.long_description || subject.description || 'Learning information for this subject will appear here as it is published.'}</p>
                   </div>
                   <div className="sd-overview-facts">
                     <div><span>Subject</span><strong>{subject.name}</strong></div>
@@ -668,10 +733,19 @@ const SubjectDetail = () => {
                 <div className="sd-curriculum-panel">
                   <div className="sd-panel-heading">
                     <div><span className="sd-panel-index">02 / LEARNING CONTENT</span><h3>Curriculum & resources</h3></div>
-                    <span>{contentLoading ? 'Loading…' : `${topicCount} topics · ${resourceCount} resources`}</span>
+                    <span>{contentLoading ? 'Loading…' : contentError ? 'Could not load' : `${topicCount} topics · ${resourceCount} resources`}</span>
                   </div>
                   {contentLoading ? (
                     <div className="sd-content-loading"><div className="loading-spinner" /><p>Loading published learning content…</p></div>
+                  ) : contentError ? (
+                    <div className="sd-empty-content">
+                      <div className="sd-empty-symbol">⚠</div>
+                      <h4>We couldn't load the learning content</h4>
+                      <p>{contentError}</p>
+                      <button type="button" className="sd-inline-action" onClick={() => setContentReload((n) => n + 1)}>
+                        Try again
+                      </button>
+                    </div>
                   ) : (contentTree.topics.length === 0 && contentTree.subjectResources.length === 0) ? (
                     <div className="sd-empty-content">
                       <div className="sd-empty-symbol">＋</div>

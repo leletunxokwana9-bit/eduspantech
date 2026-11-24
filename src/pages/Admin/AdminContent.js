@@ -194,6 +194,12 @@ const AdminContent = () => {
   const [builderPapers, setBuilderPapers] = useState([]);
   const [builderMocks, setBuilderMocks] = useState([]);
 
+  // Tracks whether existing content loaded when editing, so a failed load
+  // can never cause the save to delete topics the admin never saw.
+  const [topicsLoaded, setTopicsLoaded] = useState(true);
+  const [contentLoading, setContentLoading] = useState(false);
+  const [loadFailures, setLoadFailures] = useState([]);
+
   const [uploading, setUploading] = useState(false);
   const [previewMode, setPreviewMode] = useState('open');
   const [editingSubject, setEditingSubject] = useState(null);
@@ -513,47 +519,94 @@ const AdminContent = () => {
 
   const getResourceIcon = (t) => ({ video: '🎬', pdf: '📄', practice: '✏️', guide: '📖', quiz: '📝', link: '🔗' }[t] || '📎');
 
+  // ============================================================
+  // Load existing topics / resources / papers for a subject.
+  // Each request is independent: one failing request (e.g. a 401 on
+  // /papers) no longer prevents the others from showing.
+  // ============================================================
   const loadExistingContent = async (subjectId) => {
+    setContentLoading(true);
+    setLoadFailures([]);
+
+    const fetchPart = async (path) => {
+      try {
+        const r = await authFetch(`${API_URL}/admin/content/subjects/${subjectId}/${path}`);
+        if (!r.ok) return { ok: false, status: r.status };
+        return { ok: true, data: await r.json() };
+      } catch (e) {
+        return { ok: false, error: e.message };
+      }
+    };
+
     try {
-      const [tRes, rRes, pRes] = await Promise.all([
-        authFetch(`${API_URL}/admin/content/subjects/${subjectId}/topics`),
-        authFetch(`${API_URL}/admin/content/subjects/${subjectId}/resources`),
-        authFetch(`${API_URL}/admin/content/subjects/${subjectId}/papers`),
+      const [t, r, p] = await Promise.all([
+        fetchPart('topics'),
+        fetchPart('resources'),
+        fetchPart('papers'),
       ]);
-      if (tRes.ok) {
-        const d = await tRes.json();
-        const topics = d.topics || d.data || [];
-        setBuilderTopics(topics.map((t) => ({ id: t.id, name: t.name, description: t.description || '', display_order: t.display_order || 0, is_active: t.is_active !== false })));
-      }
-      if (rRes.ok) {
-        const d = await rRes.json();
-        const resources = d.resources || d.data || [];
-        setBuilderResources(resources.map((r) => ({
-          saved: true, id: r.id, name: r.name, type: r.type || 'pdf', url: r.url || '',
-          description: r.description || '', topicLocalId: r.topic_id || null,
-          youtube_id: r.youtube_id || '', thumbnail_url: r.thumbnail_url || '',
-          duration: r.duration || '', difficulty: r.difficulty || 'beginner',
-          is_free: r.is_free || false, display_order: r.display_order || 0, is_active: r.is_active !== false,
+
+      const failed = [];
+
+      if (t.ok) {
+        const topics = t.data.topics || t.data.data || [];
+        setBuilderTopics(topics.map((x) => ({
+          id: x.id, name: x.name, description: x.description || '',
+          display_order: x.display_order || 0, is_active: x.is_active !== false,
         })));
+        setTopicsLoaded(true);
+      } else {
+        setTopicsLoaded(false);
+        failed.push('topics');
       }
-      if (pRes.ok) {
-        const d = await pRes.json();
-        const papers = d.papers || d.data || [];
-        const regular = papers.filter((p) => !p.is_mock);
-        const mocks = papers.filter((p) => p.is_mock);
-        setBuilderPapers(regular.map((p) => ({
-          saved: true, id: p.id, year: p.year || '2024', session: p.session || 'Nov', paper: p.paper_number || 'P1',
-          paper_url: p.paper_url || '', memo_url: p.memo_url || '',
-          paper_name: p.paper_url ? 'Uploaded' : '', memo_name: p.memo_url ? 'Uploaded' : '',
+
+      if (r.ok) {
+        const resources = r.data.resources || r.data.data || [];
+        setBuilderResources(resources.map((x) => ({
+          saved: true, id: x.id, name: x.name, type: x.type || 'pdf', url: x.url || '',
+          description: x.description || '', topicLocalId: x.topic_id || null,
+          youtube_id: x.youtube_id || '', thumbnail_url: x.thumbnail_url || '',
+          duration: x.duration || '', difficulty: x.difficulty || 'beginner',
+          is_free: x.is_free || false, display_order: x.display_order || 0,
+          is_active: x.is_active !== false,
         })));
-        setBuilderMocks(mocks.map((m) => ({
-          saved: true, id: m.id, title: m.title || '', duration: m.duration_minutes || 150, marks: m.total_marks || 150,
-          paper_url: m.paper_url || '', memo_url: m.memo_url || '',
-          paper_name: m.paper_url ? 'Uploaded' : '', memo_name: m.memo_url ? 'Uploaded' : '',
-        })));
+      } else {
+        failed.push('resources');
       }
-    } catch (err) {
-      showError('Could not load existing content.');
+
+      if (p.ok) {
+        const papers = p.data.papers || p.data.data || [];
+        const regular = papers.filter((x) => !x.is_mock);
+        const mocks = papers.filter((x) => x.is_mock);
+        setBuilderPapers(regular.map((x) => ({
+          saved: true, id: x.id, year: x.year || '2024', session: x.session || 'Nov', paper: x.paper_number || 'P1',
+          paper_url: x.paper_url || '', memo_url: x.memo_url || '',
+          paper_name: x.paper_url ? 'Uploaded' : '', memo_name: x.memo_url ? 'Uploaded' : '',
+        })));
+        setBuilderMocks(mocks.map((x) => ({
+          saved: true, id: x.id, title: x.title || '', duration: x.duration_minutes || 150, marks: x.total_marks || 150,
+          paper_url: x.paper_url || '', memo_url: x.memo_url || '',
+          paper_name: x.paper_url ? 'Uploaded' : '', memo_name: x.memo_url ? 'Uploaded' : '',
+        })));
+      } else {
+        failed.push('past papers & mock exams');
+      }
+
+      setLoadFailures(failed);
+
+      if (failed.length) {
+        const expired = [t, r, p].some((x) => x.error === 'SESSION_EXPIRED' || x.status === 401);
+        showError(
+          `Couldn't load: ${failed.join(', ')}.\n\n` +
+          (expired
+            ? 'Your session looks expired. Please log out and log in again, then reopen this subject.\n\n'
+            : 'Check your connection and try again.\n\n') +
+          (failed.includes('topics')
+            ? 'Saving is blocked from removing topics until topics load, so nothing will be deleted by mistake.'
+            : 'Items that failed to load will not be changed when you save.')
+        );
+      }
+    } finally {
+      setContentLoading(false);
     }
   };
 
@@ -568,6 +621,10 @@ const AdminContent = () => {
     if (!isDraft && otherIssues.some((i) => i.level === 'error')) {
       const list = otherIssues.filter((i) => i.level === 'error').map((i) => `• ${i.msg}`).join('\n');
       showError(`A few things need attention:\n\n${list}`);
+      return;
+    }
+    if (contentLoading) {
+      showError('Existing content is still loading. Please wait a moment and try again.');
       return;
     }
 
@@ -619,7 +676,10 @@ const AdminContent = () => {
       const topicIdMap = {};
       const keptTopicIds = builderTopics.filter((t) => !String(t.id).startsWith('local-')).map((t) => t.id);
       keptTopicIds.forEach((id) => { topicIdMap[id] = id; });
-      if (editingSubject) {
+
+      // SAFETY: only delete topics if the existing topics were actually loaded.
+      // Otherwise an empty builder would wipe every topic of this subject.
+      if (editingSubject && topicsLoaded) {
         const { data: oldTopics } = await supabase.from('topics').select('id').eq('subject_id', newId);
         const removed = (Array.isArray(oldTopics) ? oldTopics : []).filter((t) => !keptTopicIds.includes(t.id));
         if (removed.length) await supabase.from('topics').delete().in('id', removed.map((t) => t.id));
@@ -716,6 +776,13 @@ const AdminContent = () => {
       allowed_plans: subject.allowed_plans || [],
       soon: false, region: 'Global', year_level: '1ST_YEAR',
     });
+
+    // Clear anything left over from a previously opened subject, so a failed
+    // load can never show (or save) another subject's content.
+    setBuilderTopics([]); setBuilderResources([]); setBuilderPapers([]); setBuilderMocks([]);
+    setTopicsLoaded(false);
+    setLoadFailures([]);
+
     setViewMode('builder');
     setActiveSection('basics');
     await loadExistingContent(subject.id);
@@ -723,6 +790,9 @@ const AdminContent = () => {
   const resetForm = () => {
     setFormData(initialForm());
     setBuilderTopics([]); setBuilderResources([]); setBuilderPapers([]); setBuilderMocks([]);
+    setTopicsLoaded(true);   // a brand-new subject has nothing to protect
+    setLoadFailures([]);
+    setContentLoading(false);
   };
 
   const handleDeleteClick = (subject) => { setDeleteTarget(subject); setShowDeletePopup(true); };
@@ -919,12 +989,30 @@ const AdminContent = () => {
         </div>
         <div className="ac-header-actions">
           <button className="ac-btn-secondary" onClick={() => setViewMode('list')}>Cancel</button>
-          <button className="ac-btn-secondary" onClick={() => handleSaveSubject({ draft: true })} disabled={actionLoading || uploading}>Save draft</button>
-          <button className="ac-btn-primary" onClick={() => handleSaveSubject()} disabled={actionLoading || uploading}>
+          <button className="ac-btn-secondary" onClick={() => handleSaveSubject({ draft: true })} disabled={actionLoading || uploading || contentLoading}>Save draft</button>
+          <button className="ac-btn-primary" onClick={() => handleSaveSubject()} disabled={actionLoading || uploading || contentLoading}>
             {actionLoading ? 'Saving…' : editingSubject ? 'Update live subject' : 'Publish subject'}
           </button>
         </div>
       </header>
+
+      {contentLoading && (
+        <div style={{ margin: '0 0 12px', padding: '10px 14px', borderRadius: 10, background: 'rgba(99,102,241,0.15)', color: '#e5e7eb', fontSize: 13 }}>
+          ⏳ Loading existing topics, resources and papers…
+        </div>
+      )}
+
+      {!contentLoading && loadFailures.length > 0 && editingSubject && (
+        <div style={{ margin: '0 0 12px', padding: '10px 14px', borderRadius: 10, background: 'rgba(245,158,11,0.15)', border: '1px solid rgba(245,158,11,0.4)', color: '#fde68a', fontSize: 13, display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
+          <span style={{ flex: 1, minWidth: 200 }}>
+            ⚠️ Couldn't load: {loadFailures.join(', ')}. What you see below is incomplete.
+            {loadFailures.includes('topics') ? ' Existing topics will not be removed when you save.' : ''}
+          </span>
+          <button type="button" className="ac-btn-secondary" onClick={() => loadExistingContent(editingSubject.id)}>
+            Retry
+          </button>
+        </div>
+      )}
 
       <div className="ac-layout">
         <nav className="ac-nav">
@@ -1011,7 +1099,7 @@ const AdminContent = () => {
                     <button type="button" className="ac-btn-icon" onClick={() => removeTopicFromBuilder(t.id)}>✕</button>
                   </div>
                 ))}
-                {builderTopics.length === 0 && <p className="ac-muted-text">No topics yet.</p>}
+                {builderTopics.length === 0 && <p className="ac-muted-text">{contentLoading ? 'Loading topics…' : 'No topics yet.'}</p>}
               </div>
               <button type="button" className="ac-btn-dashed" onClick={openResourcePopup}>➕ Add resource (PDF / Video)</button>
               <div className="ac-list" style={{ marginTop: 12 }}>
@@ -1033,7 +1121,7 @@ const AdminContent = () => {
               <p className="ac-subtitle">Official question papers and memos.</p>
               <div className="ac-list">
                 {builderPapers.map((p, i) => (
-                  <div key={i} className="ac-list-row ac-paper-row">
+                  <div key={p.id || i} className="ac-list-row ac-paper-row">
                     <div className="ac-paper-meta">
                       <input type="number" value={p.year} onChange={(e) => updateArrayItem(setBuilderPapers, i, 'year', e.target.value)} placeholder="Year" />
                       <select value={p.session} onChange={(e) => updateArrayItem(setBuilderPapers, i, 'session', e.target.value)}><option value="Nov">Nov</option><option value="Jun">June</option></select>
@@ -1071,7 +1159,7 @@ const AdminContent = () => {
               <p className="ac-subtitle">EduSpantech generated practice exams.</p>
               <div className="ac-list">
                 {builderMocks.map((m, i) => (
-                  <div key={i} className="ac-list-row ac-mock-row">
+                  <div key={m.id || i} className="ac-list-row ac-mock-row">
                     <div className="ac-mock-top">
                       <input value={m.title} onChange={(e) => updateArrayItem(setBuilderMocks, i, 'title', e.target.value)} placeholder="Mock Title" style={{ flex: 1 }} />
                       <input type="number" value={m.duration} onChange={(e) => updateArrayItem(setBuilderMocks, i, 'duration', e.target.value)} placeholder="Mins" style={{ maxWidth: '80px' }} />
@@ -1207,7 +1295,7 @@ const AdminContent = () => {
             <p style={{ fontSize: 11, color: '#9a9ab8', marginBottom: 12 }}>Newest papers. Greyed links are missing.</p>
             <div className="ac-hub-list">
               {builderPapers.slice(0, 4).map((p, i) => (
-                <div key={i} className="ac-hub-item">
+                <div key={p.id || i} className="ac-hub-item">
                   <span><span className="ac-hub-year">{p.year}</span> <span className="ac-hub-paper">{p.paper}</span> <span className="ac-tag sm">{p.session}</span></span>
                   <span className="ac-hub-links">
                     <span className={p.paper_url ? '' : 'grey'}>Question paper</span> | <span className={p.memo_url ? '' : 'grey'}>Memo</span>

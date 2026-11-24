@@ -246,3 +246,13 @@ a, button:not(.btn-primary),
 ::-webkit-scrollbar-thumb:hover {
   background: rgba(255, 255, 255, 0.25) !important;
 }
+/* Android bottom system navigation area */
+html {
+  background-color: #0a0e1a !important;
+  color-scheme: dark;
+}
+
+body {
+  background-color: #0a0e1a !important;
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+}

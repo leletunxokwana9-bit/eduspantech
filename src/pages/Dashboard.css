@@ -1,4 +1,10 @@
-/* Dashboard.css - Complete Dark Theme */
+/* Dashboard.css - Complete Dark Theme (Lucide icons) */
+
+/* ===== ICON ACCENT COLOURS ===== */
+.icon-blue   { color: #60a5fa; }
+.icon-purple { color: #a78bfa; }
+.icon-amber  { color: #fbbf24; }
+.icon-green  { color: #34d399; }
 
 .dashboard-container {
   max-width: 1200px;
@@ -48,11 +54,13 @@
   margin: 0;
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 12px;
 }
 
-.greeting-emoji {
-  font-size: 28px;
+.greeting-icon {
+  width: 28px;
+  height: 28px;
+  flex-shrink: 0;
 }
 
 .greeting-subtitle {
@@ -106,7 +114,8 @@
 }
 
 .welcome-icon {
-  font-size: 32px;
+  width: 36px;
+  height: 36px;
   flex-shrink: 0;
 }
 
@@ -159,7 +168,8 @@
 }
 
 .stat-icon {
-  font-size: 22px;
+  width: 22px;
+  height: 22px;
 }
 
 .stat-info {
@@ -218,7 +228,9 @@
 }
 
 .action-icon {
-  font-size: 18px;
+  width: 18px;
+  height: 18px;
+  flex-shrink: 0;
 }
 
 /* ===== AVAILABLE SUBJECTS ===== */
@@ -243,7 +255,9 @@
 }
 
 .popular-icon {
-  font-size: 24px;
+  width: 24px;
+  height: 24px;
+  flex-shrink: 0;
 }
 
 .popular-title {
@@ -291,7 +305,8 @@
 }
 
 .popular-card-icon {
-  font-size: 32px;
+  width: 32px;
+  height: 32px;
 }
 
 .popular-card-body {
@@ -320,8 +335,16 @@
 }
 
 .popular-card-topics {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
   font-size: 13px;
   color: rgba(255, 255, 255, 0.5) !important;
+}
+
+.topics-icon {
+  width: 14px;
+  height: 14px;
 }
 
 .no-subjects {
@@ -382,6 +405,10 @@
 [data-theme="light"] .stat-card {
   background: #ffffff !important;
   border: 1px solid rgba(0, 0, 0, 0.06) !important;
+}
+
+[data-theme="light"] .stat-icon-wrapper {
+  background: rgba(0, 0, 0, 0.04) !important;
 }
 
 [data-theme="light"] .stat-value {
@@ -478,6 +505,12 @@
   color: rgba(0, 0, 0, 0.5) !important;
 }
 
+/* Slightly deeper accents for contrast on light backgrounds */
+[data-theme="light"] .icon-blue   { color: #2563eb; }
+[data-theme="light"] .icon-purple { color: #7c3aed; }
+[data-theme="light"] .icon-amber  { color: #d97706; }
+[data-theme="light"] .icon-green  { color: #059669; }
+
 /* ===== RESPONSIVE ===== */
 @media (max-width: 1024px) {
   .stats-grid {
@@ -506,6 +539,11 @@
 
   .greeting-name {
     font-size: 24px;
+  }
+
+  .greeting-icon {
+    width: 24px;
+    height: 24px;
   }
 
   .stats-grid {

@@ -7,18 +7,37 @@ import '../Pricing.css';
 
 const API_URL = process.env.REACT_APP_API_URL || 'https://eduspantech-backend.onrender.com/api';
 
+// Steps follow the order an admin naturally works in:
+// who is it for -> what is in it -> who can open it -> publish.
 const SECTIONS = [
-  { id: 'basics',  label: 'Basic info' },
-  { id: 'topics',  label: 'Topics' },
-  { id: 'papers',  label: 'Past papers' },
-  { id: 'mocks',   label: 'Mock exams' },
-  { id: 'access',  label: 'Access & visibility' },
-  { id: 'review',  label: 'Review and publish' },
+  { id: 'basics',    label: 'Basic info' },
+  { id: 'topics',    label: 'Topics' },
+  { id: 'resources', label: 'Lesson resources' },
+  { id: 'papers',    label: 'Past papers' },
+  { id: 'mocks',     label: 'Mock exams' },
+  { id: 'access',    label: 'Access & visibility' },
+  { id: 'review',    label: 'Review and publish' },
 ];
 
 const DEFAULT_COLORS = ['#4f46e5','#7c3aed','#06b6d4','#10b981','#f59e0b','#ef4444','#ec4899','#8b5cf6','#14b8a6','#f97316'];
 
 const MAX_UPLOAD_BYTES = 50 * 1024 * 1024; // 50MB
+
+// The 11 official languages. The code is what gets stored on the subject.
+const LANGUAGES = [
+  { code: 'en',  label: 'English' },
+  { code: 'af',  label: 'Afrikaans' },
+  { code: 'zu',  label: 'isiZulu' },
+  { code: 'xh',  label: 'isiXhosa' },
+  { code: 'nso', label: 'Sepedi' },
+  { code: 'st',  label: 'Sesotho' },
+  { code: 'tn',  label: 'Setswana' },
+  { code: 'ss',  label: 'siSwati' },
+  { code: 've',  label: 'Tshivenda' },
+  { code: 'ts',  label: 'Xitsonga' },
+  { code: 'nr',  label: 'isiNdebele' },
+];
+const getLanguageLabel = (code) => LANGUAGES.find((l) => l.code === (code || 'en'))?.label || 'English';
 
 // Individual grades instead of buckets
 const HIGHSCHOOL_GRADES = [
@@ -52,6 +71,7 @@ const getDefaultColor = (name) => {
 };
 
 const initialForm = () => ({
+  language: 'en',
   name: '', slug: '', description: '', long_description: '',
   icon: '📚', color: '#4f46e5', grade_key: '', category_id: '',
   is_active: true, code: '', track: '', semester: '', institution: '',
@@ -61,6 +81,16 @@ const initialForm = () => ({
 const initialResourceDraft = () => ({
   name: '', type: 'pdf', url: '', description: '', topicIndex: '',
   youtube_id: '', thumbnail_url: '', duration: '', difficulty: 'beginner', is_free: false,
+});
+
+const newPaper = () => ({
+  year: String(new Date().getFullYear()), session: 'Nov', paper: 'P1',
+  paper_url: '', memo_url: '', paper_name: '', memo_name: '',
+});
+
+const newMock = () => ({
+  title: '', paper: 'P1', duration: '', marks: '',
+  paper_url: '', memo_url: '', paper_name: '', memo_name: '',
 });
 
 const normGrade = (k) => String(k || '').toLowerCase().replace(/[^a-z0-9]/g, '');
@@ -180,6 +210,7 @@ const AdminContent = () => {
   const [subjects, setSubjects] = useState([]);
   const [filteredSubjects, setFilteredSubjects] = useState([]);
   const [searchTerm, setSearchTerm] = useState('');
+  const [languageFilter, setLanguageFilter] = useState('all');
   const [loading, setLoading] = useState(true);
   const [actionLoading, setActionLoading] = useState(false);
 
@@ -226,6 +257,9 @@ const AdminContent = () => {
   const [newTopicName, setNewTopicName] = useState('');
   const [newTopicDesc, setNewTopicDesc] = useState('');
 
+  // Same wording on the header button and on the last step.
+  const publishLabel = editingSubject ? 'Publish live subject' : 'Publish';
+
   const authFetch = useCallback(async (url, options = {}, retry = true) => {
     const headers = {
       'Content-Type': 'application/json',
@@ -267,6 +301,7 @@ const AdminContent = () => {
             color: s.color || getDefaultColor(s.name),
             grade_key: s.grade_key || '',
             category_id: s.category_id || '',
+            language: s.language || 'en',
             allowed_plans: s.allowed_plans || [],
           }));
           setSubjects(mapped);
@@ -344,19 +379,24 @@ const AdminContent = () => {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => { fetchInitialData(); }, []);
 
+  // Slug = name + grade (+ language when it is not English, so existing English slugs stay the same).
   useEffect(() => {
     if (viewMode === 'builder' && formData.name && !editingSubject) {
       const base = formData.name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
       const gs = formData.grade_key ? `-${formData.grade_key}` : '';
-      setFormData((p) => ({ ...p, slug: `${base}${gs}` }));
+      const ls = formData.language && formData.language !== 'en' ? `-${formData.language}` : '';
+      setFormData((p) => ({ ...p, slug: `${base}${gs}${ls}` }));
     }
-  }, [formData.name, formData.grade_key, viewMode, editingSubject]);
+  }, [formData.name, formData.grade_key, formData.language, viewMode, editingSubject]);
 
   useEffect(() => {
     let list = subjects.filter((s) => {
       const tertiary = isTertiaryKey(s.grade_key);
       return contentTab === 'tertiary' ? tertiary : !tertiary;
     });
+    if (languageFilter !== 'all') {
+      list = list.filter((s) => (s.language || 'en') === languageFilter);
+    }
     if (searchTerm.trim()) {
       const q = searchTerm.toLowerCase();
       list = list.filter((s) =>
@@ -368,7 +408,7 @@ const AdminContent = () => {
       );
     }
     setFilteredSubjects(list);
-  }, [searchTerm, subjects, contentTab]);
+  }, [searchTerm, subjects, contentTab, languageFilter]);
 
   const gradeOptions = useMemo(() => {
     return grades.filter((g) => {
@@ -379,24 +419,51 @@ const AdminContent = () => {
 
   const missingFields = useMemo(() => {
     const missing = [];
-    if (!formData.name.trim()) missing.push('Subject name');
+    if (!formData.language) missing.push('Content language');
     if (!formData.grade_key) missing.push('Grade');
     if (!formData.category_id) missing.push('Category');
+    if (!formData.name.trim()) missing.push('Subject name');
     if (formData.is_active && formData.allowed_plans.length === 0) missing.push('At least one access plan');
     return missing;
   }, [formData]);
 
   const otherIssues = useMemo(() => {
     const issues = [];
+
     const blankTopics = builderTopics.filter((t) => !t.name?.trim()).length;
     if (blankTopics) issues.push({ sec: 'topics', level: 'error', msg: `${blankTopics} topic${blankTopics > 1 ? 's have' : ' has'} no title` });
+
+    // Past papers
     const papersMissing = builderPapers.filter((p) => !p.paper_url).length;
-    if (builderPapers.length > 0 && papersMissing) issues.push({ sec: 'papers', level: 'error', msg: `${papersMissing} paper${papersMissing > 1 ? 's need' : ' needs'} a PDF file` });
+    if (builderPapers.length > 0 && papersMissing) issues.push({ sec: 'papers', level: 'error', msg: `${papersMissing} past paper${papersMissing > 1 ? 's need' : ' needs'} a question paper PDF` });
+
+    const seen = new Set();
+    let dupes = 0;
+    builderPapers.forEach((p) => {
+      const key = `${p.year}-${p.session}-${p.paper}`;
+      if (seen.has(key)) dupes += 1; else seen.add(key);
+    });
+    if (dupes) issues.push({ sec: 'papers', level: 'error', msg: `${dupes} past paper${dupes > 1 ? 's repeat' : ' repeats'} another one (same year, session and paper)` });
+
     const noMemos = builderPapers.filter((p) => p.paper_url && !p.memo_url).length;
-    if (noMemos) issues.push({ sec: 'papers', level: 'warn', msg: `${noMemos} paper${noMemos > 1 ? 's have' : ' has'} no memo yet` });
+    if (noMemos) issues.push({ sec: 'papers', level: 'warn', msg: `${noMemos} past paper${noMemos > 1 ? 's have' : ' has'} no memo yet` });
     if (builderPapers.length === 0) issues.push({ sec: 'papers', level: 'warn', msg: 'no past papers added yet' });
+
+    // Mock exams
+    const mockNoTitle = builderMocks.filter((m) => !String(m.title || '').trim()).length;
+    if (mockNoTitle) issues.push({ sec: 'mocks', level: 'error', msg: `${mockNoTitle} mock exam${mockNoTitle > 1 ? 's need' : ' needs'} a title` });
+
+    const mockBadNumbers = builderMocks.filter((m) => !(Number(m.duration) > 0) || !(Number(m.marks) > 0)).length;
+    if (mockBadNumbers) issues.push({ sec: 'mocks', level: 'error', msg: `${mockBadNumbers} mock exam${mockBadNumbers > 1 ? 's need' : ' needs'} the time allowed and total marks` });
+
+    const mockNoPaper = builderMocks.filter((m) => !m.paper_url).length;
+    if (mockNoPaper) issues.push({ sec: 'mocks', level: 'error', msg: `${mockNoPaper} mock exam${mockNoPaper > 1 ? 's need' : ' needs'} a question paper PDF` });
+
+    const mockNoMemo = builderMocks.filter((m) => m.paper_url && !m.memo_url).length;
+    if (mockNoMemo) issues.push({ sec: 'mocks', level: 'warn', msg: `${mockNoMemo} mock exam${mockNoMemo > 1 ? 's have' : ' has'} no memo yet` });
+
     return issues;
-  }, [builderTopics, builderPapers]);
+  }, [builderTopics, builderPapers, builderMocks]);
 
   const errorCount = missingFields.length + otherIssues.filter((i) => i.level === 'error').length;
   const completeness = Math.max(0, 5 - errorCount) * 20;
@@ -461,6 +528,13 @@ const AdminContent = () => {
     setter((prev) => {
       const copy = [...prev];
       copy[index] = { ...copy[index], [field]: value };
+      return copy;
+    });
+
+  const clearFiles = (setter, index) =>
+    setter((prev) => {
+      const copy = [...prev];
+      copy[index] = { ...copy[index], paper_url: '', memo_url: '', paper_name: '', memo_name: '' };
       return copy;
     });
 
@@ -578,12 +652,13 @@ const AdminContent = () => {
         const regular = papers.filter((x) => !x.is_mock);
         const mocks = papers.filter((x) => x.is_mock);
         setBuilderPapers(regular.map((x) => ({
-          saved: true, id: x.id, year: x.year || '2024', session: x.session || 'Nov', paper: x.paper_number || 'P1',
+          saved: true, id: x.id, year: String(x.year || new Date().getFullYear()), session: x.session || 'Nov', paper: x.paper_number || 'P1',
           paper_url: x.paper_url || '', memo_url: x.memo_url || '',
           paper_name: x.paper_url ? 'Uploaded' : '', memo_name: x.memo_url ? 'Uploaded' : '',
         })));
         setBuilderMocks(mocks.map((x) => ({
-          saved: true, id: x.id, title: x.title || '', duration: x.duration_minutes || 150, marks: x.total_marks || 150,
+          saved: true, id: x.id, title: x.title || '', paper: x.paper_number || 'P1',
+          duration: x.duration_minutes ? String(x.duration_minutes) : '', marks: x.total_marks ? String(x.total_marks) : '',
           paper_url: x.paper_url || '', memo_url: x.memo_url || '',
           paper_name: x.paper_url ? 'Uploaded' : '', memo_name: x.memo_url ? 'Uploaded' : '',
         })));
@@ -635,6 +710,7 @@ const AdminContent = () => {
 
       const payload = {
         name: formData.name.trim(), slug: formData.slug,
+        language: formData.language || 'en',
         description: formData.description || '', long_description: formData.long_description || '',
         icon: formData.icon || getDefaultIcon(formData.name),
         color: formData.color || getDefaultColor(formData.name),
@@ -708,19 +784,24 @@ const AdminContent = () => {
         if (okRes) done.add(res2);
       }
 
+      // Past papers
       for (const p of builderPapers) {
         if (p.saved || (!p.paper_url && !isDraft)) continue;
         const okP = await post('papers', {
-          subject_id: newId, year: p.year, session: p.session, paper_number: p.paper,
+          subject_id: newId, year: Number(p.year) || p.year, session: p.session, paper_number: p.paper,
           is_mock: false, paper_url: p.paper_url || null, memo_url: p.memo_url || null,
         }, `Past paper ${p.year} ${p.session} ${p.paper}`);
         if (okP) done.add(p);
       }
+
+      // Mock exams
       for (const m of builderMocks) {
         if (m.saved || (!m.paper_url && !isDraft)) continue;
         const okM = await post('papers', {
-          subject_id: newId, is_mock: true, title: m.title,
-          duration_minutes: m.duration, total_marks: m.marks,
+          subject_id: newId, is_mock: true,
+          title: String(m.title || '').trim(),
+          year: new Date().getFullYear(), paper_number: m.paper || 'P1',
+          duration_minutes: Number(m.duration) || 0, total_marks: Number(m.marks) || 0,
           paper_url: m.paper_url || null, memo_url: m.memo_url || null,
         }, `Mock exam "${m.title || 'untitled'}"`);
         if (okM) done.add(m);
@@ -733,7 +814,7 @@ const AdminContent = () => {
         setBuilderPapers((prev) => mark(prev));
         setBuilderMocks((prev) => mark(prev));
         setBuilderTopics((prev) => prev.map((t) => (topicIdMap[t.id] ? { ...t, id: topicIdMap[t.id] } : t)));
-        showError(`The subject was saved, but these items were NOT saved:\n\n${failures.map((f) => `• ${f}`).join('\n')}\n\nFix the problem and press Save again. Items already saved will not be duplicated.`);
+        showError(`The subject was saved, but these items were NOT saved:\n\n${failures.map((f) => `• ${f}`).join('\n')}\n\nFix the problem and press ${publishLabel} again. Items already saved will not be duplicated.`);
         return;
       }
 
@@ -765,6 +846,7 @@ const AdminContent = () => {
     setContentTab(isTertiaryKey(subject.grade_key) ? 'tertiary' : 'highschool');
     setEditingSubject(subject);
     setFormData({
+      language: subject.language || 'en',
       name: subject.name || '', slug: subject.slug || '',
       description: subject.description || '', long_description: subject.long_description || '',
       icon: subject.icon || getDefaultIcon(subject.name),
@@ -911,6 +993,10 @@ const AdminContent = () => {
             <span className="search-icon">🔍</span>
             <input type="text" className="search-input" placeholder="Search..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} />
           </div>
+          <select className="ac-lang-filter" value={languageFilter} onChange={(e) => setLanguageFilter(e.target.value)} aria-label="Filter by language">
+            <option value="all">All languages</option>
+            {LANGUAGES.map((l) => <option key={l.code} value={l.code}>{l.label}</option>)}
+          </select>
         </div>
 
         {filteredSubjects.length === 0 ? (
@@ -929,6 +1015,7 @@ const AdminContent = () => {
                     <p>{subject.description}</p>
                     <div className="subject-meta">
                       {getGradeBadge(subject.grade_key)}
+                      <span className="tier-badge lang-badge">{getLanguageLabel(subject.language)}</span>
                       <span className={`status-badge ${subject.is_active ? 'active' : 'inactive'}`}>{subject.is_active ? '✅ Active' : '❌ Inactive'}</span>
                     </div>
                   </div>
@@ -979,6 +1066,26 @@ const AdminContent = () => {
     );
   }
 
+  const gradeLabel = grades.find((g) => normGrade(g.key) === normGrade(formData.grade_key))?.label;
+  const saveDisabled = actionLoading || uploading || contentLoading;
+
+  // Small helper so past papers and mock exams share the same upload buttons.
+  const renderUploads = (item, index, setter, qpType, memoType, qpLabel) => (
+    <div className="ac-upload-group">
+      <label className={`ac-upload-btn ${item.paper_url ? 'uploaded' : ''} ${item.saved ? 'locked' : ''}`}>
+        {item.paper_url ? `✅ ${item.paper_name || `${qpLabel} uploaded`}` : (uploading ? '⏳ Uploading…' : `📤 Upload ${qpLabel}`)}
+        <input type="file" accept="application/pdf,.pdf" disabled={uploading || item.saved} onChange={(e) => handleFileUpload(e, qpType, index)} hidden />
+      </label>
+      <label className={`ac-upload-btn ${item.memo_url ? 'uploaded' : ''} ${item.saved ? 'locked' : ''}`}>
+        {item.memo_url ? `✅ ${item.memo_name || 'Memo uploaded'}` : (uploading ? '⏳ Uploading…' : '📤 Upload memo')}
+        <input type="file" accept="application/pdf,.pdf" disabled={uploading || item.saved} onChange={(e) => handleFileUpload(e, memoType, index)} hidden />
+      </label>
+      {!item.saved && (item.paper_url || item.memo_url) && (
+        <button type="button" className="ac-btn-icon" title="Clear files" onClick={() => clearFiles(setter, index)}>🗑️</button>
+      )}
+    </div>
+  );
+
   return (
     <div className="ac-builder-page">
       <header className="ac-builder-header">
@@ -989,28 +1096,24 @@ const AdminContent = () => {
         </div>
         <div className="ac-header-actions">
           <button className="ac-btn-secondary" onClick={() => setViewMode('list')}>Cancel</button>
-          <button className="ac-btn-secondary" onClick={() => handleSaveSubject({ draft: true })} disabled={actionLoading || uploading || contentLoading}>Save draft</button>
-          <button className="ac-btn-primary" onClick={() => handleSaveSubject()} disabled={actionLoading || uploading || contentLoading}>
-            {actionLoading ? 'Saving…' : editingSubject ? 'Update live subject' : 'Publish subject'}
+          <button className="ac-btn-secondary" onClick={() => handleSaveSubject({ draft: true })} disabled={saveDisabled}>Save draft</button>
+          <button className="ac-btn-primary" onClick={() => handleSaveSubject()} disabled={saveDisabled}>
+            {actionLoading ? 'Saving…' : publishLabel}
           </button>
         </div>
       </header>
 
       {contentLoading && (
-        <div style={{ margin: '0 0 12px', padding: '10px 14px', borderRadius: 10, background: 'rgba(99,102,241,0.15)', color: '#e5e7eb', fontSize: 13 }}>
-          ⏳ Loading existing topics, resources and papers…
-        </div>
+        <div className="ac-banner info">⏳ Loading existing topics, resources and papers…</div>
       )}
 
       {!contentLoading && loadFailures.length > 0 && editingSubject && (
-        <div style={{ margin: '0 0 12px', padding: '10px 14px', borderRadius: 10, background: 'rgba(245,158,11,0.15)', border: '1px solid rgba(245,158,11,0.4)', color: '#fde68a', fontSize: 13, display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
-          <span style={{ flex: 1, minWidth: 200 }}>
+        <div className="ac-banner warn">
+          <span className="ac-banner-text">
             ⚠️ Couldn't load: {loadFailures.join(', ')}. What you see below is incomplete.
             {loadFailures.includes('topics') ? ' Existing topics will not be removed when you save.' : ''}
           </span>
-          <button type="button" className="ac-btn-secondary" onClick={() => loadExistingContent(editingSubject.id)}>
-            Retry
-          </button>
+          <button type="button" className="ac-btn-secondary" onClick={() => loadExistingContent(editingSubject.id)}>Retry</button>
         </div>
       )}
 
@@ -1024,6 +1127,7 @@ const AdminContent = () => {
             if (hasErr) { badgeCls = 'error'; badgeText = 'Needs attention'; }
             else if (hasWarn) { badgeCls = 'warn'; badgeText = 'Note'; }
             else if (sec.id === 'topics') badgeText = builderTopics.length;
+            else if (sec.id === 'resources') badgeText = builderResources.length;
             else if (sec.id === 'papers') badgeText = builderPapers.length;
             else if (sec.id === 'mocks') badgeText = builderMocks.length;
             else if (sec.id === 'review') { badgeCls = errorCount ? 'error' : 'ok'; badgeText = errorCount ? 'To fix' : 'Ready'; }
@@ -1043,16 +1147,20 @@ const AdminContent = () => {
         </nav>
 
         <main className="ac-form-area">
+          {/* ---------- 1. BASIC INFO ---------- */}
           {activeSection === 'basics' && (
             <div className="ac-section-panel">
               <h2>Basic info</h2>
-              <p className="ac-subtitle">What students see on the subject card.</p>
+              <p className="ac-subtitle">Start with who this is for. Students find subjects by language and grade, then see the name and description on the subject card.</p>
+
               <div className="ac-form-grid">
-                <div className="ac-field"><label>Subject name *</label><input value={formData.name} onChange={(e) => setFormData({ ...formData, name: e.target.value })} placeholder="e.g. Physical Sciences" /></div>
-                <div className="ac-field"><label>URL slug *</label><input value={formData.slug} readOnly className="ac-readonly" /></div>
-              </div>
-              <div className="ac-field"><label>Short description *</label><textarea value={formData.description} onChange={(e) => setFormData({ ...formData, description: e.target.value })} placeholder="Shown on the card." rows={3} /></div>
-              <div className="ac-form-grid">
+                <div className="ac-field">
+                  <label>Content language *</label>
+                  <select value={formData.language} onChange={(e) => setFormData({ ...formData, language: e.target.value })}>
+                    {LANGUAGES.map((l) => <option key={l.code} value={l.code}>{l.label}</option>)}
+                  </select>
+                  <p className="ac-hint">The language the lessons, papers and memos are written in. The same subject in another language is a separate entry.</p>
+                </div>
                 <div className="ac-field">
                   <label>Grade *</label>
                   <select value={formData.grade_key} onChange={(e) => setFormData({ ...formData, grade_key: e.target.value })}>
@@ -1060,6 +1168,9 @@ const AdminContent = () => {
                     {gradeOptions.map((g) => <option key={g.key} value={g.key}>{g.label}</option>)}
                   </select>
                 </div>
+              </div>
+
+              <div className="ac-form-grid">
                 <div className="ac-field">
                   <label>Category *</label>
                   <select value={formData.category_id} onChange={(e) => setFormData({ ...formData, category_id: e.target.value })}>
@@ -1067,7 +1178,22 @@ const AdminContent = () => {
                     {categories.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
                   </select>
                 </div>
+                <div className="ac-field">
+                  <label>Subject name *</label>
+                  <input value={formData.name} onChange={(e) => setFormData({ ...formData, name: e.target.value })} placeholder="e.g. Physical Sciences" />
+                </div>
               </div>
+
+              <div className="ac-field">
+                <label>URL slug (automatic)</label>
+                <input value={formData.slug} readOnly className="ac-readonly" />
+              </div>
+
+              <div className="ac-field">
+                <label>Short description</label>
+                <textarea value={formData.description} onChange={(e) => setFormData({ ...formData, description: e.target.value })} placeholder="Shown on the subject card." rows={3} />
+              </div>
+
               <div className="ac-form-grid">
                 <div className="ac-field"><label>Icon (emoji)</label><input value={formData.icon} onChange={(e) => setFormData({ ...formData, icon: e.target.value })} placeholder="e.g. ⚗️" maxLength={2} /></div>
                 <div className="ac-field">
@@ -1082,115 +1208,154 @@ const AdminContent = () => {
             </div>
           )}
 
+          {/* ---------- 2. TOPICS ---------- */}
           {activeSection === 'topics' && (
             <div className="ac-section-panel">
               <h2>Topics</h2>
-              <p className="ac-subtitle">Students open these from View topics.</p>
+              <p className="ac-subtitle">The chapters students open from View topics. Add topics first, then attach lesson resources to them in the next step.</p>
               <div className="ac-inline-add">
                 <input value={newTopicName} onChange={(e) => setNewTopicName(e.target.value)} placeholder="Topic name" />
                 <input value={newTopicDesc} onChange={(e) => setNewTopicDesc(e.target.value)} placeholder="Description (optional)" />
-                <button type="button" className="ac-btn-primary" onClick={addTopicToBuilder} style={{ padding: '0 16px' }}>➕ Add</button>
+                <button type="button" className="ac-btn-primary" onClick={addTopicToBuilder}>➕ Add</button>
               </div>
               <div className="ac-list">
                 {builderTopics.map((t, i) => (
                   <div key={t.id} className="ac-list-row">
                     <span className="ac-row-num">{i + 1}</span>
-                    <span>{t.name} {t.description && <small style={{ color: '#9a9ab8' }}>— {t.description}</small>}</span>
+                    <span className="ac-row-main">{t.name} {t.description && <small style={{ color: '#9a9ab8' }}>— {t.description}</small>}</span>
                     <button type="button" className="ac-btn-icon" onClick={() => removeTopicFromBuilder(t.id)}>✕</button>
                   </div>
                 ))}
                 {builderTopics.length === 0 && <p className="ac-muted-text">{contentLoading ? 'Loading topics…' : 'No topics yet.'}</p>}
               </div>
-              <button type="button" className="ac-btn-dashed" onClick={openResourcePopup}>➕ Add resource (PDF / Video)</button>
-              <div className="ac-list" style={{ marginTop: 12 }}>
-                {builderResources.map((r) => (
-                  <div key={r.id} className="ac-list-row">
-                    <span>{getResourceIcon(r.type)}</span>
-                    <span>{r.name}</span>
-                    <span className="ac-builder-tag">{r.type}</span>
-                    <button type="button" className="ac-btn-icon" onClick={() => setBuilderResources((prev) => prev.filter((x) => x.id !== r.id))}>✕</button>
-                  </div>
-                ))}
-              </div>
             </div>
           )}
 
+          {/* ---------- 3. LESSON RESOURCES ---------- */}
+          {activeSection === 'resources' && (
+            <div className="ac-section-panel">
+              <h2>Lesson resources</h2>
+              <p className="ac-subtitle">PDF notes and videos for the lessons. Link each one to a topic so students find it in the right place.</p>
+              <div className="ac-list">
+                {builderResources.map((r) => {
+                  const topicName = builderTopics.find((t) => t.id === r.topicLocalId)?.name;
+                  return (
+                    <div key={r.id} className="ac-list-row">
+                      <span>{getResourceIcon(r.type)}</span>
+                      <span className="ac-row-main">{r.name}</span>
+                      {topicName && <span className="ac-builder-tag">{topicName}</span>}
+                      <span className="ac-builder-tag">{r.type}</span>
+                      {r.saved
+                        ? <span className="ac-saved-tag">Saved</span>
+                        : <button type="button" className="ac-btn-icon" onClick={() => setBuilderResources((prev) => prev.filter((x) => x.id !== r.id))}>✕</button>}
+                    </div>
+                  );
+                })}
+                {builderResources.length === 0 && <p className="ac-muted-text">No lesson resources yet.</p>}
+              </div>
+              <button type="button" className="ac-btn-dashed" onClick={openResourcePopup}>➕ Add resource (PDF / Video)</button>
+              {builderResources.some((r) => r.saved) && (
+                <p className="ac-hint" style={{ marginTop: 12 }}>Resources marked Saved are already live. Edit or remove them from the subject's Manage page.</p>
+              )}
+            </div>
+          )}
+
+          {/* ---------- 4. PAST PAPERS ---------- */}
           {activeSection === 'papers' && (
             <div className="ac-section-panel">
               <h2>Past papers</h2>
-              <p className="ac-subtitle">Official question papers and memos.</p>
+              <p className="ac-subtitle">Official exam papers from earlier years. Upload the question paper and, if you have it, the memo (marking guideline).</p>
               <div className="ac-list">
                 {builderPapers.map((p, i) => (
                   <div key={p.id || i} className="ac-list-row ac-paper-row">
-                    <div className="ac-paper-meta">
-                      <input type="number" value={p.year} onChange={(e) => updateArrayItem(setBuilderPapers, i, 'year', e.target.value)} placeholder="Year" />
-                      <select value={p.session} onChange={(e) => updateArrayItem(setBuilderPapers, i, 'session', e.target.value)}><option value="Nov">Nov</option><option value="Jun">June</option></select>
-                      <select value={p.paper} onChange={(e) => updateArrayItem(setBuilderPapers, i, 'paper', e.target.value)}><option value="P1">P1</option><option value="P2">P2</option></select>
+                    <div className="ac-row-head">
+                      <span className="ac-row-title">{p.year} {p.session === 'Jun' ? 'June' : 'November'} · Paper {String(p.paper).replace('P', '')}</span>
+                      {p.saved
+                        ? <span className="ac-saved-tag">Saved</span>
+                        : <button type="button" className="ac-btn-icon danger" title="Remove" onClick={() => setBuilderPapers(builderPapers.filter((_, idx) => idx !== i))}>✕</button>}
                     </div>
-                    <div className="ac-upload-group">
-                      <label className={`ac-upload-btn ${p.paper_url ? 'uploaded' : ''}`}>
-                        {p.paper_url ? `✅ ${p.paper_name || 'QP uploaded'}` : (uploading ? '⏳ Uploading…' : '📤 Upload QP')}
-                        <input type="file" accept="application/pdf,.pdf" disabled={uploading} onChange={(e) => handleFileUpload(e, 'paper_qp', i)} hidden />
-                      </label>
-                      <label className={`ac-upload-btn ${p.memo_url ? 'uploaded' : ''}`}>
-                        {p.memo_url ? `✅ ${p.memo_name || 'Memo uploaded'}` : (uploading ? '⏳ Uploading…' : '📤 Upload Memo')}
-                        <input type="file" accept="application/pdf,.pdf" disabled={uploading} onChange={(e) => handleFileUpload(e, 'paper_memo', i)} hidden />
-                      </label>
-                      {(p.paper_url || p.memo_url) && (
-                        <button type="button" className="ac-btn-icon" title="Clear files" onClick={() => {
-                          updateArrayItem(setBuilderPapers, i, 'paper_url', '');
-                          updateArrayItem(setBuilderPapers, i, 'memo_url', '');
-                          updateArrayItem(setBuilderPapers, i, 'paper_name', '');
-                          updateArrayItem(setBuilderPapers, i, 'memo_name', '');
-                        }}>🗑️</button>
-                      )}
+                    <div className="ac-mini-grid three">
+                      <div className="ac-mini">
+                        <label>Exam year</label>
+                        <input type="number" min="1990" max="2100" value={p.year} disabled={p.saved} onChange={(e) => updateArrayItem(setBuilderPapers, i, 'year', e.target.value)} placeholder="e.g. 2024" />
+                      </div>
+                      <div className="ac-mini">
+                        <label>Exam session</label>
+                        <select value={p.session} disabled={p.saved} onChange={(e) => updateArrayItem(setBuilderPapers, i, 'session', e.target.value)}>
+                          <option value="Nov">November</option>
+                          <option value="Jun">June</option>
+                        </select>
+                      </div>
+                      <div className="ac-mini">
+                        <label>Paper</label>
+                        <select value={p.paper} disabled={p.saved} onChange={(e) => updateArrayItem(setBuilderPapers, i, 'paper', e.target.value)}>
+                          <option value="P1">Paper 1</option>
+                          <option value="P2">Paper 2</option>
+                          <option value="P3">Paper 3</option>
+                        </select>
+                      </div>
                     </div>
-                    <button type="button" className="ac-btn-icon danger" onClick={() => setBuilderPapers(builderPapers.filter((_, idx) => idx !== i))}>✕</button>
+                    {renderUploads(p, i, setBuilderPapers, 'paper_qp', 'paper_memo', 'question paper')}
                   </div>
                 ))}
+                {builderPapers.length === 0 && <p className="ac-muted-text">No past papers yet.</p>}
               </div>
-              <button type="button" className="ac-btn-dashed" onClick={() => setBuilderPapers([...builderPapers, { year: '2024', session: 'Nov', paper: 'P1', paper_url: '', memo_url: '', paper_name: '', memo_name: '' }])}>➕ Add past paper</button>
+              <button type="button" className="ac-btn-dashed" onClick={() => setBuilderPapers([...builderPapers, newPaper()])}>➕ Add past paper</button>
             </div>
           )}
 
+          {/* ---------- 5. MOCK EXAMS ---------- */}
           {activeSection === 'mocks' && (
             <div className="ac-section-panel">
               <h2>Mock exams</h2>
-              <p className="ac-subtitle">EduSpantech generated practice exams.</p>
+              <p className="ac-subtitle">Practice exams written by EduSpantech. Students sit them under exam conditions, so set how long they have and what they are marked out of.</p>
               <div className="ac-list">
                 {builderMocks.map((m, i) => (
-                  <div key={m.id || i} className="ac-list-row ac-mock-row">
-                    <div className="ac-mock-top">
-                      <input value={m.title} onChange={(e) => updateArrayItem(setBuilderMocks, i, 'title', e.target.value)} placeholder="Mock Title" style={{ flex: 1 }} />
-                      <input type="number" value={m.duration} onChange={(e) => updateArrayItem(setBuilderMocks, i, 'duration', e.target.value)} placeholder="Mins" style={{ maxWidth: '80px' }} />
-                      <input type="number" value={m.marks} onChange={(e) => updateArrayItem(setBuilderMocks, i, 'marks', e.target.value)} placeholder="Marks" style={{ maxWidth: '80px' }} />
-                      <button type="button" className="ac-btn-icon danger" onClick={() => setBuilderMocks(builderMocks.filter((_, idx) => idx !== i))}>✕</button>
+                  <div key={m.id || i} className="ac-list-row ac-paper-row">
+                    <div className="ac-row-head">
+                      <span className="ac-row-title">{m.title?.trim() || `Mock exam ${i + 1}`}</span>
+                      {m.saved
+                        ? <span className="ac-saved-tag">Saved</span>
+                        : <button type="button" className="ac-btn-icon danger" title="Remove" onClick={() => setBuilderMocks(builderMocks.filter((_, idx) => idx !== i))}>✕</button>}
                     </div>
-                    <div className="ac-upload-group" style={{ marginTop: '10px' }}>
-                      <label className={`ac-upload-btn ${m.paper_url ? 'uploaded' : ''}`}>
-                        {m.paper_url ? `✅ ${m.paper_name || 'Paper uploaded'}` : (uploading ? '⏳ Uploading…' : '📤 Upload Paper')}
-                        <input type="file" accept="application/pdf,.pdf" disabled={uploading} onChange={(e) => handleFileUpload(e, 'mock_qp', i)} hidden />
-                      </label>
-                      <label className={`ac-upload-btn ${m.memo_url ? 'uploaded' : ''}`}>
-                        {m.memo_url ? `✅ ${m.memo_name || 'Memo uploaded'}` : (uploading ? '⏳ Uploading…' : '📤 Upload Memo')}
-                        <input type="file" accept="application/pdf,.pdf" disabled={uploading} onChange={(e) => handleFileUpload(e, 'mock_memo', i)} hidden />
-                      </label>
-                      {(m.paper_url || m.memo_url) && (
-                        <button type="button" className="ac-btn-icon" title="Clear files" onClick={() => {
-                          updateArrayItem(setBuilderMocks, i, 'paper_url', '');
-                          updateArrayItem(setBuilderMocks, i, 'memo_url', '');
-                          updateArrayItem(setBuilderMocks, i, 'paper_name', '');
-                          updateArrayItem(setBuilderMocks, i, 'memo_name', '');
-                        }}>🗑️</button>
-                      )}
+                    <div className="ac-mini-grid mock">
+                      <div className="ac-mini wide">
+                        <label>Mock exam title</label>
+                        <input value={m.title} disabled={m.saved} onChange={(e) => updateArrayItem(setBuilderMocks, i, 'title', e.target.value)} placeholder="e.g. Mathematics Mock Exam 1" />
+                      </div>
+                      <div className="ac-mini">
+                        <label>Paper</label>
+                        <select value={m.paper} disabled={m.saved} onChange={(e) => updateArrayItem(setBuilderMocks, i, 'paper', e.target.value)}>
+                          <option value="P1">Paper 1</option>
+                          <option value="P2">Paper 2</option>
+                          <option value="P3">Paper 3</option>
+                        </select>
+                      </div>
+                      <div className="ac-mini">
+                        <label>Time allowed</label>
+                        <div className="ac-unit-input">
+                          <input type="number" min="1" value={m.duration} disabled={m.saved} onChange={(e) => updateArrayItem(setBuilderMocks, i, 'duration', e.target.value)} placeholder="e.g. 180" />
+                          <span>minutes</span>
+                        </div>
+                      </div>
+                      <div className="ac-mini">
+                        <label>Total marks</label>
+                        <div className="ac-unit-input">
+                          <input type="number" min="1" value={m.marks} disabled={m.saved} onChange={(e) => updateArrayItem(setBuilderMocks, i, 'marks', e.target.value)} placeholder="e.g. 150" />
+                          <span>marks</span>
+                        </div>
+                      </div>
                     </div>
+                    {renderUploads(m, i, setBuilderMocks, 'mock_qp', 'mock_memo', 'question paper')}
                   </div>
                 ))}
+                {builderMocks.length === 0 && <p className="ac-muted-text">No mock exams yet.</p>}
               </div>
-              <button type="button" className="ac-btn-dashed" onClick={() => setBuilderMocks([...builderMocks, { title: '', duration: 150, marks: 150, paper_url: '', memo_url: '', paper_name: '', memo_name: '' }])}>➕ Add mock exam</button>
+              <button type="button" className="ac-btn-dashed" onClick={() => setBuilderMocks([...builderMocks, newMock()])}>➕ Add mock exam</button>
             </div>
           )}
 
+          {/* ---------- 6. ACCESS ---------- */}
           {activeSection === 'access' && (
             <div className="ac-section-panel">
               <h2>Access and visibility</h2>
@@ -1220,15 +1385,18 @@ const AdminContent = () => {
             </div>
           )}
 
+          {/* ---------- 7. REVIEW ---------- */}
           {activeSection === 'review' && (
             <div className="ac-section-panel">
               <h2>Review and publish</h2>
               <p className="ac-subtitle">A last look at what will go live.</p>
               <div className="ac-review-grid">
                 <div className="ac-review-item"><dt>Type</dt><dd>{contentTab === 'tertiary' ? 'Tertiary' : 'Highschool'}</dd></div>
-                <div className="ac-review-item"><dt>Subject</dt><dd>{formData.name || 'Untitled'} {grades.find((g) => normGrade(g.key) === normGrade(formData.grade_key))?.label ? `— ${grades.find((g) => normGrade(g.key) === normGrade(formData.grade_key)).label}` : ''}</dd></div>
+                <div className="ac-review-item"><dt>Language</dt><dd>{getLanguageLabel(formData.language)}</dd></div>
+                <div className="ac-review-item"><dt>Subject</dt><dd>{formData.name || 'Untitled'}{gradeLabel ? ` — ${gradeLabel}` : ''}</dd></div>
                 <div className="ac-review-item"><dt>Category</dt><dd>{categories.find((c) => c.id === formData.category_id)?.name || '—'}</dd></div>
                 <div className="ac-review-item"><dt>Topics</dt><dd>{builderTopics.length}</dd></div>
+                <div className="ac-review-item"><dt>Lesson resources</dt><dd>{builderResources.length}</dd></div>
                 <div className="ac-review-item"><dt>Past papers</dt><dd>{builderPapers.length}</dd></div>
                 <div className="ac-review-item"><dt>Mock exams</dt><dd>{builderMocks.length}</dd></div>
                 <div className="ac-review-item"><dt>Available on</dt><dd>{formData.allowed_plans.length} plans</dd></div>
@@ -1260,7 +1428,13 @@ const AdminContent = () => {
 
           <div className="ac-pager">
             <button type="button" className="ac-btn-secondary" disabled={activeSection === 'basics'} onClick={() => setActiveSection(SECTIONS[SECTIONS.findIndex((s) => s.id === activeSection) - 1].id)}>Back</button>
-            <button type="button" className="ac-btn-secondary" disabled={activeSection === 'review'} onClick={() => setActiveSection(SECTIONS[SECTIONS.findIndex((s) => s.id === activeSection) + 1].id)}>Next</button>
+            {activeSection === 'review' ? (
+              <button type="button" className="ac-btn-primary ac-publish-btn" onClick={() => handleSaveSubject()} disabled={saveDisabled}>
+                {actionLoading ? 'Saving…' : publishLabel}
+              </button>
+            ) : (
+              <button type="button" className="ac-btn-secondary" onClick={() => setActiveSection(SECTIONS[SECTIONS.findIndex((s) => s.id === activeSection) + 1].id)}>Next</button>
+            )}
           </div>
         </main>
 
@@ -1276,7 +1450,10 @@ const AdminContent = () => {
           <div className="ac-pv-card" style={{ '--c': formData.color || '#a78bfa', opacity: previewMode === 'locked' ? 0.7 : 1 }}>
             <div className="ac-pv-top">
               <span className="ac-pv-icon">{formData.icon || '📚'}</span>
-              <span className="ac-pv-grade">{grades.find((g) => normGrade(g.key) === normGrade(formData.grade_key))?.label || 'Grade ?'}</span>
+              <span className="ac-pv-tags">
+                <span className="ac-pv-grade">{gradeLabel || 'Grade ?'}</span>
+                <span className="ac-pv-grade lang">{getLanguageLabel(formData.language)}</span>
+              </span>
             </div>
             <h4>{formData.name || 'Subject name'}</h4>
             <p>{formData.description || 'Description…'}</p>
@@ -1284,6 +1461,7 @@ const AdminContent = () => {
               <div><dt>Past papers</dt><dd>{builderPapers.length}</dd></div>
               <div><dt>Topics</dt><dd>{builderTopics.length}</dd></div>
               <div><dt>Memos</dt><dd>{builderPapers.filter((p) => p.memo_url).length}</dd></div>
+              <div><dt>Mock exams</dt><dd>{builderMocks.length}</dd></div>
             </dl>
             <div className="ac-pv-footer">
               {previewMode === 'locked' ? <span style={{ color: '#fbbf24' }}>🔒 Upgrade to open</span> : <span>View topics →</span>}
@@ -1363,6 +1541,20 @@ const AdminContent = () => {
                 style={{ padding: '10px 12px', borderRadius: 10, background: '#0f0f24', border: '1px solid #5b5b8f', color: '#fff' }}
               />
             </label>
+
+            {builderTopics.length > 0 && (
+              <label style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                <span style={{ fontSize: 12, fontWeight: 600, color: 'rgba(255,255,255,0.7)' }}>Topic (optional)</span>
+                <select
+                  value={resourceDraft.topicIndex}
+                  onChange={(e) => setResourceDraft({ ...resourceDraft, topicIndex: e.target.value })}
+                  style={{ padding: '10px 12px', borderRadius: 10, background: '#0f0f24', border: '1px solid #5b5b8f', color: '#fff' }}
+                >
+                  <option value="">No topic (general resource)</option>
+                  {builderTopics.map((t, idx) => <option key={t.id} value={idx}>{t.name}</option>)}
+                </select>
+              </label>
+            )}
 
             {resourceDraft.type === 'pdf' && (
               <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>

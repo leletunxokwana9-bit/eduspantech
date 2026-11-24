@@ -1,800 +1,2093 @@
-// src/pages/SubjectDetail.js
-import React, { useState, useEffect } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
-import { useHomeData } from '../hooks/useHomeData';
-import { authService } from '../services/authService';
-import { useSound } from '../context/SoundContext';
-import './SubjectDetail.css';
+/* =========================================================
+   EDUSPANTECH — SUBJECT DETAIL
+   Complete Dark Theme Stylesheet
+   File: src/pages/SubjectDetail.css
+========================================================= */
 
-import { API_BASE_URL } from '../services/api';
+/* =========================================================
+   1. THEME VARIABLES
+========================================================= */
 
-const SubjectDetail = () => {
-  const { subjectName } = useParams();
-  const navigate = useNavigate();
-  const { data, loading: homeLoading, error: homeError } = useHomeData();
-  const [activeTab, setActiveTab] = useState('overview');
-  const [isEnrolling, setIsEnrolling] = useState(false);
-  const [enrollmentStatus, setEnrollmentStatus] = useState(null);
-  const [user, setUser] = useState(null);
-  const [subscription, setSubscription] = useState(null);
-  const [isCheckingAuth, setIsCheckingAuth] = useState(true);
-  const [showLoginPrompt, setShowLoginPrompt] = useState(false);
-  const [selectedSubject, setSelectedSubject] = useState(null);
+.sd-redesign {
+  --sd-page: #07111f;
+  --sd-surface: #101d2e;
+  --sd-surface-raised: #142338;
+  --sd-surface-soft: #17283d;
+  --sd-surface-hover: #1c3049;
 
-  // ===== CONTENT TREE STATE =====
-  const [contentTree, setContentTree] = useState({ topics: [], subjectResources: [] });
-  const [contentLoading, setContentLoading] = useState(true);
-  const [expandedTopics, setExpandedTopics] = useState({});
-  const [activeResource, setActiveResource] = useState(null);
+  --sd-heading: #f4f7fc;
+  --sd-text: #dce6f3;
+  --sd-muted: #a7b6ca;
+  --sd-subtle: #899bb2;
 
-  // ===== SOUND HOOK =====
-  const {
-    playClick,
-    playTabSwitch,
-    playPageTransition,
-    playEnrollSuccess,
-    playEnrollFail,
-    playAlreadyEnrolled,
-    playEnrollComplete,
-    playSubscriptionCreated,
-    playSuccess,
-    playNotification
-  } = useSound();
+  --sd-border: #293b52;
+  --sd-border-strong: #3a506b;
 
-  // Make sure subjects is always an array
-  const subjects = Array.isArray(data?.subjects) ? data.subjects : [];
+  --sd-accent: #83b4ff;
+  --sd-accent-strong: #3979cb;
+  --sd-accent-hover: #4789dc;
+  --sd-accent-soft: #1b3451;
 
-  // Find subject - handles both slug and exact name
-  const subject = subjects.find((item) => {
-    if (!item?.name) return false;
-    const itemSlug = item.name.toLowerCase().replace(/\s+/g, '-');
-    return itemSlug === subjectName || item.name === subjectName;
-  });
+  --sd-success: #8fe0b9;
+  --sd-warning: #f3d58b;
+  --sd-danger: #ffb5bd;
 
-  // ===== HELPER: Get subscription from JWT token =====
-  const getSubscriptionFromToken = () => {
-    const token = localStorage.getItem('accessToken');
-    if (!token) return null;
+  width: 100%;
+  max-width: none;
+  min-height: 100vh;
+  margin: 0;
+  padding: 34px 34px 70px;
+  background: var(--sd-page);
+  color: var(--sd-text);
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  box-sizing: border-box;
+  color-scheme: dark;
+}
 
-    try {
-      const tokenParts = token.split('.');
-      if (tokenParts.length === 3) {
-        const payload = JSON.parse(atob(tokenParts[1]));
-        console.log('📦 Token payload:', payload);
+.sd-redesign *,
+.sd-redesign *::before,
+.sd-redesign *::after {
+  box-sizing: border-box;
+}
 
-        return {
-          tier: payload.subscriptionTier || payload.tier || null,
-          status: payload.subscriptionStatus || 'active',
-          subscriptionTier: payload.subscriptionTier || payload.tier || null,
-          subscriptionStatus: payload.subscriptionStatus || 'active'
-        };
-      }
-    } catch (error) {
-      console.error('Error decoding token:', error);
-    }
-    return null;
-  };
+/* =========================================================
+   2. GENERAL PAGE ELEMENTS
+========================================================= */
 
-  // Check authentication status on mount
-  useEffect(() => {
-    const checkAuth = async () => {
-      setIsCheckingAuth(true);
+.subject-detail-container {
+  width: 100%;
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 24px;
+  background: var(--sd-page);
+  color: var(--sd-text);
+  font-family: inherit;
+}
 
-      const isAuthenticated = authService.isAuthenticated();
+.subject-detail-container h1,
+.subject-detail-container h2,
+.subject-detail-container h3,
+.subject-detail-container h4,
+.subject-detail-container h5,
+.subject-detail-container h6 {
+  color: var(--sd-heading);
+}
 
-      if (isAuthenticated) {
-        try {
-          // Get subscription from token first
-          const tokenSubscription = getSubscriptionFromToken();
-          if (tokenSubscription) {
-            console.log('✅ Subscription from token:', tokenSubscription);
-            setSubscription(tokenSubscription);
-          }
+.subject-detail-container p {
+  color: var(--sd-muted);
+}
 
-          const userData = await authService.getCurrentUserWithSubscription();
-          if (userData) {
-            setUser(userData);
+.subject-detail-container button {
+  font-family: inherit;
+}
 
-            // If userData has subscription, use it
-            if (userData.subscription) {
-              setSubscription(userData.subscription);
-            }
-          } else {
-            const fallbackUser = await authService.getCurrentUser();
-            if (fallbackUser) {
-              setUser(fallbackUser);
-            }
-          }
-        } catch (error) {
-          console.error('Failed to get user:', error);
-          authService.logout();
-        }
-      }
+.subject-detail-container button:focus-visible {
+  outline: 3px solid rgba(131, 180, 255, 0.65);
+  outline-offset: 3px;
+}
 
-      setIsCheckingAuth(false);
-    };
+.sd-redesign button {
+  font-family: inherit;
+}
 
-    checkAuth();
-  }, []);
+.sd-redesign button:disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
+}
 
-  // ===== FETCH CONTENT TREE =====
-  useEffect(() => {
-    const fetchContentTree = async () => {
-      if (!subject?.id) return;
-      try {
-        setContentLoading(true);
-        const res = await fetch(`${API_BASE_URL}/content/subjects/${subject.id}/full`);
-        const json = await res.json();
-        if (json.success) {
-          setContentTree({
-            topics: json.topics || [],
-            subjectResources: json.subjectResources || []
-          });
-        }
-      } catch (err) {
-        console.error('Failed to fetch content tree:', err);
-      } finally {
-        setContentLoading(false);
-      }
-    };
-    fetchContentTree();
-  }, [subject?.id]);
+.sd-page-shell {
+  width: 100%;
+  max-width: 1440px;
+  margin: 0 auto;
+  color: var(--sd-text);
+}
 
-  // If subject not found, redirect
-  useEffect(() => {
-    if (!homeLoading && !subject && data) {
-      playPageTransition();
-      navigate('/subjects');
-    }
-  }, [homeLoading, subject, data, navigate, playPageTransition]);
+/* =========================================================
+   3. LOADING AND ERROR STATES
+========================================================= */
 
-  const getCohortTier = () => {
-    if (subject?.name === 'Algebra' || subject?.name === 'Geometry') return 'Tier 1';
-    if (subject?.name === 'Calculus' || subject?.name === 'Statistics' || subject?.name === 'Trigonometry') return 'Tier 2';
-    if (subject?.name === 'Differential Equations' || subject?.name === 'Linear Algebra' || subject?.name === 'Matrices') return 'Tier 3';
-    return 'Tier 1';
-  };
+.subject-detail-container.loading,
+.subject-detail-container.error {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 60vh;
+  text-align: center;
+  color: var(--sd-text);
+  background: var(--sd-page);
+}
 
-  const getRegion = () => {
-    const regions = {
-      'Algebra': 'Global',
-      'Geometry': 'Global',
-      'Calculus': 'Global',
-      'Statistics': 'Global',
-      'Trigonometry': 'Global',
-      'Matrices': 'Global',
-      'Functions': 'Global',
-      'Financial Mathematics': 'South Africa',
-      'Differential Equations': 'Global',
-      'Linear Algebra': 'Global'
-    };
-    return regions[subject?.name] || 'Global';
-  };
+.subject-detail-container.loading p,
+.subject-detail-container.error p {
+  color: var(--sd-muted);
+}
 
-  const getAWSRegion = () => {
-    const regions = {
-      'South Africa': 'af-south-1',
-      'USA': 'us-east-1',
-      'UK': 'eu-west-1',
-      'Australia': 'ap-southeast-2',
-      'Singapore': 'ap-southeast-1',
-      'Japan': 'ap-northeast-1',
-      'Brazil': 'sa-east-1'
-    };
-    return regions[getRegion()] || 'us-east-1';
-  };
+.loading-spinner {
+  width: 40px;
+  height: 40px;
+  border: 4px solid #2b3d55;
+  border-top-color: var(--sd-accent);
+  border-radius: 50%;
+  animation: sd-spin 1s linear infinite;
+}
 
-  // ===== HANDLE LOGIN REDIRECT =====
-  const handleLoginRedirect = () => {
-    playClick();
-    navigate('/login', { state: { from: `/subjects/${subjectName}` } });
-  };
+@keyframes sd-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
 
-  // ===== LOGIN PROMPT MODAL =====
-  const LoginPrompt = () => (
-    <div className="login-prompt-overlay" onClick={() => setShowLoginPrompt(false)}>
-      <div className="login-prompt-modal" onClick={(e) => e.stopPropagation()}>
-        <button className="login-prompt-close" onClick={() => setShowLoginPrompt(false)}>×</button>
-        <div className="login-prompt-icon">🔒</div>
-        <h3>Login Required</h3>
-        <p>Please log in to enroll in <strong>{selectedSubject?.name || subject?.name}</strong>.</p>
-        <div className="login-prompt-actions">
-          <button className="login-prompt-btn" onClick={handleLoginRedirect}>
-            Login Now →
-          </button>
-          <button className="login-prompt-cancel" onClick={() => setShowLoginPrompt(false)}>
-            Cancel
-          </button>
-        </div>
-        <p className="login-prompt-register">
-          Don't have an account? <span onClick={() => navigate('/register')}>Register here</span>
-        </p>
-      </div>
-    </div>
-  );
+.error-icon {
+  margin-bottom: 16px;
+  color: #ff9a9a;
+  font-size: 48px;
+}
 
-  // ===== ENROLLMENT FUNCTION =====
-  const handleEnroll = async () => {
-    console.log('🚀 ENROLLMENT STARTED');
-    playClick();
+.retry-button {
+  padding: 10px 24px;
+  border: 0;
+  border-radius: 8px;
+  background: var(--sd-accent-strong);
+  color: #ffffff;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background 0.2s ease;
+}
 
-    // Check authentication first
-    if (!authService.isAuthenticated()) {
-      setSelectedSubject(subject);
-      setShowLoginPrompt(true);
-      playNotification();
-      return;
-    }
+.retry-button:hover {
+  background: var(--sd-accent-hover);
+}
 
-    if (isCheckingAuth) {
-      return;
-    }
+/* =========================================================
+   4. BREADCRUMBS
+========================================================= */
 
-    setIsEnrolling(true);
-    setEnrollmentStatus(null);
+.sd-breadcrumbs {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 11px;
+  margin: 0 0 22px;
+  color: var(--sd-subtle);
+  font-size: 12px;
+  font-weight: 600;
+}
 
-    try {
-      const subjectId = subject.id;
-      console.log('📚 Subject ID:', subjectId);
+.sd-breadcrumbs button {
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--sd-muted);
+  font: inherit;
+  cursor: pointer;
+  transition: color 0.2s ease;
+}
 
-      // Get token
-      const token = localStorage.getItem('accessToken');
-      if (!token) {
-        console.log('❌ No token found');
-        playEnrollFail();
-        setEnrollmentStatus({
-          type: 'error',
-          message: 'Please login again to enroll.',
-          action: 'login'
-        });
-        setIsEnrolling(false);
-        return;
-      }
+.sd-breadcrumbs button:hover {
+  color: var(--sd-accent);
+}
 
-      // ===== FIX: Get subscription from JWT token =====
-      const subscriptionFromToken = getSubscriptionFromToken();
-      console.log('📊 Subscription from token:', subscriptionFromToken);
+.sd-breadcrumbs > span:last-child {
+  color: var(--sd-heading);
+}
 
-      // Check if user has a subscription tier in the token
-      if (!subscriptionFromToken || !subscriptionFromToken.tier) {
-        console.log('❌ No subscription tier found in token');
-        playEnrollFail();
-        setEnrollmentStatus({
-          type: 'error',
-          message: 'You need an active subscription to enroll. Please subscribe first.',
-          action: 'upgrade'
-        });
-        setIsEnrolling(false);
-        return;
-      }
+/* =========================================================
+   5. SUBJECT HERO
+========================================================= */
 
-      console.log('✅ User has subscription tier:', subscriptionFromToken.tier);
+.sd-hero {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 35px;
+  min-height: 270px;
+  padding: 48px 54px;
+  overflow: hidden;
+  border: 1px solid #2b405c;
+  border-radius: 16px;
+  background: #101f36;
+  color: #ffffff;
+}
 
-      // Silver tier warning
-      const tier = subscriptionFromToken.tier;
-      if (tier === 'TIER_SILVER' || tier === 'Silver' || tier === 'Tier_Silver') {
-        playNotification();
-        setEnrollmentStatus({
-          type: 'warning',
-          message: 'Silver tier provides archive access only. Upgrade to Gold for live sessions.',
-          action: 'upgrade'
-        });
-      }
+.sd-hero-copy {
+  position: relative;
+  z-index: 2;
+  max-width: 760px;
+}
 
-      // ===== SEND ENROLLMENT REQUEST =====
-      console.log('📤 Sending enrollment request...');
-      const enrollmentResponse = await fetch(`${API_BASE_URL}/content/subjects/${subjectId}/enroll`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        }
-      });
+.sd-eyebrow {
+  margin-bottom: 17px;
+  color: #a9c3e7;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 2.2px;
+}
 
-      console.log('📡 Enrollment response status:', enrollmentResponse.status);
+.sd-hero h1 {
+  margin: 0 0 13px;
+  color: #ffffff;
+  font-size: clamp(34px, 4vw, 52px);
+  font-weight: 750;
+  letter-spacing: -1.7px;
+  line-height: 1.08;
+}
 
-      if (enrollmentResponse.ok) {
-        // ===== SUCCESS SOUNDS =====
-        playEnrollSuccess();
-        setTimeout(() => playEnrollComplete(), 300);
-        setTimeout(() => playSubscriptionCreated(), 600);
+.sd-hero-copy > p {
+  max-width: 650px;
+  margin: 0;
+  color: #c4d0df;
+  font-size: 14px;
+  line-height: 1.8;
+}
 
-        setEnrollmentStatus({
-          type: 'success',
-          message: `✅ Successfully enrolled in ${subject.name}! You now have access to all materials.`,
-          action: 'dashboard'
-        });
+.sd-hero-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 9px;
+  margin-top: 25px;
+}
 
-        setTimeout(() => {
-          playSuccess();
-          navigate('/dashboard');
-        }, 2000);
-      } else if (enrollmentResponse.status === 400) {
-        const errorData = await enrollmentResponse.json();
-        console.log('📄 Error data:', errorData);
+.sd-hero-meta span {
+  display: inline-flex;
+  align-items: center;
+  padding: 8px 12px;
+  border: 1px solid rgba(255, 255, 255, 0.17);
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.07);
+  color: #e0e9f5;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.3px;
+}
 
-        if (errorData.error && errorData.error.toLowerCase().includes('already enrolled')) {
-          // ===== ALREADY ENROLLED SOUND =====
-          playAlreadyEnrolled();
-          setEnrollmentStatus({
-            type: 'info',
-            message: `ℹ️ You are already enrolled in ${subject.name}. You can access all materials from your dashboard.`,
-            action: 'dashboard'
-          });
-        } else {
-          playEnrollFail();
-          setEnrollmentStatus({
-            type: 'error',
-            message: errorData.error || 'Failed to enroll. Please try again.',
-            action: 'retry'
-          });
-        }
-      } else if (enrollmentResponse.status === 401) {
-        playEnrollFail();
-        setEnrollmentStatus({
-          type: 'error',
-          message: 'Session expired. Please login again.',
-          action: 'login'
-        });
-      } else {
-        const errorData = await enrollmentResponse.json();
-        console.log('❌ Error response:', errorData);
-        playEnrollFail();
-        setEnrollmentStatus({
-          type: 'error',
-          message: errorData.error || 'Failed to enroll. Please try again.',
-          action: 'retry'
-        });
-      }
-    } catch (error) {
-      console.error('❌ Enrollment error:', error);
-      playEnrollFail();
-      setEnrollmentStatus({
-        type: 'error',
-        message: 'An error occurred during enrollment. Please try again.',
-        action: 'retry'
-      });
-    } finally {
-      setIsEnrolling(false);
-    }
-  };
+.sd-hero-actions {
+  position: relative;
+  z-index: 3;
+  display: flex;
+  flex-shrink: 0;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 11px;
+  width: 190px;
+}
 
-  // ===== HANDLE ENROLLMENT ACTION WITH SOUNDS =====
-  const handleEnrollmentAction = () => {
-    if (!enrollmentStatus) return;
+.sd-enrol-button {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 15px;
+  min-height: 48px;
+  padding: 0 17px;
+  border: 0;
+  border-radius: 7px;
+  background: #e8f1ff;
+  color: #142641;
+  font-size: 12px;
+  font-weight: 800;
+  cursor: pointer;
+  transition: background 0.2s ease, transform 0.2s ease;
+}
 
-    playClick();
+.sd-enrol-button:hover {
+  background: #cfe1fb;
+  transform: translateY(-1px);
+}
 
-    switch (enrollmentStatus.action) {
-      case 'upgrade':
-        playPageTransition();
-        navigate('/pricing');
-        break;
-      case 'login':
-        playPageTransition();
-        navigate('/login', { state: { redirect: `/subjects/${subjectName}` } });
-        break;
-      case 'schedule':
-        playTabSwitch();
-        setActiveTab('schedule');
-        setEnrollmentStatus(null);
-        break;
-      case 'dashboard':
-        playPageTransition();
-        navigate('/dashboard');
-        break;
-      case 'subjects':
-        playPageTransition();
-        navigate('/subjects');
-        break;
-      case 'prereqs':
-        setEnrollmentStatus(null);
-        break;
-      case 'retry':
-        setEnrollmentStatus(null);
-        handleEnroll();
-        break;
-      default:
-        setEnrollmentStatus(null);
-    }
-  };
+.sd-enrol-button:disabled {
+  cursor: wait;
+  opacity: 0.6;
+  transform: none;
+}
 
-  // ============================================
-  // RESOURCE HANDLING
-  // ============================================
-  const getResourceIcon = (type) => ({
-    video: '🎬',
-    pdf: '📄',
-    practice: '✏️',
-    guide: '📖',
-    quiz: '📝',
-    link: '🔗'
-  }[type] || '📎');
+.sd-enrol-button span {
+  font-size: 18px;
+}
 
-  const handleResourceClick = (resource) => {
-    console.log('📄 Resource clicked:', resource);
-    playClick();
-    setActiveResource(resource);
-  };
+.sd-back-button {
+  min-height: 43px;
+  padding: 0 14px;
+  border: 1px solid rgba(255, 255, 255, 0.24);
+  border-radius: 7px;
+  background: transparent;
+  color: #f5f8fd;
+  font-size: 11px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background 0.2s ease;
+}
 
-  const toggleTopic = (topicId) => {
-    playClick();
-    setExpandedTopics(prev => ({
-      ...prev,
-      [topicId]: prev[topicId] === false ? true : false
-    }));
-  };
+.sd-back-button:hover {
+  background: rgba(255, 255, 255, 0.1);
+}
 
-  const renderResourceViewer = (r) => {
-    if (r.type === 'video' && r.youtube_id) {
-      return (
-        <div className="sd-viewer-embed">
-          <iframe
-            src={`https://www.youtube.com/embed/${r.youtube_id}`}
-            title={r.name}
-            frameBorder="0"
-            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-            allowFullScreen
-          />
-        </div>
-      );
-    }
-    if (r.type === 'pdf') {
-      return (
-        <div className="sd-viewer-embed">
-          <iframe src={r.url} title={r.name} />
-          <a href={r.url} target="_blank" rel="noopener noreferrer" className="sd-open-link">
-            📄 Open in new tab
-          </a>
-        </div>
-      );
-    }
-    return (
-      <a href={r.url} target="_blank" rel="noopener noreferrer" className="sd-open-link">
-        🔗 Open Resource
-      </a>
-    );
-  };
+.sd-hero-mark {
+  position: absolute;
+  z-index: 1;
+  top: 50%;
+  right: 250px;
+  color: rgba(255, 255, 255, 0.045);
+  font-size: 210px;
+  font-weight: 900;
+  line-height: 1;
+  pointer-events: none;
+  user-select: none;
+  transform: translateY(-50%);
+}
 
-  // ===== HANDLE TAB SWITCH WITH SOUNDS =====
-  const handleTabSwitch = (tabId) => {
-    if (activeTab !== tabId) {
-      playTabSwitch();
-      setActiveTab(tabId);
-    }
-  };
+/* =========================================================
+   6. LOGIN PROMPT MODAL
+========================================================= */
 
-  const tabs = [
-    { id: 'overview', label: '📋 Overview' },
-    { id: 'topics', label: '📚 Topics & Content' },
-    { id: 'schedule', label: '🕐 Schedule' }
-  ];
+.login-prompt-overlay {
+  position: fixed;
+  z-index: 3000;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  background: rgba(2, 8, 18, 0.84);
+  backdrop-filter: blur(6px);
+}
 
-  if (homeLoading || isCheckingAuth) {
-    return (
-      <div className="subject-detail-container loading">
-        <div className="loading-spinner"></div>
-        <p>{isCheckingAuth ? 'Checking your account...' : 'Loading subject details...'}</p>
-      </div>
-    );
+.login-prompt-modal {
+  position: relative;
+  width: 100%;
+  max-width: 420px;
+  padding: 36px;
+  border: 1px solid #30445e;
+  border-radius: 18px;
+  background: #122238;
+  color: var(--sd-text);
+  text-align: center;
+  box-shadow: 0 25px 80px rgba(0, 0, 0, 0.55);
+}
+
+.login-prompt-close {
+  position: absolute;
+  top: 14px;
+  right: 16px;
+  display: grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  border: 0;
+  border-radius: 50%;
+  background: #20344c;
+  color: #c4d2e4;
+  font-size: 20px;
+  cursor: pointer;
+}
+
+.login-prompt-close:hover {
+  background: #2a425e;
+  color: #ffffff;
+}
+
+.login-prompt-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 64px;
+  height: 64px;
+  margin: 0 auto 20px;
+  border-radius: 18px;
+  background: #1b385b;
+  color: #8bbaff;
+  font-size: 28px;
+}
+
+.login-prompt-modal h3 {
+  margin: 0 0 10px;
+  color: #f4f7fc;
+  font-size: 24px;
+}
+
+.login-prompt-modal p {
+  margin-bottom: 24px;
+  color: #b0bfd2;
+  line-height: 1.6;
+}
+
+.login-prompt-modal strong {
+  color: #edf3fb;
+}
+
+.login-prompt-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.login-prompt-btn {
+  width: 100%;
+  padding: 13px 20px;
+  border: 0;
+  border-radius: 9px;
+  background: var(--sd-accent-strong);
+  color: #ffffff;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background 0.2s ease;
+}
+
+.login-prompt-btn:hover {
+  background: var(--sd-accent-hover);
+}
+
+.login-prompt-cancel {
+  padding: 12px;
+  border: 0;
+  background: transparent;
+  color: var(--sd-muted);
+  cursor: pointer;
+}
+
+.login-prompt-cancel:hover {
+  color: #ffffff;
+}
+
+.login-prompt-register {
+  margin-top: 20px !important;
+  margin-bottom: 0 !important;
+  color: var(--sd-muted);
+  font-size: 13px;
+}
+
+.login-prompt-register span {
+  color: var(--sd-accent);
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.login-prompt-register span:hover {
+  color: #b7d5ff;
+  text-decoration: underline;
+}
+
+/* =========================================================
+   7. ENROLLMENT STATUS
+========================================================= */
+
+.enrollment-status {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 15px;
+  margin: 20px 0;
+  padding: 16px 20px;
+  border: 1px solid var(--sd-border);
+  border-radius: 10px;
+  color: var(--sd-text);
+}
+
+.enrollment-status p {
+  margin: 0;
+  color: inherit;
+  line-height: 1.5;
+}
+
+.enrollment-status.success {
+  border-color: #245d4d;
+  background: #102d29;
+  color: #9be2c3;
+}
+
+.enrollment-status.error {
+  border-color: #70404d;
+  background: #351f29;
+  color: #ffb5bd;
+}
+
+.enrollment-status.warning {
+  border-color: #75602d;
+  background: #352d1b;
+  color: #f3d58b;
+}
+
+.enrollment-status.info {
+  border-color: #345b85;
+  background: #172d47;
+  color: #a9ceff;
+}
+
+.enrollment-action-btn {
+  padding: 9px 16px;
+  border: 0;
+  border-radius: 7px;
+  background: var(--sd-accent-strong);
+  color: #ffffff;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.enrollment-action-btn:hover {
+  background: var(--sd-accent-hover);
+}
+
+/* =========================================================
+   8. ACCOUNT SUBSCRIPTION STRIP
+========================================================= */
+
+.sd-account-strip {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  min-height: 54px;
+  margin-top: 18px;
+  padding: 12px 17px;
+  border: 1px solid var(--sd-border);
+  border-radius: 8px;
+  background: var(--sd-surface);
+  color: var(--sd-text);
+}
+
+.sd-account-indicator {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--sd-muted);
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: 1px;
+}
+
+.sd-account-indicator > span {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #24976a;
+}
+
+.sd-account-strip > strong {
+  color: var(--sd-heading);
+  font-size: 12px;
+}
+
+.sd-account-strip > span {
+  margin-left: auto;
+  color: #7bd5aa;
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.sd-account-strip > button {
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--sd-accent);
+  font-size: 11px;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.sd-account-strip > button:hover {
+  color: #b7d5ff;
+}
+
+.sd-signin-note {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 14px;
+  color: var(--sd-muted);
+  font-size: 11px;
+}
+
+.sd-signin-note button {
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--sd-accent);
+  font-size: 11px;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.sd-signin-note button:hover {
+  color: #b7d5ff;
+}
+
+/* =========================================================
+   9. SECTION HEADINGS
+========================================================= */
+
+.sd-learning-overview {
+  margin-top: 43px;
+}
+
+.sd-section-heading {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 20px;
+  margin-bottom: 20px;
+}
+
+.sd-section-kicker,
+.sd-panel-index {
+  display: block;
+  color: #8ea2bb;
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: 1.6px;
+}
+
+.sd-section-heading h2 {
+  margin: 9px 0 6px;
+  color: var(--sd-heading);
+  font-size: 24px;
+  font-weight: 750;
+  letter-spacing: -0.6px;
+}
+
+.sd-section-heading p {
+  margin: 0;
+  color: var(--sd-muted);
+  font-size: 12px;
+  line-height: 1.7;
+}
+
+.sd-active-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 11px;
+  border: 1px solid #285b4b;
+  border-radius: 5px;
+  background: #122e2a;
+  color: #91d9b7;
+  font-size: 10px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.sd-active-label i {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #55bd8a;
+}
+
+/* =========================================================
+   10. SUBJECT STATISTICS
+========================================================= */
+
+.sd-stat-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 13px;
+}
+
+.sd-stat-card {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+  min-height: 94px;
+  padding: 17px;
+  border: 1px solid var(--sd-border);
+  border-radius: 9px;
+  background: var(--sd-surface);
+  transition: border-color 0.2s ease, background 0.2s ease, transform 0.2s ease;
+}
+
+.sd-stat-card:hover {
+  border-color: #45617f;
+  background: var(--sd-surface-raised);
+  transform: translateY(-2px);
+}
+
+.sd-stat-icon {
+  display: grid;
+  place-items: center;
+  width: 38px;
+  height: 38px;
+  flex: 0 0 38px;
+  border-radius: 9px;
+  background: var(--sd-accent-soft);
+  color: #9bc4ff;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.4px;
+}
+
+.sd-stat-card div {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  min-width: 0;
+}
+
+.sd-stat-card strong {
+  color: var(--sd-heading);
+  font-size: 19px;
+  font-weight: 800;
+  line-height: 1.1;
+  overflow-wrap: anywhere;
+}
+
+.sd-stat-card div > span {
+  color: var(--sd-muted);
+  font-size: 10px;
+  font-weight: 600;
+}
+
+/* =========================================================
+   11. MAIN WORKSPACE
+========================================================= */
+
+.sd-workspace {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 280px;
+  align-items: start;
+  gap: 20px;
+  margin-top: 43px;
+}
+
+.sd-workspace-main {
+  min-width: 0;
+  overflow: hidden;
+  border: 1px solid var(--sd-border);
+  border-radius: 11px;
+  background: var(--sd-surface);
+}
+
+.sd-tabs-header {
+  padding: 26px 28px 0;
+  border-bottom: 1px solid var(--sd-border);
+}
+
+.sd-tabs-header h2 {
+  margin: 8px 0 20px;
+  color: var(--sd-heading);
+  font-size: 23px;
+  font-weight: 750;
+  letter-spacing: -0.5px;
+}
+
+/* =========================================================
+   12. TAB NAVIGATION
+========================================================= */
+
+.sd-tabs {
+  display: flex;
+  align-items: center;
+  gap: 25px;
+  overflow-x: auto;
+  scrollbar-width: thin;
+  scrollbar-color: #405773 transparent;
+}
+
+.sd-tabs button {
+  position: relative;
+  flex-shrink: 0;
+  padding: 0 0 15px;
+  border: 0;
+  background: transparent;
+  color: #a0b0c4;
+  font-size: 11px;
+  font-weight: 700;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: color 0.2s ease;
+}
+
+.sd-tabs button:hover {
+  color: #c4dcff;
+}
+
+.sd-tabs button.active {
+  color: var(--sd-accent);
+}
+
+.sd-tabs button.active::after {
+  position: absolute;
+  right: 0;
+  bottom: -1px;
+  left: 0;
+  height: 2px;
+  border-radius: 2px 2px 0 0;
+  background: #6ea8f5;
+  content: "";
+}
+
+.sd-tab-panel {
+  min-height: 400px;
+  padding: 28px;
+  color: var(--sd-text);
+}
+
+/* =========================================================
+   13. OVERVIEW PANEL
+========================================================= */
+
+.sd-overview-intro {
+  padding-bottom: 26px;
+  border-bottom: 1px solid var(--sd-border);
+}
+
+.sd-overview-intro h3 {
+  margin: 12px 0 10px;
+  color: var(--sd-heading);
+  font-size: 25px;
+  font-weight: 750;
+  letter-spacing: -0.6px;
+}
+
+.sd-overview-intro > p {
+  max-width: 700px;
+  margin: 0;
+  color: #b0bfd2;
+  font-size: 13px;
+  line-height: 1.8;
+}
+
+.sd-overview-facts {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0 24px;
+  padding: 8px 0;
+}
+
+.sd-overview-facts > div {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  padding: 17px 0;
+  border-bottom: 1px solid var(--sd-border);
+}
+
+.sd-overview-facts span {
+  color: #9aabc0;
+  font-size: 10px;
+  font-weight: 700;
+}
+
+.sd-overview-facts strong {
+  color: #e4edf8;
+  font-size: 13px;
+  font-weight: 750;
+  overflow-wrap: anywhere;
+}
+
+/* =========================================================
+   14. OVERVIEW CALLOUT
+========================================================= */
+
+.sd-overview-callout {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+  margin-top: 22px;
+  padding: 18px;
+  border: 1px solid #304760;
+  border-radius: 8px;
+  background: var(--sd-surface-soft);
+}
+
+.sd-callout-symbol {
+  display: grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  flex: 0 0 36px;
+  border-radius: 8px;
+  background: #203b5b;
+  color: #a9ccff;
+  font-size: 18px;
+  font-weight: 800;
+}
+
+.sd-overview-callout > div:nth-child(2) {
+  flex: 1;
+  min-width: 0;
+}
+
+.sd-overview-callout strong {
+  color: var(--sd-heading);
+  font-size: 12px;
+}
+
+.sd-overview-callout p {
+  margin: 5px 0 0;
+  color: #aab9cc;
+  font-size: 11px;
+  line-height: 1.6;
+}
+
+.sd-overview-callout button {
+  flex-shrink: 0;
+  padding: 10px 13px;
+  border: 0;
+  border-radius: 6px;
+  background: var(--sd-accent-strong);
+  color: #ffffff;
+  font-size: 10px;
+  font-weight: 750;
+  cursor: pointer;
+  transition: background 0.2s ease;
+}
+
+.sd-overview-callout button:hover {
+  background: var(--sd-accent-hover);
+}
+
+/* =========================================================
+   15. CURRICULUM PANEL
+========================================================= */
+
+.sd-panel-heading {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 15px;
+  margin-bottom: 24px;
+}
+
+.sd-panel-heading h3 {
+  margin: 8px 0 0;
+  color: var(--sd-heading);
+  font-size: 22px;
+  font-weight: 750;
+  letter-spacing: -0.5px;
+}
+
+.sd-panel-heading > span {
+  color: var(--sd-muted);
+  font-size: 10px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.sd-topic-tree {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+/* =========================================================
+   16. TOPIC BLOCKS
+========================================================= */
+
+.sd-topic-block {
+  overflow: hidden;
+  border: 1px solid var(--sd-border);
+  border-radius: 8px;
+  background: var(--sd-surface);
+}
+
+.sd-topic-title {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  width: 100%;
+  padding: 17px 18px;
+  border: 0;
+  background: var(--sd-surface);
+  color: var(--sd-text);
+  text-align: left;
+  cursor: pointer;
+  transition: background 0.2s ease;
+}
+
+.sd-topic-title:hover {
+  background: var(--sd-surface-soft);
+}
+
+.sd-topic-number {
+  display: grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  flex: 0 0 34px;
+  border-radius: 7px;
+  background: var(--sd-accent-soft);
+  color: #a9ccff;
+  font-size: 10px;
+  font-weight: 800;
+}
+
+.sd-topic-title-copy {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 5px;
+  min-width: 0;
+}
+
+.sd-topic-title-copy strong {
+  color: var(--sd-heading);
+  font-size: 12px;
+  font-weight: 750;
+}
+
+.sd-topic-title-copy small {
+  overflow: hidden;
+  color: var(--sd-muted);
+  font-size: 10px;
+  text-overflow: ellipsis;
+}
+
+.sd-topic-count {
+  color: #9aabc0;
+  font-size: 10px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.sd-toggle {
+  flex-shrink: 0;
+  color: #b4c4d8;
+  font-size: 18px;
+  transition: transform 0.2s ease;
+}
+
+.sd-toggle.expanded {
+  transform: rotate(180deg);
+}
+
+.sd-topic-content {
+  padding: 0 18px 18px 66px;
+  color: var(--sd-text);
+}
+
+.sd-topic-content:empty {
+  display: none;
+}
+
+/* =========================================================
+   17. GENERAL SUBJECT RESOURCES HEADING
+========================================================= */
+
+.sd-topic-block-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 15px;
+  padding: 17px 18px;
+  border-bottom: 1px solid var(--sd-border);
+}
+
+.sd-topic-block-heading > div > span {
+  color: #9aabc0;
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: 1.2px;
+}
+
+.sd-topic-block-heading h4 {
+  margin: 6px 0 0;
+  color: var(--sd-heading);
+  font-size: 13px;
+}
+
+.sd-topic-block-heading small {
+  color: var(--sd-muted);
+  font-size: 10px;
+}
+
+/* =========================================================
+   18. SUBTOPICS
+========================================================= */
+
+.sd-subtopic-block {
+  margin-top: 17px;
+}
+
+.sd-subtopic-heading {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  padding: 10px 0;
+}
+
+.sd-subtopic-heading strong {
+  color: #e2ebf7;
+  font-size: 11px;
+}
+
+.sd-subtopic-heading span {
+  color: #aab9cc;
+  font-size: 10px;
+  line-height: 1.6;
+}
+
+/* =========================================================
+   19. RESOURCE LIST
+========================================================= */
+
+.sd-resource-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding-top: 10px;
+}
+
+.sd-resource-card {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  min-width: 0;
+  padding: 12px;
+  border: 1px solid #2b4059;
+  border-radius: 7px;
+  background: var(--sd-surface-raised);
+  color: var(--sd-text);
+  text-align: left;
+  cursor: pointer;
+  transition: border-color 0.2s ease, background 0.2s ease;
+}
+
+.sd-resource-card:hover {
+  border-color: #49698c;
+  background: var(--sd-surface-hover);
+}
+
+.sd-res-icon {
+  display: grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  flex: 0 0 34px;
+  border-radius: 7px;
+  background: #203852;
+  color: #b8d5ff;
+  font-size: 15px;
+}
+
+.sd-res-body {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+
+.sd-res-name {
+  overflow: hidden;
+  color: #eaf1fa;
+  font-size: 11px;
+  font-weight: 750;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.sd-res-desc {
+  overflow: hidden;
+  color: #a5b5c9;
+  font-size: 10px;
+  line-height: 1.5;
+  text-overflow: ellipsis;
+}
+
+.sd-res-free {
+  flex-shrink: 0;
+  padding: 4px 6px;
+  border-radius: 4px;
+  background: #17392f;
+  color: #9be0bd;
+  font-size: 8px;
+  font-weight: 800;
+  letter-spacing: 0.5px;
+}
+
+.sd-resource-arrow {
+  flex-shrink: 0;
+  color: #a9bad0;
+  font-size: 15px;
+}
+
+/* =========================================================
+   20. CONTENT LOADING STATE
+========================================================= */
+
+.sd-content-loading {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 260px;
+  padding: 35px;
+  color: var(--sd-text);
+  text-align: center;
+}
+
+.sd-content-loading p {
+  max-width: 440px;
+  color: #aab9cc;
+  font-size: 12px;
+  line-height: 1.7;
+}
+
+/* =========================================================
+   21. EMPTY CONTENT STATE
+========================================================= */
+
+.sd-empty-content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 260px;
+  padding: 35px;
+  color: var(--sd-text);
+  text-align: center;
+}
+
+.sd-empty-symbol {
+  display: grid;
+  place-items: center;
+  width: 48px;
+  height: 48px;
+  border-radius: 12px;
+  background: var(--sd-accent-soft);
+  color: #a9ccff;
+  font-size: 24px;
+}
+
+.sd-empty-content h4 {
+  margin: 15px 0 7px;
+  color: var(--sd-heading);
+  font-size: 15px;
+}
+
+.sd-empty-content p {
+  max-width: 440px;
+  color: #aab9cc;
+  font-size: 12px;
+  line-height: 1.7;
+}
+
+.sd-empty-content .sd-inline-action {
+  margin-top: 8px;
+}
+
+/* =========================================================
+   22. SCHEDULE PANEL
+========================================================= */
+
+.sd-schedule-panel {
+  min-height: 320px;
+  color: var(--sd-text);
+}
+
+.sd-schedule-panel > h3 {
+  margin: 9px 0 8px;
+  color: var(--sd-heading);
+  font-size: 22px;
+}
+
+.sd-schedule-panel .sd-empty-content {
+  margin-top: 20px;
+  border: 1px dashed var(--sd-border-strong);
+  border-radius: 9px;
+  background: var(--sd-surface-raised);
+}
+
+.sd-inline-action {
+  padding: 10px 14px;
+  border: 0;
+  border-radius: 6px;
+  background: var(--sd-accent-strong);
+  color: #ffffff;
+  font-size: 11px;
+  font-weight: 750;
+  cursor: pointer;
+  transition: background 0.2s ease;
+}
+
+.sd-inline-action:hover {
+  background: var(--sd-accent-hover);
+}
+
+/* =========================================================
+   23. WORKSPACE SIDEBAR
+========================================================= */
+
+.sd-workspace-aside {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.sd-aside-card {
+  padding: 21px;
+  border: 1px solid var(--sd-border);
+  border-radius: 10px;
+  background: var(--sd-surface);
+  color: var(--sd-text);
+}
+
+.sd-about-card h3 {
+  margin: 9px 0 18px;
+  color: var(--sd-heading);
+  font-size: 16px;
+  font-weight: 750;
+}
+
+.sd-aside-detail {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  padding: 12px 0;
+  border-top: 1px solid var(--sd-border);
+}
+
+.sd-aside-detail span {
+  color: #9eafc4;
+  font-size: 10px;
+  font-weight: 600;
+}
+
+.sd-aside-detail strong {
+  color: #e4edf8;
+  font-size: 12px;
+  font-weight: 750;
+  overflow-wrap: anywhere;
+}
+
+/* =========================================================
+   24. NEXT ACTION SIDEBAR CARD
+========================================================= */
+
+.sd-next-card {
+  border-color: #304760;
+  background: var(--sd-surface-soft);
+}
+
+.sd-next-label {
+  color: #9fc3f1;
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: 1.3px;
+}
+
+.sd-next-card h3 {
+  margin: 12px 0 9px;
+  color: var(--sd-heading);
+  font-size: 17px;
+  line-height: 1.4;
+}
+
+.sd-next-card p {
+  margin: 0 0 18px;
+  color: #aab9cc;
+  font-size: 11px;
+  line-height: 1.7;
+}
+
+.sd-next-card button {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  width: 100%;
+  padding: 12px 13px;
+  border: 0;
+  border-radius: 6px;
+  background: var(--sd-accent-strong);
+  color: #ffffff;
+  font-size: 10px;
+  font-weight: 750;
+  cursor: pointer;
+  transition: background 0.2s ease;
+}
+
+.sd-next-card button:hover {
+  background: var(--sd-accent-hover);
+}
+
+.sd-next-card button span {
+  font-size: 16px;
+}
+
+/* =========================================================
+   25. RESOURCE VIEWER MODAL
+========================================================= */
+
+.sd-viewer-overlay {
+  position: fixed;
+  z-index: 3000;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  background: rgba(1, 7, 16, 0.88);
+  backdrop-filter: blur(5px);
+}
+
+.sd-viewer {
+  position: relative;
+  width: 100%;
+  max-width: 900px;
+  max-height: 90vh;
+  overflow-y: auto;
+  padding: 30px;
+  border: 1px solid #30445e;
+  border-radius: 16px;
+  background: var(--sd-surface);
+  color: var(--sd-text);
+  box-shadow: 0 25px 80px rgba(0, 0, 0, 0.6);
+}
+
+.sd-viewer-close {
+  position: absolute;
+  top: 15px;
+  right: 15px;
+  display: grid;
+  place-items: center;
+  width: 35px;
+  height: 35px;
+  border: 0;
+  border-radius: 50%;
+  background: #20344c;
+  color: #d1dceb;
+  font-size: 18px;
+  cursor: pointer;
+}
+
+.sd-viewer-close:hover {
+  background: #2b4562;
+  color: #ffffff;
+}
+
+.sd-viewer h2 {
+  margin: 0 0 12px;
+  padding-right: 45px;
+  color: var(--sd-heading);
+  font-size: 22px;
+}
+
+.sd-viewer-desc {
+  margin-bottom: 20px;
+  color: #b0bfd2;
+  line-height: 1.6;
+}
+
+.sd-viewer-embed {
+  width: 100%;
+  margin-top: 20px;
+  color: var(--sd-text);
+}
+
+.sd-viewer-embed iframe {
+  display: block;
+  width: 100%;
+  min-height: 500px;
+  border: 1px solid var(--sd-border);
+  border-radius: 10px;
+  background: #ffffff;
+}
+
+.sd-viewer-embed iframe[src*="youtube"] {
+  min-height: auto;
+  aspect-ratio: 16 / 9;
+}
+
+.sd-open-link {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  margin-top: 15px;
+  padding: 11px 18px;
+  border-radius: 8px;
+  background: var(--sd-accent-strong);
+  color: #ffffff;
+  font-weight: 600;
+  text-decoration: none;
+  transition: background 0.2s ease;
+}
+
+.sd-open-link:hover {
+  background: var(--sd-accent-hover);
+  color: #ffffff;
+}
+
+/* =========================================================
+   26. LEGACY SUBJECT COMPONENT COMPATIBILITY
+   Keeps older subject components readable in dark mode.
+========================================================= */
+
+.subject-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 24px;
+  margin-bottom: 30px;
+}
+
+.subject-header-content {
+  flex: 1;
+}
+
+.subject-header-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.subject-title {
+  margin: 0 0 12px;
+  color: var(--sd-heading);
+  font-size: 32px;
+  font-weight: 800;
+}
+
+.subject-description {
+  color: var(--sd-muted);
+  font-size: 15px;
+  line-height: 1.7;
+}
+
+.subject-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 18px;
+}
+
+.subject-meta span {
+  display: inline-flex;
+  align-items: center;
+  padding: 7px 12px;
+  border: 1px solid var(--sd-border-strong);
+  border-radius: 7px;
+  background: var(--sd-surface-soft);
+  color: #c3d0e1;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.enroll-button {
+  padding: 12px 20px;
+  border: 0;
+  border-radius: 8px;
+  background: var(--sd-accent-strong);
+  color: #ffffff;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.enroll-button:hover {
+  background: var(--sd-accent-hover);
+}
+
+.enroll-button:disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+.syllabus-button {
+  padding: 12px 20px;
+  border: 1px solid var(--sd-border-strong);
+  border-radius: 8px;
+  background: var(--sd-surface-raised);
+  color: var(--sd-text);
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.syllabus-button:hover {
+  background: var(--sd-surface-hover);
+}
+
+/* =========================================================
+   27. LEGACY SUBJECT INFORMATION
+========================================================= */
+
+.subject-information {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 20px;
+  margin: 30px 0;
+}
+
+.subject-information-card {
+  padding: 22px;
+  border: 1px solid var(--sd-border);
+  border-radius: 12px;
+  background: var(--sd-surface);
+}
+
+.subject-information-card h3 {
+  margin: 0 0 15px;
+  color: var(--sd-heading);
+  font-size: 17px;
+}
+
+.subject-information-card p {
+  color: var(--sd-muted);
+  line-height: 1.65;
+}
+
+/* =========================================================
+   28. LEGACY SUBJECT TABS
+========================================================= */
+
+.subject-tabs {
+  display: flex;
+  align-items: center;
+  gap: 25px;
+  margin-top: 30px;
+  border-bottom: 1px solid var(--sd-border);
+}
+
+.subject-tab {
+  position: relative;
+  padding: 15px 0;
+  border: 0;
+  background: transparent;
+  color: var(--sd-muted);
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.subject-tab:hover,
+.subject-tab.active {
+  color: var(--sd-accent);
+}
+
+.subject-tab.active::after {
+  position: absolute;
+  right: 0;
+  bottom: -1px;
+  left: 0;
+  height: 3px;
+  border-radius: 3px 3px 0 0;
+  background: #6ea8f5;
+  content: "";
+}
+
+/* =========================================================
+   29. LEGACY TOPICS AND RESOURCES
+========================================================= */
+
+.topic-item {
+  margin-bottom: 12px;
+  overflow: hidden;
+  border: 1px solid var(--sd-border);
+  border-radius: 10px;
+  background: var(--sd-surface);
+}
+
+.topic-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 15px;
+  padding: 17px 20px;
+  background: var(--sd-surface);
+  cursor: pointer;
+}
+
+.topic-header:hover {
+  background: var(--sd-surface-soft);
+}
+
+.topic-header h3 {
+  margin: 0;
+  color: var(--sd-heading);
+  font-size: 15px;
+}
+
+.topic-content {
+  padding: 0 20px 20px;
+  color: var(--sd-text);
+}
+
+.resource-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-top: 8px;
+  padding: 12px;
+  border-radius: 8px;
+  background: var(--sd-surface-raised);
+  color: var(--sd-text);
+  cursor: pointer;
+}
+
+.resource-item:hover {
+  background: var(--sd-surface-hover);
+}
+
+.resource-item-name {
+  color: #e3edf9;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+/* =========================================================
+   30. LEGACY SCHEDULE
+========================================================= */
+
+.schedule-container {
+  padding: 25px 0;
+}
+
+.schedule-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 15px;
+  margin-bottom: 12px;
+  padding: 17px;
+  border: 1px solid var(--sd-border);
+  border-radius: 10px;
+  background: var(--sd-surface);
+  color: var(--sd-text);
+}
+
+.schedule-item h4 {
+  margin: 0 0 5px;
+  color: var(--sd-heading);
+}
+
+.schedule-item p {
+  margin: 0;
+  color: var(--sd-muted);
+  font-size: 13px;
+}
+
+/* =========================================================
+   31. WHITEBOARD
+   Whiteboard remains a white drawing surface by design.
+========================================================= */
+
+.whiteboard-preview {
+  position: relative;
+  overflow: hidden;
+  border: 1px solid var(--sd-border-strong);
+  border-radius: 12px;
+  background: #ffffff;
+}
+
+.whiteboard-preview img {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
+/* =========================================================
+   32. GENERIC DARK FORM CONTROLS
+========================================================= */
+
+.sd-redesign input,
+.sd-redesign select,
+.sd-redesign textarea {
+  border: 1px solid var(--sd-border-strong);
+  border-radius: 7px;
+  background: var(--sd-surface-raised);
+  color: var(--sd-heading);
+}
+
+.sd-redesign input::placeholder,
+.sd-redesign textarea::placeholder {
+  color: var(--sd-subtle);
+  opacity: 1;
+}
+
+.sd-redesign select option {
+  background: var(--sd-surface-raised);
+  color: var(--sd-heading);
+}
+
+.sd-redesign input:focus,
+.sd-redesign select:focus,
+.sd-redesign textarea:focus {
+  border-color: var(--sd-accent);
+  outline: 2px solid rgba(131, 180, 255, 0.2);
+}
+
+.sd-redesign hr {
+  border: 0;
+  border-top: 1px solid var(--sd-border);
+}
+
+.sd-redesign code,
+.sd-redesign pre {
+  border: 1px solid var(--sd-border);
+  border-radius: 6px;
+  background: #0b1727;
+  color: #dce9fa;
+}
+
+/* =========================================================
+   33. SCROLLBARS
+========================================================= */
+
+.sd-redesign * {
+  scrollbar-color: #405773 #101d2e;
+}
+
+.sd-redesign *::-webkit-scrollbar {
+  width: 9px;
+  height: 9px;
+}
+
+.sd-redesign *::-webkit-scrollbar-track {
+  background: #101d2e;
+}
+
+.sd-redesign *::-webkit-scrollbar-thumb {
+  border: 2px solid #101d2e;
+  border-radius: 20px;
+  background: #405773;
+}
+
+.sd-redesign *::-webkit-scrollbar-thumb:hover {
+  background: #587493;
+}
+
+/* =========================================================
+   34. TABLET RESPONSIVENESS
+========================================================= */
+
+@media (max-width: 1100px) {
+  .sd-workspace {
+    grid-template-columns: minmax(0, 1fr) 250px;
   }
 
-  if (homeError) {
-    return (
-      <div className="subject-detail-container error">
-        <div className="error-icon">⚠️</div>
-        <h2>Error loading subject</h2>
-        <p>{homeError}</p>
-        <button className="retry-button" onClick={() => window.location.reload()}>
-          Try Again
-        </button>
-      </div>
-    );
+  .sd-stat-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
-  if (!subject) {
-    return (
-      <div className="subject-detail-container error">
-        <div className="error-icon">🔍</div>
-        <h2>Subject Not Found</h2>
-        <p>The subject you're looking for doesn't exist.</p>
-        <button className="retry-button" onClick={() => navigate('/subjects')}>
-          Back to Subjects
-        </button>
-      </div>
-    );
+  .sd-hero {
+    padding: 35px;
   }
 
-  const resourceCount = contentTree.topics.reduce((total, topic) =>
-    total + (topic.resources?.length || 0) +
-    (topic.subtopics?.reduce((subTotal, sub) => subTotal + (sub.resources?.length || 0), 0) || 0), 0
-  ) + contentTree.subjectResources.length;
+  .sd-hero-mark {
+    right: 210px;
+  }
+}
 
-  const topicCount = contentTree.topics.length;
+/* =========================================================
+   35. MOBILE RESPONSIVENESS
+========================================================= */
 
-  return (
-    <main className="subject-detail-container sd-redesign">
-      {showLoginPrompt && <LoginPrompt />}
+@media (max-width: 800px) {
+  .sd-redesign {
+    padding: 22px 15px 50px;
+    background: var(--sd-page);
+  }
 
-      <div className="sd-page-shell">
-        <div className="sd-breadcrumbs">
-          <button type="button" onClick={() => navigate('/subjects')}>Subjects</button>
-          <span>/</span>
-          <span>{subject.name}</span>
-        </div>
+  .sd-hero {
+    align-items: flex-start;
+    flex-direction: column;
+    padding: 30px 25px;
+  }
 
-        <section className="sd-hero">
-          <div className="sd-hero-copy">
-            <div className="sd-eyebrow">YOUR LEARNING SPACE</div>
-            <h1>{subject.name}</h1>
-            <p>{subject.longDescription || subject.description || 'Explore the learning materials and curriculum for this subject.'}</p>
-            <div className="sd-hero-meta">
-              <span>{getCohortTier()}</span>
-              <span>{getRegion()}</span>
-              <span>{getAWSRegion()}</span>
-            </div>
-          </div>
-          <div className="sd-hero-actions">
-            <button
-              type="button"
-              className="sd-enrol-button"
-              onClick={handleEnroll}
-              disabled={isEnrolling}
-            >
-              {isEnrolling ? 'Enrolling…' : 'Enrol in subject'}
-              <span aria-hidden="true">→</span>
-            </button>
-            <button
-              type="button"
-              className="sd-back-button"
-              onClick={() => { playClick(); navigate('/subjects'); }}
-            >
-              Browse subjects
-            </button>
-          </div>
-          <div className="sd-hero-mark" aria-hidden="true">{subject.icon || '✦'}</div>
-        </section>
+  .sd-hero-actions {
+    flex-direction: row;
+    width: 100%;
+  }
 
-        {enrollmentStatus && (
-          <div className={`enrollment-status ${enrollmentStatus.type}`} role="status">
-            <p>{enrollmentStatus.message}</p>
-            {(enrollmentStatus.action === 'upgrade' || enrollmentStatus.action === 'login' ||
-              enrollmentStatus.action === 'schedule' || enrollmentStatus.action === 'dashboard' ||
-              enrollmentStatus.action === 'subjects' || enrollmentStatus.action === 'retry') && (
-              <button type="button" className="enrollment-action-btn" onClick={handleEnrollmentAction}>
-                {enrollmentStatus.action === 'upgrade' && 'Upgrade plan →'}
-                {enrollmentStatus.action === 'login' && 'Log in →'}
-                {enrollmentStatus.action === 'schedule' && 'View schedule →'}
-                {enrollmentStatus.action === 'dashboard' && 'Go to dashboard →'}
-                {enrollmentStatus.action === 'subjects' && 'Browse subjects →'}
-                {enrollmentStatus.action === 'retry' && 'Try again →'}
-              </button>
-            )}
-          </div>
-        )}
+  .sd-hero-actions button {
+    flex: 1;
+  }
 
-        {user && subscription && (
-          <section className="sd-account-strip">
-            <div className="sd-account-indicator"><span /> ACCOUNT PLAN</div>
-            <strong>{subscription.tier || subscription.subscriptionTier || 'Subscription'}</strong>
-            <span>{subscription.status || subscription.subscriptionStatus || 'Active'}</span>
-            {(subscription.tier === 'TIER_SILVER' || subscription.tier === 'Silver' || subscription.tier === 'Tier_Silver') && (
-              <button type="button" onClick={() => navigate('/pricing')}>Explore live-session plans</button>
-            )}
-          </section>
-        )}
+  .sd-hero-mark {
+    top: 30px;
+    right: 20px;
+    font-size: 120px;
+    transform: none;
+  }
 
-        {!user && !isCheckingAuth && (
-          <div className="sd-signin-note">
-            <span>Already have an account?</span>
-            <button type="button" onClick={() => { playClick(); setShowLoginPrompt(true); }}>Log in to enrol</button>
-          </div>
-        )}
+  .sd-workspace {
+    grid-template-columns: 1fr;
+  }
 
-        <section className="sd-learning-overview">
-          <div className="sd-section-heading">
-            <div>
-              <span className="sd-section-kicker">SUBJECT AT A GLANCE</span>
-              <h2>Build your understanding</h2>
-              <p>Everything published for this subject, organised in one learning space.</p>
-            </div>
-            <span className="sd-active-label"><i /> Subject page</span>
-          </div>
+  .sd-workspace-aside {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
 
-          <div className="sd-stat-grid">
-            <article className="sd-stat-card">
-              <span className="sd-stat-icon">01</span>
-              <div><strong>{contentLoading ? '—' : topicCount}</strong><span>Learning topics</span></div>
-            </article>
-            <article className="sd-stat-card">
-              <span className="sd-stat-icon">02</span>
-              <div><strong>{contentLoading ? '—' : resourceCount}</strong><span>Published resources</span></div>
-            </article>
-            <article className="sd-stat-card">
-              <span className="sd-stat-icon">03</span>
-              <div><strong>{getCohortTier()}</strong><span>Learning tier</span></div>
-            </article>
-            <article className="sd-stat-card">
-              <span className="sd-stat-icon">04</span>
-              <div><strong>{getRegion()}</strong><span>Learning region</span></div>
-            </article>
-          </div>
-        </section>
+  .sd-tabs-header {
+    padding: 22px 18px 0;
+  }
 
-        <section className="sd-workspace">
-          <div className="sd-workspace-main">
-            <div className="sd-tabs-header">
-              <div>
-                <span className="sd-section-kicker">COURSE WORKSPACE</span>
-                <h2>Explore this subject</h2>
-              </div>
-              <nav className="sd-tabs" aria-label="Subject sections">
-                {tabs.map(tab => (
-                  <button
-                    type="button"
-                    key={tab.id}
-                    className={activeTab === tab.id ? 'active' : ''}
-                    onClick={() => handleTabSwitch(tab.id)}
-                  >
-                    {tab.id === 'overview' ? 'Overview' : tab.id === 'topics' ? 'Curriculum & resources' : 'Schedule'}
-                  </button>
-                ))}
-              </nav>
-            </div>
+  .sd-tab-panel {
+    padding: 22px 18px;
+  }
 
-            <div className="sd-tab-panel">
-              {activeTab === 'overview' && (
-                <div className="sd-overview-panel">
-                  <div className="sd-overview-intro">
-                    <span className="sd-panel-index">01 / OVERVIEW</span>
-                    <h3>{subject.name}</h3>
-                    <p>{subject.longDescription || subject.description || 'Learning information for this subject will appear here as it is published.'}</p>
-                  </div>
-                  <div className="sd-overview-facts">
-                    <div><span>Subject</span><strong>{subject.name}</strong></div>
-                    <div><span>Learning tier</span><strong>{getCohortTier()}</strong></div>
-                    <div><span>Region</span><strong>{getRegion()}</strong></div>
-                    <div><span>Infrastructure region</span><strong>{getAWSRegion()}</strong></div>
-                  </div>
-                  <div className="sd-overview-callout">
-                    <div className="sd-callout-symbol">↗</div>
-                    <div><strong>Continue into the curriculum</strong><p>Open the curriculum and resources tab to explore topics, lessons and materials published for this subject.</p></div>
-                    <button type="button" onClick={() => handleTabSwitch('topics')}>Explore curriculum</button>
-                  </div>
-                </div>
-              )}
+  .sd-workspace-main,
+  .sd-aside-card,
+  .sd-stat-card,
+  .sd-account-strip {
+    background-color: var(--sd-surface);
+  }
+}
 
-              {activeTab === 'topics' && (
-                <div className="sd-curriculum-panel">
-                  <div className="sd-panel-heading">
-                    <div><span className="sd-panel-index">02 / LEARNING CONTENT</span><h3>Curriculum & resources</h3></div>
-                    <span>{contentLoading ? 'Loading…' : `${topicCount} topics · ${resourceCount} resources`}</span>
-                  </div>
-                  {contentLoading ? (
-                    <div className="sd-content-loading"><div className="loading-spinner" /><p>Loading published learning content…</p></div>
-                  ) : (contentTree.topics.length === 0 && contentTree.subjectResources.length === 0) ? (
-                    <div className="sd-empty-content">
-                      <div className="sd-empty-symbol">＋</div>
-                      <h4>Learning content is being prepared</h4>
-                      <p>There are no published topics or resources for this subject yet. New material will appear here when it is published.</p>
-                    </div>
-                  ) : (
-                    <div className="sd-topic-tree">
-                      {contentTree.subjectResources.length > 0 && (
-                        <section className="sd-topic-block sd-general-resources">
-                          <div className="sd-topic-block-heading"><div><span>FOUNDATION</span><h4>Subject resources</h4></div><small>{contentTree.subjectResources.length} items</small></div>
-                          <div className="sd-resource-list">
-                            {contentTree.subjectResources.map(r => (
-                              <button type="button" key={r.id} className="sd-resource-card" onClick={() => handleResourceClick(r)}>
-                                <span className="sd-res-icon">{getResourceIcon(r.type)}</span>
-                                <span className="sd-res-body"><strong className="sd-res-name">{r.name}</strong>{r.description && <span className="sd-res-desc">{r.description}</span>}</span>
-                                {r.is_free && <span className="sd-res-free">FREE</span>}
-                                <span className="sd-resource-arrow">↗</span>
-                              </button>
-                            ))}
-                          </div>
-                        </section>
-                      )}
+/* =========================================================
+   36. SMALL MOBILE RESPONSIVENESS
+========================================================= */
 
-                      {contentTree.topics.map((topic, index) => {
-                        const isExpanded = expandedTopics[topic.id] !== false;
-                        const topicResCount = (topic.resources?.length || 0) +
-                          (topic.subtopics?.reduce((total, sub) => total + (sub.resources?.length || 0), 0) || 0);
-                        return (
-                          <section key={topic.id} className="sd-topic-block">
-                            <button type="button" className="sd-topic-title" onClick={() => toggleTopic(topic.id)} aria-expanded={isExpanded}>
-                              <span className="sd-topic-number">{String(index + 1).padStart(2, '0')}</span>
-                              <span className="sd-topic-title-copy"><strong>{topic.name}</strong>{topic.description && <small>{topic.description}</small>}</span>
-                              <span className="sd-topic-count">{topicResCount} resources</span>
-                              <span className={`sd-toggle ${isExpanded ? 'expanded' : ''}`}>⌄</span>
-                            </button>
-                            {isExpanded && (
-                              <div className="sd-topic-content">
-                                {topic.resources?.length > 0 && (
-                                  <div className="sd-resource-list">
-                                    {topic.resources.map(r => (
-                                      <button type="button" key={r.id} className="sd-resource-card" onClick={() => handleResourceClick(r)}>
-                                        <span className="sd-res-icon">{getResourceIcon(r.type)}</span>
-                                        <span className="sd-res-body"><strong className="sd-res-name">{r.name}</strong>{r.description && <span className="sd-res-desc">{r.description}</span>}</span>
-                                        {r.is_free && <span className="sd-res-free">FREE</span>}
-                                        <span className="sd-resource-arrow">↗</span>
-                                      </button>
-                                    ))}
-                                  </div>
-                                )}
-                                {topic.subtopics?.map(sub => (
-                                  <div key={sub.id} className="sd-subtopic-block">
-                                    <div className="sd-subtopic-heading"><strong>{sub.name}</strong>{sub.description && <span>{sub.description}</span>}</div>
-                                    {sub.resources?.length > 0 && (
-                                      <div className="sd-resource-list">
-                                        {sub.resources.map(r => (
-                                          <button type="button" key={r.id} className="sd-resource-card" onClick={() => handleResourceClick(r)}>
-                                            <span className="sd-res-icon">{getResourceIcon(r.type)}</span>
-                                            <span className="sd-res-body"><strong className="sd-res-name">{r.name}</strong>{r.description && <span className="sd-res-desc">{r.description}</span>}</span>
-                                            {r.is_free && <span className="sd-res-free">FREE</span>}
-                                            <span className="sd-resource-arrow">↗</span>
-                                          </button>
-                                        ))}
-                                      </div>
-                                    )}
-                                  </div>
-                                ))}
-                              </div>
-                            )}
-                          </section>
-                        );
-                      })}
-                    </div>
-                  )}
-                </div>
-              )}
+@media (max-width: 560px) {
+  .sd-redesign {
+    padding: 18px 12px 40px;
+  }
 
-              {activeTab === 'schedule' && (
-                <div className="sd-schedule-panel">
-                  <span className="sd-panel-index">03 / YOUR SESSIONS</span>
-                  <h3>Learning schedule</h3>
-                  <div className="sd-empty-content">
-                    <div className="sd-empty-symbol">◷</div>
-                    <h4>Your subject sessions belong here</h4>
-                    <p>Session times should be shown from your actual bookings. Visit your dashboard to view and manage scheduled tutoring sessions.</p>
-                    <button type="button" className="sd-inline-action" onClick={() => navigate('/dashboard')}>Open learner dashboard →</button>
-                  </div>
-                </div>
-              )}
-            </div>
-          </div>
+  .sd-hero {
+    padding: 27px 20px;
+  }
 
-          <aside className="sd-workspace-aside">
-            <section className="sd-aside-card sd-about-card">
-              <span className="sd-section-kicker">SUBJECT DETAILS</span>
-              <h3>Learning profile</h3>
-              <div className="sd-aside-detail"><span>Subject tier</span><strong>{getCohortTier()}</strong></div>
-              <div className="sd-aside-detail"><span>Region</span><strong>{getRegion()}</strong></div>
-              <div className="sd-aside-detail"><span>Cloud hub</span><strong>{getAWSRegion()}</strong></div>
-              <div className="sd-aside-detail"><span>Published topics</span><strong>{contentLoading ? '—' : topicCount}</strong></div>
-            </section>
-            <section className="sd-aside-card sd-next-card">
-              <span className="sd-next-label">READY TO LEARN?</span>
-              <h3>Make progress, one topic at a time.</h3>
-              <p>Access the published learning material for {subject.name} in your curriculum workspace.</p>
-              <button type="button" onClick={() => handleTabSwitch('topics')}>View learning content <span>→</span></button>
-            </section>
-          </aside>
-        </section>
-      </div>
+  .sd-hero h1 {
+    font-size: 34px;
+  }
 
-      {activeResource && (
-        <div className="sd-viewer-overlay" onClick={() => setActiveResource(null)}>
-          <div className="sd-viewer" onClick={e => e.stopPropagation()}>
-            <button type="button" className="sd-viewer-close" onClick={() => setActiveResource(null)}>✕</button>
-            <h2>{getResourceIcon(activeResource.type)} {activeResource.name}</h2>
-            {activeResource.description && <p className="sd-viewer-desc">{activeResource.description}</p>}
-            {renderResourceViewer(activeResource)}
-          </div>
-        </div>
-      )}
-    </main>
-  );
-};
+  .sd-hero-copy > p {
+    font-size: 13px;
+  }
 
-export default SubjectDetail;
+  .sd-hero-actions {
+    flex-direction: column;
+  }
+
+  .sd-hero-mark {
+    right: 10px;
+    font-size: 90px;
+  }
+
+  .sd-stat-grid {
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+  }
+
+  .sd-stat-card {
+    gap: 9px;
+    min-height: 76px;
+    padding: 12px;
+  }
+
+  .sd-stat-icon {
+    width: 31px;
+    height: 31px;
+    flex-basis: 31px;
+  }
+
+  .sd-stat-card strong {
+    font-size: 15px;
+  }
+
+  .sd-stat-card div > span {
+    font-size: 9px;
+  }
+
+  .sd-section-heading {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .sd-workspace-aside {
+    grid-template-columns: 1fr;
+  }
+
+  .sd-tabs {
+    gap: 16px;
+  }
+
+  .sd-tabs button {
+    font-size: 10px;
+  }
+
+  .sd-tabs-header h2 {
+    font-size: 21px;
+  }
+
+  .sd-overview-facts {
+    grid-template-columns: 1fr;
+  }
+
+  .sd-overview-callout {
+    align-items: flex-start;
+    flex-wrap: wrap;
+  }
+
+  .sd-overview-callout button {
+    margin-left: 52px;
+  }
+
+  .sd-topic-content {
+    padding-right: 12px;
+    padding-left: 14px;
+  }
+
+  .sd-topic-title {
+    gap: 9px;
+    padding: 14px 12px;
+  }
+
+  .sd-topic-count {
+    display: none;
+  }
+
+  .sd-account-strip {
+    flex-wrap: wrap;
+  }
+
+  .sd-account-strip > span {
+    margin-left: 0;
+  }
+
+  .sd-panel-heading {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .sd-viewer {
+    max-height: 94vh;
+    padding: 22px;
+  }
+
+  .sd-viewer-embed iframe {
+    min-height: 350px;
+  }
+
+  .login-prompt-modal {
+    padding: 30px 22px;
+  }
+
+  .enrollment-status {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .subject-information {
+    grid-template-columns: 1fr;
+  }
+
+  .subject-header {
+    flex-direction: column;
+  }
+
+  .subject-tabs {
+    gap: 20px;
+    overflow-x: auto;
+  }
+
+  .subject-title {
+    font-size: 26px;
+  }
+}
+
+/* =========================================================
+   37. REDUCED MOTION ACCESSIBILITY
+========================================================= */
+
+@media (prefers-reduced-motion: reduce) {
+  .sd-redesign *,
+  .sd-redesign *::before,
+  .sd-redesign *::after {
+    scroll-behavior: auto !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}

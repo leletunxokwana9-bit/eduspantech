@@ -1,2033 +1,2823 @@
-/* Profile.css - Complete Dark Theme with Video Management */
-
-.profile-container {
-  max-width: 1200px;
-  margin: 0 auto;
-  padding: 32px 40px;
-  min-height: 100vh;
-  background: #0a0e1a !important;
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
-  transition: background 0.3s ease;
-}
-
-.profile-loading {
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  min-height: 60vh;
-  font-size: 16px;
-  color: rgba(255, 255, 255, 0.7) !important;
-}
-
-/* ===== HEADER ===== */
-.profile-header {
-  display: flex;
-  align-items: center;
-  gap: 24px;
-  padding: 28px 32px;
-  background: #141b2d !important;
-  border-radius: 12px;
-  border: 1px solid rgba(255, 255, 255, 0.06) !important;
-  margin-bottom: 36px;
-}
-
-.profile-avatar {
-  width: 80px;
-  height: 80px;
-  border-radius: 50%;
-  background: linear-gradient(135deg, #4f46e5, #7c3aed);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
-  cursor: pointer;
-  transition: all 0.2s ease;
-  position: relative;
-}
-
-.profile-avatar:hover {
-  transform: scale(1.05);
-  box-shadow: 0 8px 24px rgba(79, 70, 229, 0.3);
-}
-
-.profile-avatar-img {
-  width: 100%;
-  height: 100%;
-  border-radius: 50%;
-  object-fit: cover;
-}
-
-.profile-avatar-emoji {
-  font-size: 40px;
-}
-
-.avatar-edit-badge {
-  position: absolute;
-  bottom: -4px;
-  right: -4px;
-  background: #4f46e5;
-  color: white;
-  width: 28px;
-  height: 28px;
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 14px;
-  border: 2px solid #141b2d;
-  transition: all 0.2s ease;
-}
-
-.profile-avatar:hover .avatar-edit-badge {
-  transform: scale(1.1);
-  background: #7c3aed;
-}
-
-.profile-header-info {
-  flex: 1;
-}
-
-.profile-header-info h1 {
-  font-size: 28px;
-  font-weight: 600;
-  color: #ffffff !important;
-  margin: 0 0 4px 0;
-}
-
-.profile-header-subtitle {
-  font-size: 15px;
-  color: rgba(255, 255, 255, 0.6) !important;
-  margin: 0 0 8px 0;
-}
-
-.profile-status {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  background: rgba(34, 197, 94, 0.1);
-  padding: 4px 14px;
-  border-radius: 20px;
-  border: 1px solid rgba(34, 197, 94, 0.2);
-}
-
-.status-dot {
-  width: 8px;
-  height: 8px;
-  background: #22c55e !important;
-  border-radius: 50%;
-  display: inline-block;
-}
-
-.profile-status span:last-child {
-  font-size: 12px;
-  font-weight: 500;
-  color: #22c55e !important;
-}
-
-.profile-edit-btn {
-  padding: 10px 24px;
-  border-radius: 10px;
-  border: 1px solid rgba(255, 255, 255, 0.06) !important;
-  background: #141b2d !important;
-  color: #ffffff !important;
-  font-size: 14px;
-  font-weight: 600;
-  cursor: pointer;
-  transition: all 0.2s ease;
-  white-space: nowrap;
-}
-
-.profile-edit-btn:hover {
-  border-color: #ffffff !important;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
-  transform: translateY(-2px);
-}
-
-/* ===== MESSAGES ===== */
-.profile-error {
-  background: rgba(239, 68, 68, 0.1) !important;
-  color: #ef4444 !important;
-  padding: 12px 20px;
-  border-radius: 10px;
-  margin-bottom: 16px;
-  border: 1px solid rgba(239, 68, 68, 0.15) !important;
-}
-
-.profile-success {
-  background: rgba(34, 197, 94, 0.1) !important;
-  color: #22c55e !important;
-  padding: 12px 20px;
-  border-radius: 10px;
-  margin-bottom: 16px;
-  border: 1px solid rgba(34, 197, 94, 0.15) !important;
-}
-
-/* ===== STATS ===== */
-.profile-stats {
-  display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: 16px;
-  margin-bottom: 28px;
-}
-
-.profile-stat-card {
-  background: #141b2d !important;
-  border-radius: 12px;
-  padding: 20px 24px;
-  border: 1px solid rgba(255, 255, 255, 0.06) !important;
-  text-align: center;
-  transition: all 0.2s ease;
-}
-
-.profile-stat-card:hover {
-  border-color: rgba(255, 255, 255, 0.12) !important;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
-}
-
-.stat-number {
-  display: block;
-  font-size: 32px;
-  font-weight: 700;
-  color: #ffffff !important;
-  line-height: 1.2;
-}
-
-.stat-label {
-  display: block;
-  font-size: 14px;
-  color: rgba(255, 255, 255, 0.6) !important;
-  font-weight: 500;
-  margin-top: 4px;
-}
-
-/* ===== SUBSCRIPTION BANNER ===== */
-.subscription-banner {
-  display: flex;
-  align-items: center;
-  gap: 16px;
-  padding: 12px 20px;
-  background: rgba(79, 70, 229, 0.1);
-  border-radius: 12px;
-  border: 1px solid rgba(79, 70, 229, 0.15);
-  margin-bottom: 20px;
-}
-
-.subscription-tier {
-  font-size: 14px;
-  font-weight: 600;
-  color: #818cf8 !important;
-}
-
-.subscription-status {
-  font-size: 13px;
-  color: #22c55e !important;
-  background: rgba(34, 197, 94, 0.1);
-  padding: 2px 12px;
-  border-radius: 12px;
-}
-
-.subscription-end {
-  font-size: 13px;
-  color: rgba(255, 255, 255, 0.4) !important;
-  margin-left: auto;
-}
-
-/* ===== PROFILE GRID ===== */
-.profile-grid {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 24px;
-}
-
-.profile-card {
-  background: #141b2d !important;
-  border-radius: 12px;
-  padding: 24px 28px;
-  border: 1px solid rgba(255, 255, 255, 0.06) !important;
-}
-
-.profile-card.full-width {
-  grid-column: 1 / -1;
-}
-
-.profile-card h3 {
-  font-size: 18px;
-  font-weight: 600;
-  color: #ffffff !important;
-  margin: 0 0 20px 0;
-  padding-bottom: 12px;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.06) !important;
-}
-
-/* ============================================
-   ✅ NEW: TUTOR PROFILE — CLEAN GRID LAYOUT
-   ============================================ */
-.tutor-profile-grid {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 20px 28px;
-}
-
-.tutor-field {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-  min-width: 0;
-}
-
-.tutor-field-full {
-  grid-column: 1 / -1;
-}
-
-.tutor-field-label {
-  font-size: 12px;
-  font-weight: 600;
-  color: rgba(255, 255, 255, 0.5) !important;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-  margin-bottom: 2px;
-}
-
-.tutor-field-value {
-  font-size: 15px;
-  color: #ffffff !important;
-  font-weight: 500;
-  line-height: 1.5;
-  word-break: break-word;
-}
-
-.tutor-field-bio {
-  font-size: 14px;
-  color: rgba(255, 255, 255, 0.75) !important;
-  font-weight: 400;
-  line-height: 1.7;
-  margin: 0;
-  padding: 10px 14px;
-  background: rgba(255, 255, 255, 0.03);
-  border: 1px solid rgba(255, 255, 255, 0.06);
-  border-radius: 8px;
-}
-
-.tutor-field-empty {
-  font-size: 14px;
-  color: rgba(255, 255, 255, 0.4) !important;
-  font-style: italic;
-}
-
-.tutor-field-link {
-  color: #818cf8 !important;
-  text-decoration: none;
-  word-break: break-all;
-  transition: color 0.2s ease;
-}
-
-.tutor-field-link:hover {
-  color: #a5b4fc !important;
-  text-decoration: underline;
-}
-
-.tutor-input,
-.tutor-select {
-  width: 100% !important;
-  padding: 10px 14px;
-  font-size: 14px;
-}
-
-.tutor-textarea {
-  width: 100% !important;
-  font-family: inherit;
-  resize: vertical;
-  min-height: 100px;
-  padding: 12px 14px;
-  line-height: 1.6;
-}
-
-/* Subjects — display mode */
-.tutor-subjects-display {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-  padding-top: 2px;
-}
-
-.tutor-subject-tag {
-  font-size: 13px;
-  padding: 5px 14px;
-  border-radius: 20px;
-  background: rgba(79, 70, 229, 0.15);
-  color: #a5b4fc !important;
-  border: 1px solid rgba(79, 70, 229, 0.25);
-  font-weight: 500;
-  transition: all 0.2s ease;
-}
-
-.tutor-subject-tag:hover {
-  background: rgba(79, 70, 229, 0.25);
-  border-color: rgba(79, 70, 229, 0.4);
-}
-
-/* Subjects — edit mode */
-.tutor-subjects-edit {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 10px 18px;
-  padding: 12px 14px;
-  background: rgba(255, 255, 255, 0.03);
-  border: 1px solid rgba(255, 255, 255, 0.06);
-  border-radius: 8px;
-}
-
-.tutor-subject-checkbox-label {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  font-size: 14px;
-  color: #e2e8f0 !important;
-  cursor: pointer;
-  padding: 4px 0;
-  transition: color 0.2s ease;
-}
-
-.tutor-subject-checkbox-label:hover {
-  color: #ffffff !important;
-}
-
-/* Video field */
-.tutor-video-field {
-  margin-top: 8px;
-  padding-top: 20px;
-  border-top: 1px solid rgba(255, 255, 255, 0.06);
-}
-
-.tutor-video-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  margin-bottom: 10px;
-  gap: 12px;
-  flex-wrap: wrap;
-}
-
-.tutor-video-hint {
-  font-size: 13px;
-  color: rgba(255, 255, 255, 0.5) !important;
-  margin: 0 0 14px 0;
-  line-height: 1.5;
-}
-
-/* ===== PERSONAL INFO ===== */
-.profile-info-group {
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
-}
-
-.profile-info-item {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 6px 0;
-}
-
-.info-label {
-  font-size: 13px;
-  font-weight: 500;
-  color: rgba(255, 255, 255, 0.6) !important;
-}
-
-.info-value {
-  font-size: 15px;
-  color: #ffffff !important;
-  font-weight: 500;
-}
-
-.profile-input,
-.profile-select {
-  padding: 8px 12px;
-  border: 1px solid rgba(255, 255, 255, 0.06) !important;
-  border-radius: 8px;
-  font-size: 14px;
-  width: 60%;
-  background: rgba(255, 255, 255, 0.04) !important;
-  color: #ffffff !important;
-  transition: border-color 0.2s;
-}
-
-.profile-input::placeholder {
-  color: rgba(255, 255, 255, 0.3) !important;
-}
-
-.profile-input:focus,
-.profile-select:focus {
-  outline: none;
-  border-color: #4f46e5 !important;
-  box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.1);
-}
-
-.profile-select option {
-  background: #141b2d !important;
-  color: #ffffff !important;
-}
-
-.profile-actions {
-  margin-top: 20px;
-  padding-top: 16px;
-  border-top: 1px solid rgba(255, 255, 255, 0.06) !important;
-}
-
-.profile-save-btn {
-  padding: 10px 28px;
-  background: linear-gradient(135deg, #4f46e5, #7c3aed) !important;
-  color: #ffffff !important;
-  border: none;
-  border-radius: 10px;
-  font-size: 14px;
-  font-weight: 600;
-  cursor: pointer;
-  transition: all 0.2s ease;
-}
-
-.profile-save-btn:hover:not(:disabled) {
-  transform: translateY(-2px);
-  box-shadow: 0 8px 24px rgba(79, 70, 229, 0.3);
-}
-
-.profile-save-btn:disabled {
-  opacity: 0.6;
-  cursor: not-allowed;
-}
-
-/* ===== SETTINGS LIST ===== */
-.profile-settings-list {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-}
-
-.profile-setting-item {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 14px 16px;
-  border-radius: 10px;
-  border: 1px solid rgba(255, 255, 255, 0.06) !important;
-  transition: all 0.2s ease;
-}
-
-.profile-setting-item:hover {
-  background: rgba(255, 255, 255, 0.03) !important;
-}
-
-.profile-setting-item.danger {
-  border-color: rgba(239, 68, 68, 0.2) !important;
-}
-
-.profile-setting-item.danger:hover {
-  background: rgba(239, 68, 68, 0.05) !important;
-}
-
-.setting-info {
-  display: flex;
-  align-items: center;
-  gap: 14px;
-}
-
-.setting-icon {
-  font-size: 20px;
-}
-
-.setting-info h4 {
-  font-size: 14px;
-  font-weight: 600;
-  color: #ffffff !important;
-  margin: 0 0 2px 0;
-}
-
-.setting-info p {
-  font-size: 13px;
-  color: rgba(255, 255, 255, 0.6) !important;
-  margin: 0;
-}
-
-.setting-action-btn {
-  padding: 6px 18px;
-  border-radius: 8px;
-  border: 1px solid rgba(255, 255, 255, 0.06) !important;
-  background: rgba(255, 255, 255, 0.04) !important;
-  color: #ffffff !important;
-  font-size: 13px;
-  font-weight: 500;
-  cursor: pointer;
-  transition: all 0.2s ease;
-  white-space: nowrap;
-}
-
-.setting-action-btn:hover {
-  border-color: rgba(255, 255, 255, 0.12) !important;
-  background: rgba(255, 255, 255, 0.08) !important;
-}
-
-.setting-action-btn.danger {
-  border-color: rgba(239, 68, 68, 0.2) !important;
-  color: #ef4444 !important;
-}
-
-.setting-action-btn.danger:hover {
-  background: rgba(239, 68, 68, 0.1) !important;
-  border-color: rgba(239, 68, 68, 0.3) !important;
-}
-
-/* ===== ENROLLED COURSES ===== */
-.profile-courses-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
-  gap: 12px;
-}
-
-.profile-course-card {
-  display: flex;
-  align-items: center;
-  gap: 14px;
-  padding: 14px 18px;
-  border-radius: 10px;
-  border: 1px solid rgba(255, 255, 255, 0.06) !important;
-  cursor: pointer;
-  transition: all 0.2s ease;
-}
-
-.profile-course-card:hover {
-  border-color: #ffffff !important;
-  background: rgba(255, 255, 255, 0.03) !important;
-  transform: translateY(-2px);
-}
-
-.course-icon {
-  font-size: 28px;
-  flex-shrink: 0;
-}
-
-.course-info h4 {
-  font-size: 14px;
-  font-weight: 600;
-  color: #ffffff !important;
-  margin: 0 0 2px 0;
-}
-
-.course-tier {
-  font-size: 12px;
-  color: rgba(255, 255, 255, 0.5) !important;
-}
-
-.course-progress {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  min-width: 70px;
-}
-
-.progress-bar {
-  flex: 1;
-  height: 6px;
-  background: rgba(255, 255, 255, 0.06) !important;
-  border-radius: 4px;
-  overflow: hidden;
-  min-width: 40px;
-}
-
-.progress-fill {
-  height: 100%;
-  background: linear-gradient(135deg, #4f46e5, #7c3aed);
-  border-radius: 4px;
-  transition: width 0.6s ease;
-}
-
-.progress-text {
-  font-size: 12px;
-  font-weight: 600;
-  color: #ffffff !important;
-  min-width: 36px;
-  text-align: right;
-}
-
-/* ===== EMPTY STATE ===== */
-.profile-empty-state {
-  text-align: center;
-  padding: 32px 0;
-  color: rgba(255, 255, 255, 0.5) !important;
-}
-
-.profile-empty-btn {
-  margin-top: 12px;
-  padding: 10px 28px;
-  background: linear-gradient(135deg, #4f46e5, #7c3aed) !important;
-  color: #ffffff !important;
-  border: none;
-  border-radius: 10px;
-  font-size: 14px;
-  font-weight: 600;
-  cursor: pointer;
-  transition: all 0.2s ease;
-}
-
-.profile-empty-btn:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 8px 24px rgba(79, 70, 229, 0.3);
-}
-
-/* ============================================
-   MODALS - MATCHING TUTORS PAGE STYLE
-   ============================================ */
-.profile-modal-overlay {
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background: rgba(0, 0, 0, 0.7);
-  backdrop-filter: blur(8px);
-  -webkit-backdrop-filter: blur(8px);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 1000;
-  animation: modalFadeIn 0.3s ease;
-  padding: 20px;
-}
-
-@keyframes modalFadeIn {
-  from { opacity: 0; }
-  to { opacity: 1; }
-}
-
-@keyframes modalSlideUp {
-  from { opacity: 0; transform: translateY(30px) scale(0.95); }
-  to { opacity: 1; transform: translateY(0) scale(1); }
-}
-
-.profile-modal {
-  background: #141b2d !important;
-  border-radius: 16px;
-  max-width: 500px;
-  width: 100%;
-  max-height: 90vh;
-  overflow: hidden;
-  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
-  border: 1px solid rgba(255, 255, 255, 0.06) !important;
-  animation: modalSlideUp 0.3s ease;
-  display: flex;
-  flex-direction: column;
-}
-
-.profile-modal-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 20px 24px;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.06) !important;
-  flex-shrink: 0;
-}
-
-.profile-modal-header.danger {
-  border-bottom-color: rgba(239, 68, 68, 0.2) !important;
-}
-
-.profile-modal-header h3 {
-  font-size: 18px;
-  font-weight: 600;
-  color: #ffffff !important;
-  margin: 0;
-}
-
-.modal-close {
-  background: none;
-  border: none;
-  font-size: 28px;
-  color: rgba(255, 255, 255, 0.4) !important;
-  cursor: pointer;
-  padding: 0 8px;
-  transition: color 0.2s ease;
-  line-height: 1;
-}
-
-.modal-close:hover {
-  color: #ffffff !important;
-}
-
-.modal-close:disabled {
-  opacity: 0.3;
-  cursor: not-allowed;
-}
-
-.profile-modal-body {
-  padding: 24px;
-  overflow-y: auto;
-  flex: 1;
-}
-
-.profile-modal-body .form-group {
-  margin-bottom: 16px;
-}
-
-.profile-modal-body .form-group label {
-  display: block;
-  font-size: 13px;
-  font-weight: 500;
-  color: rgba(255, 255, 255, 0.6) !important;
-  margin-bottom: 4px;
-}
-
-.profile-modal-body .form-group input {
-  width: 100%;
-  padding: 10px 14px;
-  border: 1px solid rgba(255, 255, 255, 0.06) !important;
-  border-radius: 8px;
-  font-size: 14px;
-  background: rgba(255, 255, 255, 0.04) !important;
-  color: #ffffff !important;
-  box-sizing: border-box;
-}
-
-.profile-modal-body .form-group input::placeholder {
-  color: rgba(255, 255, 255, 0.3) !important;
-}
-
-.profile-modal-body .form-group input:focus {
-  outline: none;
-  border-color: #4f46e5 !important;
-  box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.1);
-}
-
-.delete-warning {
-  font-size: 15px;
-  color: #ef4444 !important;
-  margin-bottom: 12px;
-}
-
-.profile-modal-actions {
-  display: flex;
-  justify-content: flex-end;
-  gap: 12px;
-  padding: 16px 24px;
-  border-top: 1px solid rgba(255, 255, 255, 0.06) !important;
-  flex-shrink: 0;
-}
-
-.modal-cancel {
-  padding: 10px 24px;
-  border: 1px solid rgba(255, 255, 255, 0.06) !important;
-  border-radius: 8px;
-  background: rgba(255, 255, 255, 0.04) !important;
-  color: #ffffff !important;
-  font-size: 14px;
-  font-weight: 500;
-  cursor: pointer;
-  transition: all 0.2s ease;
-}
-
-.modal-cancel:hover {
-  background: rgba(255, 255, 255, 0.08) !important;
-}
-
-.modal-submit {
-  padding: 10px 24px;
-  border: none;
-  border-radius: 8px;
-  background: linear-gradient(135deg, #4f46e5, #7c3aed) !important;
-  color: #ffffff !important;
-  font-size: 14px;
-  font-weight: 500;
-  cursor: pointer;
-  transition: all 0.2s ease;
-}
-
-.modal-submit:hover:not(:disabled) {
-  transform: translateY(-2px);
-  box-shadow: 0 8px 24px rgba(79, 70, 229, 0.3);
-}
-
-.modal-submit:disabled {
-  opacity: 0.6;
-  cursor: not-allowed;
-}
-
-.modal-delete {
-  padding: 10px 24px;
-  border: none;
-  border-radius: 8px;
-  background: #dc2626 !important;
-  color: #ffffff !important;
-  font-size: 14px;
-  font-weight: 500;
-  cursor: pointer;
-  transition: all 0.2s ease;
-}
-
-.modal-delete:hover:not(:disabled) {
-  background: #b91c1c !important;
-}
-
-.modal-delete:disabled {
-  opacity: 0.6;
-  cursor: not-allowed;
-}
-
-/* ============================================
-   VIDEO MANAGER MODAL
-   ============================================ */
-.video-manager-modal {
-  max-width: 500px;
-}
-
-.video-manager-body {
-  padding: 20px 24px;
-}
-
-.video-current-display {
-  margin-bottom: 16px;
-}
-
-.video-preview-container {
-  position: relative;
-  border-radius: 8px;
-  overflow: hidden;
-  background: #0a0e1a;
-}
-
-.video-play-overlay {
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: rgba(0, 0, 0, 0.2);
-  transition: background 0.3s ease;
-}
-
-.video-preview-container:hover .video-play-overlay {
-  background: rgba(0, 0, 0, 0.1);
-}
-
-.play-button {
-  width: 56px;
-  height: 56px;
-  border-radius: 50%;
-  background: rgba(79, 70, 229, 0.9);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
-  transition: transform 0.3s ease;
-}
-
-.play-button:hover {
-  transform: scale(1.1);
-}
-
-.play-icon {
-  color: white;
-  font-size: 28px;
-  margin-left: 4px;
-}
-
-.video-info-badge {
-  display: flex;
-  gap: 16px;
-  padding: 8px 12px;
-  font-size: 13px;
-  color: #94a3b8;
-  background: rgba(255, 255, 255, 0.03);
-  border-radius: 0 0 8px 8px;
-  flex-wrap: wrap;
-}
-
-.video-status-text {
-  font-size: 14px;
-  color: #22c55e;
-  margin-top: 8px;
-}
-
-.video-preview-section {
-  margin-bottom: 16px;
-}
-
-.video-file-info {
-  display: flex;
-  gap: 12px;
-  padding: 8px 12px;
-  font-size: 13px;
-  color: #94a3b8;
-  background: rgba(255, 255, 255, 0.03);
-  border-radius: 0 0 8px 8px;
-  flex-wrap: wrap;
-}
-
-.video-file-info span:first-child {
-  color: #ffffff;
-  font-weight: 500;
-}
-
-.video-progress-container {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  margin-top: 12px;
-}
-
-.video-progress-bar {
-  flex: 1;
-  height: 6px;
-  background: rgba(255, 255, 255, 0.06);
-  border-radius: 4px;
-  overflow: hidden;
-}
-
-.video-progress-fill {
-  height: 100%;
-  background: linear-gradient(135deg, #4f46e5, #7c3aed);
-  border-radius: 4px;
-  transition: width 0.3s ease;
-}
-
-.video-progress-text {
-  font-size: 13px;
-  color: #94a3b8;
-  min-width: 36px;
-}
-
-.video-upload-zone {
-  border: 2px dashed rgba(255, 255, 255, 0.15);
-  border-radius: 12px;
-  padding: 40px 20px;
-  text-align: center;
-  cursor: pointer;
-  transition: all 0.3s ease;
-  background: rgba(255, 255, 255, 0.02);
-  margin-bottom: 16px;
-}
-
-.video-upload-zone:hover {
-  border-color: rgba(79, 70, 229, 0.4);
-  background: rgba(79, 70, 229, 0.05);
-}
-
-.video-upload-zone .upload-icon {
-  font-size: 48px;
-  display: block;
-  margin-bottom: 8px;
-}
-
-.video-upload-zone p {
-  font-size: 15px;
-  color: #e2e8f0;
-  margin: 0 0 4px 0;
-}
-
-.video-upload-zone small {
-  font-size: 12px;
-  color: #94a3b8;
-}
-
-.video-actions {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 10px;
-  margin-top: 4px;
-}
-
-.video-action-btn {
-  padding: 10px 24px;
-  border: none;
-  border-radius: 8px;
-  font-size: 14px;
-  font-weight: 500;
-  cursor: pointer;
-  transition: all 0.2s ease;
-  flex: 1;
-  min-width: 100px;
-  text-align: center;
-}
-
-.video-action-btn:hover:not(:disabled) {
-  transform: translateY(-2px);
-}
-
-.video-action-btn:disabled {
-  opacity: 0.6;
-  cursor: not-allowed;
-}
-
-.video-action-btn.primary {
-  background: linear-gradient(135deg, #4f46e5, #7c3aed);
-  color: #ffffff;
-}
-
-.video-action-btn.primary:hover:not(:disabled) {
-  box-shadow: 0 8px 24px rgba(79, 70, 229, 0.3);
-}
-
-.video-action-btn.secondary {
-  background: rgba(255, 255, 255, 0.06);
-  color: #ffffff;
-  border: 1px solid rgba(255, 255, 255, 0.08);
-}
-
-.video-action-btn.secondary:hover:not(:disabled) {
-  background: rgba(255, 255, 255, 0.1);
-}
-
-.video-action-btn.danger {
-  background: rgba(239, 68, 68, 0.1);
-  color: #fca5a5;
-  border: 1px solid rgba(239, 68, 68, 0.2);
-}
-
-.video-action-btn.danger:hover:not(:disabled) {
-  background: rgba(239, 68, 68, 0.2);
-}
-
-.video-action-btn.cancel {
-  background: rgba(255, 255, 255, 0.04);
-  color: #94a3b8;
-  border: 1px solid rgba(255, 255, 255, 0.06);
-}
-
-.video-action-btn.cancel:hover:not(:disabled) {
-  background: rgba(255, 255, 255, 0.08);
-}
-
-.video-action-btn.full-width {
-  flex: 1 1 100%;
-}
-
-.uploading-status {
-  display: flex;
-  align-items: center;
-  padding: 8px 16px;
-  color: #94a3b8;
-  font-size: 14px;
-  flex: 1;
-}
-
-/* ============================================
-   VIDEO PREVIEW MODAL
-   ============================================ */
-.video-preview-modal {
-  max-width: 640px;
-}
-
-.video-preview-modal .profile-modal-body {
-  padding: 20px 24px;
-}
-
-.video-preview-info {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  padding: 12px;
-  margin-top: 12px;
-  font-size: 13px;
-  color: #94a3b8;
-  background: rgba(255, 255, 255, 0.03);
-  border-radius: 8px;
-}
-
-.video-preview-info p {
-  margin: 0;
-}
-
-.video-preview-info div {
-  display: flex;
-  gap: 16px;
-  flex-wrap: wrap;
-}
-
-/* ============================================
-   SCROLLBAR
-   ============================================ */
-.profile-container::-webkit-scrollbar {
-  width: 8px;
-}
-
-.profile-container::-webkit-scrollbar-track {
-  background: #141b2d;
-}
-
-.profile-container::-webkit-scrollbar-thumb {
-  background: rgba(255, 255, 255, 0.15);
-  border-radius: 4px;
-}
-
-.profile-container::-webkit-scrollbar-thumb:hover {
-  background: rgba(255, 255, 255, 0.25);
-}
-
-.profile-modal::-webkit-scrollbar {
-  width: 6px;
-}
-
-.profile-modal::-webkit-scrollbar-track {
-  background: rgba(255, 255, 255, 0.03);
-  border-radius: 3px;
-}
-
-.profile-modal::-webkit-scrollbar-thumb {
-  background: rgba(255, 255, 255, 0.1);
-  border-radius: 3px;
-}
-
-.profile-modal::-webkit-scrollbar-thumb:hover {
-  background: rgba(255, 255, 255, 0.2);
-}
-
-/* ============================================
-   RESPONSIVE
-   ============================================ */
-@media (max-width: 1024px) {
-  .profile-grid {
-    grid-template-columns: 1fr;
+// src/pages/Profile.js
+// COMPLETE PROFILE PAGE
+// Includes UUID-safe tutor shift handling, tutor weekly availability,
+// profile editing, student/tutor statistics, avatar/photo uploads,
+// intro video management, password changes and account deletion.
+
+import React, { useState, useEffect, useRef } from 'react';
+import { useNavigate } from 'react-router-dom';
+import authService from '../services/authService';
+import AvatarSelector from '../components/AvatarSelector';
+import { API_BASE_URL } from '../services/api';
+import { tutorService } from '../services/tutorService';
+import './Profile.css';
+
+// PostgreSQL EXTRACT(DOW):
+// Sunday = 0, Monday = 1, ... Saturday = 6.
+const TUTOR_WEEK_DAYS = [
+  { dayOfWeek: 1, name: 'Monday' },
+  { dayOfWeek: 2, name: 'Tuesday' },
+  { dayOfWeek: 3, name: 'Wednesday' },
+  { dayOfWeek: 4, name: 'Thursday' },
+  { dayOfWeek: 5, name: 'Friday' },
+  { dayOfWeek: 6, name: 'Saturday' },
+  { dayOfWeek: 0, name: 'Sunday' }
+];
+
+const createEmptyAvailability = () =>
+  TUTOR_WEEK_DAYS.map((day) => ({
+    ...day,
+    enabled: false,
+    slots: []
+  }));
+
+// Safely handles common API response formats.
+const extractAvailabilitySlots = (result) => {
+  if (Array.isArray(result)) return result;
+  if (Array.isArray(result?.availability)) return result.availability;
+  if (Array.isArray(result?.slots)) return result.slots;
+  if (Array.isArray(result?.data?.availability)) {
+    return result.data.availability;
+  }
+  if (Array.isArray(result?.data?.slots)) {
+    return result.data.slots;
+  }
+  return null;
+};
+
+// Converts database/API slots into the format used by the UI.
+const mapAvailabilitySlots = (slots) => {
+  const safeSlots = Array.isArray(slots) ? slots : [];
+
+  return TUTOR_WEEK_DAYS.map((day) => {
+    const daySlots = safeSlots
+      .filter((slot) => {
+        const dayValue =
+          slot.day_of_week ??
+          slot.dayOfWeek ??
+          slot.day;
+
+        return Number(dayValue) === day.dayOfWeek;
+      })
+      .map((slot) => ({
+        startTime: String(
+          slot.start_time ??
+          slot.startTime ??
+          ''
+        ).slice(0, 5),
+
+        endTime: String(
+          slot.end_time ??
+          slot.endTime ??
+          ''
+        ).slice(0, 5)
+      }))
+      .filter((slot) => slot.startTime && slot.endTime);
+
+    return {
+      ...day,
+      enabled: daySlots.length > 0,
+      slots: daySlots
+    };
+  });
+};
+
+const readJsonResponse = async (response) => {
+  const text = await response.text();
+
+  if (!text) return {};
+
+  try {
+    return JSON.parse(text);
+  } catch {
+    throw new Error('The server returned an invalid response.');
+  }
+};
+
+const Profile = () => {
+  const navigate = useNavigate();
+
+  const [user, setUser] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+  const [success, setSuccess] = useState('');
+  const [isEditing, setIsEditing] = useState(false);
+  const [isTutor, setIsTutor] = useState(false);
+
+  const [subjectOptions, setSubjectOptions] = useState([]);
+  const [shiftOptions, setShiftOptions] = useState([]);
+
+  const [editForm, setEditForm] = useState({
+    name: '',
+    email: '',
+    country: '',
+    timezone: '',
+    grade: '',
+    bio: '',
+    tier: '',
+    subjects: [],
+    shiftId: '',
+    yearsExperience: 0,
+    education: '',
+    phone: '',
+    linkedin: '',
+    website: ''
+  });
+
+  const [passwordData, setPasswordData] = useState({
+    currentPassword: '',
+    newPassword: '',
+    confirmPassword: ''
+  });
+
+  const [showPasswordModal, setShowPasswordModal] = useState(false);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+
+  const [enrollments, setEnrollments] = useState([]);
+
+  const [studentStats, setStudentStats] = useState({
+    coursesEnrolled: 0,
+    hoursSpent: 0,
+    badgesEarned: 0,
+    completionRate: 0
+  });
+
+  const [tutorStats, setTutorStats] = useState({
+    totalSessions: 0,
+    studentsTaught: 0,
+    totalEarnings: 0,
+    avgRating: 0,
+    ratingCount: 0
+  });
+
+  const [subscription, setSubscription] = useState(null);
+
+  const [showAvatarSelector, setShowAvatarSelector] = useState(false);
+  const [avatarData, setAvatarData] = useState(null);
+  const [avatarImage, setAvatarImage] = useState(null);
+
+  const [profilePhoto, setProfilePhoto] = useState(null);
+  const [photoUploading, setPhotoUploading] = useState(false);
+  const [photoError, setPhotoError] = useState('');
+
+  const fileInputRef = useRef(null);
+
+  // VIDEO STATE
+  const [videoFile, setVideoFile] = useState(null);
+  const [videoPreview, setVideoPreview] = useState(null);
+  const [videoUploading, setVideoUploading] = useState(false);
+  const [videoProgress, setVideoProgress] = useState(0);
+  const [videoUrl, setVideoUrl] = useState(null);
+  const [videoDuration, setVideoDuration] = useState(0);
+  const [videoThumbnail, setVideoThumbnail] = useState(null);
+  const [showVideoModal, setShowVideoModal] = useState(false);
+  const [videoViews, setVideoViews] = useState(0);
+  const videoFileInputRef = useRef(null);
+
+  const [showVideoManager, setShowVideoManager] = useState(false);
+
+  // TUTOR WEEKLY AVAILABILITY
+  const [availabilityDays, setAvailabilityDays] = useState(
+    createEmptyAvailability
+  );
+  const [availabilityLoading, setAvailabilityLoading] = useState(false);
+  const [availabilitySaving, setAvailabilitySaving] = useState(false);
+  const [availabilityMessage, setAvailabilityMessage] = useState('');
+  const [availabilityError, setAvailabilityError] = useState(false);
+  // ✅ NEW: tracks whether the availability form has unsaved edits.
+  const [availabilityDirty, setAvailabilityDirty] = useState(false);
+
+  // SUCCESS MESSAGE TIMER
+  useEffect(() => {
+    if (!success) return undefined;
+
+    const timer = setTimeout(() => setSuccess(''), 5000);
+    return () => clearTimeout(timer);
+  }, [success]);
+
+  // FETCH SUBJECTS AND SHIFTS
+  useEffect(() => {
+    let cancelled = false;
+
+    const fetchOptions = async () => {
+      try {
+        const [subjectsResponse, shiftsResponse] = await Promise.all([
+          fetch(`${API_BASE_URL}/content/subjects`),
+          fetch(`${API_BASE_URL}/shifts`)
+        ]);
+
+        if (subjectsResponse.ok) {
+          const data = await readJsonResponse(subjectsResponse);
+
+          if (!cancelled && data.success && Array.isArray(data.subjects)) {
+            setSubjectOptions(
+              data.subjects
+                .map((subject) => subject.name)
+                .filter(Boolean)
+            );
+          }
+        }
+
+        if (shiftsResponse.ok) {
+          const data = await readJsonResponse(shiftsResponse);
+
+          if (!cancelled && data.success && Array.isArray(data.shifts)) {
+            setShiftOptions(data.shifts);
+          }
+        }
+      } catch (err) {
+        console.error('Failed to fetch profile options:', err);
+      }
+    };
+
+    fetchOptions();
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  // FETCH USER DATA
+  const fetchUserData = async () => {
+    try {
+      const token = localStorage.getItem('accessToken');
+
+      if (!token) {
+        navigate('/login');
+        return;
+      }
+
+      const userData =
+        await authService.getCurrentUserWithSubscription();
+
+      if (!userData) {
+        navigate('/login');
+        return;
+      }
+
+      setUser(userData);
+
+      const isTutorAccount =
+        userData.is_tutor === true ||
+        userData.role === 'tutor';
+
+      setIsTutor(isTutorAccount);
+
+      if (userData.avatar) {
+        if (isTutorAccount) {
+          setProfilePhoto(userData.avatar);
+        } else {
+          setAvatarImage(userData.avatar);
+          setAvatarData({
+            id: userData.avatar_seed || 'default',
+            seed: userData.avatar_seed || 'default',
+            style: userData.avatar_style || 'adventurer'
+          });
+        }
+      }
+
+      if (userData.intro_video_url) {
+        setVideoUrl(userData.intro_video_url);
+        setVideoThumbnail(userData.intro_video_thumbnail || null);
+        setVideoDuration(Number(userData.intro_video_duration) || 0);
+        setVideoViews(Number(userData.intro_video_views) || 0);
+      } else {
+        setVideoUrl(null);
+        setVideoThumbnail(null);
+        setVideoDuration(0);
+        setVideoViews(0);
+      }
+
+      if (userData.subscription || userData.subscriptionTier) {
+        setSubscription({
+          tier:
+            userData.subscriptionTier ||
+            userData.subscription?.tier ||
+            'SILVER',
+          status:
+            userData.subscriptionStatus ||
+            userData.subscription?.status ||
+            'active',
+          endDate:
+            userData.subscriptionEnd ||
+            userData.subscription?.end_date
+        });
+      }
+
+      setEditForm({
+        name: userData.name || '',
+        email: userData.email || '',
+        country: userData.country || '',
+        timezone: userData.timezone || '',
+        grade: userData.grade || '',
+        bio: userData.bio || '',
+        tier: userData.tutor_tier || userData.tier || '',
+        subjects: Array.isArray(userData.tutor_subjects)
+          ? userData.tutor_subjects
+          : [],
+        shiftId: userData.tutor_shift_id || '',
+        yearsExperience: userData.years_experience || 0,
+        education: userData.education || '',
+        phone: userData.phone || '',
+        linkedin: userData.linkedin || '',
+        website: userData.website || ''
+      });
+
+      if (isTutorAccount) {
+        await fetchTutorStats(userData);
+      } else {
+        await fetchStudentStats();
+      }
+    } catch (err) {
+      console.error('Failed to load profile data:', err);
+      setError('Failed to load profile data.');
+      navigate('/login');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // STUDENT STATISTICS
+  const fetchStudentStats = async () => {
+    try {
+      const token = localStorage.getItem('accessToken');
+      if (!token) return;
+
+      const response = await fetch(
+        `${API_BASE_URL}/content/my/subjects`,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          }
+        }
+      );
+
+      if (!response.ok) return;
+
+      const data = await readJsonResponse(response);
+
+      if (data.success) {
+        const subjects = Array.isArray(data.subjects)
+          ? data.subjects
+          : [];
+
+        setEnrollments(subjects);
+
+        setStudentStats({
+          coursesEnrolled: subjects.length,
+          hoursSpent: 0,
+          badgesEarned: 0,
+          completionRate:
+            subjects.length > 0
+              ? Math.min(subjects.length * 20, 100)
+              : 0
+        });
+      }
+    } catch (err) {
+      console.error('Failed to fetch student stats:', err);
+    }
+  };
+
+  // TUTOR STATISTICS
+  const fetchTutorStats = async (userData) => {
+    try {
+      const token = localStorage.getItem('accessToken');
+      if (!token) return;
+
+      let rating = Number(
+        userData?.tutor_rating ??
+        userData?.rating ??
+        4.5
+      );
+      let ratingCount = 0;
+
+      try {
+        const tutorsResponse = await fetch(`${API_BASE_URL}/tutors`, {
+          headers: {
+            Authorization: `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          }
+        });
+
+        if (tutorsResponse.ok) {
+          const tutorsData = await readJsonResponse(tutorsResponse);
+
+          for (const shift of (tutorsData.tutors || [])) {
+            const tutor = shift.tutors?.find(
+              (item) => String(item.id) === String(userData?.id)
+            );
+
+            if (tutor) {
+              rating = Number(
+                tutor.rating ??
+                tutor.tutorRating ??
+                rating
+              );
+              ratingCount = Number(tutor.ratingCount) || 0;
+              break;
+            }
+          }
+        }
+      } catch (err) {
+        console.error('Failed to fetch tutor rating:', err);
+      }
+
+      let totalEarnings = 0;
+      let sessionsCount = 0;
+      let uniqueStudents = new Set();
+
+      try {
+        const earningsResponse = await fetch(
+          `${API_BASE_URL}/earnings`,
+          {
+            headers: {
+              Authorization: `Bearer ${token}`,
+              'Content-Type': 'application/json'
+            }
+          }
+        );
+
+        if (earningsResponse.ok) {
+          const data = await readJsonResponse(earningsResponse);
+
+          if (data.success && data.earnings) {
+            totalEarnings = Number(data.earnings.total) || 0;
+            sessionsCount = Number(data.earnings.sessionsCount) || 0;
+
+            uniqueStudents = new Set(
+              (data.earnings.history || [])
+                .map((item) => item.studentId)
+                .filter(Boolean)
+            );
+          }
+        } else {
+          throw new Error('Earnings endpoint unavailable');
+        }
+      } catch (err) {
+        console.error('Failed to fetch earnings:', err);
+
+        try {
+          const sessionsResponse = await fetch(
+            `${API_BASE_URL}/sessions`,
+            {
+              headers: {
+                Authorization: `Bearer ${token}`,
+                'Content-Type': 'application/json'
+              }
+            }
+          );
+
+          if (sessionsResponse.ok) {
+            const data = await readJsonResponse(sessionsResponse);
+            const sessions = data.sessions || [];
+
+            uniqueStudents = new Set(
+              sessions
+                .map((session) => session.user_id)
+                .filter(Boolean)
+            );
+
+            const completedSessions = sessions.filter(
+              (session) =>
+                session.status === 'completed' ||
+                session.status === 'ended'
+            );
+
+            sessionsCount = sessions.length;
+            totalEarnings = completedSessions.length * 100;
+          }
+        } catch (sessionsError) {
+          console.error('Failed to fetch tutor sessions:', sessionsError);
+        }
+      }
+
+      setTutorStats({
+        totalSessions: sessionsCount,
+        studentsTaught: uniqueStudents.size,
+        totalEarnings,
+        avgRating: Number.isFinite(rating) ? rating : 4.5,
+        ratingCount
+      });
+    } catch (err) {
+      console.error('Failed to fetch tutor statistics:', err);
+
+      setTutorStats({
+        totalSessions: 0,
+        studentsTaught: 0,
+        totalEarnings: 0,
+        avgRating: Number(userData?.tutor_rating || userData?.rating || 4.5),
+        ratingCount: 0
+      });
+    }
+  };
+
+  useEffect(() => {
+    fetchUserData();
+    // Load the current account once when the profile page mounts.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // LOAD TUTOR WEEKLY AVAILABILITY
+  useEffect(() => {
+    if (!isTutor) return undefined;
+
+    let cancelled = false;
+
+    const loadAvailability = async () => {
+      setAvailabilityLoading(true);
+      setAvailabilityError(false);
+      setAvailabilityMessage('');
+
+      try {
+        const token = localStorage.getItem('accessToken');
+
+        if (!token) {
+          throw new Error(
+            'Your session has expired. Please sign in again.'
+          );
+        }
+
+        const response = await fetch(
+          `${API_BASE_URL}/tutors/availability/me`,
+          {
+            method: 'GET',
+            headers: {
+              Authorization: `Bearer ${token}`,
+              'Content-Type': 'application/json'
+            }
+          }
+        );
+
+        const result = await readJsonResponse(response);
+
+        if (!response.ok) {
+          throw new Error(
+            result.error ||
+            result.message ||
+            'Could not load your weekly availability.'
+          );
+        }
+
+        if (cancelled) return;
+
+        const slots = extractAvailabilitySlots(result);
+
+        if (slots === null) {
+          throw new Error(
+            'The availability response did not contain a valid slots list.'
+          );
+        }
+
+        setAvailabilityDays(mapAvailabilitySlots(slots));
+        // ✅ Reset dirty flag after a fresh load.
+        setAvailabilityDirty(false);
+      } catch (err) {
+        if (!cancelled) {
+          console.error('Availability loading error:', err);
+          setAvailabilityError(true);
+          setAvailabilityMessage(err.message);
+        }
+      } finally {
+        if (!cancelled) {
+          setAvailabilityLoading(false);
+        }
+      }
+    };
+
+    loadAvailability();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [isTutor]);
+
+  // ✅ NEW: mark availability as dirty whenever the user edits it.
+  const markAvailabilityDirty = () => {
+    setAvailabilityDirty(true);
+    setAvailabilityMessage('');
+  };
+
+  // ✅ REPLACED: two explicit checkboxes — Unavailable / Available.
+  // Selecting "Available" enables slot editing; selecting "Unavailable"
+  // disables the day and clears its slots.
+  const setAvailabilityDayMode = (dayOfWeek, mode) => {
+    setAvailabilityDays((current) =>
+      current.map((day) => {
+        if (day.dayOfWeek !== dayOfWeek) return day;
+
+        if (mode === 'available') {
+          return {
+            ...day,
+            enabled: true,
+            slots:
+              day.slots.length > 0
+                ? day.slots
+                : [{ startTime: '09:00', endTime: '17:00' }]
+          };
+        }
+
+        // mode === 'unavailable'
+        return {
+          ...day,
+          enabled: false,
+          slots: []
+        };
+      })
+    );
+
+    markAvailabilityDirty();
+  };
+
+  // UPDATE TIME RANGE
+  const updateAvailabilityTime = (
+    dayOfWeek,
+    slotIndex,
+    field,
+    value
+  ) => {
+    setAvailabilityDays((current) =>
+      current.map((day) => {
+        if (day.dayOfWeek !== dayOfWeek) return day;
+
+        return {
+          ...day,
+          slots: day.slots.map((slot, index) =>
+            index === slotIndex
+              ? { ...slot, [field]: value }
+              : slot
+          )
+        };
+      })
+    );
+
+    markAvailabilityDirty();
+  };
+
+  // ADD TIME RANGE
+  const addAvailabilitySlot = (dayOfWeek) => {
+    setAvailabilityDays((current) =>
+      current.map((day) => {
+        if (day.dayOfWeek !== dayOfWeek) return day;
+
+        const previousSlot = day.slots[day.slots.length - 1];
+        const nextStart = previousSlot?.endTime || '09:00';
+
+        const [hours, minutes] = nextStart.split(':').map(Number);
+        const startMinutes = hours * 60 + minutes;
+
+        if (
+          !Number.isFinite(startMinutes) ||
+          startMinutes >= 23 * 60 + 59
+        ) {
+          return day;
+        }
+
+        const nextEndMinutes = Math.min(
+          startMinutes + 60,
+          23 * 60 + 59
+        );
+
+        const nextEnd =
+          `${String(Math.floor(nextEndMinutes / 60)).padStart(2, '0')}:` +
+          `${String(nextEndMinutes % 60).padStart(2, '0')}`;
+
+        return {
+          ...day,
+          slots: [
+            ...day.slots,
+            {
+              startTime: nextStart,
+              endTime: nextEnd
+            }
+          ]
+        };
+      })
+    );
+
+    markAvailabilityDirty();
+  };
+
+  // REMOVE TIME RANGE
+  const removeAvailabilitySlot = (dayOfWeek, slotIndex) => {
+    setAvailabilityDays((current) =>
+      current.map((day) => {
+        if (day.dayOfWeek !== dayOfWeek) return day;
+
+        return {
+          ...day,
+          slots: day.slots.filter(
+            (_, index) => index !== slotIndex
+          )
+        };
+      })
+    );
+
+    markAvailabilityDirty();
+  };
+
+  // VALIDATE AVAILABILITY
+  const validateAvailability = () => {
+    const enabledDays = availabilityDays.filter(
+      (day) => day.enabled
+    );
+
+    for (const day of enabledDays) {
+      if (!day.slots.length) {
+        return `Please add at least one time range for ${day.name}.`;
+      }
+
+      const sortedSlots = [...day.slots].sort(
+        (a, b) => a.startTime.localeCompare(b.startTime)
+      );
+
+      for (const slot of sortedSlots) {
+        if (!slot.startTime || !slot.endTime) {
+          return `Complete all time ranges for ${day.name}.`;
+        }
+
+        if (
+          !/^\d{2}:\d{2}$/.test(slot.startTime) ||
+          !/^\d{2}:\d{2}$/.test(slot.endTime)
+        ) {
+          return `Enter valid start and end times for ${day.name}.`;
+        }
+
+        if (slot.startTime >= slot.endTime) {
+          return `The end time must be later than the start time on ${day.name}.`;
+        }
+      }
+
+      for (let index = 1; index < sortedSlots.length; index += 1) {
+        if (
+          sortedSlots[index].startTime <
+          sortedSlots[index - 1].endTime
+        ) {
+          return `Your time ranges overlap on ${day.name}. Please adjust them.`;
+        }
+      }
+    }
+
+    if (!enabledDays.length) {
+      return 'Please make at least one day available before saving.';
+    }
+
+    return null;
+  };
+
+  // SAVE AVAILABILITY
+  const saveAvailability = async () => {
+    if (availabilitySaving || availabilityLoading) return;
+
+    setAvailabilityError(false);
+    setAvailabilityMessage('');
+
+    const validationError = validateAvailability();
+
+    if (validationError) {
+      setAvailabilityError(true);
+      setAvailabilityMessage(validationError);
+      return;
+    }
+
+    setAvailabilitySaving(true);
+
+    try {
+      const token = localStorage.getItem('accessToken');
+
+      if (!token) {
+        throw new Error(
+          'Your session has expired. Please sign in again.'
+        );
+      }
+
+      const slots = availabilityDays
+        .filter((day) => day.enabled)
+        .flatMap((day) =>
+          day.slots.map((slot) => ({
+            day_of_week: day.dayOfWeek,
+            start_time: slot.startTime,
+            end_time: slot.endTime
+          }))
+        );
+
+      const response = await fetch(
+        `${API_BASE_URL}/tutors/availability/me`,
+        {
+          method: 'PUT',
+          headers: {
+            Authorization: `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({ slots })
+        }
+      );
+
+      const result = await readJsonResponse(response);
+
+      if (!response.ok) {
+        throw new Error(
+          result.error ||
+          result.message ||
+          'Could not save your weekly availability.'
+        );
+      }
+
+      // Some APIs return the saved slots; others return only success/message.
+      // Do not clear the user's schedule when the response omits the slots.
+      const returnedSlots = extractAvailabilitySlots(result);
+      const slotsToDisplay = returnedSlots ?? slots;
+
+      setAvailabilityDays(mapAvailabilitySlots(slotsToDisplay));
+      // ✅ Saving resets the dirty flag — button becomes inactive again.
+      setAvailabilityDirty(false);
+
+      setAvailabilityMessage(
+        result.message ||
+        'Weekly availability saved successfully.'
+      );
+
+      setAvailabilityError(false);
+    } catch (err) {
+      console.error('Availability saving error:', err);
+      setAvailabilityError(true);
+      setAvailabilityMessage(err.message);
+    } finally {
+      setAvailabilitySaving(false);
+    }
+  };
+
+  // REFRESH USER DATA
+  const refreshUserData = async () => {
+    try {
+      const token = localStorage.getItem('accessToken');
+      if (!token) return;
+
+      const response = await fetch(
+        `${API_BASE_URL}/auth/profile`,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          }
+        }
+      );
+
+      if (!response.ok) return;
+
+      const data = await readJsonResponse(response);
+
+      if (data.success && data.user) {
+        const userData = data.user;
+
+        setUser(userData);
+
+        if (userData.avatar && isTutor) {
+          setProfilePhoto(userData.avatar);
+        }
+
+        if (userData.intro_video_url) {
+          setVideoUrl(userData.intro_video_url);
+          setVideoThumbnail(userData.intro_video_thumbnail || null);
+          setVideoDuration(Number(userData.intro_video_duration) || 0);
+          setVideoViews(Number(userData.intro_video_views) || 0);
+        } else {
+          setVideoUrl(null);
+          setVideoThumbnail(null);
+          setVideoDuration(0);
+          setVideoViews(0);
+        }
+
+        localStorage.setItem('user', JSON.stringify(userData));
+      }
+    } catch (err) {
+      console.error('Failed to refresh user data:', err);
+    }
+  };
+
+  // VIDEO SELECTION
+  const handleVideoSelect = (event) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    const validTypes = [
+      'video/mp4',
+      'video/webm',
+      'video/quicktime',
+      'video/x-matroska'
+    ];
+
+    const validExtension = /\.(mp4|webm|mov|mkv)$/i.test(file.name);
+
+    if (!validTypes.includes(file.type) && !validExtension) {
+      setError('Please upload a valid video file (MP4, WebM, MOV, MKV).');
+      event.target.value = '';
+      return;
+    }
+
+    if (file.size > 100 * 1024 * 1024) {
+      setError('Video file must be less than 100MB.');
+      event.target.value = '';
+      return;
+    }
+
+    setVideoFile(file);
+    setError('');
+
+    if (videoPreview) {
+      URL.revokeObjectURL(videoPreview);
+    }
+
+    const previewUrl = URL.createObjectURL(file);
+    setVideoPreview(previewUrl);
+
+    const video = document.createElement('video');
+    video.preload = 'metadata';
+    video.src = previewUrl;
+
+    video.onloadedmetadata = () => {
+      setVideoDuration(
+        Number.isFinite(video.duration)
+          ? Math.round(video.duration)
+          : 0
+      );
+    };
+
+    generateThumbnail(file);
+    setShowVideoManager(true);
+  };
+
+  // GENERATE VIDEO THUMBNAIL
+  const generateThumbnail = (file) => {
+    const url = URL.createObjectURL(file);
+    const video = document.createElement('video');
+
+    video.preload = 'metadata';
+    video.muted = true;
+    video.src = url;
+
+    video.onloadedmetadata = () => {
+      video.currentTime = Math.min(1, video.duration || 1);
+    };
+
+    video.onloadeddata = () => {
+      try {
+        const canvas = document.createElement('canvas');
+        canvas.width = 640;
+        canvas.height = 360;
+
+        const context = canvas.getContext('2d');
+
+        if (context) {
+          context.drawImage(
+            video,
+            0,
+            0,
+            canvas.width,
+            canvas.height
+          );
+
+          setVideoThumbnail(
+            canvas.toDataURL('image/jpeg', 0.8)
+          );
+        }
+      } catch (err) {
+        console.error('Could not generate video thumbnail:', err);
+        setVideoThumbnail(null);
+      } finally {
+        URL.revokeObjectURL(url);
+      }
+    };
+
+    video.onerror = () => {
+      setVideoThumbnail(null);
+      URL.revokeObjectURL(url);
+    };
+  };
+
+  // UPLOAD VIDEO
+  const handleUploadVideo = async () => {
+    if (!videoFile) {
+      setError('Please select a video first.');
+      return;
+    }
+
+    try {
+      setVideoUploading(true);
+      setVideoProgress(0);
+      setError('');
+
+      const base64Video = await new Promise((resolve, reject) => {
+        const reader = new FileReader();
+
+        reader.onload = () => resolve(reader.result);
+        reader.onerror = () => reject(
+          new Error('Failed to read video file.')
+        );
+
+        reader.readAsDataURL(videoFile);
+      });
+
+      setVideoProgress(50);
+
+      const result = await tutorService.uploadIntroVideo({
+        videoUrl: base64Video,
+        thumbnail: videoThumbnail || null,
+        duration: videoDuration
+      });
+
+      if (!result?.success) {
+        throw new Error(result?.error || 'Failed to upload video.');
+      }
+
+      setVideoProgress(100);
+      await refreshUserData();
+
+      setSuccess('Video uploaded successfully!');
+
+      if (videoPreview) {
+        URL.revokeObjectURL(videoPreview);
+      }
+
+      setVideoPreview(null);
+      setVideoFile(null);
+      setShowVideoManager(false);
+
+      if (videoFileInputRef.current) {
+        videoFileInputRef.current.value = '';
+      }
+    } catch (err) {
+      console.error('Video upload error:', err);
+      setError(err.message || 'Failed to upload video.');
+    } finally {
+      setVideoUploading(false);
+    }
+  };
+
+  // REMOVE VIDEO
+  const handleRemoveVideo = async () => {
+    if (
+      !window.confirm(
+        'Are you sure you want to remove your intro video?'
+      )
+    ) {
+      return;
+    }
+
+    try {
+      setVideoUploading(true);
+
+      const result = await tutorService.removeIntroVideo();
+
+      if (!result?.success) {
+        throw new Error(result?.error || 'Failed to remove video.');
+      }
+
+      await refreshUserData();
+
+      setVideoPreview(null);
+      setVideoFile(null);
+      setVideoProgress(0);
+      setShowVideoManager(false);
+      setSuccess('Video removed successfully.');
+    } catch (err) {
+      setError(err.message || 'Failed to remove video.');
+    } finally {
+      setVideoUploading(false);
+    }
+  };
+
+  const handleReplaceVideo = () => {
+    videoFileInputRef.current?.click();
+  };
+
+  const formatDuration = (seconds) => {
+    const value = Number(seconds) || 0;
+    const mins = Math.floor(value / 60);
+    const secs = value % 60;
+
+    return `${mins}:${String(secs).padStart(2, '0')}`;
+  };
+
+  // GENERAL FORM HANDLERS
+  const handleInputChange = (event) => {
+    const { name, value } = event.target;
+
+    setEditForm((previous) => ({
+      ...previous,
+      [name]: value
+    }));
+  };
+
+  const handleSubjectToggle = (subject) => {
+    setEditForm((previous) => {
+      const subjects = previous.subjects || [];
+
+      return {
+        ...previous,
+        subjects: subjects.includes(subject)
+          ? subjects.filter((item) => item !== subject)
+          : [...subjects, subject]
+      };
+    });
+  };
+
+  // AVATAR HANDLERS
+  const handleAvatarSelect = async (avatar) => {
+    setAvatarData(avatar);
+    setAvatarImage(avatar.svg);
+    setShowAvatarSelector(false);
+
+    await saveAvatarToBackend(avatar);
+  };
+
+  const saveAvatarToBackend = async (avatar) => {
+    try {
+      const token = localStorage.getItem('accessToken');
+
+      if (!token) {
+        setError('Please log in again to save your avatar.');
+        return;
+      }
+
+      const response = await fetch(
+        `${API_BASE_URL}/auth/profile`,
+        {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${token}`
+          },
+          body: JSON.stringify({
+            avatar: avatar.svg,
+            avatar_seed: avatar.seed,
+            avatar_style: avatar.style || 'adventurer'
+          })
+        }
+      );
+
+      const data = await readJsonResponse(response);
+
+      if (!response.ok || !data.success) {
+        throw new Error(data.error || 'Failed to save avatar.');
+      }
+
+      setSuccess('Avatar updated successfully!');
+
+      setUser((previous) => ({
+        ...previous,
+        avatar: avatar.svg,
+        avatar_seed: avatar.seed,
+        avatar_style: avatar.style || 'adventurer'
+      }));
+    } catch (err) {
+      console.error('Failed to save avatar:', err);
+      setError(err.message || 'Failed to save avatar.');
+    }
+  };
+
+  // PROFILE PHOTO UPLOAD
+  const handlePhotoUpload = async (event) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    if (!file.type.startsWith('image/')) {
+      setPhotoError('Please upload an image file (JPG, PNG, WEBP).');
+      event.target.value = '';
+      return;
+    }
+
+    if (file.size > 5 * 1024 * 1024) {
+      setPhotoError('Image must be under 5MB.');
+      event.target.value = '';
+      return;
+    }
+
+    setPhotoUploading(true);
+    setPhotoError('');
+
+    try {
+      const base64Image = await new Promise((resolve, reject) => {
+        const reader = new FileReader();
+
+        reader.onload = () => resolve(reader.result);
+        reader.onerror = () => reject(
+          new Error('Failed to read image file.')
+        );
+
+        reader.readAsDataURL(file);
+      });
+
+      const token = localStorage.getItem('accessToken');
+
+      if (!token) {
+        throw new Error('Your session has expired. Please sign in again.');
+      }
+
+      const response = await fetch(
+        `${API_BASE_URL}/auth/profile`,
+        {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${token}`
+          },
+          body: JSON.stringify({ avatar: base64Image })
+        }
+      );
+
+      const data = await readJsonResponse(response);
+
+      if (!response.ok || !data.success) {
+        throw new Error(data.error || 'Failed to upload photo.');
+      }
+
+      setProfilePhoto(base64Image);
+      setSuccess('Photo uploaded successfully!');
+
+      setUser((previous) => ({
+        ...previous,
+        avatar: base64Image
+      }));
+
+      const storedUser = JSON.parse(
+        localStorage.getItem('user') || '{}'
+      );
+
+      storedUser.avatar = base64Image;
+      localStorage.setItem('user', JSON.stringify(storedUser));
+    } catch (err) {
+      console.error('Photo upload error:', err);
+      setPhotoError(err.message || 'Error uploading photo.');
+    } finally {
+      setPhotoUploading(false);
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
+      }
+    }
+  };
+
+  const triggerFileInput = () => {
+    fileInputRef.current?.click();
+  };
+
+  // SAVE PROFILE - UUID-SAFE SHIFT HANDLING
+  const handleSaveProfile = async (event) => {
+    event.preventDefault();
+
+    setLoading(true);
+    setError('');
+    setSuccess('');
+
+    try {
+      const token = localStorage.getItem('accessToken');
+
+      if (!token) {
+        setError('Session expired. Please log in again.');
+        navigate('/login');
+        return;
+      }
+
+      const payload = {
+        name: editForm.name,
+        email: editForm.email,
+        country: editForm.country,
+        timezone: editForm.timezone,
+        grade: editForm.grade
+          ? parseInt(editForm.grade, 10)
+          : 0,
+        bio: editForm.bio || '',
+        phone: editForm.phone || '',
+        education: editForm.education || '',
+        yearsExperience:
+          parseInt(editForm.yearsExperience, 10) || 0,
+        linkedin: editForm.linkedin || '',
+        website: editForm.website || '',
+        tier: editForm.tier || '',
+        subjects: editForm.subjects || [],
+
+        // An empty string must never be sent as a UUID.
+        shiftId:
+          editForm.shiftId &&
+          String(editForm.shiftId).trim() !== ''
+            ? editForm.shiftId
+            : null
+      };
+
+      const response = await fetch(
+        `${API_BASE_URL}/auth/profile`,
+        {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${token}`
+          },
+          body: JSON.stringify(payload)
+        }
+      );
+
+      const data = await readJsonResponse(response);
+
+      if (!response.ok || !data.success) {
+        throw new Error(data.error || 'Failed to update profile.');
+      }
+
+      const returnedUser = data.user || {};
+      const updatedUser = {
+        ...user,
+        ...returnedUser
+      };
+
+      setUser(updatedUser);
+      localStorage.setItem('user', JSON.stringify(updatedUser));
+
+      setEditForm((previous) => ({
+        ...previous,
+        name: returnedUser.name ?? previous.name,
+        email: returnedUser.email ?? previous.email,
+        country: returnedUser.country ?? previous.country,
+        timezone: returnedUser.timezone ?? previous.timezone,
+        grade: returnedUser.grade ?? previous.grade,
+        bio: returnedUser.bio ?? previous.bio,
+        tier:
+          returnedUser.tutor_tier ??
+          returnedUser.tier ??
+          previous.tier,
+        subjects:
+          returnedUser.tutor_subjects ??
+          previous.subjects,
+        shiftId:
+          returnedUser.tutor_shift_id ??
+          (payload.shiftId || ''),
+        yearsExperience:
+          returnedUser.years_experience ??
+          previous.yearsExperience,
+        education: returnedUser.education ?? previous.education,
+        phone: returnedUser.phone ?? previous.phone,
+        linkedin: returnedUser.linkedin ?? previous.linkedin,
+        website: returnedUser.website ?? previous.website
+      }));
+
+      if (updatedUser.intro_video_url) {
+        setVideoUrl(updatedUser.intro_video_url);
+        setVideoThumbnail(updatedUser.intro_video_thumbnail || null);
+        setVideoDuration(Number(updatedUser.intro_video_duration) || 0);
+        setVideoViews(Number(updatedUser.intro_video_views) || 0);
+      }
+
+      setSuccess('Profile updated successfully!');
+      setIsEditing(false);
+    } catch (err) {
+      console.error('Profile save error:', err);
+      setError(err.message || 'Failed to update profile.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // CHANGE PASSWORD
+  const handlePasswordChange = async (event) => {
+    event.preventDefault();
+
+    setError('');
+    setSuccess('');
+
+    if (
+      passwordData.newPassword !==
+      passwordData.confirmPassword
+    ) {
+      setError('New passwords do not match.');
+      return;
+    }
+
+    setLoading(true);
+
+    try {
+      const token = localStorage.getItem('accessToken');
+
+      if (!token) {
+        throw new Error('Session expired. Please log in again.');
+      }
+
+      const response = await fetch(
+        `${API_BASE_URL}/auth/change-password`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${token}`
+          },
+          body: JSON.stringify({
+            currentPassword: passwordData.currentPassword,
+            newPassword: passwordData.newPassword
+          })
+        }
+      );
+
+      const data = await readJsonResponse(response);
+
+      if (!response.ok || !data.success) {
+        throw new Error(data.error || 'Failed to change password.');
+      }
+
+      setSuccess('Password changed successfully!');
+      setShowPasswordModal(false);
+
+      setPasswordData({
+        currentPassword: '',
+        newPassword: '',
+        confirmPassword: ''
+      });
+    } catch (err) {
+      setError(err.message || 'Failed to change password.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // DELETE ACCOUNT
+  const handleDeleteAccount = async () => {
+    if (
+      !window.confirm(
+        'Are you sure you want to delete your account? This action is permanent!'
+      )
+    ) {
+      return;
+    }
+
+    setLoading(true);
+    setError('');
+
+    try {
+      const token = localStorage.getItem('accessToken');
+
+      if (!token) {
+        throw new Error('Session expired. Please log in again.');
+      }
+
+      const response = await fetch(
+        `${API_BASE_URL}/auth/account`,
+        {
+          method: 'DELETE',
+          headers: {
+            Authorization: `Bearer ${token}`
+          }
+        }
+      );
+
+      const data = await readJsonResponse(response);
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to delete account.');
+      }
+
+      await authService.logout();
+      navigate('/login');
+    } catch (err) {
+      setError(err.message || 'Failed to delete account.');
+    } finally {
+      setLoading(false);
+      setShowDeleteModal(false);
+    }
+  };
+
+  // VIDEO MANAGER MODAL
+  const VideoManagerModal = () => {
+    if (!showVideoManager) return null;
+
+    const closeVideoManager = () => {
+      if (videoUploading) return;
+
+      if (videoPreview) {
+        URL.revokeObjectURL(videoPreview);
+      }
+
+      setShowVideoManager(false);
+      setVideoPreview(null);
+      setVideoFile(null);
+      setVideoProgress(0);
+
+      if (videoFileInputRef.current) {
+        videoFileInputRef.current.value = '';
+      }
+    };
+
+    return (
+      <div
+        className="profile-modal-overlay"
+        onClick={closeVideoManager}
+      >
+        <div
+          className="profile-modal video-manager-modal"
+          onClick={(event) => event.stopPropagation()}
+        >
+          <div className="profile-modal-header">
+            <h3>🎬 Video Manager</h3>
+            <button
+              type="button"
+              className="modal-close"
+              onClick={closeVideoManager}
+              disabled={videoUploading}
+            >
+              ×
+            </button>
+          </div>
+
+          <div className="profile-modal-body video-manager-body">
+            {/* Keep this input mounted whether a video exists or not.
+                This ensures Replace Video can always open the picker. */}
+            <input
+              ref={videoFileInputRef}
+              type="file"
+              accept="video/mp4,video/webm,video/quicktime,video/x-matroska,.mkv"
+              onChange={handleVideoSelect}
+              disabled={videoUploading}
+              style={{ display: 'none' }}
+            />
+
+            {videoUrl && !videoPreview && (
+              <div className="video-current-display">
+                <div
+                  className="video-preview-container"
+                  style={{ cursor: 'pointer' }}
+                  onClick={() => {
+                    setShowVideoModal(true);
+                    setShowVideoManager(false);
+                  }}
+                >
+                  <video
+                    src={videoUrl}
+                    style={{
+                      width: '100%',
+                      maxHeight: '300px',
+                      borderRadius: '8px',
+                      background: '#0a0e1a'
+                    }}
+                    poster={videoThumbnail || undefined}
+                  />
+
+                  <div className="video-play-overlay">
+                    <div className="play-button">
+                      <span className="play-icon">▶</span>
+                    </div>
+                  </div>
+
+                  <div className="video-info-badge">
+                    <span>⏱️ {formatDuration(videoDuration)}</span>
+                    {videoViews > 0 && (
+                      <span>👁️ {videoViews} views</span>
+                    )}
+                  </div>
+                </div>
+
+                <p className="video-status-text">
+                  ✅ Video uploaded successfully
+                </p>
+              </div>
+            )}
+
+            {videoPreview && (
+              <div className="video-preview-section">
+                <div className="video-preview-container">
+                  <video
+                    src={videoPreview}
+                    controls
+                    style={{
+                      width: '100%',
+                      maxHeight: '300px',
+                      borderRadius: '8px',
+                      background: '#0a0e1a'
+                    }}
+                    poster={videoThumbnail || undefined}
+                  />
+                </div>
+
+                <div className="video-file-info">
+                  <span>📁 {videoFile?.name}</span>
+                  <span>
+                    ({((videoFile?.size || 0) / (1024 * 1024)).toFixed(1)} MB)
+                  </span>
+                  {videoDuration > 0 && (
+                    <span>⏱️ {formatDuration(videoDuration)}</span>
+                  )}
+                </div>
+
+                {videoUploading && (
+                  <div className="video-progress-container">
+                    <div className="video-progress-bar">
+                      <div
+                        className="video-progress-fill"
+                        style={{ width: `${videoProgress}%` }}
+                      />
+                    </div>
+                    <span className="video-progress-text">
+                      {videoProgress}%
+                    </span>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {!videoUrl && !videoPreview && (
+              <div
+                className="video-upload-zone"
+                onClick={() => videoFileInputRef.current?.click()}
+              >
+                <span className="upload-icon">🎥</span>
+                <p>Click to upload your intro video</p>
+                <small>MP4, WebM, MOV, MKV • Max 100MB</small>
+              </div>
+            )}
+
+            <div className="video-actions">
+              {!videoPreview && !videoUrl && (
+                <button
+                  type="button"
+                  className="video-action-btn primary"
+                  onClick={() => videoFileInputRef.current?.click()}
+                  disabled={videoUploading}
+                >
+                  📤 Upload Video
+                </button>
+              )}
+
+              {videoPreview && !videoUploading && (
+                <>
+                  <button
+                    type="button"
+                    className="video-action-btn primary"
+                    onClick={handleUploadVideo}
+                  >
+                    ✅ Confirm Upload
+                  </button>
+
+                  <button
+                    type="button"
+                    className="video-action-btn cancel"
+                    onClick={() => {
+                      URL.revokeObjectURL(videoPreview);
+                      setVideoPreview(null);
+                      setVideoFile(null);
+                      setVideoThumbnail(null);
+                      setVideoDuration(0);
+                      setVideoProgress(0);
+
+                      if (videoFileInputRef.current) {
+                        videoFileInputRef.current.value = '';
+                      }
+                    }}
+                  >
+                    Cancel
+                  </button>
+                </>
+              )}
+
+              {videoUrl && !videoPreview && (
+                <>
+                  <button
+                    type="button"
+                    className="video-action-btn secondary"
+                    onClick={() => {
+                      setShowVideoModal(true);
+                      setShowVideoManager(false);
+                    }}
+                  >
+                    👁️ Preview
+                  </button>
+
+                  <button
+                    type="button"
+                    className="video-action-btn primary"
+                    onClick={handleReplaceVideo}
+                    disabled={videoUploading}
+                  >
+                    🔄 Replace Video
+                  </button>
+
+                  <button
+                    type="button"
+                    className="video-action-btn danger"
+                    onClick={handleRemoveVideo}
+                    disabled={videoUploading}
+                  >
+                    🗑️ Remove Video
+                  </button>
+                </>
+              )}
+
+              {videoUploading && (
+                <div className="uploading-status">
+                  <span className="spinner"></span>
+                  Uploading... {videoProgress}%
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
+  // VIDEO PREVIEW MODAL
+  const VideoPreviewModal = () => {
+    if (!showVideoModal || !videoUrl) return null;
+
+    return (
+      <div
+        className="profile-modal-overlay"
+        onClick={() => setShowVideoModal(false)}
+      >
+        <div
+          className="profile-modal video-preview-modal"
+          onClick={(event) => event.stopPropagation()}
+        >
+          <div className="profile-modal-header">
+            <h3>🎬 Your Intro Video</h3>
+            <button
+              type="button"
+              className="modal-close"
+              onClick={() => setShowVideoModal(false)}
+            >
+              ×
+            </button>
+          </div>
+
+          <div className="profile-modal-body">
+            <div className="video-preview-container">
+              <video
+                src={videoUrl}
+                controls
+                autoPlay
+                style={{
+                  width: '100%',
+                  maxHeight: '70vh',
+                  borderRadius: '8px',
+                  background: '#0a0e1a'
+                }}
+                poster={videoThumbnail || undefined}
+              />
+            </div>
+
+            <div className="video-preview-info">
+              <p>
+                This video is shown to students on your tutor card.
+              </p>
+
+              <div
+                style={{
+                  display: 'flex',
+                  gap: '16px',
+                  flexWrap: 'wrap'
+                }}
+              >
+                {videoDuration > 0 && (
+                  <span>
+                    ⏱️ Duration: {formatDuration(videoDuration)}
+                  </span>
+                )}
+                {videoViews > 0 && (
+                  <span>👁️ {videoViews} views</span>
+                )}
+              </div>
+            </div>
+
+            <button
+              type="button"
+              className="video-action-btn primary full-width"
+              onClick={() => setShowVideoModal(false)}
+            >
+              Close
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
+  // RENDER
+  if (loading) {
+    return (
+      <div className="profile-loading">
+        Loading profile...
+      </div>
+    );
   }
 
-  .profile-stats {
-    grid-template-columns: repeat(2, 1fr);
-  }
-
-  .tutor-profile-grid {
-    grid-template-columns: 1fr;
-  }
-}
-
-@media (max-width: 768px) {
-  .profile-container {
-    padding: 20px 16px;
-  }
-
-  .profile-header {
-    flex-direction: column;
-    text-align: center;
-    padding: 20px;
-    margin-bottom: 28px;
-  }
-
-  .profile-header-info h1 {
-    font-size: 24px;
-  }
-
-  .profile-edit-btn {
-    width: 100%;
-  }
-
-  .profile-stats {
-    grid-template-columns: 1fr 1fr;
-    gap: 10px;
-  }
-
-  .profile-stat-card {
-    padding: 14px 16px;
-  }
-
-  .stat-number {
-    font-size: 24px;
-  }
-
-  .stat-label {
-    font-size: 12px;
-  }
-
-  .profile-card {
-    padding: 16px 18px;
-  }
-
-  .profile-info-item {
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 4px;
-    padding: 8px 0;
-  }
-
-  .profile-input,
-  .profile-select {
-    width: 100%;
-  }
-
-  .profile-setting-item {
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 10px;
-  }
-
-  .profile-courses-grid {
-    grid-template-columns: 1fr;
-  }
-
-  .profile-modal {
-    width: 95%;
-    max-width: 400px;
-  }
-
-  .profile-modal-actions {
-    flex-direction: column;
-  }
-
-  .profile-modal-actions button {
-    width: 100%;
-  }
-
-  .subscription-banner {
-    flex-direction: column;
-    text-align: center;
-  }
-
-  .subscription-end {
-    margin-left: 0;
-  }
-
-  .video-manager-modal {
-    max-width: 95%;
-  }
-
-  .video-preview-modal {
-    max-width: 95%;
-  }
-
-  .video-actions {
-    flex-direction: column;
-  }
-
-  .video-action-btn {
-    width: 100%;
-  }
-
-  .tutor-profile-grid {
-    gap: 16px;
-  }
-}
-
-@media (max-width: 480px) {
-  .profile-container {
-    padding: 12px 10px;
-  }
-
-  .profile-header {
-    padding: 16px;
-    gap: 16px;
-  }
-
-  .profile-avatar {
-    width: 64px;
-    height: 64px;
-  }
-
-  .profile-avatar-emoji {
-    font-size: 32px;
-  }
-
-  .avatar-edit-badge {
-    width: 24px;
-    height: 24px;
-    font-size: 12px;
-  }
-
-  .profile-header-info h1 {
-    font-size: 20px;
-  }
-
-  .profile-stats {
-    grid-template-columns: 1fr 1fr;
-    gap: 8px;
-  }
-
-  .profile-stat-card {
-    padding: 10px 12px;
-  }
-
-  .stat-number {
-    font-size: 20px;
-  }
-
-  .profile-card {
-    padding: 12px 14px;
-  }
-
-  .profile-card h3 {
-    font-size: 16px;
-  }
-
-  .video-upload-zone {
-    padding: 24px 16px;
-  }
-
-  .video-upload-zone .upload-icon {
-    font-size: 36px;
-  }
-
-  .video-upload-zone p {
-    font-size: 14px;
-  }
-
-  .video-info-badge {
-    font-size: 12px;
-    gap: 10px;
-  }
-
-  .tutor-field-label {
-    font-size: 11px;
-  }
-
-  .tutor-field-value {
-    font-size: 14px;
-  }
-}
-
-/* ============================================
-   LIGHT THEME
-   ============================================ */
-[data-theme="light"] .profile-container {
-  background: #f8fafc !important;
-}
-
-[data-theme="light"] .profile-header {
-  background: #ffffff !important;
-  border: 1px solid rgba(0, 0, 0, 0.06) !important;
-}
-
-[data-theme="light"] .profile-header-info h1 {
-  color: #0f172a !important;
-}
-
-[data-theme="light"] .profile-header-subtitle {
-  color: rgba(0, 0, 0, 0.6) !important;
-}
-
-[data-theme="light"] .profile-edit-btn {
-  background: #ffffff !important;
-  border: 1px solid rgba(0, 0, 0, 0.06) !important;
-  color: #0f172a !important;
-}
-
-[data-theme="light"] .profile-edit-btn:hover {
-  border-color: #0f172a !important;
-}
-
-[data-theme="light"] .profile-stat-card {
-  background: #ffffff !important;
-  border: 1px solid rgba(0, 0, 0, 0.06) !important;
-}
-
-[data-theme="light"] .stat-number {
-  color: #0f172a !important;
-}
-
-[data-theme="light"] .stat-label {
-  color: rgba(0, 0, 0, 0.6) !important;
-}
-
-[data-theme="light"] .profile-card {
-  background: #ffffff !important;
-  border: 1px solid rgba(0, 0, 0, 0.06) !important;
-}
-
-[data-theme="light"] .profile-card h3 {
-  color: #0f172a !important;
-  border-bottom: 1px solid rgba(0, 0, 0, 0.06) !important;
-}
-
-[data-theme="light"] .info-label {
-  color: rgba(0, 0, 0, 0.6) !important;
-}
-
-[data-theme="light"] .info-value {
-  color: #0f172a !important;
-}
-
-[data-theme="light"] .profile-input,
-[data-theme="light"] .profile-select {
-  background: #ffffff !important;
-  border: 1px solid rgba(0, 0, 0, 0.06) !important;
-  color: #0f172a !important;
-}
-
-[data-theme="light"] .profile-setting-item {
-  border: 1px solid rgba(0, 0, 0, 0.06) !important;
-}
-
-[data-theme="light"] .setting-info h4 {
-  color: #0f172a !important;
-}
-
-[data-theme="light"] .setting-info p {
-  color: rgba(0, 0, 0, 0.6) !important;
-}
-
-[data-theme="light"] .setting-action-btn {
-  background: #ffffff !important;
-  border: 1px solid rgba(0, 0, 0, 0.06) !important;
-  color: #0f172a !important;
-}
-
-[data-theme="light"] .profile-course-card {
-  border: 1px solid rgba(0, 0, 0, 0.06) !important;
-}
-
-[data-theme="light"] .course-info h4 {
-  color: #0f172a !important;
-}
-
-[data-theme="light"] .course-tier {
-  color: rgba(0, 0, 0, 0.5) !important;
-}
-
-[data-theme="light"] .progress-text {
-  color: #0f172a !important;
-}
-
-[data-theme="light"] .profile-empty-state {
-  color: rgba(0, 0, 0, 0.5) !important;
-}
-
-[data-theme="light"] .profile-modal {
-  background: #ffffff !important;
-  border: 1px solid rgba(0, 0, 0, 0.06) !important;
-}
-
-[data-theme="light"] .profile-modal-header {
-  border-bottom: 1px solid rgba(0, 0, 0, 0.06) !important;
-}
-
-[data-theme="light"] .profile-modal-header h3 {
-  color: #0f172a !important;
-}
-
-[data-theme="light"] .modal-close {
-  color: rgba(0, 0, 0, 0.4) !important;
-}
-
-[data-theme="light"] .modal-close:hover {
-  color: #0f172a !important;
-}
-
-[data-theme="light"] .profile-modal-body .form-group label {
-  color: rgba(0, 0, 0, 0.6) !important;
-}
-
-[data-theme="light"] .profile-modal-body .form-group input {
-  background: #ffffff !important;
-  border: 1px solid rgba(0, 0, 0, 0.06) !important;
-  color: #0f172a !important;
-}
-
-[data-theme="light"] .modal-cancel {
-  background: #ffffff !important;
-  border: 1px solid rgba(0, 0, 0, 0.06) !important;
-  color: #0f172a !important;
-}
-
-[data-theme="light"] .profile-error {
-  color: #dc2626 !important;
-}
-
-[data-theme="light"] .profile-success {
-  color: #16a34a !important;
-}
-
-[data-theme="light"] .profile-loading {
-  color: rgba(0, 0, 0, 0.6) !important;
-}
-
-[data-theme="light"] .subscription-tier {
-  color: #4f46e5 !important;
-}
-
-[data-theme="light"] .subscription-status {
-  color: #16a34a !important;
-}
-
-[data-theme="light"] .subscription-end {
-  color: rgba(0, 0, 0, 0.4) !important;
-}
-
-/* ===== LIGHT THEME - TUTOR PROFILE ===== */
-[data-theme="light"] .tutor-field-label {
-  color: rgba(0, 0, 0, 0.55) !important;
-}
-
-[data-theme="light"] .tutor-field-value {
-  color: #0f172a !important;
-}
-
-[data-theme="light"] .tutor-field-bio {
-  color: rgba(0, 0, 0, 0.7) !important;
-  background: rgba(0, 0, 0, 0.02);
-  border-color: rgba(0, 0, 0, 0.06);
-}
-
-[data-theme="light"] .tutor-field-empty {
-  color: rgba(0, 0, 0, 0.4) !important;
-}
-
-[data-theme="light"] .tutor-field-link {
-  color: #4f46e5 !important;
-}
-
-[data-theme="light"] .tutor-field-link:hover {
-  color: #7c3aed !important;
-}
-
-[data-theme="light"] .tutor-subject-tag {
-  background: rgba(79, 70, 229, 0.08);
-  color: #4f46e5 !important;
-  border-color: rgba(79, 70, 229, 0.2);
-}
-
-[data-theme="light"] .tutor-subject-checkbox-label {
-  color: #0f172a !important;
-}
-
-[data-theme="light"] .tutor-subjects-edit {
-  background: rgba(0, 0, 0, 0.02);
-  border-color: rgba(0, 0, 0, 0.06);
-}
-
-[data-theme="light"] .tutor-video-field {
-  border-top-color: rgba(0, 0, 0, 0.06);
-}
-
-[data-theme="light"] .tutor-video-hint {
-  color: rgba(0, 0, 0, 0.5) !important;
-}
-
-/* ===== LIGHT THEME - VIDEO ===== */
-[data-theme="light"] .video-upload-zone {
-  border-color: rgba(0, 0, 0, 0.1);
-  background: rgba(0, 0, 0, 0.02);
-}
-
-[data-theme="light"] .video-upload-zone:hover {
-  border-color: rgba(79, 70, 229, 0.3);
-  background: rgba(79, 70, 229, 0.04);
-}
-
-[data-theme="light"] .video-upload-zone p {
-  color: #0f172a;
-}
-
-[data-theme="light"] .video-file-info {
-  color: rgba(0, 0, 0, 0.6);
-  background: rgba(0, 0, 0, 0.02);
-}
-
-[data-theme="light"] .video-file-info span:first-child {
-  color: #0f172a;
-}
-
-[data-theme="light"] .video-status-text {
-  color: #16a34a;
-}
-
-[data-theme="light"] .video-action-btn.secondary {
-  color: #0f172a;
-  border-color: rgba(0, 0, 0, 0.1);
-}
-
-[data-theme="light"] .video-action-btn.secondary:hover:not(:disabled) {
-  background: rgba(0, 0, 0, 0.05);
-}
-
-[data-theme="light"] .video-action-btn.cancel {
-  color: rgba(0, 0, 0, 0.5);
-  border-color: rgba(0, 0, 0, 0.06);
-}
-
-[data-theme="light"] .uploading-status {
-  color: rgba(0, 0, 0, 0.5);
-}
-
-[data-theme="light"] .video-preview-info {
-  color: rgba(0, 0, 0, 0.6);
-  background: rgba(0, 0, 0, 0.02);
-}
-
-[data-theme="light"] .video-info-badge {
-  color: rgba(0, 0, 0, 0.6);
-  background: rgba(0, 0, 0, 0.02);
-}
-
-[data-theme="light"] .play-button {
-  background: rgba(79, 70, 229, 0.8);
-}
-
-[data-theme="light"] .video-progress-bar {
-  background: rgba(0, 0, 0, 0.06);
-}
-
-[data-theme="light"] .video-progress-text {
-  color: rgba(0, 0, 0, 0.5);
-}
-
-/* ============================================
-   SPINNER ANIMATION
-   ============================================ */
-@keyframes spin {
-  to { transform: rotate(360deg); }
-}
-
-.spinner {
-  display: inline-block;
-  width: 16px;
-  height: 16px;
-  border: 2px solid rgba(255, 255, 255, 0.2);
-  border-top-color: #ffffff;
-  border-radius: 50%;
-  animation: spin 0.8s linear infinite;
-  margin-right: 8px;
-  vertical-align: middle;
-}
-
-[data-theme="light"] .spinner {
-  border-color: rgba(0, 0, 0, 0.1);
-  border-top-color: #4f46e5;
-}
-
-/* ============================================
-   TUTOR WEEKLY AVAILABILITY
-   ============================================ */
-
-.tutor-availability {
-  display: flex;
-  flex-direction: column;
-  gap: 18px;
-}
-
-.tutor-availability-intro {
-  color: rgba(255, 255, 255, 0.55);
-  font-size: 13px;
-  line-height: 1.6;
-  margin: -10px 0 4px;
-}
-
-/* ============================================
-   ✅ DAY CARDS — each day (Monday → Sunday) is its own
-   separate card with a clear gap between them, so no two
-   day cards touch each other.
-   ============================================ */
-.tutor-availability-day {
-  padding: 18px;
-  border: 1px solid rgba(255, 255, 255, 0.07);
-  border-radius: 10px;
-  background: rgba(255, 255, 255, 0.025);
-  margin-bottom: 20px;
-}
-
-.tutor-availability-day-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: 14px;
-  margin-bottom: 14px;
-}
-
-.tutor-availability-day-name {
-  color: #fff;
-  font-size: 14px;
-  font-weight: 600;
-}
-
-.tutor-availability-toggle {
-  display: flex;
-  align-items: center;
-  gap: 9px;
-  color: #94a3b8;
-  font-size: 13px;
-  cursor: pointer;
-}
-
-.tutor-availability-toggle input {
-  accent-color: #6366f1;
-  width: 16px;
-  height: 16px;
-}
-
-/* ============================================
-   ✅ SLOTS — small spaces between slot cards
-   ============================================ */
-.tutor-availability-slots {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-}
-
-.tutor-availability-slot {
-  display: grid;
-  grid-template-columns: 1fr 1fr auto;
-  align-items: end;
-  gap: 12px;
-  padding: 12px 14px;
-  border: 1px solid rgba(255, 255, 255, 0.06);
-  border-radius: 10px;
-  background: rgba(255, 255, 255, 0.02);
-}
-
-.tutor-availability-time-field {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-}
-
-.tutor-availability-time-field label {
-  color: rgba(255, 255, 255, 0.5);
-  font-size: 11px;
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.4px;
-}
-
-.tutor-availability-time-field input {
-  width: 100%;
-  box-sizing: border-box;
-  padding: 10px 12px;
-  border-radius: 8px;
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  background: rgba(255, 255, 255, 0.04);
-  color: #fff;
-  font: inherit;
-  color-scheme: dark;
-}
-
-.tutor-availability-time-field input:focus {
-  outline: none;
-  border-color: #6366f1;
-  box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.12);
-}
-
-/* Remove button — keeps the × centered */
-.tutor-availability-remove {
-  width: 36px;
-  height: 36px;
-  padding: 0;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  border-radius: 8px;
-  border: 1px solid rgba(239, 68, 68, 0.2);
-  background: rgba(239, 68, 68, 0.08);
-  color: #fca5a5;
-  font-size: 16px;
-  font-weight: 600;
-  line-height: 1;
-  cursor: pointer;
-  transition: 0.2s ease;
-  align-self: end;
-}
-
-.tutor-availability-remove:hover {
-  background: rgba(239, 68, 68, 0.16);
-}
-
-.tutor-availability-add {
-  margin-top: 4px;
-  align-self: flex-start;
-  border-radius: 8px;
-  padding: 9px 13px;
-  font-size: 12px;
-  font-weight: 600;
-  cursor: pointer;
-  transition: 0.2s ease;
-  border: 1px solid rgba(99, 102, 241, 0.3);
-  background: rgba(99, 102, 241, 0.1);
-  color: #a5b4fc;
-}
-
-.tutor-availability-add:hover {
-  background: rgba(99, 102, 241, 0.2);
-}
-
-.tutor-availability-disabled {
-  color: rgba(255, 255, 255, 0.35);
-  font-size: 13px;
-}
-
-.tutor-availability-actions {
-  display: flex;
-  justify-content: flex-end;
-  align-items: center;
-  gap: 12px;
-  padding-top: 18px;
-  border-top: 1px solid rgba(255, 255, 255, 0.07);
-}
-
-.tutor-availability-save {
-  padding: 11px 24px;
-  border: 0;
-  border-radius: 9px;
-  background: #4f46e5;
-  color: #fff;
-  font-size: 14px;
-  font-weight: 600;
-  cursor: pointer;
-  transition: background 0.2s ease;
-}
-
-.tutor-availability-save:hover:not(:disabled) {
-  background: #4338ca;
-}
-
-.tutor-availability-message {
-  font-size: 13px;
-  line-height: 1.5;
-  margin-bottom: 4px;
-}
-
-.tutor-availability-message.error {
-  color: #f87171;
-}
-
-.tutor-availability-message.success {
-  color: #4ade80;
-}
-
-/* Light theme */
-
-[data-theme="light"] .tutor-availability-intro {
-  color: rgba(15, 23, 42, 0.6);
-}
-
-[data-theme="light"] .tutor-availability-day {
-  background: #f8fafc;
-  border-color: rgba(0, 0, 0, 0.07);
-}
-
-[data-theme="light"] .tutor-availability-day-name {
-  color: #0f172a;
-}
-
-[data-theme="light"] .tutor-availability-toggle {
-  color: #475569;
-}
-
-[data-theme="light"] .tutor-availability-slot {
-  background: #ffffff;
-  border-color: #e2e8f0;
-}
-
-[data-theme="light"] .tutor-availability-time-field label {
-  color: #64748b;
-}
-
-[data-theme="light"] .tutor-availability-time-field input {
-  background: #fff;
-  border-color: #e2e8f0;
-  color: #0f172a;
-  color-scheme: light;
-}
-
-[data-theme="light"] .tutor-availability-remove {
-  border-color: rgba(220, 38, 38, 0.2);
-  background: rgba(220, 38, 38, 0.06);
-  color: #dc2626;
-}
-
-[data-theme="light"] .tutor-availability-remove:hover {
-  background: rgba(220, 38, 38, 0.12);
-}
-
-[data-theme="light"] .tutor-availability-disabled {
-  color: #64748b;
-}
-
-[data-theme="light"] .tutor-availability-actions {
-  border-top-color: #e2e8f0;
-}
-
-/* Responsive */
-
-@media (max-width: 600px) {
-  .tutor-availability-day {
-    padding: 14px;
-    margin-bottom: 16px;
-  }
-
-  .tutor-availability-slot {
-    grid-template-columns: 1fr 1fr;
-  }
-
-  .tutor-availability-remove {
-    grid-column: 1 / -1;
-    justify-self: start;
-  }
-
-  .tutor-availability-actions {
-    flex-direction: column;
-    align-items: stretch;
-  }
-
-  .tutor-availability-save {
-    width: 100%;
-  }
-}
-
-/* ============================================
-   ✅ SEPARATED WEEKLY AVAILABILITY CARD
-   ============================================ */
-.tutor-availability-card {
-  margin-top: 8px;
-}
-
-.tutor-availability-subtitle {
-  font-size: 14px;
-  color: rgba(255, 255, 255, 0.6);
-  margin: 0 0 20px 0;
-  line-height: 1.5;
-}
-
-/* ============================================
-   ✅ TWO-CHECKBOX MODE SELECTOR
-   ============================================ */
-.tutor-availability-mode {
-  display: flex;
-  align-items: center;
-  gap: 20px;
-  flex-wrap: wrap;
-}
-
-.tutor-availability-mode-label {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  font-size: 13px;
-  font-weight: 500;
-  color: rgba(255, 255, 255, 0.75);
-  cursor: pointer;
-  user-select: none;
-  padding: 4px 10px;
-  border-radius: 8px;
-  border: 1px solid transparent;
-  transition: border-color 0.2s ease, background 0.2s ease;
-}
-
-.tutor-availability-mode-label:hover {
-  background: rgba(255, 255, 255, 0.04);
-  border-color: rgba(255, 255, 255, 0.08);
-}
-
-.tutor-availability-mode-label input[type='checkbox'] {
-  width: 16px;
-  height: 16px;
-  accent-color: #4f46e5;
-  cursor: pointer;
-}
-
-.tutor-availability-mode-label input:checked + span {
-  color: #ffffff;
-  font-weight: 600;
-}
-
-/* ============================================
-   ✅ SAVE BUTTON — INACTIVE UNTIL DIRTY
-   ============================================ */
-.tutor-availability-save:disabled {
-  opacity: 0.45;
-  cursor: not-allowed;
-  filter: grayscale(60%);
-}
+  const statsToShow = isTutor
+    ? [
+        {
+          number: tutorStats.totalSessions,
+          label: 'Total Sessions'
+        },
+        {
+          number: tutorStats.studentsTaught,
+          label: 'Students Taught'
+        },
+        {
+          number: `R${Number(tutorStats.totalEarnings || 0).toFixed(2)}`,
+          label: 'Earnings'
+        },
+        {
+          number: `${Number(tutorStats.avgRating || 0).toFixed(1)}⭐`,
+          label: 'Rating'
+        }
+      ]
+    : [
+        {
+          number: studentStats.coursesEnrolled,
+          label: 'Courses Enrolled'
+        },
+        {
+          number: studentStats.hoursSpent,
+          label: 'Hours Spent'
+        },
+        {
+          number: studentStats.badgesEarned,
+          label: 'Badges Earned'
+        },
+        {
+          number: `${studentStats.completionRate}%`,
+          label: 'Completion Rate'
+        }
+      ];
+
+  return (
+    <div className="profile-container">
+      <VideoManagerModal />
+      <VideoPreviewModal />
+
+      {/* PROFILE HEADER */}
+      <div className="profile-header">
+        <div
+          className="profile-avatar"
+          onClick={
+            isTutor
+              ? triggerFileInput
+              : () => setShowAvatarSelector(true)
+          }
+          role="button"
+          tabIndex={0}
+          onKeyDown={(event) => {
+            if (event.key === 'Enter' || event.key === ' ') {
+              isTutor
+                ? triggerFileInput()
+                : setShowAvatarSelector(true);
+            }
+          }}
+        >
+          {isTutor ? (
+            profilePhoto ? (
+              <img
+                src={profilePhoto}
+                alt={user?.name || 'Tutor profile'}
+                className="profile-avatar-img"
+              />
+            ) : (
+              <span className="profile-avatar-emoji">👨‍🏫</span>
+            )
+          ) : avatarImage ? (
+            <img
+              src={avatarImage}
+              alt={user?.name || 'User avatar'}
+              className="profile-avatar-img"
+            />
+          ) : (
+            <span className="profile-avatar-emoji">👤</span>
+          )}
+
+          <div className="avatar-edit-badge">
+            {isTutor ? '📸' : '✎'}
+          </div>
+        </div>
+
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept="image/*"
+          onChange={handlePhotoUpload}
+          style={{ display: 'none' }}
+        />
+
+        <div className="profile-header-info">
+          <h1>
+            {user?.name || 'User'}
+
+            {isTutor && (
+              <span
+                style={{
+                  fontSize: '14px',
+                  fontWeight: 600,
+                  color: '#34d399',
+                  background: 'rgba(52,211,153,0.15)',
+                  padding: '2px 12px',
+                  borderRadius: '12px',
+                  marginLeft: '12px',
+                  border: '1px solid rgba(52,211,153,0.2)'
+                }}
+              >
+                👨‍🏫 Tutor
+              </span>
+            )}
+          </h1>
+
+          <p className="profile-header-subtitle">
+            {isTutor
+              ? 'Professional Mathematics Tutor'
+              : user?.cohort === 'HighSchool'
+                ? 'High School Student'
+                : 'University Student'}
+            {' • '}
+            {user?.country || 'South Africa'}
+          </p>
+
+          <div className="profile-status">
+            <span className="status-dot"></span>
+            <span>{isTutor ? 'Active Tutor' : 'Active Member'}</span>
+          </div>
+        </div>
+
+        <button
+          type="button"
+          className="profile-edit-btn"
+          onClick={() => setIsEditing((previous) => !previous)}
+        >
+          {isEditing ? 'Cancel' : '✏️ Edit Profile'}
+        </button>
+      </div>
+
+      {/* MESSAGES */}
+      {photoError && (
+        <div className="profile-error">{photoError}</div>
+      )}
+
+      {photoUploading && (
+        <div className="profile-success">📤 Uploading photo...</div>
+      )}
+
+      {error && (
+        <div className="profile-error">{error}</div>
+      )}
+
+      {success && (
+        <div className="profile-success">{success}</div>
+      )}
+
+      {/* PROFILE STATISTICS */}
+      <div className="profile-stats">
+        {statsToShow.map((stat, index) => (
+          <div key={index} className="profile-stat-card">
+            <span className="stat-number">{stat.number}</span>
+            <span className="stat-label">{stat.label}</span>
+          </div>
+        ))}
+      </div>
+
+      {/* PROFILE GRID */}
+      <div className="profile-grid">
+        {/* PERSONAL INFORMATION */}
+        <div className="profile-card">
+          <h3>
+            {isTutor
+              ? '📋 Tutor Information'
+              : '📋 Personal Information'}
+          </h3>
+
+          <div className="profile-info-group">
+            {[
+              {
+                label: 'Full Name',
+                name: 'name',
+                value: editForm.name
+              },
+              {
+                label: 'Email Address',
+                name: 'email',
+                value: editForm.email
+              },
+              {
+                label: 'Country',
+                name: 'country',
+                value: editForm.country
+              },
+              {
+                label: isTutor ? 'Expertise Level' : 'Grade / Year',
+                name: 'grade',
+                value: editForm.grade
+              },
+              {
+                label: 'Role',
+                name: 'cohort',
+                value: isTutor
+                  ? 'Tutor'
+                  : user?.cohort === 'HighSchool'
+                    ? 'High School Student'
+                    : 'University First Year'
+              }
+            ].map((field) => (
+              <div
+                key={field.name}
+                className="profile-info-item"
+              >
+                <span className="info-label">{field.label}</span>
+
+                {isEditing && field.name !== 'cohort' ? (
+                  <input
+                    type="text"
+                    name={field.name}
+                    value={field.value ?? ''}
+                    onChange={handleInputChange}
+                    className="profile-input"
+                  />
+                ) : (
+                  <span className="info-value">
+                    {field.value || 'Not set'}
+                  </span>
+                )}
+              </div>
+            ))}
+          </div>
+
+          {isEditing && !isTutor && (
+            <div className="profile-actions">
+              <button
+                type="button"
+                className="profile-save-btn"
+                onClick={handleSaveProfile}
+                disabled={loading}
+              >
+                {loading ? 'Saving...' : '💾 Save Changes'}
+              </button>
+            </div>
+          )}
+        </div>
+
+        {/* ACCOUNT SETTINGS */}
+        <div className="profile-card">
+          <h3>🔒 Account Settings</h3>
+
+          <div className="profile-settings-list">
+            <div className="profile-setting-item">
+              <div className="setting-info">
+                <span className="setting-icon">🔑</span>
+                <div>
+                  <h4>Change Password</h4>
+                  <p>Update your password regularly for security</p>
+                </div>
+              </div>
+
+              <button
+                type="button"
+                className="setting-action-btn"
+                onClick={() => setShowPasswordModal(true)}
+              >
+                Update
+              </button>
+            </div>
+
+            <div className="profile-setting-item danger">
+              <div className="setting-info">
+                <span className="setting-icon">⚠️</span>
+                <div>
+                  <h4>Delete Account</h4>
+                  <p>Permanently delete your account and all data</p>
+                </div>
+              </div>
+
+              <button
+                type="button"
+                className="setting-action-btn danger"
+                onClick={() => setShowDeleteModal(true)}
+              >
+                Delete
+              </button>
+            </div>
+          </div>
+        </div>
+
+        {/* TUTOR PROFILE */}
+        {isTutor && (
+          <div className="profile-card full-width">
+            <h3>👨‍🏫 Tutor Profile</h3>
+
+            <div className="tutor-profile-grid">
+              {/* BIO */}
+              <div className="tutor-field tutor-field-full">
+                <label className="tutor-field-label">📝 About Me</label>
+
+                {isEditing ? (
+                  <textarea
+                    name="bio"
+                    value={editForm.bio || ''}
+                    onChange={handleInputChange}
+                    placeholder="Tell students about yourself..."
+                    rows="4"
+                    className="profile-input tutor-textarea"
+                  />
+                ) : (
+                  <p className="tutor-field-value tutor-field-bio">
+                    {editForm.bio || 'No bio provided yet.'}
+                  </p>
+                )}
+              </div>
+
+              {/* TIER */}
+              <div className="tutor-field">
+                <label className="tutor-field-label">🏅 Tier / Level</label>
+
+                {isEditing ? (
+                  <select
+                    name="tier"
+                    value={editForm.tier || ''}
+                    onChange={handleInputChange}
+                    className="profile-select tutor-select"
+                  >
+                    <option value="">Select Tier</option>
+                    <option value="TIER_1">TIER_1 - Grades 8-9</option>
+                    <option value="TIER_2">TIER_2 - Grades 10-11</option>
+                    <option value="TIER_3">TIER_3 - Grade 12 &amp; Tertiary</option>
+                  </select>
+                ) : (
+                  <span className="tutor-field-value">
+                    {editForm.tier || 'Not set'}
+                  </span>
+                )}
+              </div>
+
+              {/* SHIFT */}
+              <div className="tutor-field">
+                <label className="tutor-field-label">⏰ Shift</label>
+
+                {isEditing ? (
+                  <select
+                    name="shiftId"
+                    value={editForm.shiftId || ''}
+                    onChange={handleInputChange}
+                    className="profile-select tutor-select"
+                  >
+                    <option value="">Select Shift</option>
+                    {shiftOptions.map((shift) => (
+                      <option key={shift.id} value={shift.id}>
+                        {shift.name} ({shift.sast_start} - {shift.sast_end})
+                      </option>
+                    ))}
+                  </select>
+                ) : (
+                  <span className="tutor-field-value">
+                    {
+                      shiftOptions.find(
+                        (shift) =>
+                          String(shift.id) === String(editForm.shiftId)
+                      )?.name || 'Not set'
+                    }
+                  </span>
+                )}
+              </div>
+
+              {/* EXPERIENCE */}
+              <div className="tutor-field">
+                <label className="tutor-field-label">
+                  📅 Years of Experience
+                </label>
+
+                {isEditing ? (
+                  <input
+                    type="number"
+                    name="yearsExperience"
+                    value={editForm.yearsExperience || 0}
+                    onChange={handleInputChange}
+                    min="0"
+                    max="50"
+                    className="profile-input tutor-input"
+                  />
+                ) : (
+                  <span className="tutor-field-value">
+                    {editForm.yearsExperience || 0}{' '}
+                    {Number(editForm.yearsExperience) === 1 ? 'year' : 'years'}
+                  </span>
+                )}
+              </div>
+
+              {/* EDUCATION */}
+              <div className="tutor-field">
+                <label className="tutor-field-label">🎓 Education</label>
+
+                {isEditing ? (
+                  <input
+                    type="text"
+                    name="education"
+                    value={editForm.education || ''}
+                    onChange={handleInputChange}
+                    placeholder="e.g., BSc Mathematics, University of Cape Town"
+                    className="profile-input tutor-input"
+                  />
+                ) : (
+                  <span className="tutor-field-value">
+                    {editForm.education || 'Not specified'}
+                  </span>
+                )}
+              </div>
+
+              {/* PHONE */}
+              <div className="tutor-field">
+                <label className="tutor-field-label">📞 Phone Number</label>
+
+                {isEditing ? (
+                  <input
+                    type="tel"
+                    name="phone"
+                    value={editForm.phone || ''}
+                    onChange={handleInputChange}
+                    placeholder="+27 82 123 4567"
+                    className="profile-input tutor-input"
+                  />
+                ) : (
+                  <span className="tutor-field-value">
+                    {editForm.phone || 'Not set'}
+                  </span>
+                )}
+              </div>
+
+              {/* LINKEDIN */}
+              <div className="tutor-field">
+                <label className="tutor-field-label">🔗 LinkedIn</label>
+
+                {isEditing ? (
+                  <input
+                    type="url"
+                    name="linkedin"
+                    value={editForm.linkedin || ''}
+                    onChange={handleInputChange}
+                    placeholder="https://linkedin.com/in/your-profile"
+                    className="profile-input tutor-input"
+                  />
+                ) : (
+                  <span className="tutor-field-value">
+                    {editForm.linkedin ? (
+                      <a
+                        href={editForm.linkedin}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="tutor-field-link"
+                      >
+                        {editForm.linkedin}
+                      </a>
+                    ) : 'Not set'}
+                  </span>
+                )}
+              </div>
+
+              {/* WEBSITE */}
+              <div className="tutor-field">
+                <label className="tutor-field-label">🌐 Website</label>
+
+                {isEditing ? (
+                  <input
+                    type="url"
+                    name="website"
+                    value={editForm.website || ''}
+                    onChange={handleInputChange}
+                    placeholder="https://yourwebsite.com"
+                    className="profile-input tutor-input"
+                  />
+                ) : (
+                  <span className="tutor-field-value">
+                    {editForm.website ? (
+                      <a
+                        href={editForm.website}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="tutor-field-link"
+                      >
+                        {editForm.website}
+                      </a>
+                    ) : 'Not set'}
+                  </span>
+                )}
+              </div>
+
+              {/* SUBJECTS */}
+              <div className="tutor-field tutor-field-full">
+                <label className="tutor-field-label">📖 Subjects Taught</label>
+
+                {isEditing ? (
+                  <div className="tutor-subjects-edit">
+                    {subjectOptions.map((subject) => (
+                      <label
+                        key={subject}
+                        className="tutor-subject-checkbox-label"
+                      >
+                        <input
+                          type="checkbox"
+                          checked={(editForm.subjects || []).includes(subject)}
+                          onChange={() => handleSubjectToggle(subject)}
+                          style={{ accentColor: '#4f46e5' }}
+                        />
+                        {subject}
+                      </label>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="tutor-subjects-display">
+                    {(editForm.subjects || []).length > 0 ? (
+                      editForm.subjects.map((subject) => (
+                        <span
+                          key={subject}
+                          className="tutor-subject-tag"
+                        >
+                          {subject}
+                        </span>
+                      ))
+                    ) : (
+                      <span className="tutor-field-empty">
+                        No subjects added yet
+                      </span>
+                    )}
+                  </div>
+                )}
+              </div>
+
+              {/* INTRO VIDEO — now a standalone visual block, no longer
+                  directly above the Weekly Availability card. The
+                  availability card is moved outside this grid entirely. */}
+              <div className="tutor-field tutor-field-full tutor-video-field">
+                <div className="tutor-video-header">
+                  <label
+                    className="tutor-field-label"
+                    style={{ marginBottom: 0 }}
+                  >
+                    🎬 Intro Video
+                  </label>
+
+                  <button
+                    type="button"
+                    className="setting-action-btn"
+                    onClick={() => setShowVideoManager(true)}
+                    style={{
+                      background: videoUrl
+                        ? 'rgba(255,255,255,0.04)'
+                        : 'rgba(79,70,229,0.15)',
+                      borderColor: videoUrl
+                        ? 'rgba(255,255,255,0.06)'
+                        : 'rgba(79,70,229,0.2)',
+                      color: videoUrl ? '#ffffff' : '#818cf8',
+                      fontWeight: 600
+                    }}
+                  >
+                    {videoUrl ? '⚙️ Manage Video' : '📤 Upload Video'}
+                  </button>
+                </div>
+
+                <p className="tutor-video-hint">
+                  {videoUrl
+                    ? '✅ Video uploaded and visible to students'
+                    : 'No video uploaded yet. Upload a short introduction video (max 100MB)'}
+                </p>
+
+                {videoUrl ? (
+                  <div
+                    className="video-preview-container"
+                    style={{ maxWidth: '400px', cursor: 'pointer' }}
+                    onClick={() => setShowVideoModal(true)}
+                  >
+                    <video
+                      src={videoUrl}
+                      style={{
+                        width: '100%',
+                        maxHeight: '225px',
+                        display: 'block',
+                        background: '#0a0e1a'
+                      }}
+                      poster={videoThumbnail || undefined}
+                    />
+
+                    <div className="video-play-overlay">
+                      <div className="play-button">
+                        <span className="play-icon">▶</span>
+                      </div>
+                    </div>
+
+                    <div className="video-info-badge">
+                      <span>⏱️ {formatDuration(videoDuration)}</span>
+                      {videoViews > 0 && (
+                        <span>👁️ {videoViews} views</span>
+                      )}
+                    </div>
+                  </div>
+                ) : (
+                  <div
+                    className="video-upload-zone"
+                    style={{ maxWidth: '400px', cursor: 'pointer' }}
+                    onClick={() => setShowVideoManager(true)}
+                  >
+                    <span className="upload-icon">🎥</span>
+                    <p>No intro video yet</p>
+                    <small>Click to upload your introduction video</small>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* SAVE TUTOR PROFILE */}
+            {isEditing && (
+              <div className="profile-actions">
+                <button
+                  type="button"
+                  className="profile-save-btn"
+                  onClick={handleSaveProfile}
+                  disabled={loading}
+                >
+                  {loading ? 'Saving...' : '💾 Save Changes'}
+                </button>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* ===== WEEKLY AVAILABILITY — SEPARATED SECTION ===== */}
+        {isTutor && (
+          <div className="profile-card full-width tutor-availability-card">
+            <h3>📅 Weekly Availability</h3>
+            <p className="tutor-availability-subtitle">
+              Set the days and times when students can book sessions with you.
+              You can add multiple time ranges for each day.
+            </p>
+
+            {availabilityLoading ? (
+              <div className="tutor-availability-disabled">
+                Loading your saved availability...
+              </div>
+            ) : (
+              <>
+                {availabilityDays.map((day) => (
+                  <div
+                    className="tutor-availability-day"
+                    key={day.dayOfWeek}
+                  >
+                    <div className="tutor-availability-day-header">
+                      <div className="tutor-availability-day-name">
+                        {day.name}
+                      </div>
+
+                      {/* ✅ TWO EXPLICIT CHECKBOXES */}
+                      <div className="tutor-availability-mode">
+                        <label className="tutor-availability-mode-label">
+                          <input
+                            type="checkbox"
+                            checked={!day.enabled}
+                            onChange={() =>
+                              setAvailabilityDayMode(
+                                day.dayOfWeek,
+                                'unavailable'
+                              )
+                            }
+                          />
+                          <span>Unavailable</span>
+                        </label>
+
+                        <label className="tutor-availability-mode-label">
+                          <input
+                            type="checkbox"
+                            checked={day.enabled}
+                            onChange={() =>
+                              setAvailabilityDayMode(
+                                day.dayOfWeek,
+                                'available'
+                              )
+                            }
+                          />
+                          <span>Available</span>
+                        </label>
+                      </div>
+                    </div>
+
+                    {day.enabled ? (
+                      <div className="tutor-availability-slots">
+                        {day.slots.map((slot, index) => (
+                          <div
+                            className="tutor-availability-slot"
+                            key={`${day.dayOfWeek}-${index}`}
+                          >
+                            <div className="tutor-availability-time-field">
+                              <label>Start time</label>
+                              <input
+                                type="time"
+                                value={slot.startTime}
+                                onChange={(event) =>
+                                  updateAvailabilityTime(
+                                    day.dayOfWeek,
+                                    index,
+                                    'startTime',
+                                    event.target.value
+                                  )
+                                }
+                              />
+                            </div>
+
+                            <div className="tutor-availability-time-field">
+                              <label>End time</label>
+                              <input
+                                type="time"
+                                value={slot.endTime}
+                                onChange={(event) =>
+                                  updateAvailabilityTime(
+                                    day.dayOfWeek,
+                                    index,
+                                    'endTime',
+                                    event.target.value
+                                  )
+                                }
+                              />
+                            </div>
+
+                            <button
+                              type="button"
+                              className="tutor-availability-remove"
+                              onClick={() =>
+                                removeAvailabilitySlot(
+                                  day.dayOfWeek,
+                                  index
+                                )
+                              }
+                              aria-label={`Remove ${day.name} time range`}
+                              title="Remove time range"
+                            >
+                              ×
+                            </button>
+                          </div>
+                        ))}
+
+                        <button
+                          type="button"
+                          className="tutor-availability-add"
+                          onClick={() =>
+                            addAvailabilitySlot(day.dayOfWeek)
+                          }
+                        >
+                          + Add another time range
+                        </button>
+                      </div>
+                    ) : (
+                      <div className="tutor-availability-disabled">
+                        You are not available on this day.
+                      </div>
+                    )}
+                  </div>
+                ))}
+
+                {availabilityMessage && (
+                  <div
+                    className={`tutor-availability-message ${
+                      availabilityError ? 'error' : 'success'
+                    }`}
+                    role="status"
+                  >
+                    {availabilityMessage}
+                  </div>
+                )}
+
+                <div className="tutor-availability-actions">
+                  {/* ✅ DISABLED UNTIL DIRTY */}
+                  <button
+                    type="button"
+                    className="tutor-availability-save"
+                    onClick={saveAvailability}
+                    disabled={
+                      availabilitySaving ||
+                      availabilityLoading ||
+                      !availabilityDirty
+                    }
+                  >
+                    {availabilitySaving
+                      ? 'Saving availability...'
+                      : '💾 Save Weekly Availability'}
+                  </button>
+                </div>
+              </>
+            )}
+          </div>
+        )}
+
+        {/* STUDENT COURSES */}
+        {!isTutor && (
+          <div className="profile-card full-width">
+            <h3>📚 My Courses</h3>
+
+            {enrollments.length > 0 ? (
+              <div className="profile-courses-grid">
+                {enrollments.map((course) => {
+                  const progress = Math.floor(
+                    Math.random() * 60 + 20
+                  );
+
+                  return (
+                    <div
+                      key={course.id}
+                      className="profile-course-card"
+                      onClick={() =>
+                        navigate(
+                          `/subjects/${String(course.name || '').toLowerCase()}`
+                        )
+                      }
+                    >
+                      <span className="course-icon">
+                        {course.icon || '📘'}
+                      </span>
+
+                      <div className="course-info">
+                        <h4>{course.name}</h4>
+                        <span className="course-tier">
+                          {course.tier || 'Tier 1'}
+                        </span>
+                      </div>
+
+                      <div className="course-progress">
+                        <div className="progress-bar">
+                          <div
+                            className="progress-fill"
+                            style={{ width: `${progress}%` }}
+                          />
+                        </div>
+                        <span className="progress-text">
+                          {progress}%
+                        </span>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            ) : (
+              <div className="profile-empty-state">
+                <p>No courses enrolled yet</p>
+                <button
+                  type="button"
+                  className="profile-empty-btn"
+                  onClick={() => navigate('/subjects')}
+                >
+                  Browse Subjects →
+                </button>
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+
+      {/* CHANGE PASSWORD MODAL */}
+      {showPasswordModal && (
+        <div
+          className="profile-modal-overlay"
+          onClick={() => setShowPasswordModal(false)}
+        >
+          <div
+            className="profile-modal"
+            onClick={(event) => event.stopPropagation()}
+          >
+            <div className="profile-modal-header">
+              <h3>🔑 Change Password</h3>
+              <button
+                type="button"
+                className="modal-close"
+                onClick={() => setShowPasswordModal(false)}
+              >
+                ×
+              </button>
+            </div>
+
+            <form onSubmit={handlePasswordChange}>
+              <div className="profile-modal-body">
+                <div className="form-group">
+                  <label>Current Password</label>
+                  <input
+                    type="password"
+                    value={passwordData.currentPassword}
+                    onChange={(event) =>
+                      setPasswordData((previous) => ({
+                        ...previous,
+                        currentPassword: event.target.value
+                      }))
+                    }
+                    required
+                  />
+                </div>
+
+                <div className="form-group">
+                  <label>New Password</label>
+                  <input
+                    type="password"
+                    value={passwordData.newPassword}
+                    onChange={(event) =>
+                      setPasswordData((previous) => ({
+                        ...previous,
+                        newPassword: event.target.value
+                      }))
+                    }
+                    required
+                    minLength="8"
+                  />
+                </div>
+
+                <div className="form-group">
+                  <label>Confirm New Password</label>
+                  <input
+                    type="password"
+                    value={passwordData.confirmPassword}
+                    onChange={(event) =>
+                      setPasswordData((previous) => ({
+                        ...previous,
+                        confirmPassword: event.target.value
+                      }))
+                    }
+                    required
+                  />
+                </div>
+              </div>
+
+              <div className="profile-modal-actions">
+                <button
+                  type="button"
+                  className="modal-cancel"
+                  onClick={() => setShowPasswordModal(false)}
+                >
+                  Cancel
+                </button>
+
+                <button
+                  type="submit"
+                  className="modal-submit"
+                  disabled={loading}
+                >
+                  {loading ? 'Changing...' : 'Change Password'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* DELETE ACCOUNT MODAL */}
+      {showDeleteModal && (
+        <div
+          className="profile-modal-overlay"
+          onClick={() => setShowDeleteModal(false)}
+        >
+          <div
+            className="profile-modal"
+            onClick={(event) => event.stopPropagation()}
+          >
+            <div className="profile-modal-header danger">
+              <h3>⚠️ Delete Account</h3>
+              <button
+                type="button"
+                className="modal-close"
+                onClick={() => setShowDeleteModal(false)}
+              >
+                ×
+              </button>
+            </div>
+
+            <div className="profile-modal-body">
+              <p className="delete-warning">
+                Are you sure you want to delete your account?
+                This action is <strong>permanent</strong> and cannot be undone.
+              </p>
+
+              <p style={{ color: '#94a3b8' }}>
+                All your data, including enrolled courses and progress,
+                will be permanently removed.
+              </p>
+            </div>
+
+            <div className="profile-modal-actions">
+              <button
+                type="button"
+                className="modal-cancel"
+                onClick={() => setShowDeleteModal(false)}
+              >
+                Cancel
+              </button>
+
+              <button
+                type="button"
+                className="modal-delete"
+                onClick={handleDeleteAccount}
+                disabled={loading}
+              >
+                {loading ? 'Deleting...' : '🗑️ Delete Account'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* STUDENT AVATAR SELECTOR */}
+      {!isTutor && showAvatarSelector && (
+        <AvatarSelector
+          onSelect={handleAvatarSelect}
+          currentAvatar={avatarData}
+          onClose={() => setShowAvatarSelector(false)}
+        />
+      )}
+    </div>
+  );
+};
+
+export default Profile;

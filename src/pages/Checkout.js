@@ -8,7 +8,19 @@ import TermsOfService from './Terms';
 import PrivacyPolicy from './Privacy';
 import './Checkout.css';
 
-const API_BASE_URL = (process.env.REACT_APP_API_URL || '').replace(/\/$/, '');
+// =====================================================
+// API URL CONFIGURATION
+// =====================================================
+
+// Normalize the API URL so /api is never duplicated.
+// Supports:
+// https://api.example.com
+// https://api.example.com/api
+// Empty value (same-origin deployment)
+
+const API_BASE_URL = (process.env.REACT_APP_API_URL || '')
+  .replace(/\/+$/, '')
+  .replace(/\/api$/i, '');
 
 const PAYSTACK_SCRIPT_URL = 'https://js.paystack.co/v1/inline.js';
 
@@ -28,10 +40,24 @@ const loadPaystackScript = () => {
     );
 
     if (existingScript) {
-      existingScript.addEventListener('load', resolve, { once: true });
-      existingScript.addEventListener('error', reject, { once: true });
+      const handleLoad = () => {
+        if (window.PaystackPop) {
+          resolve();
+        } else {
+          reject(
+            new Error('Paystack script loaded but could not initialize.')
+          );
+        }
+      };
 
-      // Handle a script that has already loaded.
+      const handleError = () => {
+        reject(new Error('Unable to load the Paystack payment script.'));
+      };
+
+      existingScript.addEventListener('load', handleLoad, { once: true });
+      existingScript.addEventListener('error', handleError, { once: true });
+
+      // If the script has already loaded, check immediately.
       if (window.PaystackPop) {
         resolve();
       }
@@ -48,7 +74,9 @@ const loadPaystackScript = () => {
       if (window.PaystackPop) {
         resolve();
       } else {
-        reject(new Error('Paystack script loaded but could not initialize.'));
+        reject(
+          new Error('Paystack script loaded but could not initialize.')
+        );
       }
     };
 
@@ -157,14 +185,13 @@ const Checkout = () => {
       }
 
       try {
-        let query = supabase
+        const { data, error } = await supabase
           .from('pricing_plans')
           .select('*')
           .ilike('tier', planTier)
           .eq('audience', audience)
-          .eq('is_active', true);
-
-        const { data, error } = await query.maybeSingle();
+          .eq('is_active', true)
+          .maybeSingle();
 
         if (error) {
           console.error('Plan lookup error:', error);
@@ -352,21 +379,28 @@ const Checkout = () => {
       throw new Error('The selected plan ID is missing.');
     }
 
-    const response = await fetch(
-      `${API_BASE_URL}/api/subscriptions/verify`,
-      {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`
-        },
-        body: JSON.stringify({
-          reference,
-          planId: selectedPlan.id,
-          billingCycle: 'monthly'
-        })
-      }
-    );
+    // Correct endpoint:
+    // /api/subscriptions/verify
+    //
+    // API_BASE_URL has its trailing /api removed above.
+
+    const verificationUrl =
+      `${API_BASE_URL}/api/subscriptions/verify`;
+
+    console.log('Payment verification endpoint:', verificationUrl);
+
+    const response = await fetch(verificationUrl, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${token}`
+      },
+      body: JSON.stringify({
+        reference,
+        planId: selectedPlan.id,
+        billingCycle: 'monthly'
+      })
+    });
 
     let result;
 
@@ -480,9 +514,7 @@ const Checkout = () => {
       await loadPaystackScript();
 
       if (!window.PaystackPop) {
-        throw new Error(
-          'Paystack could not be initialized.'
-        );
+        throw new Error('Paystack could not be initialized.');
       }
 
       const reference =
@@ -490,10 +522,6 @@ const Checkout = () => {
           .toString(36)
           .slice(2, 10)
           .toUpperCase()}`;
-
-      // IMPORTANT:
-      // callback and onClose are regular functions.
-      // This avoids the Paystack callback validation error.
 
       const paymentConfig = {
         key: gatewayConfig.publicKey,
@@ -536,6 +564,7 @@ const Checkout = () => {
           ]
         },
 
+        // Paystack requires a function here.
         callback: function (response) {
           if (!response || !response.reference) {
             setProcessing(false);
@@ -547,9 +576,6 @@ const Checkout = () => {
 
             return;
           }
-
-          // Verify with the backend.
-          // Do not trust the browser callback as payment proof.
 
           verifyPaymentOnBackend(response.reference)
             .then((verification) => {
@@ -589,7 +615,16 @@ const Checkout = () => {
         }
       };
 
-      // Initialize Paystack
+      // Check callback types before initialization.
+      if (
+        typeof paymentConfig.callback !== 'function' ||
+        typeof paymentConfig.onClose !== 'function'
+      ) {
+        throw new Error(
+          'Paystack callback configuration is invalid.'
+        );
+      }
+
       const handler = window.PaystackPop.setup(paymentConfig);
 
       if (

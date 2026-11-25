@@ -1,5 +1,6 @@
 
 // src/pages/Checkout.js
+
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { supabase } from '../services/supabaseClient';
@@ -10,6 +11,10 @@ import './Checkout.css';
 const API_BASE_URL = (process.env.REACT_APP_API_URL || '').replace(/\/$/, '');
 
 const PAYSTACK_SCRIPT_URL = 'https://js.paystack.co/v1/inline.js';
+
+// =====================================================
+// LOAD PAYSTACK SCRIPT
+// =====================================================
 
 const loadPaystackScript = () => {
   return new Promise((resolve, reject) => {
@@ -25,25 +30,48 @@ const loadPaystackScript = () => {
     if (existingScript) {
       existingScript.addEventListener('load', resolve, { once: true });
       existingScript.addEventListener('error', reject, { once: true });
+
+      // Handle a script that has already loaded.
+      if (window.PaystackPop) {
+        resolve();
+      }
+
       return;
     }
 
     const script = document.createElement('script');
+
     script.src = PAYSTACK_SCRIPT_URL;
     script.async = true;
 
-    script.onload = resolve;
-    script.onerror = reject;
+    script.onload = () => {
+      if (window.PaystackPop) {
+        resolve();
+      } else {
+        reject(new Error('Paystack script loaded but could not initialize.'));
+      }
+    };
+
+    script.onerror = () => {
+      reject(new Error('Unable to load the Paystack payment script.'));
+    };
 
     document.body.appendChild(script);
   });
 };
 
+// =====================================================
+// CHECKOUT COMPONENT
+// =====================================================
+
 const Checkout = () => {
   const navigate = useNavigate();
   const location = useLocation();
 
-  // 1. Selected plan
+  // ===================================================
+  // 1. SELECTED PLAN
+  // ===================================================
+
   const [selectedPlan, setSelectedPlan] = useState(
     location.state?.plan || null
   );
@@ -52,7 +80,10 @@ const Checkout = () => {
     !location.state?.plan
   );
 
-  // 2. Account and gateway configuration
+  // ===================================================
+  // 2. ACCOUNT AND GATEWAY CONFIGURATION
+  // ===================================================
+
   const [accountInfo, setAccountInfo] = useState({
     companyName: 'EduSpantech',
     supportEmail: 'support@eduspantech.com'
@@ -65,7 +96,10 @@ const Checkout = () => {
 
   const [gatewayLoading, setGatewayLoading] = useState(true);
 
-  // 3. Payment state
+  // ===================================================
+  // 3. PAYMENT STATE
+  // ===================================================
+
   const [processing, setProcessing] = useState(false);
 
   const [formData, setFormData] = useState({
@@ -75,7 +109,10 @@ const Checkout = () => {
     agreeToTerms: false
   });
 
-  // 4. Modal state
+  // ===================================================
+  // 4. MODAL STATE
+  // ===================================================
+
   const [showTermsModal, setShowTermsModal] = useState(false);
   const [showPrivacyModal, setShowPrivacyModal] = useState(false);
   const [showAlertModal, setShowAlertModal] = useState(false);
@@ -83,17 +120,17 @@ const Checkout = () => {
   const [alertTitle, setAlertTitle] = useState('');
   const [alertMessage, setAlertMessage] = useState('');
 
-  // ============================================
+  // ===================================================
   // AUTHENTICATION
-  // ============================================
+  // ===================================================
 
   const getAccessToken = () => {
     return localStorage.getItem('accessToken');
   };
 
-  // ============================================
+  // ===================================================
   // FETCH EXACT PLAN
-  // ============================================
+  // ===================================================
 
   useEffect(() => {
     let mounted = true;
@@ -115,6 +152,7 @@ const Checkout = () => {
           setSelectedPlan(null);
           setLoadingPlan(false);
         }
+
         return;
       }
 
@@ -122,11 +160,9 @@ const Checkout = () => {
         let query = supabase
           .from('pricing_plans')
           .select('*')
-          .ilike('tier', planTier);
-
-        if (audience) {
-          query = query.eq('audience', audience);
-        }
+          .ilike('tier', planTier)
+          .eq('audience', audience)
+          .eq('is_active', true);
 
         const { data, error } = await query.maybeSingle();
 
@@ -158,21 +194,26 @@ const Checkout = () => {
     };
   }, [location.state, location.search]);
 
-  // ============================================
+  // ===================================================
   // FETCH ACCOUNT AND PAYSTACK CONFIGURATION
-  // ============================================
+  // ===================================================
 
   useEffect(() => {
     let mounted = true;
 
     const fetchData = async () => {
       try {
-        const { data: accountData, error: accountError } = await supabase
-          .from('account_settings')
-          .select('key, value');
+        // Account settings
+        const { data: accountData, error: accountError } =
+          await supabase
+            .from('account_settings')
+            .select('key, value');
 
         if (accountError) {
-          console.warn('Account settings could not be loaded:', accountError);
+          console.warn(
+            'Account settings could not be loaded:',
+            accountError
+          );
         }
 
         if (accountData && mounted) {
@@ -188,15 +229,21 @@ const Checkout = () => {
           }));
         }
 
-        const { data: gatewayData, error: gatewayError } = await supabase
-          .from('payment_gateways')
-          .select('*')
-          .eq('name', 'paystack')
-          .eq('is_active', true)
-          .maybeSingle();
+        // Paystack gateway configuration
+        const { data: gatewayData, error: gatewayError } =
+          await supabase
+            .from('payment_gateways')
+            .select('*')
+            .eq('name', 'paystack')
+            .eq('is_active', true)
+            .maybeSingle();
 
         if (gatewayError) {
-          console.error('Paystack configuration error:', gatewayError);
+          console.error(
+            'Paystack configuration error:',
+            gatewayError
+          );
+
           throw gatewayError;
         }
 
@@ -236,9 +283,9 @@ const Checkout = () => {
     };
   }, []);
 
-  // ============================================
+  // ===================================================
   // ALERT
-  // ============================================
+  // ===================================================
 
   const showAlert = (title, message) => {
     setAlertTitle(title);
@@ -246,9 +293,9 @@ const Checkout = () => {
     setShowAlertModal(true);
   };
 
-  // ============================================
+  // ===================================================
   // FORM INPUT
-  // ============================================
+  // ===================================================
 
   const handleInputChange = (e) => {
     const { name, value, type, checked } = e.target;
@@ -259,9 +306,9 @@ const Checkout = () => {
     }));
   };
 
-  // ============================================
+  // ===================================================
   // PLAN PRICE
-  // ============================================
+  // ===================================================
 
   const getPlanAmount = () => {
     const amount = Number(
@@ -274,7 +321,11 @@ const Checkout = () => {
   };
 
   const getPlanCurrency = () => {
-    return selectedPlan?.currency || gatewayConfig.currency || 'ZAR';
+    return (
+      selectedPlan?.currency ||
+      gatewayConfig.currency ||
+      'ZAR'
+    ).toUpperCase();
   };
 
   const formatAmount = (amount) => {
@@ -284,65 +335,69 @@ const Checkout = () => {
     }).format(amount);
   };
 
-  // ============================================
+  // ===================================================
   // BACKEND PAYMENT VERIFICATION
-  // ============================================
+  // ===================================================
 
   const verifyPaymentOnBackend = async (reference) => {
     const token = getAccessToken();
 
     if (!token) {
-      throw new Error('Your login session has expired. Please log in again.');
+      throw new Error(
+        'Your login session has expired. Please log in again.'
+      );
     }
 
     if (!selectedPlan?.id) {
       throw new Error('The selected plan ID is missing.');
     }
 
-    const response = await fetch(`${API_BASE_URL}/api/subscriptions`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${token}`
-      },
-      body: JSON.stringify({
-        reference,
-        plan_id: selectedPlan.id,
-        billing_cycle: 'monthly',
-        fullName: formData.fullName,
-        email: formData.email,
-        country: formData.country
-      })
-    });
+    const response = await fetch(
+      `${API_BASE_URL}/api/subscriptions/verify`,
+      {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          reference,
+          planId: selectedPlan.id,
+          billingCycle: 'monthly'
+        })
+      }
+    );
 
     let result;
 
     try {
       result = await response.json();
     } catch (error) {
-      throw new Error('The server returned an invalid payment response.');
+      throw new Error(
+        'The server returned an invalid payment response.'
+      );
     }
 
     if (!response.ok || !result?.success) {
       throw new Error(
-        result?.error ||
         result?.message ||
+        result?.error ||
         'Payment verification failed. Please contact support.'
       );
     }
 
     if (!result.subscription) {
       throw new Error(
-        'Payment was received, but the server did not confirm a saved subscription. Please contact support before paying again.'
+        'Payment was verified, but your subscription was not returned by the server. Please contact support before paying again.'
       );
     }
 
     return result;
   };
 
-  // ============================================
+  // ===================================================
   // PAYSTACK PAYMENT
-  // ============================================
+  // ===================================================
 
   const handlePayment = async (e) => {
     e.preventDefault();
@@ -354,14 +409,19 @@ const Checkout = () => {
         'Plan Error',
         'The selected plan could not be identified. Please return to Pricing and select your plan again.'
       );
+
       return;
     }
 
-    if (!formData.fullName.trim() || !formData.email.trim()) {
+    if (
+      !formData.fullName.trim() ||
+      !formData.email.trim()
+    ) {
       showAlert(
         '⚠️ Missing Information',
         'Please fill in your name and email.'
       );
+
       return;
     }
 
@@ -370,6 +430,7 @@ const Checkout = () => {
         '📋 Terms Required',
         'You must agree to the Terms of Service and Privacy Policy to continue.'
       );
+
       return;
     }
 
@@ -378,6 +439,7 @@ const Checkout = () => {
         'Login Required',
         'Your login session is missing. Please log in again before making a payment.'
       );
+
       return;
     }
 
@@ -386,6 +448,7 @@ const Checkout = () => {
         'Payment Gateway Unavailable',
         'Paystack is not configured or is still loading. Please try again later.'
       );
+
       return;
     }
 
@@ -396,6 +459,7 @@ const Checkout = () => {
         'Invalid Plan Price',
         'The selected plan does not have a valid monthly price.'
       );
+
       return;
     }
 
@@ -406,6 +470,7 @@ const Checkout = () => {
         'Currency Mismatch',
         'The selected plan currency does not match the configured Paystack currency.'
       );
+
       return;
     }
 
@@ -415,17 +480,30 @@ const Checkout = () => {
       await loadPaystackScript();
 
       if (!window.PaystackPop) {
-        throw new Error('Paystack could not be initialized.');
+        throw new Error(
+          'Paystack could not be initialized.'
+        );
       }
 
       const reference =
-        `EDU-${Date.now()}-${Math.random().toString(36).slice(2, 10).toUpperCase()}`;
+        `EDU-${Date.now()}-${Math.random()
+          .toString(36)
+          .slice(2, 10)
+          .toUpperCase()}`;
+
+      // IMPORTANT:
+      // callback and onClose are regular functions.
+      // This avoids the Paystack callback validation error.
 
       const paymentConfig = {
         key: gatewayConfig.publicKey,
+
         email: formData.email.trim(),
+
         amount: Math.round(amount * 100),
+
         currency,
+
         ref: reference,
 
         metadata: {
@@ -438,7 +516,7 @@ const Checkout = () => {
             {
               display_name: 'Plan',
               variable_name: 'plan',
-              value: selectedPlan.name
+              value: selectedPlan.name || selectedPlan.tier
             },
             {
               display_name: 'Plan ID',
@@ -458,70 +536,92 @@ const Checkout = () => {
           ]
         },
 
-        callback: async (response) => {
-          try {
-            if (!response?.reference) {
-              throw new Error('Paystack did not return a transaction reference.');
-            }
-
-            // Never treat the browser callback as verified payment.
-            // The backend must independently verify the transaction.
-            const verification = await verifyPaymentOnBackend(
-              response.reference
-            );
-
-            navigate('/payment-success', {
-              replace: true,
-              state: {
-                reference: response.reference,
-                plan: selectedPlan,
-                user: formData,
-                verification,
-                subscription: verification.subscription
-              }
-            });
-          } catch (error) {
-            console.error('Payment verification error:', error);
+        callback: function (response) {
+          if (!response || !response.reference) {
+            setProcessing(false);
 
             showAlert(
-              'Payment Verification Pending',
-              error.message ||
-              'We could not confirm your payment. Please do not make another payment until the transaction has been checked. Contact support with your payment reference: ' +
-              response.reference
+              'Payment Verification Error',
+              'Paystack did not return a valid payment reference.'
             );
 
-            setProcessing(false);
+            return;
           }
+
+          // Verify with the backend.
+          // Do not trust the browser callback as payment proof.
+
+          verifyPaymentOnBackend(response.reference)
+            .then((verification) => {
+              navigate('/payment-success', {
+                replace: true,
+                state: {
+                  reference: response.reference,
+                  plan: selectedPlan,
+                  user: formData,
+                  verification,
+                  subscription: verification.subscription
+                }
+              });
+            })
+            .catch((error) => {
+              console.error(
+                'Backend payment verification failed:',
+                error
+              );
+
+              setProcessing(false);
+
+              showAlert(
+                'Payment Verification Pending',
+                `${error.message} Your payment reference is ${response.reference}. Please do not pay again until this transaction has been checked.`
+              );
+            });
         },
 
-        onClose: () => {
+        onClose: function () {
           setProcessing(false);
 
           showAlert(
             '⏸️ Payment Window Closed',
-            'The Paystack payment window was closed. If you completed the payment, please contact support with your transaction reference before trying again.'
+            'The Paystack payment window was closed. If you completed payment, keep your transaction reference and contact support before trying again.'
           );
         }
       };
 
+      // Initialize Paystack
       const handler = window.PaystackPop.setup(paymentConfig);
 
+      if (
+        !handler ||
+        typeof handler.openIframe !== 'function'
+      ) {
+        throw new Error(
+          'Paystack could not open its payment window. Please refresh and try again.'
+        );
+      }
+
       handler.openIframe();
+
     } catch (error) {
-      console.error('Paystack initialization error:', error);
+      console.error(
+        'Paystack initialization error:',
+        error
+      );
 
       setProcessing(false);
 
       showAlert(
         '❌ Payment Error',
-        error.message || 'Could not initialize Paystack. Please try again.'
+        error.message ||
+        'Could not initialize Paystack. Please try again.'
       );
     }
   };
 
-  // ============================================
+  // ===================================================
   // ALERT MODAL
-  // ============================================
+  // ===================================================
 
   const AlertModal = () => {
     if (!showAlertModal) return null;
@@ -543,8 +643,14 @@ const Checkout = () => {
           </button>
 
           <div className="alert-icon">⚠️</div>
-          <h2 className="alert-title">{alertTitle || 'Notice'}</h2>
-          <p className="alert-message">{alertMessage}</p>
+
+          <h2 className="alert-title">
+            {alertTitle || 'Notice'}
+          </h2>
+
+          <p className="alert-message">
+            {alertMessage}
+          </p>
 
           <button
             className="btn-primary alert-btn"
@@ -557,14 +663,15 @@ const Checkout = () => {
     );
   };
 
-  // ============================================
+  // ===================================================
   // TERMS MODAL
-  // ============================================
+  // ===================================================
 
   const TermsModal = () => {
     if (!showTermsModal) return null;
 
     const terms = TermsOfService.sections || [];
+
     const effectiveDate =
       TermsOfService.effectiveDate || '2026-07-09';
 
@@ -584,7 +691,9 @@ const Checkout = () => {
             ×
           </button>
 
-          <h2 className="modal-title">📋 Terms of Service</h2>
+          <h2 className="modal-title">
+            📋 Terms of Service
+          </h2>
 
           <div className="modal-scroll-content">
             <div className="last-updated">
@@ -596,7 +705,9 @@ const Checkout = () => {
                 <h3>{section.title}</h3>
 
                 {section.content.map((paragraph, index) => (
-                  <p key={index}>{paragraph}</p>
+                  <p key={index}>
+                    {paragraph}
+                  </p>
                 ))}
               </div>
             ))}
@@ -613,14 +724,15 @@ const Checkout = () => {
     );
   };
 
-  // ============================================
+  // ===================================================
   // PRIVACY MODAL
-  // ============================================
+  // ===================================================
 
   const PrivacyModal = () => {
     if (!showPrivacyModal) return null;
 
     const privacy = PrivacyPolicy.sections || [];
+
     const effectiveDate =
       PrivacyPolicy.effectiveDate || '2026-07-09';
 
@@ -640,7 +752,9 @@ const Checkout = () => {
             ×
           </button>
 
-          <h2 className="modal-title">🔒 Privacy Policy</h2>
+          <h2 className="modal-title">
+            🔒 Privacy Policy
+          </h2>
 
           <div className="modal-scroll-content">
             <div className="last-updated">
@@ -652,7 +766,9 @@ const Checkout = () => {
                 <h3>{section.title}</h3>
 
                 {section.content.map((paragraph, index) => (
-                  <p key={index}>{paragraph}</p>
+                  <p key={index}>
+                    {paragraph}
+                  </p>
                 ))}
               </div>
             ))}
@@ -669,14 +785,15 @@ const Checkout = () => {
     );
   };
 
-  // ============================================
+  // ===================================================
   // RENDER GUARDS
-  // ============================================
+  // ===================================================
 
   if (loadingPlan) {
     return (
       <div className="checkout-loading">
         <div className="spinner"></div>
+
         <p style={{ marginTop: '16px', color: '#94a3b8' }}>
           Loading plan details...
         </p>
@@ -688,6 +805,7 @@ const Checkout = () => {
     return (
       <div className="checkout-empty">
         <p>No plan selected.</p>
+
         <button
           className="btn-primary"
           onClick={() => navigate('/pricing')}
@@ -699,19 +817,22 @@ const Checkout = () => {
   }
 
   const planAmount = getPlanAmount();
-  const planCurrency = getPlanCurrency();
 
-  // ============================================
+  // ===================================================
   // MAIN RENDER
-  // ============================================
+  // ===================================================
 
   return (
     <div className="checkout-page">
+
       <AlertModal />
       <TermsModal />
       <PrivacyModal />
 
       <div className="checkout-container">
+
+        {/* HEADER */}
+
         <div className="checkout-header">
           <button
             className="checkout-back"
@@ -722,10 +843,14 @@ const Checkout = () => {
           </button>
 
           <h1>Complete Your Enrollment</h1>
+
           <p>Secure payment powered by Paystack</p>
         </div>
 
         <div className="checkout-grid">
+
+          {/* CHECKOUT MAIN */}
+
           <div className="checkout-main">
 
             {/* SELECTED PLAN */}
@@ -734,6 +859,7 @@ const Checkout = () => {
               <h3>📋 Selected Plan</h3>
 
               <div className="selected-plan-card">
+
                 <div className="plan-info">
                   <h4>{selectedPlan.name}</h4>
 
@@ -744,7 +870,10 @@ const Checkout = () => {
                   <div className="plan-features-mini">
                     {selectedPlan.features?.slice(0, 3).map(
                       (feature, index) => (
-                        <span key={index} className="mini-feature">
+                        <span
+                          key={index}
+                          className="mini-feature"
+                        >
                           ✓ {feature}
                         </span>
                       )
@@ -761,6 +890,7 @@ const Checkout = () => {
                     {selectedPlan.period || '/month'}
                   </span>
                 </div>
+
               </div>
             </div>
 
@@ -773,7 +903,9 @@ const Checkout = () => {
                 onSubmit={handlePayment}
                 className="checkout-form"
               >
+
                 <div className="form-row">
+
                   <div className="form-group">
                     <label>Full Name *</label>
 
@@ -801,9 +933,11 @@ const Checkout = () => {
                       disabled={processing}
                     />
                   </div>
+
                 </div>
 
                 <div className="form-row">
+
                   <div className="form-group">
                     <label>Country *</label>
 
@@ -814,18 +948,31 @@ const Checkout = () => {
                       required
                       disabled={processing}
                     >
-                      <option value="ZA">South Africa</option>
-                      <option value="NG">Nigeria</option>
-                      <option value="GH">Ghana</option>
-                      <option value="KE">Kenya</option>
+                      <option value="ZA">
+                        South Africa
+                      </option>
+
+                      <option value="NG">
+                        Nigeria
+                      </option>
+
+                      <option value="GH">
+                        Ghana
+                      </option>
+
+                      <option value="KE">
+                        Kenya
+                      </option>
                     </select>
                   </div>
+
                 </div>
 
                 {/* TERMS CHECKBOX */}
 
                 <div className="terms-checkbox">
                   <label className="checkbox-label">
+
                     <input
                       type="checkbox"
                       name="agreeToTerms"
@@ -860,7 +1007,9 @@ const Checkout = () => {
                       >
                         Privacy Policy
                       </span>
+
                     </span>
+
                   </label>
                 </div>
 
@@ -879,20 +1028,28 @@ const Checkout = () => {
                     ? 'Processing...'
                     : gatewayLoading
                       ? 'Loading payment gateway...'
-                      : `Pay ${formatAmount(planAmount)} ${selectedPlan.period || '/month'}`}
+                      : `Pay ${formatAmount(planAmount)} ${
+                          selectedPlan.period || '/month'
+                        }`}
                 </button>
+
               </form>
             </div>
+
           </div>
 
           {/* ORDER SUMMARY */}
 
           <div className="checkout-summary">
+
             <div className="summary-card">
+
               <h3>📊 Order Summary</h3>
 
               <div className="summary-plan">
+
                 <div className="summary-plan-name">
+
                   <span className="plan-name">
                     {selectedPlan.name}
                   </span>
@@ -900,9 +1057,11 @@ const Checkout = () => {
                   <span className="plan-tier">
                     {selectedPlan.tier || selectedPlan.name}
                   </span>
+
                 </div>
 
                 <div className="summary-plan-price">
+
                   <span className="price">
                     {formatAmount(planAmount)}
                   </span>
@@ -910,14 +1069,19 @@ const Checkout = () => {
                   <span className="period">
                     {selectedPlan.period || '/month'}
                   </span>
+
                 </div>
+
               </div>
 
               <div className="summary-divider"></div>
 
               <div className="summary-features">
                 {selectedPlan.features?.map((feature, index) => (
-                  <div key={index} className="summary-feature">
+                  <div
+                    key={index}
+                    className="summary-feature"
+                  >
                     <span>✓</span> {feature}
                   </div>
                 ))}
@@ -938,6 +1102,7 @@ const Checkout = () => {
               </div>
 
               <div className="summary-security">
+
                 <div className="security-badge">
                   <span>🔒</span> Secured by Paystack
                 </div>
@@ -945,6 +1110,7 @@ const Checkout = () => {
                 <div className="security-badge">
                   <span>🛡️</span> PCI DSS Compliant
                 </div>
+
               </div>
 
               <div className="summary-refund">
@@ -961,8 +1127,11 @@ const Checkout = () => {
               >
                 Need help? {accountInfo.supportEmail}
               </p>
+
             </div>
+
           </div>
+
         </div>
       </div>
     </div>

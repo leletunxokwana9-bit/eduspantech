@@ -1,5 +1,10 @@
 
-// src/pages/Profile.js - COMPLETE WITH UUID FIX + TUTOR WEEKLY AVAILABILITY
+// src/pages/Profile.js
+// COMPLETE PROFILE PAGE
+// Includes UUID-safe tutor shift handling, tutor weekly availability,
+// profile editing, student/tutor statistics, avatar/photo uploads,
+// intro video management, password changes and account deletion.
+
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import authService from '../services/authService';
@@ -8,7 +13,7 @@ import { API_BASE_URL } from '../services/api';
 import { tutorService } from '../services/tutorService';
 import './Profile.css';
 
-// PostgreSQL EXTRACT(DOW) convention:
+// PostgreSQL EXTRACT(DOW):
 // Sunday = 0, Monday = 1, ... Saturday = 6.
 const TUTOR_WEEK_DAYS = [
   { dayOfWeek: 1, name: 'Monday' },
@@ -26,6 +31,69 @@ const createEmptyAvailability = () =>
     enabled: false,
     slots: []
   }));
+
+// Safely handles common API response formats.
+const extractAvailabilitySlots = (result) => {
+  if (Array.isArray(result)) return result;
+  if (Array.isArray(result?.availability)) return result.availability;
+  if (Array.isArray(result?.slots)) return result.slots;
+  if (Array.isArray(result?.data?.availability)) {
+    return result.data.availability;
+  }
+  if (Array.isArray(result?.data?.slots)) {
+    return result.data.slots;
+  }
+  return null;
+};
+
+// Converts database/API slots into the format used by the UI.
+const mapAvailabilitySlots = (slots) => {
+  const safeSlots = Array.isArray(slots) ? slots : [];
+
+  return TUTOR_WEEK_DAYS.map((day) => {
+    const daySlots = safeSlots
+      .filter((slot) => {
+        const dayValue =
+          slot.day_of_week ??
+          slot.dayOfWeek ??
+          slot.day;
+
+        return Number(dayValue) === day.dayOfWeek;
+      })
+      .map((slot) => ({
+        startTime: String(
+          slot.start_time ??
+          slot.startTime ??
+          ''
+        ).slice(0, 5),
+
+        endTime: String(
+          slot.end_time ??
+          slot.endTime ??
+          ''
+        ).slice(0, 5)
+      }))
+      .filter((slot) => slot.startTime && slot.endTime);
+
+    return {
+      ...day,
+      enabled: daySlots.length > 0,
+      slots: daySlots
+    };
+  });
+};
+
+const readJsonResponse = async (response) => {
+  const text = await response.text();
+
+  if (!text) return {};
+
+  try {
+    return JSON.parse(text);
+  } catch {
+    throw new Error('The server returned an invalid response.');
+  }
+};
 
 const Profile = () => {
   const navigate = useNavigate();
@@ -79,7 +147,8 @@ const Profile = () => {
     totalSessions: 0,
     studentsTaught: 0,
     totalEarnings: 0,
-    avgRating: 0
+    avgRating: 0,
+    ratingCount: 0
   });
 
   const [subscription, setSubscription] = useState(null);
@@ -94,10 +163,7 @@ const Profile = () => {
 
   const fileInputRef = useRef(null);
 
-  // ============================================
   // VIDEO STATE
-  // ============================================
-
   const [videoFile, setVideoFile] = useState(null);
   const [videoPreview, setVideoPreview] = useState(null);
   const [videoUploading, setVideoUploading] = useState(false);
@@ -107,76 +173,70 @@ const Profile = () => {
   const [videoThumbnail, setVideoThumbnail] = useState(null);
   const [showVideoModal, setShowVideoModal] = useState(false);
   const [videoViews, setVideoViews] = useState(0);
-
   const videoFileInputRef = useRef(null);
 
-  // ===== VIDEO MANAGEMENT MODAL =====
   const [showVideoManager, setShowVideoManager] = useState(false);
 
-  // ============================================
-  // TUTOR WEEKLY AVAILABILITY STATE
-  // ============================================
-
+  // TUTOR WEEKLY AVAILABILITY
   const [availabilityDays, setAvailabilityDays] = useState(
     createEmptyAvailability
   );
-
   const [availabilityLoading, setAvailabilityLoading] = useState(false);
   const [availabilitySaving, setAvailabilitySaving] = useState(false);
   const [availabilityMessage, setAvailabilityMessage] = useState('');
   const [availabilityError, setAvailabilityError] = useState(false);
 
-  // ============================================
   // SUCCESS MESSAGE TIMER
-  // ============================================
-
   useEffect(() => {
-    if (success) {
-      const timer = setTimeout(() => setSuccess(''), 5000);
-      return () => clearTimeout(timer);
-    }
+    if (!success) return undefined;
+
+    const timer = setTimeout(() => setSuccess(''), 5000);
+    return () => clearTimeout(timer);
   }, [success]);
 
-  // ============================================
   // FETCH SUBJECTS AND SHIFTS
-  // ============================================
-
   useEffect(() => {
+    let cancelled = false;
+
     const fetchOptions = async () => {
       try {
-        const subjectsResponse = await fetch(
-          `${API_BASE_URL}/content/subjects`
-        );
+        const [subjectsResponse, shiftsResponse] = await Promise.all([
+          fetch(`${API_BASE_URL}/content/subjects`),
+          fetch(`${API_BASE_URL}/shifts`)
+        ]);
 
         if (subjectsResponse.ok) {
-          const data = await subjectsResponse.json();
+          const data = await readJsonResponse(subjectsResponse);
 
-          if (data.success && data.subjects) {
-            setSubjectOptions(data.subjects.map((s) => s.name));
+          if (!cancelled && data.success && Array.isArray(data.subjects)) {
+            setSubjectOptions(
+              data.subjects
+                .map((subject) => subject.name)
+                .filter(Boolean)
+            );
           }
         }
 
-        const shiftsResponse = await fetch(`${API_BASE_URL}/shifts`);
-
         if (shiftsResponse.ok) {
-          const data = await shiftsResponse.json();
+          const data = await readJsonResponse(shiftsResponse);
 
-          if (data.success && data.shifts) {
+          if (!cancelled && data.success && Array.isArray(data.shifts)) {
             setShiftOptions(data.shifts);
           }
         }
-      } catch (error) {
-        console.error('Failed to fetch options:', error);
+      } catch (err) {
+        console.error('Failed to fetch profile options:', err);
       }
     };
 
     fetchOptions();
+
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
-  // ============================================
   // FETCH USER DATA
-  // ============================================
-
   const fetchUserData = async () => {
     try {
       const token = localStorage.getItem('accessToken');
@@ -189,121 +249,100 @@ const Profile = () => {
       const userData =
         await authService.getCurrentUserWithSubscription();
 
-      if (userData) {
-        setUser(userData);
+      if (!userData) {
+        navigate('/login');
+        return;
+      }
 
-        const isTutorAccount =
-          userData.is_tutor === true ||
-          userData.role === 'tutor';
+      setUser(userData);
 
-        setIsTutor(isTutorAccount);
+      const isTutorAccount =
+        userData.is_tutor === true ||
+        userData.role === 'tutor';
 
-        if (userData.avatar) {
-          if (isTutorAccount) {
-            setProfilePhoto(userData.avatar);
-          } else {
-            setAvatarImage(userData.avatar);
+      setIsTutor(isTutorAccount);
 
-            setAvatarData({
-              id: userData.avatar_seed || 'default',
-              seed: userData.avatar_seed || 'default',
-              style: userData.avatar_style || 'adventurer'
-            });
-          }
-        }
-
-        if (userData.intro_video_url) {
-          setVideoUrl(userData.intro_video_url);
-          setVideoThumbnail(
-            userData.intro_video_thumbnail || null
-          );
-          setVideoDuration(
-            userData.intro_video_duration || 0
-          );
-          setVideoViews(
-            userData.intro_video_views || 0
-          );
+      if (userData.avatar) {
+        if (isTutorAccount) {
+          setProfilePhoto(userData.avatar);
         } else {
-          setVideoUrl(null);
-          setVideoThumbnail(null);
-          setVideoDuration(0);
-          setVideoViews(0);
-        }
-
-        if (
-          userData.subscription ||
-          userData.subscriptionTier
-        ) {
-          setSubscription({
-            tier:
-              userData.subscriptionTier ||
-              userData.subscription?.tier ||
-              'SILVER',
-
-            status:
-              userData.subscriptionStatus ||
-              userData.subscription?.status ||
-              'active',
-
-            endDate:
-              userData.subscriptionEnd ||
-              userData.subscription?.end_date
+          setAvatarImage(userData.avatar);
+          setAvatarData({
+            id: userData.avatar_seed || 'default',
+            seed: userData.avatar_seed || 'default',
+            style: userData.avatar_style || 'adventurer'
           });
         }
+      }
 
-        setEditForm({
-          name: userData.name || '',
-          email: userData.email || '',
-          country: userData.country || '',
-          timezone: userData.timezone || '',
-          grade: userData.grade || '',
-          bio: userData.bio || '',
-
-          tier:
-            userData.tutor_tier ||
-            userData.tier ||
-            '',
-
-          subjects: userData.tutor_subjects || [],
-
-          shiftId: userData.tutor_shift_id || '',
-
-          yearsExperience:
-            userData.years_experience || 0,
-
-          education: userData.education || '',
-          phone: userData.phone || '',
-          linkedin: userData.linkedin || '',
-          website: userData.website || ''
-        });
-
-        if (isTutorAccount) {
-          await fetchTutorStats(userData);
-        } else {
-          await fetchStudentStats();
-        }
+      if (userData.intro_video_url) {
+        setVideoUrl(userData.intro_video_url);
+        setVideoThumbnail(userData.intro_video_thumbnail || null);
+        setVideoDuration(Number(userData.intro_video_duration) || 0);
+        setVideoViews(Number(userData.intro_video_views) || 0);
       } else {
-        navigate('/login');
+        setVideoUrl(null);
+        setVideoThumbnail(null);
+        setVideoDuration(0);
+        setVideoViews(0);
+      }
+
+      if (userData.subscription || userData.subscriptionTier) {
+        setSubscription({
+          tier:
+            userData.subscriptionTier ||
+            userData.subscription?.tier ||
+            'SILVER',
+          status:
+            userData.subscriptionStatus ||
+            userData.subscription?.status ||
+            'active',
+          endDate:
+            userData.subscriptionEnd ||
+            userData.subscription?.end_date
+        });
+      }
+
+      setEditForm({
+        name: userData.name || '',
+        email: userData.email || '',
+        country: userData.country || '',
+        timezone: userData.timezone || '',
+        grade: userData.grade || '',
+        bio: userData.bio || '',
+        tier: userData.tutor_tier || userData.tier || '',
+        subjects: Array.isArray(userData.tutor_subjects)
+          ? userData.tutor_subjects
+          : [],
+        shiftId: userData.tutor_shift_id || '',
+        yearsExperience: userData.years_experience || 0,
+        education: userData.education || '',
+        phone: userData.phone || '',
+        linkedin: userData.linkedin || '',
+        website: userData.website || ''
+      });
+
+      if (isTutorAccount) {
+        await fetchTutorStats(userData);
+      } else {
+        await fetchStudentStats();
       }
     } catch (err) {
-      console.error('❌ Failed to load profile data:', err);
-      setError('Failed to load profile data');
+      console.error('Failed to load profile data:', err);
+      setError('Failed to load profile data.');
       navigate('/login');
     } finally {
       setLoading(false);
     }
   };
 
-  // ============================================
   // STUDENT STATISTICS
-  // ============================================
-
   const fetchStudentStats = async () => {
     try {
       const token = localStorage.getItem('accessToken');
       if (!token) return;
 
-      const enrollResponse = await fetch(
+      const response = await fetch(
         `${API_BASE_URL}/content/my/subjects`,
         {
           headers: {
@@ -313,80 +352,74 @@ const Profile = () => {
         }
       );
 
-      if (enrollResponse.ok) {
-        const data = await enrollResponse.json();
+      if (!response.ok) return;
 
-        if (data.success) {
-          const subjects = data.subjects || [];
+      const data = await readJsonResponse(response);
 
-          setEnrollments(subjects);
+      if (data.success) {
+        const subjects = Array.isArray(data.subjects)
+          ? data.subjects
+          : [];
 
-          setStudentStats({
-            coursesEnrolled: subjects.length,
-            hoursSpent: 0,
-            badgesEarned: 0,
+        setEnrollments(subjects);
 
-            completionRate:
-              subjects.length > 0
-                ? Math.min(subjects.length * 20, 100)
-                : 0
-          });
-        }
+        setStudentStats({
+          coursesEnrolled: subjects.length,
+          hoursSpent: 0,
+          badgesEarned: 0,
+          completionRate:
+            subjects.length > 0
+              ? Math.min(subjects.length * 20, 100)
+              : 0
+        });
       }
-    } catch (error) {
-      console.error('❌ Failed to fetch student stats:', error);
+    } catch (err) {
+      console.error('Failed to fetch student stats:', err);
     }
   };
 
-  // ============================================
   // TUTOR STATISTICS
-  // ============================================
-
   const fetchTutorStats = async (userData) => {
     try {
       const token = localStorage.getItem('accessToken');
       if (!token) return;
 
-      let rating = 4.5;
+      let rating = Number(
+        userData?.tutor_rating ??
+        userData?.rating ??
+        4.5
+      );
       let ratingCount = 0;
 
       try {
-        const tutorsResponse = await fetch(
-          `${API_BASE_URL}/tutors`,
-          {
-            headers: {
-              Authorization: `Bearer ${token}`,
-              'Content-Type': 'application/json'
-            }
+        const tutorsResponse = await fetch(`${API_BASE_URL}/tutors`, {
+          headers: {
+            Authorization: `Bearer ${token}`,
+            'Content-Type': 'application/json'
           }
-        );
+        });
 
         if (tutorsResponse.ok) {
-          const tutorsData = await tutorsResponse.json();
+          const tutorsData = await readJsonResponse(tutorsResponse);
 
           for (const shift of (tutorsData.tutors || [])) {
             const tutor = shift.tutors?.find(
-              (t) => t.id === userData?.id
+              (item) => String(item.id) === String(userData?.id)
             );
 
             if (tutor) {
-              rating =
-                tutor.rating ||
-                tutor.tutorRating ||
-                4.5;
-
-              ratingCount = tutor.ratingCount || 0;
+              rating = Number(
+                tutor.rating ??
+                tutor.tutorRating ??
+                rating
+              );
+              ratingCount = Number(tutor.ratingCount) || 0;
               break;
             }
           }
         }
-      } catch (error) {
-        console.error('❌ Failed to fetch rating:', error);
-
-        rating =
-          userData?.tutor_rating ||
-          userData?.rating ||
-          4.5;
+      } catch (err) {
+        console.error('Failed to fetch tutor rating:', err);
       }
 
       let totalEarnings = 0;
@@ -405,83 +438,74 @@ const Profile = () => {
         );
 
         if (earningsResponse.ok) {
-          const data = await earningsResponse.json();
+          const data = await readJsonResponse(earningsResponse);
 
           if (data.success && data.earnings) {
-            totalEarnings = data.earnings.total || 0;
-
-            sessionsCount =
-              data.earnings.sessionsCount || 0;
+            totalEarnings = Number(data.earnings.total) || 0;
+            sessionsCount = Number(data.earnings.sessionsCount) || 0;
 
             uniqueStudents = new Set(
-              data.earnings.history?.map(
-                (h) => h.studentId
-              ) || []
+              (data.earnings.history || [])
+                .map((item) => item.studentId)
+                .filter(Boolean)
             );
           }
+        } else {
+          throw new Error('Earnings endpoint unavailable');
         }
-      } catch (error) {
-        console.error('❌ Failed to fetch earnings:', error);
+      } catch (err) {
+        console.error('Failed to fetch earnings:', err);
 
-        const sessionsResponse = await fetch(
-          `${API_BASE_URL}/sessions`,
-          {
-            headers: {
-              Authorization: `Bearer ${token}`,
-              'Content-Type': 'application/json'
+        try {
+          const sessionsResponse = await fetch(
+            `${API_BASE_URL}/sessions`,
+            {
+              headers: {
+                Authorization: `Bearer ${token}`,
+                'Content-Type': 'application/json'
+              }
             }
+          );
+
+          if (sessionsResponse.ok) {
+            const data = await readJsonResponse(sessionsResponse);
+            const sessions = data.sessions || [];
+
+            uniqueStudents = new Set(
+              sessions
+                .map((session) => session.user_id)
+                .filter(Boolean)
+            );
+
+            const completedSessions = sessions.filter(
+              (session) =>
+                session.status === 'completed' ||
+                session.status === 'ended'
+            );
+
+            sessionsCount = sessions.length;
+            totalEarnings = completedSessions.length * 100;
           }
-        );
-
-        if (sessionsResponse.ok) {
-          const data = await sessionsResponse.json();
-          const sessions = data.sessions || [];
-
-          uniqueStudents = new Set(
-            sessions.map((s) => s.user_id)
-          );
-
-          const completedSessions = sessions.filter(
-            (s) =>
-              s.status === 'completed' ||
-              s.status === 'ended'
-          );
-
-          sessionsCount = sessions.length;
-          totalEarnings = completedSessions.length * 100;
+        } catch (sessionsError) {
+          console.error('Failed to fetch tutor sessions:', sessionsError);
         }
       }
 
       setTutorStats({
-        totalSessions:
-          sessionsCount || tutorStats.totalSessions || 0,
-
-        studentsTaught:
-          uniqueStudents.size ||
-          tutorStats.studentsTaught ||
-          0,
-
-        totalEarnings:
-          totalEarnings ||
-          tutorStats.totalEarnings ||
-          0,
-
-        avgRating: rating,
-        ratingCount: ratingCount
+        totalSessions: sessionsCount,
+        studentsTaught: uniqueStudents.size,
+        totalEarnings,
+        avgRating: Number.isFinite(rating) ? rating : 4.5,
+        ratingCount
       });
-    } catch (error) {
-      console.error('❌ Failed to fetch tutor stats:', error);
-
-      const rating =
-        userData?.tutor_rating ||
-        userData?.rating ||
-        4.5;
+    } catch (err) {
+      console.error('Failed to fetch tutor statistics:', err);
 
       setTutorStats({
         totalSessions: 0,
         studentsTaught: 0,
         totalEarnings: 0,
-        avgRating: rating,
+        avgRating: Number(userData?.tutor_rating || userData?.rating || 4.5),
         ratingCount: 0
       });
     }
@@ -489,14 +513,13 @@ const Profile = () => {
 
   useEffect(() => {
     fetchUserData();
+    // Load the current account once when the profile page mounts.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // ============================================
   // LOAD TUTOR WEEKLY AVAILABILITY
-  // ============================================
-
   useEffect(() => {
-    if (!isTutor) return;
+    if (!isTutor) return undefined;
 
     let cancelled = false;
 
@@ -525,52 +548,32 @@ const Profile = () => {
           }
         );
 
-        const result = await response.json();
+        const result = await readJsonResponse(response);
 
         if (!response.ok) {
           throw new Error(
             result.error ||
+            result.message ||
             'Could not load your weekly availability.'
           );
         }
 
         if (cancelled) return;
 
-        const savedSlots = result.availability || [];
+        const slots = extractAvailabilitySlots(result);
 
-        const mappedDays = TUTOR_WEEK_DAYS.map((day) => {
-          const daySlots = savedSlots
-            .filter(
-              (slot) =>
-                Number(slot.day_of_week) === day.dayOfWeek
-            )
-            .map((slot) => ({
-              startTime: String(
-                slot.start_time || ''
-              ).slice(0, 5),
-
-              endTime: String(
-                slot.end_time || ''
-              ).slice(0, 5)
-            }));
-
-          return {
-            ...day,
-            enabled: daySlots.length > 0,
-            slots: daySlots
-          };
-        });
-
-        setAvailabilityDays(mappedDays);
-      } catch (error) {
-        if (!cancelled) {
-          console.error(
-            'Availability loading error:',
-            error
+        if (slots === null) {
+          throw new Error(
+            'The availability response did not contain a valid slots list.'
           );
+        }
 
+        setAvailabilityDays(mapAvailabilitySlots(slots));
+      } catch (err) {
+        if (!cancelled) {
+          console.error('Availability loading error:', err);
           setAvailabilityError(true);
-          setAvailabilityMessage(error.message);
+          setAvailabilityMessage(err.message);
         }
       } finally {
         if (!cancelled) {
@@ -586,42 +589,30 @@ const Profile = () => {
     };
   }, [isTutor]);
 
-  // ============================================
-  // AVAILABILITY: TOGGLE DAY
-  // ============================================
-
+  // TOGGLE AVAILABILITY DAY
   const toggleAvailabilityDay = (dayOfWeek, enabled) => {
     setAvailabilityDays((current) =>
       current.map((day) => {
-        if (day.dayOfWeek !== dayOfWeek) {
-          return day;
-        }
+        if (day.dayOfWeek !== dayOfWeek) return day;
 
         return {
           ...day,
           enabled,
-
           slots: enabled
             ? (
                 day.slots.length > 0
                   ? day.slots
-                  : [
-                      {
-                        startTime: '09:00',
-                        endTime: '17:00'
-                      }
-                    ]
+                  : [{ startTime: '09:00', endTime: '17:00' }]
               )
             : day.slots
         };
       })
     );
+
+    setAvailabilityMessage('');
   };
 
-  // ============================================
-  // AVAILABILITY: UPDATE TIME
-  // ============================================
-
+  // UPDATE TIME RANGE
   const updateAvailabilityTime = (
     dayOfWeek,
     slotIndex,
@@ -630,50 +621,43 @@ const Profile = () => {
   ) => {
     setAvailabilityDays((current) =>
       current.map((day) => {
-        if (day.dayOfWeek !== dayOfWeek) {
-          return day;
-        }
+        if (day.dayOfWeek !== dayOfWeek) return day;
 
         return {
           ...day,
-
           slots: day.slots.map((slot, index) =>
             index === slotIndex
-              ? {
-                  ...slot,
-                  [field]: value
-                }
+              ? { ...slot, [field]: value }
               : slot
           )
         };
       })
     );
+
+    setAvailabilityMessage('');
   };
 
-  // ============================================
-  // AVAILABILITY: ADD TIME RANGE
-  // ============================================
-
+  // ADD TIME RANGE
   const addAvailabilitySlot = (dayOfWeek) => {
     setAvailabilityDays((current) =>
       current.map((day) => {
-        if (day.dayOfWeek !== dayOfWeek) {
+        if (day.dayOfWeek !== dayOfWeek) return day;
+
+        const previousSlot = day.slots[day.slots.length - 1];
+        const nextStart = previousSlot?.endTime || '09:00';
+
+        const [hours, minutes] = nextStart.split(':').map(Number);
+        const startMinutes = hours * 60 + minutes;
+
+        if (
+          !Number.isFinite(startMinutes) ||
+          startMinutes >= 23 * 60 + 59
+        ) {
           return day;
         }
 
-        const previousSlot =
-          day.slots[day.slots.length - 1];
-
-        const nextStart =
-          previousSlot?.endTime || '09:00';
-
-        // Default the next range to one hour.
-        const [hours, minutes] = nextStart
-          .split(':')
-          .map(Number);
-
         const nextEndMinutes = Math.min(
-          hours * 60 + minutes + 60,
+          startMinutes + 60,
           23 * 60 + 59
         );
 
@@ -683,7 +667,6 @@ const Profile = () => {
 
         return {
           ...day,
-
           slots: [
             ...day.slots,
             {
@@ -694,50 +677,41 @@ const Profile = () => {
         };
       })
     );
+
+    setAvailabilityMessage('');
   };
 
-  // ============================================
-  // AVAILABILITY: REMOVE TIME RANGE
-  // ============================================
-
-  const removeAvailabilitySlot = (
-    dayOfWeek,
-    slotIndex
-  ) => {
+  // REMOVE TIME RANGE
+  const removeAvailabilitySlot = (dayOfWeek, slotIndex) => {
     setAvailabilityDays((current) =>
       current.map((day) => {
-        if (day.dayOfWeek !== dayOfWeek) {
-          return day;
-        }
+        if (day.dayOfWeek !== dayOfWeek) return day;
 
         return {
           ...day,
-
           slots: day.slots.filter(
             (_, index) => index !== slotIndex
           )
         };
       })
     );
+
+    setAvailabilityMessage('');
   };
 
-  // ============================================
-  // AVAILABILITY: VALIDATE
-  // ============================================
-
+  // VALIDATE AVAILABILITY
   const validateAvailability = () => {
     const enabledDays = availabilityDays.filter(
       (day) => day.enabled
     );
 
     for (const day of enabledDays) {
-      if (day.slots.length === 0) {
+      if (!day.slots.length) {
         return `Please add at least one time range for ${day.name}.`;
       }
 
       const sortedSlots = [...day.slots].sort(
-        (a, b) =>
-          a.startTime.localeCompare(b.startTime)
+        (a, b) => a.startTime.localeCompare(b.startTime)
       );
 
       for (const slot of sortedSlots) {
@@ -745,33 +719,51 @@ const Profile = () => {
           return `Complete all time ranges for ${day.name}.`;
         }
 
+        if (
+          !/^\d{2}:\d{2}$/.test(slot.startTime) ||
+          !/^\d{2}:\d{2}$/.test(slot.endTime)
+        ) {
+          return `Enter valid start and end times for ${day.name}.`;
+        }
+
         if (slot.startTime >= slot.endTime) {
           return `The end time must be later than the start time on ${day.name}.`;
         }
       }
 
-      // Prevent overlapping time ranges on the same day.
-      for (let i = 1; i < sortedSlots.length; i++) {
+      for (let index = 1; index < sortedSlots.length; index += 1) {
         if (
-          sortedSlots[i].startTime <
-          sortedSlots[i - 1].endTime
+          sortedSlots[index].startTime <
+          sortedSlots[index - 1].endTime
         ) {
           return `Your time ranges overlap on ${day.name}. Please adjust them.`;
         }
       }
     }
 
+    if (!enabledDays.length) {
+      return 'Please make at least one day available before saving.';
+    }
+
     return null;
   };
 
-  // ============================================
-  // AVAILABILITY: SAVE
-  // ============================================
-
+  // SAVE AVAILABILITY
   const saveAvailability = async () => {
-    setAvailabilitySaving(true);
+    if (availabilitySaving || availabilityLoading) return;
+
     setAvailabilityError(false);
     setAvailabilityMessage('');
+
+    const validationError = validateAvailability();
+
+    if (validationError) {
+      setAvailabilityError(true);
+      setAvailabilityMessage(validationError);
+      return;
+    }
+
+    setAvailabilitySaving(true);
 
     try {
       const token = localStorage.getItem('accessToken');
@@ -780,12 +772,6 @@ const Profile = () => {
         throw new Error(
           'Your session has expired. Please sign in again.'
         );
-      }
-
-      const validationError = validateAvailability();
-
-      if (validationError) {
-        throw new Error(validationError);
       }
 
       const slots = availabilityDays
@@ -810,41 +796,22 @@ const Profile = () => {
         }
       );
 
-      const result = await response.json();
+      const result = await readJsonResponse(response);
 
       if (!response.ok) {
         throw new Error(
           result.error ||
+          result.message ||
           'Could not save your weekly availability.'
         );
       }
 
-      const savedSlots = result.availability || [];
+      // Some APIs return the saved slots; others return only success/message.
+      // Do not clear the user's schedule when the response omits the slots.
+      const returnedSlots = extractAvailabilitySlots(result);
+      const slotsToDisplay = returnedSlots ?? slots;
 
-      const mappedDays = TUTOR_WEEK_DAYS.map((day) => {
-        const daySlots = savedSlots
-          .filter(
-            (slot) =>
-              Number(slot.day_of_week) === day.dayOfWeek
-          )
-          .map((slot) => ({
-            startTime: String(
-              slot.start_time || ''
-            ).slice(0, 5),
-
-            endTime: String(
-              slot.end_time || ''
-            ).slice(0, 5)
-          }));
-
-        return {
-          ...day,
-          enabled: daySlots.length > 0,
-          slots: daySlots
-        };
-      });
-
-      setAvailabilityDays(mappedDays);
+      setAvailabilityDays(mapAvailabilitySlots(slotsToDisplay));
 
       setAvailabilityMessage(
         result.message ||
@@ -852,23 +819,16 @@ const Profile = () => {
       );
 
       setAvailabilityError(false);
-    } catch (error) {
-      console.error(
-        'Availability saving error:',
-        error
-      );
-
+    } catch (err) {
+      console.error('Availability saving error:', err);
       setAvailabilityError(true);
-      setAvailabilityMessage(error.message);
+      setAvailabilityMessage(err.message);
     } finally {
       setAvailabilitySaving(false);
     }
   };
 
-  // ============================================
   // REFRESH USER DATA
-  // ============================================
-
   const refreshUserData = async () => {
     try {
       const token = localStorage.getItem('accessToken');
@@ -884,55 +844,41 @@ const Profile = () => {
         }
       );
 
-      if (response.ok) {
-        const data = await response.json();
+      if (!response.ok) return;
 
-        if (data.success && data.user) {
-          const userData = data.user;
+      const data = await readJsonResponse(response);
 
-          setUser(userData);
+      if (data.success && data.user) {
+        const userData = data.user;
 
-          if (userData.intro_video_url) {
-            setVideoUrl(userData.intro_video_url);
+        setUser(userData);
 
-            setVideoThumbnail(
-              userData.intro_video_thumbnail || null
-            );
-
-            setVideoDuration(
-              userData.intro_video_duration || 0
-            );
-
-            setVideoViews(
-              userData.intro_video_views || 0
-            );
-          } else {
-            setVideoUrl(null);
-            setVideoThumbnail(null);
-            setVideoDuration(0);
-            setVideoViews(0);
-          }
-
-          localStorage.setItem(
-            'user',
-            JSON.stringify(userData)
-          );
+        if (userData.avatar && isTutor) {
+          setProfilePhoto(userData.avatar);
         }
+
+        if (userData.intro_video_url) {
+          setVideoUrl(userData.intro_video_url);
+          setVideoThumbnail(userData.intro_video_thumbnail || null);
+          setVideoDuration(Number(userData.intro_video_duration) || 0);
+          setVideoViews(Number(userData.intro_video_views) || 0);
+        } else {
+          setVideoUrl(null);
+          setVideoThumbnail(null);
+          setVideoDuration(0);
+          setVideoViews(0);
+        }
+
+        localStorage.setItem('user', JSON.stringify(userData));
       }
-    } catch (error) {
-      console.error(
-        '❌ Failed to refresh user data:',
-        error
-      );
+    } catch (err) {
+      console.error('Failed to refresh user data:', err);
     }
   };
 
-  // ============================================
-  // VIDEO HANDLERS
-  // ============================================
-
-  const handleVideoSelect = (e) => {
-    const file = e.target.files[0];
+  // VIDEO SELECTION
+  const handleVideoSelect = (event) => {
+    const file = event.target.files?.[0];
     if (!file) return;
 
     const validTypes = [
@@ -942,30 +888,39 @@ const Profile = () => {
       'video/x-matroska'
     ];
 
-    if (!validTypes.includes(file.type)) {
-      setError(
-        'Please upload a valid video file (MP4, WebM, MOV, MKV)'
-      );
+    const validExtension = /\.(mp4|webm|mov|mkv)$/i.test(file.name);
+
+    if (!validTypes.includes(file.type) && !validExtension) {
+      setError('Please upload a valid video file (MP4, WebM, MOV, MKV).');
+      event.target.value = '';
       return;
     }
 
     if (file.size > 100 * 1024 * 1024) {
-      setError('Video file must be less than 100MB');
+      setError('Video file must be less than 100MB.');
+      event.target.value = '';
       return;
     }
 
     setVideoFile(file);
     setError('');
 
+    if (videoPreview) {
+      URL.revokeObjectURL(videoPreview);
+    }
+
     const previewUrl = URL.createObjectURL(file);
     setVideoPreview(previewUrl);
 
     const video = document.createElement('video');
+    video.preload = 'metadata';
     video.src = previewUrl;
 
     video.onloadedmetadata = () => {
       setVideoDuration(
-        Math.round(video.duration)
+        Number.isFinite(video.duration)
+          ? Math.round(video.duration)
+          : 0
       );
     };
 
@@ -973,36 +928,46 @@ const Profile = () => {
     setShowVideoManager(true);
   };
 
+  // GENERATE VIDEO THUMBNAIL
   const generateThumbnail = (file) => {
-    const video = document.createElement('video');
     const url = URL.createObjectURL(file);
+    const video = document.createElement('video');
 
+    video.preload = 'metadata';
+    video.muted = true;
     video.src = url;
-    video.currentTime = 1;
+
+    video.onloadedmetadata = () => {
+      video.currentTime = Math.min(1, video.duration || 1);
+    };
 
     video.onloadeddata = () => {
-      const canvas = document.createElement('canvas');
+      try {
+        const canvas = document.createElement('canvas');
+        canvas.width = 640;
+        canvas.height = 360;
 
-      canvas.width = 640;
-      canvas.height = 360;
+        const context = canvas.getContext('2d');
 
-      const ctx = canvas.getContext('2d');
+        if (context) {
+          context.drawImage(
+            video,
+            0,
+            0,
+            canvas.width,
+            canvas.height
+          );
 
-      ctx.drawImage(
-        video,
-        0,
-        0,
-        canvas.width,
-        canvas.height
-      );
-
-      const thumbnailDataUrl = canvas.toDataURL(
-        'image/jpeg',
-        0.8
-      );
-
-      setVideoThumbnail(thumbnailDataUrl);
-      URL.revokeObjectURL(url);
+          setVideoThumbnail(
+            canvas.toDataURL('image/jpeg', 0.8)
+          );
+        }
+      } catch (err) {
+        console.error('Could not generate video thumbnail:', err);
+        setVideoThumbnail(null);
+      } finally {
+        URL.revokeObjectURL(url);
+      }
     };
 
     video.onerror = () => {
@@ -1011,9 +976,10 @@ const Profile = () => {
     };
   };
 
+  // UPLOAD VIDEO
   const handleUploadVideo = async () => {
     if (!videoFile) {
-      setError('Please select a video first');
+      setError('Please select a video first.');
       return;
     }
 
@@ -1022,70 +988,54 @@ const Profile = () => {
       setVideoProgress(0);
       setError('');
 
-      const reader = new FileReader();
+      const base64Video = await new Promise((resolve, reject) => {
+        const reader = new FileReader();
 
-      reader.readAsDataURL(videoFile);
+        reader.onload = () => resolve(reader.result);
+        reader.onerror = () => reject(
+          new Error('Failed to read video file.')
+        );
 
-      reader.onload = async () => {
-        try {
-          const base64Video = reader.result;
+        reader.readAsDataURL(videoFile);
+      });
 
-          setVideoProgress(50);
+      setVideoProgress(50);
 
-          const result =
-            await tutorService.uploadIntroVideo({
-              videoUrl: base64Video,
-              thumbnail: videoThumbnail || null,
-              duration: videoDuration
-            });
+      const result = await tutorService.uploadIntroVideo({
+        videoUrl: base64Video,
+        thumbnail: videoThumbnail || null,
+        duration: videoDuration
+      });
 
-          if (result.success) {
-            setSuccess(
-              '✅ Video uploaded successfully!'
-            );
+      if (!result?.success) {
+        throw new Error(result?.error || 'Failed to upload video.');
+      }
 
-            await refreshUserData();
+      setVideoProgress(100);
+      await refreshUserData();
 
-            if (videoFileInputRef.current) {
-              videoFileInputRef.current.value = '';
-            }
+      setSuccess('Video uploaded successfully!');
 
-            setVideoPreview(null);
-            setVideoFile(null);
-            setVideoProgress(100);
-            setShowVideoManager(false);
+      if (videoPreview) {
+        URL.revokeObjectURL(videoPreview);
+      }
 
-            setTimeout(
-              () => setSuccess(''),
-              5000
-            );
-          } else {
-            setError(
-              result.error || 'Failed to upload video'
-            );
-          }
-        } catch (err) {
-          setError(
-            err.message || 'Failed to upload video'
-          );
-        } finally {
-          setVideoUploading(false);
-        }
-      };
+      setVideoPreview(null);
+      setVideoFile(null);
+      setShowVideoManager(false);
 
-      reader.onerror = () => {
-        setError('Failed to read video file');
-        setVideoUploading(false);
-      };
+      if (videoFileInputRef.current) {
+        videoFileInputRef.current.value = '';
+      }
     } catch (err) {
-      setError(
-        err.message || 'Failed to upload video'
-      );
-
+      console.error('Video upload error:', err);
+      setError(err.message || 'Failed to upload video.');
+    } finally {
       setVideoUploading(false);
     }
   };
 
+  // REMOVE VIDEO
   const handleRemoveVideo = async () => {
     if (
       !window.confirm(
@@ -1098,32 +1048,21 @@ const Profile = () => {
     try {
       setVideoUploading(true);
 
-      const result =
-        await tutorService.removeIntroVideo();
+      const result = await tutorService.removeIntroVideo();
 
-      if (result.success) {
-        setSuccess('✅ Video removed successfully');
-
-        await refreshUserData();
-
-        setVideoPreview(null);
-        setVideoFile(null);
-        setVideoProgress(0);
-        setShowVideoManager(false);
-
-        setTimeout(
-          () => setSuccess(''),
-          5000
-        );
-      } else {
-        setError(
-          result.error || 'Failed to remove video'
-        );
+      if (!result?.success) {
+        throw new Error(result?.error || 'Failed to remove video.');
       }
+
+      await refreshUserData();
+
+      setVideoPreview(null);
+      setVideoFile(null);
+      setVideoProgress(0);
+      setShowVideoManager(false);
+      setSuccess('Video removed successfully.');
     } catch (err) {
-      setError(
-        err.message || 'Failed to remove video'
-      );
+      setError(err.message || 'Failed to remove video.');
     } finally {
       setVideoUploading(false);
     }
@@ -1134,51 +1073,37 @@ const Profile = () => {
   };
 
   const formatDuration = (seconds) => {
-    if (!seconds) return '0:00';
+    const value = Number(seconds) || 0;
+    const mins = Math.floor(value / 60);
+    const secs = value % 60;
 
-    const mins = Math.floor(seconds / 60);
-    const secs = seconds % 60;
-
-    return `${mins}:${secs.toString().padStart(2, '0')}`;
+    return `${mins}:${String(secs).padStart(2, '0')}`;
   };
 
-  // ============================================
-  // GENERAL HANDLERS
-  // ============================================
+  // GENERAL FORM HANDLERS
+  const handleInputChange = (event) => {
+    const { name, value } = event.target;
 
-  const handleInputChange = (e) => {
-    const { name, value } = e.target;
-
-    setEditForm((prev) => ({
-      ...prev,
+    setEditForm((previous) => ({
+      ...previous,
       [name]: value
     }));
   };
 
   const handleSubjectToggle = (subject) => {
-    setEditForm((prev) => {
-      const subjects = prev.subjects || [];
-
-      if (subjects.includes(subject)) {
-        return {
-          ...prev,
-          subjects: subjects.filter(
-            (s) => s !== subject
-          )
-        };
-      }
+    setEditForm((previous) => {
+      const subjects = previous.subjects || [];
 
       return {
-        ...prev,
-        subjects: [...subjects, subject]
+        ...previous,
+        subjects: subjects.includes(subject)
+          ? subjects.filter((item) => item !== subject)
+          : [...subjects, subject]
       };
     });
   };
 
-  // ============================================
   // AVATAR HANDLERS
-  // ============================================
-
   const handleAvatarSelect = async (avatar) => {
     setAvatarData(avatar);
     setAvatarImage(avatar.svg);
@@ -1192,9 +1117,7 @@ const Profile = () => {
       const token = localStorage.getItem('accessToken');
 
       if (!token) {
-        setError(
-          'Please login again to save avatar'
-        );
+        setError('Please log in again to save your avatar.');
         return;
       }
 
@@ -1206,7 +1129,6 @@ const Profile = () => {
             'Content-Type': 'application/json',
             Authorization: `Bearer ${token}`
           },
-
           body: JSON.stringify({
             avatar: avatar.svg,
             avatar_seed: avatar.seed,
@@ -1215,58 +1137,40 @@ const Profile = () => {
         }
       );
 
-      if (response.ok) {
-        const data = await response.json();
+      const data = await readJsonResponse(response);
 
-        if (data.success) {
-          setSuccess(
-            'Avatar updated successfully! ✅'
-          );
-
-          setUser((prev) => ({
-            ...prev,
-            avatar: avatar.svg,
-            avatar_seed: avatar.seed,
-            avatar_style:
-              avatar.style || 'adventurer'
-          }));
-        }
-      } else {
-        const errorData = await response.json();
-
-        setError(
-          errorData.error || 'Failed to save avatar'
-        );
+      if (!response.ok || !data.success) {
+        throw new Error(data.error || 'Failed to save avatar.');
       }
-    } catch (error) {
-      console.error(
-        '❌ Failed to save avatar:',
-        error
-      );
 
-      setError('Failed to save avatar');
+      setSuccess('Avatar updated successfully!');
+
+      setUser((previous) => ({
+        ...previous,
+        avatar: avatar.svg,
+        avatar_seed: avatar.seed,
+        avatar_style: avatar.style || 'adventurer'
+      }));
+    } catch (err) {
+      console.error('Failed to save avatar:', err);
+      setError(err.message || 'Failed to save avatar.');
     }
   };
 
-  // ============================================
   // PROFILE PHOTO UPLOAD
-  // ============================================
-
-  const handlePhotoUpload = async (e) => {
-    const file = e.target.files[0];
+  const handlePhotoUpload = async (event) => {
+    const file = event.target.files?.[0];
     if (!file) return;
 
     if (!file.type.startsWith('image/')) {
-      setPhotoError(
-        '❌ Please upload an image file (JPG, PNG, WEBP)'
-      );
+      setPhotoError('Please upload an image file (JPG, PNG, WEBP).');
+      event.target.value = '';
       return;
     }
 
     if (file.size > 5 * 1024 * 1024) {
-      setPhotoError(
-        '❌ Image must be under 5MB'
-      );
+      setPhotoError('Image must be under 5MB.');
+      event.target.value = '';
       return;
     }
 
@@ -1274,99 +1178,63 @@ const Profile = () => {
     setPhotoError('');
 
     try {
-      const reader = new FileReader();
+      const base64Image = await new Promise((resolve, reject) => {
+        const reader = new FileReader();
 
-      reader.readAsDataURL(file);
-
-      reader.onload = async () => {
-        try {
-          const base64Image = reader.result;
-
-          const token =
-            localStorage.getItem('accessToken');
-
-          const response = await fetch(
-            `${API_BASE_URL}/auth/profile`,
-            {
-              method: 'PUT',
-
-              headers: {
-                'Content-Type': 'application/json',
-                Authorization: `Bearer ${token}`
-              },
-
-              body: JSON.stringify({
-                avatar: base64Image
-              })
-            }
-          );
-
-          if (response.ok) {
-            const data = await response.json();
-
-            if (data.success) {
-              setProfilePhoto(base64Image);
-
-              setSuccess(
-                '✅ Photo uploaded successfully!'
-              );
-
-              setUser((prev) => ({
-                ...prev,
-                avatar: base64Image
-              }));
-
-              const storedUser = JSON.parse(
-                localStorage.getItem('user') || '{}'
-              );
-
-              storedUser.avatar = base64Image;
-
-              localStorage.setItem(
-                'user',
-                JSON.stringify(storedUser)
-              );
-            }
-          } else {
-            const errorData = await response.json();
-
-            setPhotoError(
-              errorData.error ||
-              '❌ Failed to upload photo'
-            );
-          }
-        } catch (error) {
-          console.error(
-            '❌ Photo upload error:',
-            error
-          );
-
-          setPhotoError(
-            '❌ Error uploading photo'
-          );
-        } finally {
-          setPhotoUploading(false);
-        }
-      };
-
-      reader.onerror = () => {
-        setPhotoError(
-          '❌ Failed to read image file'
+        reader.onload = () => resolve(reader.result);
+        reader.onerror = () => reject(
+          new Error('Failed to read image file.')
         );
 
-        setPhotoUploading(false);
-      };
-    } catch (error) {
-      console.error(
-        '❌ Photo upload error:',
-        error
+        reader.readAsDataURL(file);
+      });
+
+      const token = localStorage.getItem('accessToken');
+
+      if (!token) {
+        throw new Error('Your session has expired. Please sign in again.');
+      }
+
+      const response = await fetch(
+        `${API_BASE_URL}/auth/profile`,
+        {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${token}`
+          },
+          body: JSON.stringify({ avatar: base64Image })
+        }
       );
 
-      setPhotoError(
-        '❌ Error uploading photo'
+      const data = await readJsonResponse(response);
+
+      if (!response.ok || !data.success) {
+        throw new Error(data.error || 'Failed to upload photo.');
+      }
+
+      setProfilePhoto(base64Image);
+      setSuccess('Photo uploaded successfully!');
+
+      setUser((previous) => ({
+        ...previous,
+        avatar: base64Image
+      }));
+
+      const storedUser = JSON.parse(
+        localStorage.getItem('user') || '{}'
       );
 
+      storedUser.avatar = base64Image;
+      localStorage.setItem('user', JSON.stringify(storedUser));
+    } catch (err) {
+      console.error('Photo upload error:', err);
+      setPhotoError(err.message || 'Error uploading photo.');
+    } finally {
       setPhotoUploading(false);
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
+      }
     }
   };
 
@@ -1374,26 +1242,19 @@ const Profile = () => {
     fileInputRef.current?.click();
   };
 
-  // ============================================
-  // SAVE PROFILE - UUID HANDLING PRESERVED
-  // ============================================
-
-  const handleSaveProfile = async (e) => {
-    e.preventDefault();
+  // SAVE PROFILE - UUID-SAFE SHIFT HANDLING
+  const handleSaveProfile = async (event) => {
+    event.preventDefault();
 
     setLoading(true);
     setError('');
     setSuccess('');
 
     try {
-      const token =
-        localStorage.getItem('accessToken');
+      const token = localStorage.getItem('accessToken');
 
       if (!token) {
-        setError(
-          'Session expired. Please login again.'
-        );
-
+        setError('Session expired. Please log in again.');
         navigate('/login');
         return;
       }
@@ -1403,141 +1264,102 @@ const Profile = () => {
         email: editForm.email,
         country: editForm.country,
         timezone: editForm.timezone,
-
         grade: editForm.grade
           ? parseInt(editForm.grade, 10)
           : 0,
-
         bio: editForm.bio || '',
         phone: editForm.phone || '',
         education: editForm.education || '',
-
         yearsExperience:
           parseInt(editForm.yearsExperience, 10) || 0,
-
         linkedin: editForm.linkedin || '',
         website: editForm.website || '',
         tier: editForm.tier || '',
         subjects: editForm.subjects || [],
 
+        // An empty string must never be sent as a UUID.
         shiftId:
           editForm.shiftId &&
-          editForm.shiftId.trim() !== ''
+          String(editForm.shiftId).trim() !== ''
             ? editForm.shiftId
             : null
       };
-
-      console.log(
-        '📤 Saving profile with payload:',
-        payload
-      );
 
       const response = await fetch(
         `${API_BASE_URL}/auth/profile`,
         {
           method: 'PUT',
-
           headers: {
             'Content-Type': 'application/json',
             Authorization: `Bearer ${token}`
           },
-
           body: JSON.stringify(payload)
         }
       );
 
-      const data = await response.json();
+      const data = await readJsonResponse(response);
 
-      if (response.ok && data.success) {
-        const updatedUser = {
-          ...user,
-          ...data.user
-        };
-
-        setUser(updatedUser);
-
-        localStorage.setItem(
-          'user',
-          JSON.stringify(updatedUser)
-        );
-
-        if (updatedUser.intro_video_url) {
-          setVideoUrl(
-            updatedUser.intro_video_url
-          );
-
-          setVideoThumbnail(
-            updatedUser.intro_video_thumbnail || null
-          );
-
-          setVideoDuration(
-            updatedUser.intro_video_duration || 0
-          );
-
-          setVideoViews(
-            updatedUser.intro_video_views || 0
-          );
-        }
-
-        setEditForm({
-          name: data.user.name || '',
-          email: data.user.email || '',
-          country: data.user.country || '',
-          timezone: data.user.timezone || '',
-          grade: data.user.grade || '',
-          bio: data.user.bio || '',
-
-          tier:
-            data.user.tutor_tier ||
-            data.user.tier ||
-            '',
-
-          subjects:
-            data.user.tutor_subjects || [],
-
-          shiftId:
-            data.user.tutor_shift_id || '',
-
-          yearsExperience:
-            data.user.years_experience || 0,
-
-          education:
-            data.user.education || '',
-
-          phone: data.user.phone || '',
-          linkedin: data.user.linkedin || '',
-          website: data.user.website || ''
-        });
-
-        setSuccess(
-          '✅ Profile updated successfully!'
-        );
-
-        setIsEditing(false);
-      } else {
-        setError(
-          data.error || 'Failed to update profile'
-        );
+      if (!response.ok || !data.success) {
+        throw new Error(data.error || 'Failed to update profile.');
       }
-    } catch (error) {
-      console.error('❌ Save error:', error);
 
-      setError(
-        'Failed to update profile: ' + error.message
-      );
+      const returnedUser = data.user || {};
+      const updatedUser = {
+        ...user,
+        ...returnedUser
+      };
+
+      setUser(updatedUser);
+      localStorage.setItem('user', JSON.stringify(updatedUser));
+
+      setEditForm((previous) => ({
+        ...previous,
+        name: returnedUser.name ?? previous.name,
+        email: returnedUser.email ?? previous.email,
+        country: returnedUser.country ?? previous.country,
+        timezone: returnedUser.timezone ?? previous.timezone,
+        grade: returnedUser.grade ?? previous.grade,
+        bio: returnedUser.bio ?? previous.bio,
+        tier:
+          returnedUser.tutor_tier ??
+          returnedUser.tier ??
+          previous.tier,
+        subjects:
+          returnedUser.tutor_subjects ??
+          previous.subjects,
+        shiftId:
+          returnedUser.tutor_shift_id ??
+          (payload.shiftId || ''),
+        yearsExperience:
+          returnedUser.years_experience ??
+          previous.yearsExperience,
+        education: returnedUser.education ?? previous.education,
+        phone: returnedUser.phone ?? previous.phone,
+        linkedin: returnedUser.linkedin ?? previous.linkedin,
+        website: returnedUser.website ?? previous.website
+      }));
+
+      if (updatedUser.intro_video_url) {
+        setVideoUrl(updatedUser.intro_video_url);
+        setVideoThumbnail(updatedUser.intro_video_thumbnail || null);
+        setVideoDuration(Number(updatedUser.intro_video_duration) || 0);
+        setVideoViews(Number(updatedUser.intro_video_views) || 0);
+      }
+
+      setSuccess('Profile updated successfully!');
+      setIsEditing(false);
+    } catch (err) {
+      console.error('Profile save error:', err);
+      setError(err.message || 'Failed to update profile.');
     } finally {
       setLoading(false);
     }
   };
 
-  // ============================================
-  // PASSWORD CHANGE
-  // ============================================
+  // CHANGE PASSWORD
+  const handlePasswordChange = async (event) => {
+    event.preventDefault();
 
-  const handlePasswordChange = async (e) => {
-    e.preventDefault();
-
-    setLoading(true);
     setError('');
     setSuccess('');
 
@@ -1545,74 +1367,56 @@ const Profile = () => {
       passwordData.newPassword !==
       passwordData.confirmPassword
     ) {
-      setError('New passwords do not match');
-      setLoading(false);
+      setError('New passwords do not match.');
       return;
     }
 
+    setLoading(true);
+
     try {
-      const token =
-        localStorage.getItem('accessToken');
+      const token = localStorage.getItem('accessToken');
 
       if (!token) {
-        setError(
-          'Session expired. Please login again.'
-        );
-        return;
+        throw new Error('Session expired. Please log in again.');
       }
 
       const response = await fetch(
         `${API_BASE_URL}/auth/change-password`,
         {
           method: 'POST',
-
           headers: {
             'Content-Type': 'application/json',
             Authorization: `Bearer ${token}`
           },
-
           body: JSON.stringify({
-            currentPassword:
-              passwordData.currentPassword,
-
-            newPassword:
-              passwordData.newPassword
+            currentPassword: passwordData.currentPassword,
+            newPassword: passwordData.newPassword
           })
         }
       );
 
-      const data = await response.json();
+      const data = await readJsonResponse(response);
 
-      if (response.ok && data.success) {
-        setSuccess(
-          '✅ Password changed successfully!'
-        );
-
-        setShowPasswordModal(false);
-
-        setPasswordData({
-          currentPassword: '',
-          newPassword: '',
-          confirmPassword: ''
-        });
-      } else {
-        setError(
-          data.error || 'Failed to change password'
-        );
+      if (!response.ok || !data.success) {
+        throw new Error(data.error || 'Failed to change password.');
       }
-    } catch (error) {
-      setError(
-        'Network error. Please try again.'
-      );
+
+      setSuccess('Password changed successfully!');
+      setShowPasswordModal(false);
+
+      setPasswordData({
+        currentPassword: '',
+        newPassword: '',
+        confirmPassword: ''
+      });
+    } catch (err) {
+      setError(err.message || 'Failed to change password.');
     } finally {
       setLoading(false);
     }
   };
 
-  // ============================================
   // DELETE ACCOUNT
-  // ============================================
-
   const handleDeleteAccount = async () => {
     if (
       !window.confirm(
@@ -1623,62 +1427,55 @@ const Profile = () => {
     }
 
     setLoading(true);
+    setError('');
 
     try {
-      const token =
-        localStorage.getItem('accessToken');
+      const token = localStorage.getItem('accessToken');
 
       if (!token) {
-        setError(
-          'Session expired. Please login again.'
-        );
-        return;
+        throw new Error('Session expired. Please log in again.');
       }
 
       const response = await fetch(
         `${API_BASE_URL}/auth/account`,
         {
           method: 'DELETE',
-
           headers: {
             Authorization: `Bearer ${token}`
           }
         }
       );
 
-      if (response.ok) {
-        authService.logout();
-        navigate('/login');
-      } else {
-        const data = await response.json();
+      const data = await readJsonResponse(response);
 
-        setError(
-          data.error || 'Failed to delete account'
-        );
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to delete account.');
       }
-    } catch (error) {
-      setError('Failed to delete account');
+
+      await authService.logout();
+      navigate('/login');
+    } catch (err) {
+      setError(err.message || 'Failed to delete account.');
     } finally {
       setLoading(false);
       setShowDeleteModal(false);
     }
   };
 
-  // ============================================
   // VIDEO MANAGER MODAL
-  // ============================================
-
   const VideoManagerModal = () => {
     if (!showVideoManager) return null;
 
     const closeVideoManager = () => {
       if (videoUploading) return;
 
+      if (videoPreview) {
+        URL.revokeObjectURL(videoPreview);
+      }
+
       setShowVideoManager(false);
       setVideoPreview(null);
       setVideoFile(null);
-      setVideoThumbnail(null);
-      setVideoDuration(0);
       setVideoProgress(0);
 
       if (videoFileInputRef.current) {
@@ -1693,12 +1490,12 @@ const Profile = () => {
       >
         <div
           className="profile-modal video-manager-modal"
-          onClick={(e) => e.stopPropagation()}
+          onClick={(event) => event.stopPropagation()}
         >
           <div className="profile-modal-header">
             <h3>🎬 Video Manager</h3>
-
             <button
+              type="button"
               className="modal-close"
               onClick={closeVideoManager}
               disabled={videoUploading}
@@ -1708,6 +1505,17 @@ const Profile = () => {
           </div>
 
           <div className="profile-modal-body video-manager-body">
+            {/* Keep this input mounted whether a video exists or not.
+                This ensures Replace Video can always open the picker. */}
+            <input
+              ref={videoFileInputRef}
+              type="file"
+              accept="video/mp4,video/webm,video/quicktime,video/x-matroska,.mkv"
+              onChange={handleVideoSelect}
+              disabled={videoUploading}
+              style={{ display: 'none' }}
+            />
+
             {videoUrl && !videoPreview && (
               <div className="video-current-display">
                 <div
@@ -1736,10 +1544,7 @@ const Profile = () => {
                   </div>
 
                   <div className="video-info-badge">
-                    <span>
-                      ⏱️ {formatDuration(videoDuration)}
-                    </span>
-
+                    <span>⏱️ {formatDuration(videoDuration)}</span>
                     {videoViews > 0 && (
                       <span>👁️ {videoViews} views</span>
                     )}
@@ -1770,15 +1575,11 @@ const Profile = () => {
 
                 <div className="video-file-info">
                   <span>📁 {videoFile?.name}</span>
-
                   <span>
-                    ({(videoFile?.size / (1024 * 1024)).toFixed(1)} MB)
+                    ({((videoFile?.size || 0) / (1024 * 1024)).toFixed(1)} MB)
                   </span>
-
                   {videoDuration > 0 && (
-                    <span>
-                      ⏱️ {formatDuration(videoDuration)}
-                    </span>
+                    <span>⏱️ {formatDuration(videoDuration)}</span>
                   )}
                 </div>
 
@@ -1787,12 +1588,9 @@ const Profile = () => {
                     <div className="video-progress-bar">
                       <div
                         className="video-progress-fill"
-                        style={{
-                          width: `${videoProgress}%`
-                        }}
+                        style={{ width: `${videoProgress}%` }}
                       />
                     </div>
-
                     <span className="video-progress-text">
                       {videoProgress}%
                     </span>
@@ -1804,36 +1602,20 @@ const Profile = () => {
             {!videoUrl && !videoPreview && (
               <div
                 className="video-upload-zone"
-                onClick={() =>
-                  videoFileInputRef.current?.click()
-                }
+                onClick={() => videoFileInputRef.current?.click()}
               >
-                <input
-                  type="file"
-                  accept="video/mp4,video/webm,video/quicktime,video/x-matroska"
-                  onChange={handleVideoSelect}
-                  ref={videoFileInputRef}
-                  disabled={videoUploading}
-                  style={{ display: 'none' }}
-                />
-
                 <span className="upload-icon">🎥</span>
-
                 <p>Click to upload your intro video</p>
-
-                <small>
-                  MP4, WebM, MOV • Max 100MB
-                </small>
+                <small>MP4, WebM, MOV, MKV • Max 100MB</small>
               </div>
             )}
 
             <div className="video-actions">
               {!videoPreview && !videoUrl && (
                 <button
+                  type="button"
                   className="video-action-btn primary"
-                  onClick={() =>
-                    videoFileInputRef.current?.click()
-                  }
+                  onClick={() => videoFileInputRef.current?.click()}
                   disabled={videoUploading}
                 >
                   📤 Upload Video
@@ -1843,6 +1625,7 @@ const Profile = () => {
               {videoPreview && !videoUploading && (
                 <>
                   <button
+                    type="button"
                     className="video-action-btn primary"
                     onClick={handleUploadVideo}
                   >
@@ -1850,8 +1633,10 @@ const Profile = () => {
                   </button>
 
                   <button
+                    type="button"
                     className="video-action-btn cancel"
                     onClick={() => {
+                      URL.revokeObjectURL(videoPreview);
                       setVideoPreview(null);
                       setVideoFile(null);
                       setVideoThumbnail(null);
@@ -1871,6 +1656,7 @@ const Profile = () => {
               {videoUrl && !videoPreview && (
                 <>
                   <button
+                    type="button"
                     className="video-action-btn secondary"
                     onClick={() => {
                       setShowVideoModal(true);
@@ -1881,6 +1667,7 @@ const Profile = () => {
                   </button>
 
                   <button
+                    type="button"
                     className="video-action-btn primary"
                     onClick={handleReplaceVideo}
                     disabled={videoUploading}
@@ -1889,6 +1676,7 @@ const Profile = () => {
                   </button>
 
                   <button
+                    type="button"
                     className="video-action-btn danger"
                     onClick={handleRemoveVideo}
                     disabled={videoUploading}
@@ -1911,10 +1699,7 @@ const Profile = () => {
     );
   };
 
-  // ============================================
   // VIDEO PREVIEW MODAL
-  // ============================================
-
   const VideoPreviewModal = () => {
     if (!showVideoModal || !videoUrl) return null;
 
@@ -1925,12 +1710,12 @@ const Profile = () => {
       >
         <div
           className="profile-modal video-preview-modal"
-          onClick={(e) => e.stopPropagation()}
+          onClick={(event) => event.stopPropagation()}
         >
           <div className="profile-modal-header">
             <h3>🎬 Your Intro Video</h3>
-
             <button
+              type="button"
               className="modal-close"
               onClick={() => setShowVideoModal(false)}
             >
@@ -1971,7 +1756,6 @@ const Profile = () => {
                     ⏱️ Duration: {formatDuration(videoDuration)}
                   </span>
                 )}
-
                 {videoViews > 0 && (
                   <span>👁️ {videoViews} views</span>
                 )}
@@ -1979,6 +1763,7 @@ const Profile = () => {
             </div>
 
             <button
+              type="button"
               className="video-action-btn primary full-width"
               onClick={() => setShowVideoModal(false)}
             >
@@ -1990,10 +1775,7 @@ const Profile = () => {
     );
   };
 
-  // ============================================
   // RENDER
-  // ============================================
-
   if (loading) {
     return (
       <div className="profile-loading">
@@ -2013,11 +1795,11 @@ const Profile = () => {
           label: 'Students Taught'
         },
         {
-          number: `R${tutorStats.totalEarnings.toFixed(2)}`,
+          number: `R${Number(tutorStats.totalEarnings || 0).toFixed(2)}`,
           label: 'Earnings'
         },
         {
-          number: `${tutorStats.avgRating.toFixed(1)}⭐`,
+          number: `${Number(tutorStats.avgRating || 0).toFixed(1)}⭐`,
           label: 'Rating'
         }
       ]
@@ -2042,18 +1824,10 @@ const Profile = () => {
 
   return (
     <div className="profile-container">
-
-      {/* ============================================
-          MODALS
-          ============================================ */}
-
       <VideoManagerModal />
       <VideoPreviewModal />
 
-      {/* ============================================
-          HEADER
-          ============================================ */}
-
+      {/* PROFILE HEADER */}
       <div className="profile-header">
         <div
           className="profile-avatar"
@@ -2062,31 +1836,34 @@ const Profile = () => {
               ? triggerFileInput
               : () => setShowAvatarSelector(true)
           }
+          role="button"
+          tabIndex={0}
+          onKeyDown={(event) => {
+            if (event.key === 'Enter' || event.key === ' ') {
+              isTutor
+                ? triggerFileInput()
+                : setShowAvatarSelector(true);
+            }
+          }}
         >
           {isTutor ? (
             profilePhoto ? (
               <img
                 src={profilePhoto}
-                alt={user?.name}
+                alt={user?.name || 'Tutor profile'}
                 className="profile-avatar-img"
               />
             ) : (
-              <span className="profile-avatar-emoji">
-                👨‍🏫
-              </span>
+              <span className="profile-avatar-emoji">👨‍🏫</span>
             )
+          ) : avatarImage ? (
+            <img
+              src={avatarImage}
+              alt={user?.name || 'User avatar'}
+              className="profile-avatar-img"
+            />
           ) : (
-            avatarImage ? (
-              <img
-                src={avatarImage}
-                alt={user?.name}
-                className="profile-avatar-img"
-              />
-            ) : (
-              <span className="profile-avatar-emoji">
-                👤
-              </span>
-            )
+            <span className="profile-avatar-emoji">👤</span>
           )}
 
           <div className="avatar-edit-badge">
@@ -2127,93 +1904,58 @@ const Profile = () => {
           <p className="profile-header-subtitle">
             {isTutor
               ? 'Professional Mathematics Tutor'
-              : (
-                  user?.cohort === 'HighSchool'
-                    ? 'High School Student'
-                    : 'University Student'
-                )}
-
+              : user?.cohort === 'HighSchool'
+                ? 'High School Student'
+                : 'University Student'}
             {' • '}
-
             {user?.country || 'South Africa'}
           </p>
 
           <div className="profile-status">
             <span className="status-dot"></span>
-
-            <span>
-              {isTutor ? 'Active Tutor' : 'Active Member'}
-            </span>
+            <span>{isTutor ? 'Active Tutor' : 'Active Member'}</span>
           </div>
         </div>
 
         <button
+          type="button"
           className="profile-edit-btn"
-          onClick={() => setIsEditing(!isEditing)}
+          onClick={() => setIsEditing((previous) => !previous)}
         >
           {isEditing ? 'Cancel' : '✏️ Edit Profile'}
         </button>
       </div>
 
-      {/* ============================================
-          MESSAGES
-          ============================================ */}
-
+      {/* MESSAGES */}
       {photoError && (
-        <div className="profile-error">
-          {photoError}
-        </div>
+        <div className="profile-error">{photoError}</div>
       )}
 
       {photoUploading && (
-        <div className="profile-success">
-          📤 Uploading photo...
-        </div>
+        <div className="profile-success">📤 Uploading photo...</div>
       )}
 
       {error && (
-        <div className="profile-error">
-          {error}
-        </div>
+        <div className="profile-error">{error}</div>
       )}
 
       {success && (
-        <div className="profile-success">
-          {success}
-        </div>
+        <div className="profile-success">{success}</div>
       )}
 
-      {/* ============================================
-          STATS
-          ============================================ */}
-
+      {/* PROFILE STATISTICS */}
       <div className="profile-stats">
-        {statsToShow.map((stat, i) => (
-          <div
-            key={i}
-            className="profile-stat-card"
-          >
-            <span className="stat-number">
-              {stat.number}
-            </span>
-
-            <span className="stat-label">
-              {stat.label}
-            </span>
+        {statsToShow.map((stat, index) => (
+          <div key={index} className="profile-stat-card">
+            <span className="stat-number">{stat.number}</span>
+            <span className="stat-label">{stat.label}</span>
           </div>
         ))}
       </div>
 
-      {/* ============================================
-          PROFILE GRID
-          ============================================ */}
-
+      {/* PROFILE GRID */}
       <div className="profile-grid">
-
-        {/* ============================================
-            PERSONAL INFORMATION
-            ============================================ */}
-
+        {/* PERSONAL INFORMATION */}
         <div className="profile-card">
           <h3>
             {isTutor
@@ -2239,9 +1981,7 @@ const Profile = () => {
                 value: editForm.country
               },
               {
-                label: isTutor
-                  ? 'Expertise Level'
-                  : 'Grade / Year',
+                label: isTutor ? 'Expertise Level' : 'Grade / Year',
                 name: 'grade',
                 value: editForm.grade
               },
@@ -2250,26 +1990,22 @@ const Profile = () => {
                 name: 'cohort',
                 value: isTutor
                   ? 'Tutor'
-                  : (
-                      user?.cohort === 'HighSchool'
-                        ? 'High School Student'
-                        : 'University First Year'
-                    )
+                  : user?.cohort === 'HighSchool'
+                    ? 'High School Student'
+                    : 'University First Year'
               }
-            ].map((field, i) => (
+            ].map((field) => (
               <div
-                key={i}
+                key={field.name}
                 className="profile-info-item"
               >
-                <span className="info-label">
-                  {field.label}
-                </span>
+                <span className="info-label">{field.label}</span>
 
                 {isEditing && field.name !== 'cohort' ? (
                   <input
                     type="text"
                     name={field.name}
-                    value={field.value}
+                    value={field.value ?? ''}
                     onChange={handleInputChange}
                     className="profile-input"
                   />
@@ -2285,41 +2021,33 @@ const Profile = () => {
           {isEditing && !isTutor && (
             <div className="profile-actions">
               <button
+                type="button"
                 className="profile-save-btn"
                 onClick={handleSaveProfile}
                 disabled={loading}
               >
-                {loading
-                  ? 'Saving...'
-                  : '💾 Save Changes'}
+                {loading ? 'Saving...' : '💾 Save Changes'}
               </button>
             </div>
           )}
         </div>
 
-        {/* ============================================
-            ACCOUNT SETTINGS
-            ============================================ */}
-
+        {/* ACCOUNT SETTINGS */}
         <div className="profile-card">
           <h3>🔒 Account Settings</h3>
 
           <div className="profile-settings-list">
             <div className="profile-setting-item">
               <div className="setting-info">
-                <span className="setting-icon">
-                  🔑
-                </span>
-
+                <span className="setting-icon">🔑</span>
                 <div>
                   <h4>Change Password</h4>
-                  <p>
-                    Update your password regularly for security
-                  </p>
+                  <p>Update your password regularly for security</p>
                 </div>
               </div>
 
               <button
+                type="button"
                 className="setting-action-btn"
                 onClick={() => setShowPasswordModal(true)}
               >
@@ -2329,19 +2057,15 @@ const Profile = () => {
 
             <div className="profile-setting-item danger">
               <div className="setting-info">
-                <span className="setting-icon">
-                  ⚠️
-                </span>
-
+                <span className="setting-icon">⚠️</span>
                 <div>
                   <h4>Delete Account</h4>
-                  <p>
-                    Permanently delete your account and all data
-                  </p>
+                  <p>Permanently delete your account and all data</p>
                 </div>
               </div>
 
               <button
+                type="button"
                 className="setting-action-btn danger"
                 onClick={() => setShowDeleteModal(true)}
               >
@@ -2351,22 +2075,15 @@ const Profile = () => {
           </div>
         </div>
 
-        {/* ============================================
-            TUTOR PROFILE
-            ============================================ */}
-
+        {/* TUTOR PROFILE */}
         {isTutor && (
           <div className="profile-card full-width">
             <h3>👨‍🏫 Tutor Profile</h3>
 
             <div className="tutor-profile-grid">
-
               {/* BIO */}
-
               <div className="tutor-field tutor-field-full">
-                <label className="tutor-field-label">
-                  📝 About Me
-                </label>
+                <label className="tutor-field-label">📝 About Me</label>
 
                 {isEditing ? (
                   <textarea
@@ -2385,11 +2102,8 @@ const Profile = () => {
               </div>
 
               {/* TIER */}
-
               <div className="tutor-field">
-                <label className="tutor-field-label">
-                  🏅 Tier / Level
-                </label>
+                <label className="tutor-field-label">🏅 Tier / Level</label>
 
                 {isEditing ? (
                   <select
@@ -2399,18 +2113,9 @@ const Profile = () => {
                     className="profile-select tutor-select"
                   >
                     <option value="">Select Tier</option>
-
-                    <option value="TIER_1">
-                      TIER_1 - Grades 8-9
-                    </option>
-
-                    <option value="TIER_2">
-                      TIER_2 - Grades 10-11
-                    </option>
-
-                    <option value="TIER_3">
-                      TIER_3 - Grade 12 &amp; Tertiary
-                    </option>
+                    <option value="TIER_1">TIER_1 - Grades 8-9</option>
+                    <option value="TIER_2">TIER_2 - Grades 10-11</option>
+                    <option value="TIER_3">TIER_3 - Grade 12 &amp; Tertiary</option>
                   </select>
                 ) : (
                   <span className="tutor-field-value">
@@ -2420,11 +2125,8 @@ const Profile = () => {
               </div>
 
               {/* SHIFT */}
-
               <div className="tutor-field">
-                <label className="tutor-field-label">
-                  ⏰ Shift
-                </label>
+                <label className="tutor-field-label">⏰ Shift</label>
 
                 {isEditing ? (
                   <select
@@ -2434,12 +2136,8 @@ const Profile = () => {
                     className="profile-select tutor-select"
                   >
                     <option value="">Select Shift</option>
-
                     {shiftOptions.map((shift) => (
-                      <option
-                        key={shift.id}
-                        value={shift.id}
-                      >
+                      <option key={shift.id} value={shift.id}>
                         {shift.name} ({shift.sast_start} - {shift.sast_end})
                       </option>
                     ))}
@@ -2448,15 +2146,15 @@ const Profile = () => {
                   <span className="tutor-field-value">
                     {
                       shiftOptions.find(
-                        (s) => s.id === editForm.shiftId
+                        (shift) =>
+                          String(shift.id) === String(editForm.shiftId)
                       )?.name || 'Not set'
                     }
                   </span>
                 )}
               </div>
 
-              {/* YEARS EXPERIENCE */}
-
+              {/* EXPERIENCE */}
               <div className="tutor-field">
                 <label className="tutor-field-label">
                   📅 Years of Experience
@@ -2475,19 +2173,14 @@ const Profile = () => {
                 ) : (
                   <span className="tutor-field-value">
                     {editForm.yearsExperience || 0}{' '}
-                    {editForm.yearsExperience === 1
-                      ? 'year'
-                      : 'years'}
+                    {Number(editForm.yearsExperience) === 1 ? 'year' : 'years'}
                   </span>
                 )}
               </div>
 
               {/* EDUCATION */}
-
               <div className="tutor-field">
-                <label className="tutor-field-label">
-                  🎓 Education
-                </label>
+                <label className="tutor-field-label">🎓 Education</label>
 
                 {isEditing ? (
                   <input
@@ -2506,11 +2199,8 @@ const Profile = () => {
               </div>
 
               {/* PHONE */}
-
               <div className="tutor-field">
-                <label className="tutor-field-label">
-                  📞 Phone Number
-                </label>
+                <label className="tutor-field-label">📞 Phone Number</label>
 
                 {isEditing ? (
                   <input
@@ -2529,11 +2219,8 @@ const Profile = () => {
               </div>
 
               {/* LINKEDIN */}
-
               <div className="tutor-field">
-                <label className="tutor-field-label">
-                  🔗 LinkedIn
-                </label>
+                <label className="tutor-field-label">🔗 LinkedIn</label>
 
                 {isEditing ? (
                   <input
@@ -2555,19 +2242,14 @@ const Profile = () => {
                       >
                         {editForm.linkedin}
                       </a>
-                    ) : (
-                      'Not set'
-                    )}
+                    ) : 'Not set'}
                   </span>
                 )}
               </div>
 
               {/* WEBSITE */}
-
               <div className="tutor-field">
-                <label className="tutor-field-label">
-                  🌐 Website
-                </label>
+                <label className="tutor-field-label">🌐 Website</label>
 
                 {isEditing ? (
                   <input
@@ -2589,19 +2271,14 @@ const Profile = () => {
                       >
                         {editForm.website}
                       </a>
-                    ) : (
-                      'Not set'
-                    )}
+                    ) : 'Not set'}
                   </span>
                 )}
               </div>
 
               {/* SUBJECTS */}
-
               <div className="tutor-field tutor-field-full">
-                <label className="tutor-field-label">
-                  📖 Subjects Taught
-                </label>
+                <label className="tutor-field-label">📖 Subjects Taught</label>
 
                 {isEditing ? (
                   <div className="tutor-subjects-edit">
@@ -2612,17 +2289,10 @@ const Profile = () => {
                       >
                         <input
                           type="checkbox"
-                          checked={
-                            (editForm.subjects || []).includes(subject)
-                          }
-                          onChange={() =>
-                            handleSubjectToggle(subject)
-                          }
-                          style={{
-                            accentColor: '#4f46e5'
-                          }}
+                          checked={(editForm.subjects || []).includes(subject)}
+                          onChange={() => handleSubjectToggle(subject)}
+                          style={{ accentColor: '#4f46e5' }}
                         />
-
                         {subject}
                       </label>
                     ))}
@@ -2630,7 +2300,7 @@ const Profile = () => {
                 ) : (
                   <div className="tutor-subjects-display">
                     {(editForm.subjects || []).length > 0 ? (
-                      (editForm.subjects || []).map((subject) => (
+                      editForm.subjects.map((subject) => (
                         <span
                           key={subject}
                           className="tutor-subject-tag"
@@ -2647,10 +2317,7 @@ const Profile = () => {
                 )}
               </div>
 
-              {/* ============================================
-                  VIDEO SECTION
-                  ============================================ */}
-
+              {/* INTRO VIDEO */}
               <div className="tutor-field tutor-field-full tutor-video-field">
                 <div className="tutor-video-header">
                   <label
@@ -2663,28 +2330,19 @@ const Profile = () => {
                   <button
                     type="button"
                     className="setting-action-btn"
-                    onClick={() =>
-                      setShowVideoManager(true)
-                    }
+                    onClick={() => setShowVideoManager(true)}
                     style={{
                       background: videoUrl
                         ? 'rgba(255,255,255,0.04)'
                         : 'rgba(79,70,229,0.15)',
-
                       borderColor: videoUrl
                         ? 'rgba(255,255,255,0.06)'
                         : 'rgba(79,70,229,0.2)',
-
-                      color: videoUrl
-                        ? '#ffffff'
-                        : '#818cf8',
-
+                      color: videoUrl ? '#ffffff' : '#818cf8',
                       fontWeight: 600
                     }}
                   >
-                    {videoUrl
-                      ? '⚙️ Manage Video'
-                      : '📤 Upload Video'}
+                    {videoUrl ? '⚙️ Manage Video' : '📤 Upload Video'}
                   </button>
                 </div>
 
@@ -2697,13 +2355,8 @@ const Profile = () => {
                 {videoUrl ? (
                   <div
                     className="video-preview-container"
-                    style={{
-                      maxWidth: '400px',
-                      cursor: 'pointer'
-                    }}
-                    onClick={() =>
-                      setShowVideoModal(true)
-                    }
+                    style={{ maxWidth: '400px', cursor: 'pointer' }}
+                    onClick={() => setShowVideoModal(true)}
                   >
                     <video
                       src={videoUrl}
@@ -2723,10 +2376,7 @@ const Profile = () => {
                     </div>
 
                     <div className="video-info-badge">
-                      <span>
-                        ⏱️ {formatDuration(videoDuration)}
-                      </span>
-
+                      <span>⏱️ {formatDuration(videoDuration)}</span>
                       {videoViews > 0 && (
                         <span>👁️ {videoViews} views</span>
                       )}
@@ -2735,41 +2385,25 @@ const Profile = () => {
                 ) : (
                   <div
                     className="video-upload-zone"
-                    style={{
-                      maxWidth: '400px',
-                      cursor: 'pointer'
-                    }}
-                    onClick={() =>
-                      setShowVideoManager(true)
-                    }
+                    style={{ maxWidth: '400px', cursor: 'pointer' }}
+                    onClick={() => setShowVideoManager(true)}
                   >
-                    <span className="upload-icon">
-                      🎥
-                    </span>
-
+                    <span className="upload-icon">🎥</span>
                     <p>No intro video yet</p>
-
-                    <small>
-                      Click to upload your introduction video
-                    </small>
+                    <small>Click to upload your introduction video</small>
                   </div>
                 )}
               </div>
             </div>
 
-            {/* ============================================
-                WEEKLY AVAILABILITY EDITOR
-                ============================================ */}
-
+            {/* WEEKLY AVAILABILITY */}
             <div className="tutor-availability">
               <div className="tutor-availability-intro">
                 <div>
                   <h3>Weekly Availability</h3>
-
                   <p>
-                    Set the days and times when students can
-                    book sessions with you. You can add
-                    multiple time ranges for each day.
+                    Set the days and times when students can book sessions
+                    with you. You can add multiple time ranges for each day.
                   </p>
                 </div>
               </div>
@@ -2801,11 +2435,8 @@ const Profile = () => {
                               )
                             }
                           />
-
                           <span>
-                            {day.enabled
-                              ? 'Available'
-                              : 'Unavailable'}
+                            {day.enabled ? 'Available' : 'Unavailable'}
                           </span>
                         </label>
                       </div>
@@ -2818,10 +2449,7 @@ const Profile = () => {
                               key={`${day.dayOfWeek}-${index}`}
                             >
                               <div className="tutor-availability-time-field">
-                                <label>
-                                  Start time
-                                </label>
-
+                                <label>Start time</label>
                                 <input
                                   type="time"
                                   value={slot.startTime}
@@ -2837,10 +2465,7 @@ const Profile = () => {
                               </div>
 
                               <div className="tutor-availability-time-field">
-                                <label>
-                                  End time
-                                </label>
-
+                                <label>End time</label>
                                 <input
                                   type="time"
                                   value={slot.endTime}
@@ -2876,9 +2501,7 @@ const Profile = () => {
                             type="button"
                             className="tutor-availability-add"
                             onClick={() =>
-                              addAvailabilitySlot(
-                                day.dayOfWeek
-                              )
+                              addAvailabilitySlot(day.dayOfWeek)
                             }
                           >
                             + Add another time range
@@ -2895,9 +2518,7 @@ const Profile = () => {
                   {availabilityMessage && (
                     <div
                       className={`tutor-availability-message ${
-                        availabilityError
-                          ? 'error'
-                          : 'success'
+                        availabilityError ? 'error' : 'success'
                       }`}
                       role="status"
                     >
@@ -2924,30 +2545,23 @@ const Profile = () => {
               )}
             </div>
 
-            {/* ============================================
-                SAVE TUTOR PROFILE
-                ============================================ */}
-
+            {/* SAVE TUTOR PROFILE */}
             {isEditing && (
               <div className="profile-actions">
                 <button
+                  type="button"
                   className="profile-save-btn"
                   onClick={handleSaveProfile}
                   disabled={loading}
                 >
-                  {loading
-                    ? 'Saving...'
-                    : '💾 Save Changes'}
+                  {loading ? 'Saving...' : '💾 Save Changes'}
                 </button>
               </div>
             )}
           </div>
         )}
 
-        {/* ============================================
-            STUDENT COURSES
-            ============================================ */}
-
+        {/* STUDENT COURSES */}
         {!isTutor && (
           <div className="profile-card full-width">
             <h3>📚 My Courses</h3>
@@ -2965,7 +2579,7 @@ const Profile = () => {
                       className="profile-course-card"
                       onClick={() =>
                         navigate(
-                          `/subjects/${course.name.toLowerCase()}`
+                          `/subjects/${String(course.name || '').toLowerCase()}`
                         )
                       }
                     >
@@ -2975,7 +2589,6 @@ const Profile = () => {
 
                       <div className="course-info">
                         <h4>{course.name}</h4>
-
                         <span className="course-tier">
                           {course.tier || 'Tier 1'}
                         </span>
@@ -2985,12 +2598,9 @@ const Profile = () => {
                         <div className="progress-bar">
                           <div
                             className="progress-fill"
-                            style={{
-                              width: `${progress}%`
-                            }}
+                            style={{ width: `${progress}%` }}
                           />
                         </div>
-
                         <span className="progress-text">
                           {progress}%
                         </span>
@@ -3002,8 +2612,8 @@ const Profile = () => {
             ) : (
               <div className="profile-empty-state">
                 <p>No courses enrolled yet</p>
-
                 <button
+                  type="button"
                   className="profile-empty-btn"
                   onClick={() => navigate('/subjects')}
                 >
@@ -3015,10 +2625,7 @@ const Profile = () => {
         )}
       </div>
 
-      {/* ============================================
-          PASSWORD MODAL
-          ============================================ */}
-
+      {/* CHANGE PASSWORD MODAL */}
       {showPasswordModal && (
         <div
           className="profile-modal-overlay"
@@ -3026,16 +2633,14 @@ const Profile = () => {
         >
           <div
             className="profile-modal"
-            onClick={(e) => e.stopPropagation()}
+            onClick={(event) => event.stopPropagation()}
           >
             <div className="profile-modal-header">
               <h3>🔑 Change Password</h3>
-
               <button
+                type="button"
                 className="modal-close"
-                onClick={() =>
-                  setShowPasswordModal(false)
-                }
+                onClick={() => setShowPasswordModal(false)}
               >
                 ×
               </button>
@@ -3045,14 +2650,13 @@ const Profile = () => {
               <div className="profile-modal-body">
                 <div className="form-group">
                   <label>Current Password</label>
-
                   <input
                     type="password"
                     value={passwordData.currentPassword}
-                    onChange={(e) =>
-                      setPasswordData((prev) => ({
-                        ...prev,
-                        currentPassword: e.target.value
+                    onChange={(event) =>
+                      setPasswordData((previous) => ({
+                        ...previous,
+                        currentPassword: event.target.value
                       }))
                     }
                     required
@@ -3061,14 +2665,13 @@ const Profile = () => {
 
                 <div className="form-group">
                   <label>New Password</label>
-
                   <input
                     type="password"
                     value={passwordData.newPassword}
-                    onChange={(e) =>
-                      setPasswordData((prev) => ({
-                        ...prev,
-                        newPassword: e.target.value
+                    onChange={(event) =>
+                      setPasswordData((previous) => ({
+                        ...previous,
+                        newPassword: event.target.value
                       }))
                     }
                     required
@@ -3078,14 +2681,13 @@ const Profile = () => {
 
                 <div className="form-group">
                   <label>Confirm New Password</label>
-
                   <input
                     type="password"
                     value={passwordData.confirmPassword}
-                    onChange={(e) =>
-                      setPasswordData((prev) => ({
-                        ...prev,
-                        confirmPassword: e.target.value
+                    onChange={(event) =>
+                      setPasswordData((previous) => ({
+                        ...previous,
+                        confirmPassword: event.target.value
                       }))
                     }
                     required
@@ -3097,9 +2699,7 @@ const Profile = () => {
                 <button
                   type="button"
                   className="modal-cancel"
-                  onClick={() =>
-                    setShowPasswordModal(false)
-                  }
+                  onClick={() => setShowPasswordModal(false)}
                 >
                   Cancel
                 </button>
@@ -3109,9 +2709,7 @@ const Profile = () => {
                   className="modal-submit"
                   disabled={loading}
                 >
-                  {loading
-                    ? 'Changing...'
-                    : 'Change Password'}
+                  {loading ? 'Changing...' : 'Change Password'}
                 </button>
               </div>
             </form>
@@ -3119,10 +2717,7 @@ const Profile = () => {
         </div>
       )}
 
-      {/* ============================================
-          DELETE ACCOUNT MODAL
-          ============================================ */}
-
+      {/* DELETE ACCOUNT MODAL */}
       {showDeleteModal && (
         <div
           className="profile-modal-overlay"
@@ -3130,12 +2725,12 @@ const Profile = () => {
         >
           <div
             className="profile-modal"
-            onClick={(e) => e.stopPropagation()}
+            onClick={(event) => event.stopPropagation()}
           >
             <div className="profile-modal-header danger">
               <h3>⚠️ Delete Account</h3>
-
               <button
+                type="button"
                 className="modal-close"
                 onClick={() => setShowDeleteModal(false)}
               >
@@ -3146,18 +2741,18 @@ const Profile = () => {
             <div className="profile-modal-body">
               <p className="delete-warning">
                 Are you sure you want to delete your account?
-                This action is <strong>permanent</strong> and
-                cannot be undone.
+                This action is <strong>permanent</strong> and cannot be undone.
               </p>
 
               <p style={{ color: '#94a3b8' }}>
-                All your data, including enrolled courses
-                and progress, will be permanently removed.
+                All your data, including enrolled courses and progress,
+                will be permanently removed.
               </p>
             </div>
 
             <div className="profile-modal-actions">
               <button
+                type="button"
                 className="modal-cancel"
                 onClick={() => setShowDeleteModal(false)}
               >
@@ -3165,23 +2760,19 @@ const Profile = () => {
               </button>
 
               <button
+                type="button"
                 className="modal-delete"
                 onClick={handleDeleteAccount}
                 disabled={loading}
               >
-                {loading
-                  ? 'Deleting...'
-                  : '🗑️ Delete Account'}
+                {loading ? 'Deleting...' : '🗑️ Delete Account'}
               </button>
             </div>
           </div>
         </div>
       )}
 
-      {/* ============================================
-          AVATAR SELECTOR
-          ============================================ */}
-
+      {/* STUDENT AVATAR SELECTOR */}
       {!isTutor && showAvatarSelector && (
         <AvatarSelector
           onSelect={handleAvatarSelect}

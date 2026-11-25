@@ -1,4 +1,4 @@
-// src/pages/Notifications.js
+
 import React, { useState, useEffect, useMemo } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { API_BASE_URL } from '../services/api';
@@ -6,106 +6,162 @@ import { authService } from '../services/authService';
 import faviconLogo from '../assets/favicon-96x96.png';
 import './Notifications.css';
 
-// ─────────────────────────────────────────────────────────────
-// Icon + accent per notification type
-// ─────────────────────────────────────────────────────────────
+// ============================================================
+// ICON + ACCENT PER NOTIFICATION TYPE
+// ============================================================
+
 const TYPE_META = {
-  warning:               { icon: 'alert-triangle', label: 'Warning',           accent: 'amber',   category: 'Account' },
-  session_booked:        { icon: 'book',           label: 'Session Booked',    accent: 'indigo',  category: 'Sessions' },
-  session_accepted:      { icon: 'check',          label: 'Session Accepted',  accent: 'emerald', category: 'Sessions' },
-  session_started:       { icon: 'play',           label: 'Session Started',   accent: 'emerald', category: 'Sessions' },
-  session_ended:         { icon: 'check-circle',   label: 'Session Ended',     accent: 'slate',   category: 'Sessions' },
-  session_cancelled:     { icon: 'x',              label: 'Session Cancelled', accent: 'rose',    category: 'Sessions' },
-  payment_received:      { icon: 'credit-card',    label: 'Payment',           accent: 'emerald', category: 'Payments' },
-  subscription_renewed:  { icon: 'refresh',        label: 'Subscription',      accent: 'indigo',  category: 'Billing' },
-  subscription_expired:  { icon: 'alert-triangle', label: 'Subscription',      accent: 'amber',   category: 'Billing' },
-  student_joined:        { icon: 'user-plus',      label: 'New Student',       accent: 'indigo',  category: 'Students' },
-  tutor_assigned:        { icon: 'graduation-cap', label: 'Tutor Assigned',    accent: 'indigo',  category: 'Tutors' },
-  new_tutor:             { icon: 'graduation-cap', label: 'New Tutor',         accent: 'indigo',  category: 'Tutors' },
-  system:                { icon: 'info',           label: 'Platform',          accent: 'indigo',  category: 'System' },
-  default:               { icon: 'bell',           label: 'Notification',      accent: 'indigo',  category: 'General' },
+  warning:              { icon: 'alert-triangle', label: 'Warning', accent: 'amber', category: 'Account' },
+  session_booked:       { icon: 'book', label: 'Session Booked', accent: 'indigo', category: 'Sessions' },
+  session_accepted:     { icon: 'check', label: 'Session Accepted', accent: 'emerald', category: 'Sessions' },
+  session_started:      { icon: 'play', label: 'Session Started', accent: 'emerald', category: 'Sessions' },
+  session_ended:        { icon: 'check-circle', label: 'Session Ended', accent: 'slate', category: 'Sessions' },
+  session_cancelled:    { icon: 'x', label: 'Session Cancelled', accent: 'rose', category: 'Sessions' },
+  payment_received:     { icon: 'credit-card', label: 'Payment', accent: 'emerald', category: 'Payments' },
+  subscription_renewed: { icon: 'refresh', label: 'Subscription', accent: 'indigo', category: 'Billing' },
+  subscription_expired: { icon: 'alert-triangle', label: 'Subscription', accent: 'amber', category: 'Billing' },
+  student_joined:       { icon: 'user-plus', label: 'New Student', accent: 'indigo', category: 'Students' },
+  tutor_assigned:       { icon: 'graduation-cap', label: 'Tutor Assigned', accent: 'indigo', category: 'Tutors' },
+  new_tutor:            { icon: 'graduation-cap', label: 'New Tutor', accent: 'indigo', category: 'Tutors' },
+  system:               { icon: 'info', label: 'Platform', accent: 'indigo', category: 'System' },
+  default:              { icon: 'bell', label: 'Notification', accent: 'indigo', category: 'General' }
 };
 
-// ─────────────────────────────────────────────────────────────
-// Inline SVG icons
-// ─────────────────────────────────────────────────────────────
+// ============================================================
+// INLINE SVG ICONS
+// ============================================================
+
 const Icon = ({ name, size = 20 }) => {
   const common = {
-    width: size, height: size, viewBox: '0 0 24 24',
-    fill: 'none', stroke: 'currentColor', strokeWidth: 2,
-    strokeLinecap: 'round', strokeLinejoin: 'round',
+    width: size,
+    height: size,
+    viewBox: '0 0 24 24',
+    fill: 'none',
+    stroke: 'currentColor',
+    strokeWidth: 2,
+    strokeLinecap: 'round',
+    strokeLinejoin: 'round'
   };
+
   switch (name) {
-    case 'alert-triangle': return <svg {...common}><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>;
-    case 'bell':           return <svg {...common}><path d="M6 8a6 6 0 1 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></svg>;
-    case 'book':           return <svg {...common}><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>;
-    case 'check':          return <svg {...common}><polyline points="20 6 9 17 4 12"/></svg>;
-    case 'check-circle':   return <svg {...common}><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>;
-    case 'play':           return <svg {...common}><polygon points="5 3 19 12 5 21 5 3"/></svg>;
-    case 'x':              return <svg {...common}><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>;
-    case 'credit-card':    return <svg {...common}><rect x="1" y="4" width="22" height="16" rx="2" ry="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg>;
-    case 'refresh':        return <svg {...common}><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>;
-    case 'user-plus':      return <svg {...common}><path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="8.5" cy="7" r="4"/><line x1="20" y1="8" x2="20" y2="14"/><line x1="23" y1="11" x2="17" y2="11"/></svg>;
-    case 'graduation-cap': return <svg {...common}><path d="M22 10v6M2 10l10-5 10 5-10 5z"/><path d="M6 12v5c3 3 9 3 12 0v-5"/></svg>;
-    case 'info':           return <svg {...common}><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>;
-    case 'search':         return <svg {...common}><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>;
-    case 'arrow-right':    return <svg {...common}><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>;
-    case 'clock':          return <svg {...common}><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>;
-    case 'inbox':          return <svg {...common}><polyline points="22 12 16 12 14 15 10 15 8 12 2 12"/><path d="M5.45 5.11 2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11z"/></svg>;
-    case 'megaphone':      return <svg {...common}><path d="m3 11 18-5v12L3 14v-3z"/><path d="M11.6 16.8a3 3 0 1 1-5.8-1.6"/></svg>;
-    case 'sparkles':       return <svg {...common}><path d="M9.94 15.62A2 2 0 0 1 8.4 14.1l-.4-1.5a.5.5 0 0 0-.97 0l-.4 1.5a2 2 0 0 1-1.54 1.53l-1.5.4a.5.5 0 0 0 0 .97l1.5.4a2 2 0 0 1 1.54 1.53l.4 1.5a.5.5 0 0 0 .97 0l.4-1.5a2 2 0 0 1 1.54-1.53l1.5-.4a.5.5 0 0 0 0-.97l-1.5-.4Z"/><path d="M20 3v4M22 5h-4M18 14v3M19.5 15.5h-3"/></svg>;
-    case 'wallet':         return <svg {...common}><path d="M21 12V7H5a2 2 0 0 1 0-4h14v4"/><path d="M3 5v14a2 2 0 0 0 2 2h16v-5"/><path d="M18 12a2 2 0 0 0 0 4h4v-4Z"/></svg>;
-    case 'download':       return <svg {...common}><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>;
-    default:               return <svg {...common}><circle cx="12" cy="12" r="10"/></svg>;
+    case 'alert-triangle':
+      return <svg {...common}><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>;
+    case 'bell':
+      return <svg {...common}><path d="M6 8a6 6 0 1 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></svg>;
+    case 'book':
+      return <svg {...common}><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>;
+    case 'check':
+      return <svg {...common}><polyline points="20 6 9 17 4 12"/></svg>;
+    case 'check-circle':
+      return <svg {...common}><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>;
+    case 'play':
+      return <svg {...common}><polygon points="5 3 19 12 5 21 5 3"/></svg>;
+    case 'x':
+      return <svg {...common}><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>;
+    case 'credit-card':
+      return <svg {...common}><rect x="1" y="4" width="22" height="16" rx="2" ry="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg>;
+    case 'refresh':
+      return <svg {...common}><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>;
+    case 'user-plus':
+      return <svg {...common}><path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="8.5" cy="7" r="4"/><line x1="20" y1="8" x2="20" y2="14"/><line x1="23" y1="11" x2="17" y2="11"/></svg>;
+    case 'graduation-cap':
+      return <svg {...common}><path d="M22 10v6M2 10l10-5 10 5-10 5z"/><path d="M6 12v5c3 3 9 3 12 0v-5"/></svg>;
+    case 'info':
+      return <svg {...common}><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>;
+    case 'search':
+      return <svg {...common}><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>;
+    case 'arrow-right':
+      return <svg {...common}><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>;
+    case 'clock':
+      return <svg {...common}><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>;
+    case 'inbox':
+      return <svg {...common}><polyline points="22 12 16 12 14 15 10 15 8 12 2 12"/><path d="M5.45 5.11 2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11z"/></svg>;
+    case 'megaphone':
+      return <svg {...common}><path d="m3 11 18-5v12L3 14v-3z"/><path d="M11.6 16.8a3 3 0 1 1-5.8-1.6"/></svg>;
+    case 'sparkles':
+      return <svg {...common}><path d="M9.94 15.62A2 2 0 0 1 8.4 14.1l-.4-1.5a.5.5 0 0 0-.97 0l-.4 1.5a2 2 0 0 1-1.54 1.53l-1.5.4a.5.5 0 0 0 0 .97l1.5.4a2 2 0 0 1 1.54 1.53l.4 1.5a.5.5 0 0 0 .97 0l.4-1.5a2 2 0 0 1 1.54-1.53l1.5-.4a.5.5 0 0 0 0-.97l-1.5-.4Z"/><path d="M20 3v4M22 5h-4M18 14v3M19.5 15.5h-3"/></svg>;
+    case 'wallet':
+      return <svg {...common}><path d="M21 12V7H5a2 2 0 0 1 0-4h14v4"/><path d="M3 5v14a2 2 0 0 0 2 2h16v-5"/><path d="M18 12a2 2 0 0 0 0 4h4v-4Z"/></svg>;
+    case 'download':
+      return <svg {...common}><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>;
+    default:
+      return <svg {...common}><circle cx="12" cy="12" r="10"/></svg>;
   }
 };
 
-// ─────────────────────────────────────────────────────────────
-// Helpers
-// ─────────────────────────────────────────────────────────────
+// ============================================================
+// HELPERS
+// ============================================================
+
 const formatRelative = (dateString) => {
   const date = new Date(dateString);
   const diff = Date.now() - date.getTime();
+
   const mins = Math.floor(diff / 60000);
   const hours = Math.floor(diff / 3600000);
   const days = Math.floor(diff / 86400000);
+
   if (mins < 1) return 'Just now';
   if (mins < 60) return `${mins}m ago`;
   if (hours < 24) return `${hours}h ago`;
   if (days < 7) return `${days}d ago`;
+
   return date.toLocaleDateString();
 };
 
 const formatAbsolute = (dateString) => {
   const date = new Date(dateString);
+
   return date.toLocaleString('en-GB', {
-    weekday: 'short', day: 'numeric', month: 'short',
-    year: 'numeric', hour: '2-digit', minute: '2-digit',
+    weekday: 'short',
+    day: 'numeric',
+    month: 'short',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit'
   });
 };
 
 const groupByDay = (list) => {
-  const today = new Date(); today.setHours(0, 0, 0, 0);
-  const yest = new Date(today); yest.setDate(yest.getDate() - 1);
-  const groups = { Today: [], Yesterday: [], Earlier: [] };
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+
+  const yest = new Date(today);
+  yest.setDate(yest.getDate() - 1);
+
+  const groups = {
+    Today: [],
+    Yesterday: [],
+    Earlier: []
+  };
+
   list.forEach(n => {
-    const d = new Date(n.created_at); d.setHours(0, 0, 0, 0);
-    if (d.getTime() === today.getTime()) groups.Today.push(n);
-    else if (d.getTime() === yest.getTime()) groups.Yesterday.push(n);
-    else groups.Earlier.push(n);
+    const d = new Date(n.created_at);
+    d.setHours(0, 0, 0, 0);
+
+    if (d.getTime() === today.getTime()) {
+      groups.Today.push(n);
+    } else if (d.getTime() === yest.getTime()) {
+      groups.Yesterday.push(n);
+    } else {
+      groups.Earlier.push(n);
+    }
   });
+
   return groups;
 };
 
 const formatMoney = (amount, currency = 'ZAR') => {
   if (amount == null || isNaN(Number(amount))) return null;
+
   const num = Number(amount);
   const locale = currency === 'ZAR' ? 'en-ZA' : 'en-US';
+
   try {
     return new Intl.NumberFormat(locale, {
       style: 'currency',
       currency,
-      maximumFractionDigits: 2,
+      maximumFractionDigits: 2
     }).format(num);
   } catch {
     return `${currency} ${num.toFixed(2)}`;
@@ -114,49 +170,134 @@ const formatMoney = (amount, currency = 'ZAR') => {
 
 const isPaymentNotification = (n) => {
   const t = n.type;
-  return t === 'payment_received' ||
-         t === 'subscription_renewed' ||
-         n.metadata?.category === 'salary' ||
-         n.metadata?.category === 'payout' ||
-         n.metadata?.category === 'bonus';
+
+  return (
+    t === 'payment_received' ||
+    t === 'subscription_renewed' ||
+    n.metadata?.category === 'salary' ||
+    n.metadata?.category === 'payout' ||
+    n.metadata?.category === 'bonus'
+  );
 };
 
-// ─────────────────────────────────────────────────────────────
-// Page component
-// ─────────────────────────────────────────────────────────────
+// ============================================================
+// PROFILE PHOTO HELPERS
+// ============================================================
+
+// These notification types represent interactions involving
+// an actual tutor, student or other account holder.
+
+const PERSON_NOTIFICATION_TYPES = [
+  'session_booked',
+  'session_accepted',
+  'session_started',
+  'session_ended',
+  'session_cancelled',
+  'student_joined',
+  'tutor_assigned',
+  'new_tutor',
+  'warning'
+];
+
+const getPersonName = (notification) => {
+  const m = notification.metadata || {};
+
+  return (
+    notification.actor_name ||
+    m.actor_name ||
+    m.tutor_name ||
+    m.student_name ||
+    m.sender_name ||
+    m.warned_by_name ||
+    'EduSpantech User'
+  );
+};
+
+const getPersonAvatar = (notification) => {
+  const m = notification.metadata || {};
+
+  return (
+    notification.image_url ||
+    notification.actor_avatar ||
+    notification.avatar_url ||
+    m.actor_avatar ||
+    m.tutor_avatar ||
+    m.student_avatar ||
+    m.sender_avatar ||
+    m.image_url ||
+    null
+  );
+};
+
+const getInitials = (name) => {
+  if (!name) return '?';
+
+  return String(name)
+    .trim()
+    .split(/\s+/)
+    .filter(Boolean)
+    .slice(0, 2)
+    .map(part => part.charAt(0).toUpperCase())
+    .join('');
+};
+
+// ============================================================
+// PAGE COMPONENT
+// ============================================================
+
 const Notifications = () => {
   const navigate = useNavigate();
+
   const [notifications, setNotifications] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+
   const [filter, setFilter] = useState('all');
   const [categoryFilter, setCategoryFilter] = useState('all');
   const [query, setQuery] = useState('');
 
-  const initialIsAdmin = typeof window !== 'undefined' &&
+  const initialIsAdmin =
+    typeof window !== 'undefined' &&
     window.location.pathname.startsWith('/admin');
 
   const [role, setRole] = useState(initialIsAdmin ? 'admin' : null);
   const [isAdmin, setIsAdmin] = useState(initialIsAdmin);
+
   const [feedPath, setFeedPath] = useState(
     initialIsAdmin ? '/admin/notifications/feed' : null
   );
+
   const [readPathBase, setReadPathBase] = useState(
     initialIsAdmin ? '/admin/notifications' : null
   );
+
   const [readAllPath, setReadAllPath] = useState(
     initialIsAdmin ? '/admin/notifications/read-all' : null
   );
 
+  // ==========================================================
+  // DETECT USER ROLE
+  // ==========================================================
+
   useEffect(() => {
     const detect = async () => {
       const token = localStorage.getItem('accessToken');
-      if (!token) { navigate('/login'); return; }
+
+      if (!token) {
+        navigate('/login');
+        return;
+      }
 
       if (initialIsAdmin) return;
 
       let user = null;
-      try { user = await authService.getCurrentUser(); } catch { /* ignore */ }
+
+      try {
+        user = await authService.getCurrentUser();
+      } catch {
+        // Ignore role detection errors here.
+      }
+
       const u = user?.user || user;
 
       const adminUser =
@@ -189,11 +330,19 @@ const Notifications = () => {
         setReadAllPath('/notifications/read-all');
       }
     };
+
     detect();
   }, [navigate, initialIsAdmin]);
 
+  // ==========================================================
+  // FETCH NOTIFICATIONS
+  // ==========================================================
+
   useEffect(() => {
-    if (feedPath) fetchNotifications();
+    if (feedPath) {
+      fetchNotifications();
+    }
+
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [feedPath]);
 
@@ -201,11 +350,19 @@ const Notifications = () => {
     try {
       setLoading(true);
       setError(null);
+
       const token = localStorage.getItem('accessToken');
-      if (!token) { navigate('/login'); return; }
+
+      if (!token) {
+        navigate('/login');
+        return;
+      }
 
       const res = await fetch(`${API_BASE_URL}${feedPath}`, {
-        headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+        headers: {
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
       });
 
       if (res.ok) {
@@ -224,60 +381,137 @@ const Notifications = () => {
     }
   };
 
+  // ==========================================================
+  // MARK ONE AS READ
+  // ==========================================================
+
   const markAsRead = async (notification) => {
     try {
       const token = localStorage.getItem('accessToken');
-      const res = await fetch(`${API_BASE_URL}${readPathBase}/${notification.id}/read`, {
-        method: 'PUT',
-        headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
-      });
+
+      const res = await fetch(
+        `${API_BASE_URL}${readPathBase}/${notification.id}/read`,
+        {
+          method: 'PUT',
+          headers: {
+            Authorization: `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          }
+        }
+      );
+
       if (res.ok) {
-        setNotifications(prev => prev.map(n => n.id === notification.id ? { ...n, is_read: true } : n));
+        setNotifications(prev =>
+          prev.map(n =>
+            n.id === notification.id
+              ? { ...n, is_read: true }
+              : n
+          )
+        );
       }
-    } catch (e) { console.error(e); }
+    } catch (e) {
+      console.error(e);
+    }
   };
+
+  // ==========================================================
+  // MARK ALL AS READ
+  // ==========================================================
 
   const markAllAsRead = async () => {
     try {
       const token = localStorage.getItem('accessToken');
-      const res = await fetch(`${API_BASE_URL}${readAllPath}`, {
-        method: 'PUT',
-        headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
-      });
-      if (res.ok) setNotifications(prev => prev.map(n => ({ ...n, is_read: true })));
-    } catch (e) { console.error(e); }
+
+      const res = await fetch(
+        `${API_BASE_URL}${readAllPath}`,
+        {
+          method: 'PUT',
+          headers: {
+            Authorization: `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          }
+        }
+      );
+
+      if (res.ok) {
+        setNotifications(prev =>
+          prev.map(n => ({
+            ...n,
+            is_read: true
+          }))
+        );
+      }
+    } catch (e) {
+      console.error(e);
+    }
   };
 
+  // ==========================================================
+  // HANDLE NOTIFICATION CLICK
+  // ==========================================================
+
   const handleCardClick = (n) => {
-    if (!n.is_read) markAsRead(n);
-    if (n.link) navigate(n.link);
-    else if (n.metadata?.session_id) navigate(`/session/${n.metadata.session_id}`);
+    if (!n.is_read) {
+      markAsRead(n);
+    }
+
+    if (n.link) {
+      navigate(n.link);
+    } else if (n.metadata?.session_id) {
+      navigate(`/session/${n.metadata.session_id}`);
+    }
   };
+
+  // ==========================================================
+  // FILTER NOTIFICATIONS
+  // ==========================================================
 
   const filtered = useMemo(() => {
     let list = [...notifications];
-    if (filter === 'unread') list = list.filter(n => !n.is_read);
-    if (filter === 'read')   list = list.filter(n => n.is_read);
-    if (categoryFilter !== 'all') {
-      list = list.filter(n => (TYPE_META[n.type]?.category || 'General') === categoryFilter);
+
+    if (filter === 'unread') {
+      list = list.filter(n => !n.is_read);
     }
+
+    if (filter === 'read') {
+      list = list.filter(n => n.is_read);
+    }
+
+    if (categoryFilter !== 'all') {
+      list = list.filter(
+        n => (TYPE_META[n.type]?.category || 'General') === categoryFilter
+      );
+    }
+
     if (query.trim()) {
       const q = query.toLowerCase();
+
       list = list.filter(n =>
         (n.title || '').toLowerCase().includes(q) ||
         (n.message || '').toLowerCase().includes(q) ||
         (n.metadata?.warned_by_name || '').toLowerCase().includes(q)
       );
     }
+
     return list;
   }, [notifications, filter, categoryFilter, query]);
 
-  const groups = useMemo(() => groupByDay(filtered), [filtered]);
-  const unreadCount = notifications.filter(n => !n.is_read).length;
+  const groups = useMemo(
+    () => groupByDay(filtered),
+    [filtered]
+  );
+
+  const unreadCount = notifications.filter(
+    n => !n.is_read
+  ).length;
 
   const categories = useMemo(() => {
     const set = new Set(['all']);
-    notifications.forEach(n => set.add(TYPE_META[n.type]?.category || 'General'));
+
+    notifications.forEach(n => {
+      set.add(TYPE_META[n.type]?.category || 'General');
+    });
+
     return Array.from(set);
   }, [notifications]);
 
@@ -285,50 +519,75 @@ const Notifications = () => {
     ? 'Admin notifications'
     : (role === 'tutor' ? 'Tutor notifications' : 'Notifications');
 
+  // ==========================================================
+  // PAGE RENDER
+  // ==========================================================
+
   return (
     <div className="nx-page">
       <div className="nx-shell">
+
         <header className="nx-header">
+
           <nav className="nx-breadcrumb" aria-label="Breadcrumb">
-            <Link to={isAdmin ? '/admin' : '/'}>{isAdmin ? 'Admin' : 'Home'}</Link>
+            <Link to={isAdmin ? '/admin' : '/'}>
+              {isAdmin ? 'Admin' : 'Home'}
+            </Link>
+
             <span className="nx-crumb-sep">/</span>
-            <span className="nx-crumb-current">{heading}</span>
+
+            <span className="nx-crumb-current">
+              {heading}
+            </span>
           </nav>
 
           <div className="nx-header-row">
+
             <div className="nx-title-block">
               <h1 className="nx-title">{heading}</h1>
+
               <p className="nx-subtitle">
                 {unreadCount > 0
-                  ? <>You have <strong>{unreadCount}</strong> unread notification{unreadCount > 1 ? 's' : ''}.</>
+                  ? <>
+                      You have <strong>{unreadCount}</strong> unread notification{unreadCount > 1 ? 's' : ''}.
+                    </>
                   : 'You’re all caught up.'}
               </p>
             </div>
 
             <div className="nx-header-actions">
+
               <div className="nx-search">
                 <Icon name="search" size={16} />
+
                 <input
                   type="text"
                   placeholder="Search notifications…"
                   value={query}
-                  onChange={(e) => setQuery(e.target.value)}
+                  onChange={e => setQuery(e.target.value)}
                 />
               </div>
+
               {unreadCount > 0 && (
-                <button className="nx-btn nx-btn-ghost" onClick={markAllAsRead}>
+                <button
+                  className="nx-btn nx-btn-ghost"
+                  onClick={markAllAsRead}
+                >
                   Mark all as read
                 </button>
               )}
+
             </div>
           </div>
 
           <div className="nx-tabs-row">
+
             <div className="nx-tabs" role="tablist">
+
               {[
-                { key: 'all',    label: 'All',    count: notifications.length },
+                { key: 'all', label: 'All', count: notifications.length },
                 { key: 'unread', label: 'Unread', count: unreadCount },
-                { key: 'read',   label: 'Read',   count: notifications.length - unreadCount },
+                { key: 'read', label: 'Read', count: notifications.length - unreadCount }
               ].map(t => (
                 <button
                   key={t.key}
@@ -341,9 +600,11 @@ const Notifications = () => {
                   <span className="nx-tab-count">{t.count}</span>
                 </button>
               ))}
+
             </div>
 
             <div className="nx-category-filter">
+
               {categories.map(c => (
                 <button
                   key={c}
@@ -353,39 +614,73 @@ const Notifications = () => {
                   {c === 'all' ? 'All categories' : c}
                 </button>
               ))}
+
             </div>
+
           </div>
         </header>
 
         {loading ? (
+
           <div className="nx-skeleton-list">
-            {[0,1,2,3].map(i => <div key={i} className="nx-skeleton-card" />)}
+            {[0, 1, 2, 3].map(i => (
+              <div key={i} className="nx-skeleton-card" />
+            ))}
           </div>
+
         ) : error ? (
+
           <div className="nx-empty">
-            <div className="nx-empty-icon"><Icon name="alert-triangle" size={28} /></div>
+            <div className="nx-empty-icon">
+              <Icon name="alert-triangle" size={28} />
+            </div>
+
             <h3>Couldn’t load notifications</h3>
             <p>{error}</p>
-            <button className="nx-btn nx-btn-primary" onClick={fetchNotifications}>Try again</button>
+
+            <button
+              className="nx-btn nx-btn-primary"
+              onClick={fetchNotifications}
+            >
+              Try again
+            </button>
           </div>
+
         ) : filtered.length === 0 ? (
+
           <div className="nx-empty">
-            <div className="nx-empty-icon"><Icon name="inbox" size={28} /></div>
+            <div className="nx-empty-icon">
+              <Icon name="inbox" size={28} />
+            </div>
+
             <h3>No notifications</h3>
-            <p>{query ? 'No results match your search.' : 'When something happens on your account, you’ll see it here.'}</p>
+
+            <p>
+              {query
+                ? 'No results match your search.'
+                : 'When something happens on your account, you’ll see it here.'}
+            </p>
           </div>
+
         ) : (
+
           <div className="nx-groups">
+
             {Object.entries(groups).map(([label, items]) =>
               items.length === 0 ? null : (
+
                 <section key={label} className="nx-group">
+
                   <div className="nx-group-head">
                     <span className="nx-group-label">{label}</span>
                     <span className="nx-group-count">{items.length}</span>
                   </div>
+
                   <div className="nx-list">
+
                     {items.map(n => (
                       isPaymentNotification(n) ? (
+
                         <PaymentCard
                           key={n.id}
                           notification={n}
@@ -394,7 +689,9 @@ const Notifications = () => {
                           onMarkRead={() => markAsRead(n)}
                           onNavigate={navigate}
                         />
+
                       ) : (
+
                         <NotificationCard
                           key={n.id}
                           notification={n}
@@ -402,44 +699,61 @@ const Notifications = () => {
                           onOpen={() => handleCardClick(n)}
                           onMarkRead={() => markAsRead(n)}
                         />
+
                       )
                     ))}
+
                   </div>
                 </section>
               )
             )}
+
           </div>
         )}
+
       </div>
     </div>
   );
 };
 
-// ─────────────────────────────────────────────────────────────
-// Payment card (salary / payout / bonus / session payment)
-// ─────────────────────────────────────────────────────────────
-const PaymentCard = ({ notification, isAdmin, onOpen, onMarkRead, onNavigate }) => {
+// ============================================================
+// PAYMENT CARD
+// ============================================================
+
+const PaymentCard = ({
+  notification,
+  isAdmin,
+  onOpen,
+  onMarkRead,
+  onNavigate
+}) => {
   const m = notification.metadata || {};
+
   const amount = m.amount ?? m.total ?? m.value ?? null;
   const currency = m.currency || 'ZAR';
   const category = (m.category || 'payment').toLowerCase();
+
   const isSalary = category === 'salary';
   const isBonus = category === 'bonus';
   const isPayout = category === 'payout';
 
   const title =
     notification.title ||
-    (isSalary ? 'Salary credited' : isBonus ? 'Bonus awarded' : 'Payment received');
+    (isSalary
+      ? 'Salary credited'
+      : isBonus
+        ? 'Bonus awarded'
+        : 'Payment received');
 
   const eyebrow =
     isSalary ? 'Salary' :
-    isBonus  ? 'Bonus' :
+    isBonus ? 'Bonus' :
     isPayout ? 'Payout' :
     'Payment';
 
   const iconName =
     isSalary ? 'wallet' :
-    isBonus  ? 'sparkles' :
+    isBonus ? 'sparkles' :
     isPayout ? 'download' :
     'credit-card';
 
@@ -450,15 +764,24 @@ const PaymentCard = ({ notification, isAdmin, onOpen, onMarkRead, onNavigate }) 
 
   const handlePrimaryClick = (e) => {
     e.stopPropagation();
-    if (!notification.is_read) onMarkRead && onMarkRead();
+
+    if (!notification.is_read && onMarkRead) {
+      onMarkRead();
+    }
+
     let target;
+
     if (isSalary || isPayout) {
       target = isAdmin ? '/admin/payments' : '/tutor/earnings';
     } else {
       target = notification.link || '/notifications';
     }
-    if (onNavigate) onNavigate(target);
-    else if (typeof window !== 'undefined') window.location.href = target;
+
+    if (onNavigate) {
+      onNavigate(target);
+    } else if (typeof window !== 'undefined') {
+      window.location.href = target;
+    }
   };
 
   return (
@@ -467,27 +790,43 @@ const PaymentCard = ({ notification, isAdmin, onOpen, onMarkRead, onNavigate }) 
       onClick={onOpen}
       role="button"
       tabIndex={0}
-      onKeyDown={(e) => { if (e.key === 'Enter') onOpen(); }}
+      onKeyDown={e => {
+        if (e.key === 'Enter') onOpen();
+      }}
     >
+
       <span className="nx-pay-glow nx-pay-glow-a" aria-hidden="true" />
       <span className="nx-pay-glow nx-pay-glow-b" aria-hidden="true" />
 
       <header className="nx-pay-head">
+
         <div className="nx-pay-badge">
           <Icon name={iconName} size={18} />
         </div>
+
         <div className="nx-pay-head-text">
           <span className="nx-pay-eyebrow">{eyebrow}</span>
-          <span className="nx-pay-time">{formatRelative(notification.created_at)}</span>
+          <span className="nx-pay-time">
+            {formatRelative(notification.created_at)}
+          </span>
         </div>
-        {!notification.is_read && <span className="nx-pay-new">New</span>}
+
+        {!notification.is_read && (
+          <span className="nx-pay-new">New</span>
+        )}
+
       </header>
 
       <div className="nx-pay-amount-row">
         <div className="nx-pay-amount">
           {amount != null ? formatMoney(amount, currency) : title}
         </div>
-        {amount == null && <div className="nx-pay-title-fallback">{notification.title}</div>}
+
+        {amount == null && (
+          <div className="nx-pay-title-fallback">
+            {notification.title}
+          </div>
+        )}
       </div>
 
       <p className="nx-pay-message">{notification.message}</p>
@@ -497,26 +836,15 @@ const PaymentCard = ({ notification, isAdmin, onOpen, onMarkRead, onNavigate }) 
       )}
 
       {notification.media_url && notification.media_type === 'image' && (
-        <div className="nx-pay-media" onClick={(e) => e.stopPropagation()}>
+        <div
+          className="nx-pay-media"
+          onClick={e => e.stopPropagation()}
+        >
           <img
             src={notification.media_url}
             alt={notification.media_alt || title}
             loading="lazy"
-            onError={(e) => {
-              const wrap = e.target.closest('.nx-pay-media');
-              if (wrap) wrap.style.display = 'none';
-            }}
-          />
-        </div>
-      )}
-      {notification.media_url && notification.media_type === 'video' && (
-        <div className="nx-pay-media" onClick={(e) => e.stopPropagation()}>
-          <video
-            src={notification.media_url}
-            controls
-            preload="metadata"
-            playsInline
-            onError={(e) => {
+            onError={e => {
               const wrap = e.target.closest('.nx-pay-media');
               if (wrap) wrap.style.display = 'none';
             }}
@@ -524,45 +852,98 @@ const PaymentCard = ({ notification, isAdmin, onOpen, onMarkRead, onNavigate }) 
         </div>
       )}
 
-      <footer className="nx-pay-footer" onClick={(e) => e.stopPropagation()}>
+      {notification.media_url && notification.media_type === 'video' && (
+        <div
+          className="nx-pay-media"
+          onClick={e => e.stopPropagation()}
+        >
+          <video
+            src={notification.media_url}
+            controls
+            preload="metadata"
+            playsInline
+            onError={e => {
+              const wrap = e.target.closest('.nx-pay-media');
+              if (wrap) wrap.style.display = 'none';
+            }}
+          />
+        </div>
+      )}
+
+      <footer
+        className="nx-pay-footer"
+        onClick={e => e.stopPropagation()}
+      >
+
         <div className="nx-pay-meta">
           <Icon name="clock" size={13} />
+
           <span title={formatAbsolute(notification.created_at)}>
             {formatAbsolute(notification.created_at)}
           </span>
         </div>
+
         <div className="nx-pay-actions">
-          <button className="nx-pay-btn nx-pay-btn-primary" onClick={handlePrimaryClick}>
-            {isSalary || isPayout ? 'View earnings' : 'View details'} <Icon name="arrow-right" size={14} />
+
+          <button
+            className="nx-pay-btn nx-pay-btn-primary"
+            onClick={handlePrimaryClick}
+          >
+            {isSalary || isPayout ? 'View earnings' : 'View details'}
+            <Icon name="arrow-right" size={14} />
           </button>
+
           {!notification.is_read && (
-            <button className="nx-pay-btn nx-pay-btn-ghost" onClick={onMarkRead}>
+            <button
+              className="nx-pay-btn nx-pay-btn-ghost"
+              onClick={onMarkRead}
+            >
               Mark as read
             </button>
           )}
+
         </div>
       </footer>
     </article>
   );
 };
 
-// ─────────────────────────────────────────────────────────────
-// Standard card
-// ─────────────────────────────────────────────────────────────
-const NotificationCard = ({ notification, isAdmin, onOpen, onMarkRead }) => {
-  const isPlatform = notification.source === 'platform';
-  const meta = isPlatform
-    ? { icon: 'megaphone', label: 'Platform', accent: 'indigo', category: 'System' }
-    : (TYPE_META[notification.type] || TYPE_META.default);
+// ============================================================
+// STANDARD NOTIFICATION CARD
+// ============================================================
+
+const NotificationCard = ({
+  notification,
+  isAdmin,
+  onOpen,
+  onMarkRead
+}) => {
   const m = notification.metadata || {};
+
+  // Platform notifications always retain the EduSpantech logo.
+  const isPlatform = notification.source === 'platform';
+
+  // System notifications also retain the EduSpantech logo.
+  const isSystem = isPlatform || notification.type === 'system';
+
+  const meta = isPlatform
+    ? {
+        icon: 'megaphone',
+        label: 'Platform',
+        accent: 'indigo',
+        category: 'System'
+      }
+    : (TYPE_META[notification.type] || TYPE_META.default);
+
   const isWarning = notification.type === 'warning' && !isPlatform;
 
-  const actorName =
-    m.warned_by_name ||
-    m.tutor_name ||
-    m.student_name ||
-    m.sender_name ||
-    null;
+  const actorName = getPersonName(notification);
+  const actorAvatar = getPersonAvatar(notification);
+
+  // Only person-related notifications should use profile photos.
+  const isPersonNotification =
+    !isSystem &&
+    PERSON_NOTIFICATION_TYPES.includes(notification.type);
 
   return (
     <article
@@ -570,58 +951,161 @@ const NotificationCard = ({ notification, isAdmin, onOpen, onMarkRead }) => {
       onClick={onOpen}
       role="button"
       tabIndex={0}
-      onKeyDown={(e) => { if (e.key === 'Enter') onOpen(); }}
+      onKeyDown={e => {
+        if (e.key === 'Enter') onOpen();
+      }}
     >
-      <div className={`nx-card-avatar accent-${meta.accent}`}>
-        <img
-          src={faviconLogo}
-          alt="EduSpantech"
-          className="nx-card-avatar-img"
-          loading="lazy"
-        />
-        <span className="nx-card-avatar-ring" aria-hidden="true" />
+
+      {/* ==================================================
+          AVATAR
+
+          PEOPLE: Actual tutor/student profile photo.
+          SYSTEM: Original EduSpantech logo, unchanged.
+      ================================================== */}
+
+      <div
+        className={`nx-card-avatar accent-${meta.accent} ${
+          isPersonNotification ? 'nx-card-avatar-person' : 'nx-card-avatar-system'
+        }`}
+      >
+
+        {isPersonNotification ? (
+
+          actorAvatar ? (
+
+            <img
+              src={actorAvatar}
+              alt={actorName}
+              className="nx-card-avatar-img nx-card-avatar-person-img"
+              loading="lazy"
+              onError={e => {
+                e.currentTarget.style.display = 'none';
+
+                const fallback =
+                  e.currentTarget.parentElement?.querySelector(
+                    '.nx-card-avatar-initials'
+                  );
+
+                if (fallback) {
+                  fallback.style.display = 'flex';
+                }
+              }}
+            />
+
+          ) : null
+
+        ) : (
+
+          <img
+            src={faviconLogo}
+            alt="EduSpantech"
+            className="nx-card-avatar-img"
+            loading="lazy"
+          />
+
+        )}
+
+        {isPersonNotification && (
+          <span
+            className="nx-card-avatar-initials"
+            style={{
+              display: actorAvatar ? 'none' : 'flex'
+            }}
+          >
+            {getInitials(actorName)}
+          </span>
+        )}
+
+        {!isPersonNotification && (
+          <span
+            className="nx-card-avatar-ring"
+            aria-hidden="true"
+          />
+        )}
+
       </div>
 
+      {/* ==================================================
+          NOTIFICATION CONTENT
+      ================================================== */}
+
       <div className="nx-card-body">
+
         <div className="nx-card-chips">
-          <span className={`nx-chip-tag accent-${meta.accent}`}>{meta.label}</span>
-          <span className="nx-chip-muted">{meta.category}</span>
+
+          <span className={`nx-chip-tag accent-${meta.accent}`}>
+            {meta.label}
+          </span>
+
+          <span className="nx-chip-muted">
+            {meta.category}
+          </span>
+
           {isWarning && m.severity && (
-            <span className={`nx-chip-sev sev-${m.severity}`}>{m.severity}</span>
+            <span className={`nx-chip-sev sev-${m.severity}`}>
+              {m.severity}
+            </span>
           )}
+
           {isPlatform && notification.severity && (
-            <span className={`nx-chip-sev sev-${notification.severity}`}>{notification.severity}</span>
+            <span className={`nx-chip-sev sev-${notification.severity}`}>
+              {notification.severity}
+            </span>
           )}
-          {!notification.is_read && <span className="nx-unread-dot" aria-label="Unread" />}
+
+          {!notification.is_read && (
+            <span
+              className="nx-unread-dot"
+              aria-label="Unread"
+            />
+          )}
+
         </div>
 
         <h3 className="nx-card-title">
           {notification.title}
-          {isAdmin && isPlatform && <span className="nx-platform-tag"> · Platform</span>}
+
+          {isAdmin && isPlatform && (
+            <span className="nx-platform-tag"> · Platform</span>
+          )}
         </h3>
-        <p className="nx-card-message">{notification.message}</p>
+
+        <p className="nx-card-message">
+          {notification.message}
+        </p>
+
+        {/* IMAGE ATTACHMENT */}
 
         {notification.media_url && notification.media_type === 'image' && (
-          <div className="nx-card-media" onClick={(e) => e.stopPropagation()}>
+          <div
+            className="nx-card-media"
+            onClick={e => e.stopPropagation()}
+          >
             <img
               src={notification.media_url}
               alt={notification.media_alt || notification.title}
               loading="lazy"
-              onError={(e) => {
+              onError={e => {
                 const wrap = e.target.closest('.nx-card-media');
                 if (wrap) wrap.style.display = 'none';
               }}
             />
           </div>
         )}
+
+        {/* VIDEO ATTACHMENT */}
+
         {notification.media_url && notification.media_type === 'video' && (
-          <div className="nx-card-media" onClick={(e) => e.stopPropagation()}>
+          <div
+            className="nx-card-media"
+            onClick={e => e.stopPropagation()}
+          >
             <video
               src={notification.media_url}
               controls
               preload="metadata"
               playsInline
-              onError={(e) => {
+              onError={e => {
                 const wrap = e.target.closest('.nx-card-media');
                 if (wrap) wrap.style.display = 'none';
               }}
@@ -629,76 +1113,122 @@ const NotificationCard = ({ notification, isAdmin, onOpen, onMarkRead }) => {
           </div>
         )}
 
+        {/* WARNING INFORMATION */}
+
         {isWarning && (actorName || m.category) && (
           <div className="nx-meta-block">
+
             {actorName && (
               <div className="nx-meta-row">
                 <span className="nx-meta-key">Issued by</span>
+
                 <span className="nx-meta-val">
                   {actorName}
-                  {m.warned_by_id && <span className="nx-meta-sub"> · Administration</span>}
+
+                  {m.warned_by_id && (
+                    <span className="nx-meta-sub">
+                      {' '}· Administration
+                    </span>
+                  )}
                 </span>
               </div>
             )}
+
             {m.category && (
               <div className="nx-meta-row">
                 <span className="nx-meta-key">Reason</span>
                 <span className="nx-meta-val">{m.category}</span>
               </div>
             )}
+
             {m.warned_at && (
               <div className="nx-meta-row">
                 <span className="nx-meta-key">Issued at</span>
-                <span className="nx-meta-val">{formatAbsolute(m.warned_at)}</span>
+                <span className="nx-meta-val">
+                  {formatAbsolute(m.warned_at)}
+                </span>
               </div>
             )}
+
           </div>
         )}
 
+        {/* SESSION INFORMATION */}
+
         {!isWarning && !isPlatform && m.session_id && (
           <div className="nx-meta-block">
+
             {m.tutor_name && (
               <div className="nx-meta-row">
                 <span className="nx-meta-key">Tutor</span>
                 <span className="nx-meta-val">{m.tutor_name}</span>
               </div>
             )}
+
             {m.topic && (
               <div className="nx-meta-row">
                 <span className="nx-meta-key">Topic</span>
                 <span className="nx-meta-val">{m.topic}</span>
               </div>
             )}
+
             {m.date && (
               <div className="nx-meta-row">
                 <span className="nx-meta-key">Session</span>
-                <span className="nx-meta-val">{formatAbsolute(m.date)}</span>
+                <span className="nx-meta-val">
+                  {formatAbsolute(m.date)}
+                </span>
               </div>
             )}
+
           </div>
         )}
 
+        {/* CARD FOOTER */}
+
         <div className="nx-card-footer">
-          <div className="nx-time" title={formatAbsolute(notification.created_at)}>
+
+          <div
+            className="nx-time"
+            title={formatAbsolute(notification.created_at)}
+          >
             <Icon name="clock" size={13} />
+
             <span>{formatRelative(notification.created_at)}</span>
             <span className="nx-time-sep">·</span>
-            <span className="nx-time-abs">{formatAbsolute(notification.created_at)}</span>
+
+            <span className="nx-time-abs">
+              {formatAbsolute(notification.created_at)}
+            </span>
           </div>
 
-          <div className="nx-card-actions" onClick={(e) => e.stopPropagation()}>
+          <div
+            className="nx-card-actions"
+            onClick={e => e.stopPropagation()}
+          >
+
             {!isWarning && !isPlatform && m.session_id && (
-              <button className="nx-btn nx-btn-primary nx-btn-sm" onClick={onOpen}>
-                View session <Icon name="arrow-right" size={14} />
+              <button
+                className="nx-btn nx-btn-primary nx-btn-sm"
+                onClick={onOpen}
+              >
+                View session
+                <Icon name="arrow-right" size={14} />
               </button>
             )}
+
             {!notification.is_read && (
-              <button className="nx-btn nx-btn-ghost nx-btn-sm" onClick={onMarkRead}>
+              <button
+                className="nx-btn nx-btn-ghost nx-btn-sm"
+                onClick={onMarkRead}
+              >
                 Mark as read
               </button>
             )}
+
           </div>
         </div>
+
       </div>
     </article>
   );

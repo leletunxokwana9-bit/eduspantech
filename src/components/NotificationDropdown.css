@@ -1,5 +1,8 @@
 
-// src/components/NotificationDropdown.css
+/* =====================================================
+   NOTIFICATION DROPDOWN
+   src/components/NotificationDropdown.css
+===================================================== */
 
 .notification-dropdown {
   position: absolute;
@@ -28,14 +31,24 @@
   }
 }
 
-/* HEADER */
+/* =====================================================
+   HEADER
+===================================================== */
 
 .dropdown-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
+  gap: 12px;
   padding: 16px 20px;
   border-bottom: 1px solid var(--border-color, rgba(255, 255, 255, 0.06));
+}
+
+.dropdown-header > div {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
 }
 
 .dropdown-header h3 {
@@ -45,6 +58,12 @@
   margin: 0;
 }
 
+.notification-unread-count {
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--accent-primary, #4f46e5);
+}
+
 .mark-all-read {
   background: none;
   border: none;
@@ -52,16 +71,26 @@
   font-size: 12px;
   font-weight: 500;
   cursor: pointer;
-  padding: 4px 12px;
+  padding: 6px 10px;
   border-radius: 6px;
   transition: background 0.2s ease;
+  white-space: nowrap;
 }
 
 .mark-all-read:hover {
   background: rgba(79, 70, 229, 0.1);
 }
 
-/* DROPDOWN BODY */
+.mark-all-read:focus-visible,
+.view-all-btn:focus-visible,
+.notification-retry-btn:focus-visible {
+  outline: 2px solid var(--accent-primary, #4f46e5);
+  outline-offset: 3px;
+}
+
+/* =====================================================
+   DROPDOWN BODY
+===================================================== */
 
 .dropdown-body {
   max-height: 420px;
@@ -82,7 +111,14 @@
   border-radius: 2px;
 }
 
-/* LOADING, ERROR AND EMPTY STATES */
+.dropdown-body {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 255, 255, 0.15) transparent;
+}
+
+/* =====================================================
+   LOADING, ERROR AND EMPTY STATES
+===================================================== */
 
 .notification-loading,
 .notification-error,
@@ -92,7 +128,15 @@
   align-items: center;
   justify-content: center;
   padding: 40px 20px;
+  text-align: center;
   color: var(--text-muted, rgba(255, 255, 255, 0.5));
+}
+
+.notification-loading p,
+.notification-error p,
+.notification-empty p {
+  margin: 0;
+  font-size: 13px;
 }
 
 .notification-loading .loading-spinner {
@@ -115,8 +159,8 @@
   }
 }
 
-.notification-error span,
-.notification-empty span {
+.notification-error > span,
+.notification-empty > span {
   font-size: 32px;
   display: block;
   margin-bottom: 8px;
@@ -125,10 +169,30 @@
 .empty-sub {
   font-size: 12px;
   color: var(--text-muted, rgba(255, 255, 255, 0.3));
-  margin-top: 4px;
+  margin-top: 6px;
 }
 
-/* NOTIFICATION LIST */
+.notification-retry-btn {
+  margin-top: 12px;
+  padding: 8px 16px;
+  border: none;
+  border-radius: 7px;
+  background: var(--accent-primary, #4f46e5);
+  color: #ffffff;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: opacity 0.2s ease, transform 0.2s ease;
+}
+
+.notification-retry-btn:hover {
+  opacity: 0.9;
+  transform: translateY(-1px);
+}
+
+/* =====================================================
+   NOTIFICATION LIST
+===================================================== */
 
 .notification-list {
   display: flex;
@@ -143,10 +207,16 @@
   cursor: pointer;
   transition: background 0.15s ease;
   position: relative;
+  outline: none;
 }
 
 .notification-item:hover {
   background: var(--bg-card, rgba(255, 255, 255, 0.03));
+}
+
+.notification-item:focus-visible {
+  outline: 2px solid var(--accent-primary, #4f46e5);
+  outline-offset: -2px;
 }
 
 .notification-item.unread {
@@ -157,45 +227,72 @@
   background: rgba(79, 70, 229, 0.08);
 }
 
-/* ROUND TUTOR / STUDENT AVATARS */
+/* =====================================================
+   ROUND TUTOR / STUDENT PROFILE AVATARS
+===================================================== */
 
 .notification-avatar {
-  width: 42px;
-  height: 42px;
-  min-width: 42px;
+  width: 44px;
+  height: 44px;
+  min-width: 44px;
+  min-height: 44px;
   border-radius: 50%;
   overflow: hidden;
   display: flex;
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
+  position: relative;
   background: var(--bg-card, #263248);
   border: 1px solid var(--border-color, rgba(255, 255, 255, 0.1));
 }
+
+/* Actual uploaded tutor photo or student DiceBear avatar */
 
 .notification-avatar-image {
   width: 100%;
   height: 100%;
   object-fit: cover;
+  object-position: center;
   border-radius: 50%;
   display: block;
 }
 
-.notification-avatar-placeholder {
+/* Initials fallback when the actor has no avatar */
+
+.notification-avatar-fallback {
   width: 100%;
   height: 100%;
   display: flex;
   align-items: center;
   justify-content: center;
   border-radius: 50%;
-  font-size: 16px;
-  font-weight: 600;
+  font-size: 14px;
+  font-weight: 700;
+  letter-spacing: 0.3px;
   color: #ffffff;
   background: var(--accent-primary, #4f46e5);
   text-transform: uppercase;
+  user-select: none;
 }
 
-/* NOTIFICATION CONTENT */
+/* System notification: neutral circle, no emoji or tick */
+
+.notification-system-avatar {
+  background: var(--bg-card, #263248);
+}
+
+.notification-system-dot {
+  width: 9px;
+  height: 9px;
+  display: block;
+  border-radius: 50%;
+  background: #8993a4;
+}
+
+/* =====================================================
+   NOTIFICATION CONTENT
+===================================================== */
 
 .notification-content {
   flex: 1;
@@ -206,13 +303,14 @@
   font-size: 14px;
   font-weight: 600;
   color: var(--text-primary, #ffffff);
-  margin-bottom: 2px;
+  margin-bottom: 3px;
+  line-height: 1.4;
 }
 
 .notification-message {
   font-size: 13px;
   color: var(--text-secondary, rgba(255, 255, 255, 0.7));
-  line-height: 1.4;
+  line-height: 1.5;
   word-wrap: break-word;
   overflow-wrap: anywhere;
 }
@@ -220,10 +318,12 @@
 .notification-time {
   font-size: 11px;
   color: var(--text-muted, rgba(255, 255, 255, 0.3));
-  margin-top: 4px;
+  margin-top: 5px;
 }
 
-/* UNREAD INDICATOR */
+/* =====================================================
+   UNREAD INDICATOR
+===================================================== */
 
 .unread-dot {
   width: 8px;
@@ -231,10 +331,12 @@
   background: var(--accent-primary, #4f46e5);
   border-radius: 50%;
   flex-shrink: 0;
-  margin-top: 4px;
+  margin-top: 5px;
 }
 
-/* FOOTER */
+/* =====================================================
+   FOOTER
+===================================================== */
 
 .dropdown-footer {
   padding: 12px 20px;
@@ -249,7 +351,7 @@
   font-size: 13px;
   font-weight: 500;
   cursor: pointer;
-  padding: 6px 16px;
+  padding: 7px 16px;
   border-radius: 8px;
   transition: background 0.2s ease;
 }
@@ -258,12 +360,18 @@
   background: rgba(79, 70, 229, 0.1);
 }
 
-/* LIGHT THEME */
+/* =====================================================
+   LIGHT THEME
+===================================================== */
 
 [data-theme="light"] .notification-dropdown {
   background: #ffffff;
   border-color: rgba(0, 0, 0, 0.06);
   box-shadow: 0 20px 60px rgba(0, 0, 0, 0.12);
+}
+
+[data-theme="light"] .dropdown-header {
+  border-color: rgba(0, 0, 0, 0.07);
 }
 
 [data-theme="light"] .dropdown-header h3 {
@@ -287,6 +395,19 @@
   border-color: rgba(0, 0, 0, 0.08);
 }
 
+[data-theme="light"] .notification-avatar-fallback {
+  background: #e9efff;
+  color: #344b91;
+}
+
+[data-theme="light"] .notification-system-avatar {
+  background: #f1f5f9;
+}
+
+[data-theme="light"] .notification-system-dot {
+  background: #8993a4;
+}
+
 [data-theme="light"] .notification-title {
   color: #0f172a;
 }
@@ -299,12 +420,23 @@
   color: rgba(0, 0, 0, 0.4);
 }
 
-[data-theme="light"] .dropdown-header,
 [data-theme="light"] .dropdown-footer {
   border-color: rgba(0, 0, 0, 0.07);
 }
 
-/* RESPONSIVE */
+[data-theme="light"] .notification-loading,
+[data-theme="light"] .notification-error,
+[data-theme="light"] .notification-empty {
+  color: #64748b;
+}
+
+[data-theme="light"] .empty-sub {
+  color: #94a3b8;
+}
+
+/* =====================================================
+   RESPONSIVE
+===================================================== */
 
 @media (max-width: 480px) {
   .notification-dropdown {
@@ -325,13 +457,14 @@
   }
 
   .notification-avatar {
-    width: 36px;
-    height: 36px;
-    min-width: 36px;
+    width: 38px;
+    height: 38px;
+    min-width: 38px;
+    min-height: 38px;
   }
 
-  .notification-avatar-placeholder {
-    font-size: 14px;
+  .notification-avatar-fallback {
+    font-size: 12px;
   }
 
   .notification-title {
@@ -344,5 +477,25 @@
 
   .notification-time {
     font-size: 10px;
+  }
+
+  .dropdown-footer {
+    padding: 10px 16px;
+  }
+}
+
+/* =====================================================
+   REDUCED MOTION ACCESSIBILITY
+===================================================== */
+
+@media (prefers-reduced-motion: reduce) {
+  .notification-dropdown,
+  .notification-loading .loading-spinner,
+  .notification-item,
+  .notification-retry-btn,
+  .mark-all-read,
+  .view-all-btn {
+    animation: none;
+    transition: none;
   }
 }

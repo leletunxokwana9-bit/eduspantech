@@ -1567,3 +1567,160 @@
   .video-modal-info h4 { font-size: 16px; }
   .video-modal-content { max-width: 100%; width: 100%; border-radius: 0; max-height: 100vh; }
 }
+/* ============================================
+   ✅ TUTOR POPUP — WEEKLY AVAILABILITY
+   ============================================ */
+.tutor-modal-availability {
+  margin: 16px 0 18px;
+  text-align: left;
+}
+
+.tutor-modal-availability-title {
+  font-size: 13px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: rgba(255, 255, 255, 0.55);
+  margin: 0 0 10px;
+}
+
+.tutor-weekly-availability {
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  border-radius: 12px;
+  padding: 12px 14px;
+}
+
+.tutor-weekly-availability.compact {
+  padding: 10px 12px;
+}
+
+.twa-loading,
+.twa-empty {
+  font-size: 13px;
+  color: rgba(255, 255, 255, 0.55);
+  font-style: italic;
+  padding: 4px 0;
+}
+
+.twa-days {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.twa-day {
+  display: grid;
+  grid-template-columns: 92px 1fr;
+  align-items: start;
+  gap: 12px;
+  padding: 6px 0;
+  border-bottom: 1px dashed rgba(255, 255, 255, 0.06);
+}
+
+.twa-day:last-child {
+  border-bottom: 0;
+}
+
+.twa-day-name {
+  font-size: 13px;
+  font-weight: 600;
+  color: #e2e8f0;
+}
+
+.twa-day.unavailable .twa-day-name {
+  color: rgba(255, 255, 255, 0.45);
+  font-weight: 500;
+}
+
+.twa-ranges {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 8px;
+}
+
+.twa-range {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 12px;
+  color: #c7d2fe;
+  background: rgba(79, 70, 229, 0.15);
+  border: 1px solid rgba(79, 70, 229, 0.25);
+  padding: 3px 8px;
+  border-radius: 999px;
+  white-space: nowrap;
+}
+
+.twa-range .twa-sep {
+  color: rgba(255, 255, 255, 0.4);
+}
+
+.twa-unavailable-text {
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.4);
+  font-style: italic;
+  padding-top: 2px;
+}
+
+/* Compact variant — smaller chips in the quick-view popup */
+.tutor-weekly-availability.compact .twa-day {
+  grid-template-columns: 80px 1fr;
+  gap: 8px;
+  padding: 4px 0;
+}
+
+.tutor-weekly-availability.compact .twa-range {
+  font-size: 11px;
+  padding: 2px 7px;
+}
+
+/* Light theme */
+[data-theme="light"] .tutor-weekly-availability {
+  background: rgba(0, 0, 0, 0.02);
+  border-color: rgba(0, 0, 0, 0.07);
+}
+
+[data-theme="light"] .twa-day-name {
+  color: #0f172a;
+}
+
+[data-theme="light"] .twa-day.unavailable .twa-day-name {
+  color: rgba(0, 0, 0, 0.45);
+}
+
+[data-theme="light"] .twa-range {
+  color: #4338ca;
+  background: rgba(79, 70, 229, 0.08);
+  border-color: rgba(79, 70, 229, 0.2);
+}
+
+[data-theme="light"] .twa-range .twa-sep {
+  color: rgba(0, 0, 0, 0.4);
+}
+
+[data-theme="light"] .twa-unavailable-text,
+[data-theme="light"] .twa-loading,
+[data-theme="light"] .twa-empty {
+  color: rgba(0, 0, 0, 0.45);
+}
+
+[data-theme="light"] .tutor-modal-availability-title {
+  color: rgba(0, 0, 0, 0.55);
+}
+
+/* Responsive */
+@media (max-width: 480px) {
+  .twa-day {
+    grid-template-columns: 72px 1fr;
+    gap: 8px;
+  }
+
+  .twa-range {
+    font-size: 11px;
+    padding: 2px 7px;
+  }
+}

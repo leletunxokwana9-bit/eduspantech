@@ -1933,3 +1933,70 @@
     width: 100%;
   }
 }
+/* ============================================
+   ✅ SEPARATED WEEKLY AVAILABILITY CARD
+   ============================================ */
+.tutor-availability-card {
+  /* inherits .profile-card.full-width — no extra layout needed */
+  margin-top: 8px;
+}
+
+.tutor-availability-subtitle {
+  font-size: 14px;
+  color: rgba(255, 255, 255, 0.6);
+  margin: 0 0 20px 0;
+  line-height: 1.5;
+}
+
+/* ============================================
+   ✅ TWO-CHECKBOX MODE SELECTOR
+   Unavailable / Available radio-style checkboxes
+   ============================================ */
+.tutor-availability-mode {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  flex-wrap: wrap;
+}
+
+.tutor-availability-mode-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  font-weight: 500;
+  color: rgba(255, 255, 255, 0.75);
+  cursor: pointer;
+  user-select: none;
+  padding: 4px 10px;
+  border-radius: 8px;
+  border: 1px solid transparent;
+  transition: border-color 0.2s ease, background 0.2s ease;
+}
+
+.tutor-availability-mode-label:hover {
+  background: rgba(255, 255, 255, 0.04);
+  border-color: rgba(255, 255, 255, 0.08);
+}
+
+.tutor-availability-mode-label input[type='checkbox'] {
+  width: 16px;
+  height: 16px;
+  accent-color: #4f46e5;
+  cursor: pointer;
+}
+
+/* Optional: highlight the active mode */
+.tutor-availability-mode-label input:checked + span {
+  color: #ffffff;
+  font-weight: 600;
+}
+
+/* ============================================
+   ✅ SAVE BUTTON — INACTIVE UNTIL DIRTY
+   ============================================ */
+.tutor-availability-save:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+  filter: grayscale(60%);
+}

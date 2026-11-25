@@ -528,6 +528,46 @@ const StudentRoute = ({ children }) => {
 };
 
 // =====================================================
+// SHARED USER PROFILE ROUTE
+// Allows BOTH students and tutors to access Profile.js.
+// Parents and administrators use their own profile pages.
+// =====================================================
+
+const UserProfileRoute = ({ children }) => {
+  const user = getStoredUser();
+
+  if (!user) {
+    return (
+      <Navigate
+        to="/login"
+        replace
+      />
+    );
+  }
+
+  if (isParentAccount(user)) {
+    return (
+      <Navigate
+        to="/parent-profile"
+        replace
+      />
+    );
+  }
+
+  if (isAdminAccount(user)) {
+    return (
+      <Navigate
+        to="/admin/profile"
+        replace
+      />
+    );
+  }
+
+  // Both tutors and students can access the shared profile.
+  return children;
+};
+
+// =====================================================
 // LIVE SESSION ROUTE
 // Allows authenticated students AND tutors.
 // Parents and administrators cannot enter live sessions.
@@ -1018,12 +1058,16 @@ const AppContent = () => {
               }
             />
 
+            {/* =====================================
+                SHARED STUDENT AND TUTOR PROFILE
+            ===================================== */}
+
             <Route
               path="/profile"
               element={
-                <StudentRoute>
+                <UserProfileRoute>
                   <Profile />
-                </StudentRoute>
+                </UserProfileRoute>
               }
             />
 

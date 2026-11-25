@@ -28,7 +28,7 @@
   background: #141b2d !important;
   border-radius: 12px;
   border: 1px solid rgba(255, 255, 255, 0.06) !important;
-  margin-bottom: 36px; /* ✅ CHANGED: 28px → 36px for breathing room before stats */
+  margin-bottom: 36px;
 }
 
 .profile-avatar {
@@ -261,8 +261,6 @@
 
 /* ============================================
    ✅ NEW: TUTOR PROFILE — CLEAN GRID LAYOUT
-   Each field is a labeled block (label above value)
-   with proper spacing, dividers, and structure.
    ============================================ */
 .tutor-profile-grid {
   display: grid;
@@ -874,7 +872,7 @@
 }
 
 /* ============================================
-   VIDEO MANAGER MODAL - MATCHES TUTORS PAGE
+   VIDEO MANAGER MODAL
    ============================================ */
 .video-manager-modal {
   max-width: 500px;
@@ -1692,7 +1690,6 @@
   border-top-color: #4f46e5;
 }
 
-
 /* ============================================
    TUTOR WEEKLY AVAILABILITY
    ============================================ */
@@ -1746,10 +1743,13 @@
   height: 16px;
 }
 
+/* ============================================
+   ✅ SLOTS — small spaces between slot cards
+   ============================================ */
 .tutor-availability-slots {
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 12px;
 }
 
 .tutor-availability-slot {
@@ -1757,6 +1757,10 @@
   grid-template-columns: 1fr 1fr auto;
   align-items: end;
   gap: 12px;
+  padding: 12px 14px;
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.02);
 }
 
 .tutor-availability-time-field {
@@ -1791,18 +1795,39 @@
   box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.12);
 }
 
-.tutor-availability-add,
+/* Remove button — keeps the × centered */
 .tutor-availability-remove {
+  width: 36px;
+  height: 36px;
+  padding: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 8px;
+  border: 1px solid rgba(239, 68, 68, 0.2);
+  background: rgba(239, 68, 68, 0.08);
+  color: #fca5a5;
+  font-size: 16px;
+  font-weight: 600;
+  line-height: 1;
+  cursor: pointer;
+  transition: 0.2s ease;
+  align-self: end;
+}
+
+.tutor-availability-remove:hover {
+  background: rgba(239, 68, 68, 0.16);
+}
+
+.tutor-availability-add {
+  margin-top: 4px;
+  align-self: flex-start;
   border-radius: 8px;
   padding: 9px 13px;
   font-size: 12px;
   font-weight: 600;
   cursor: pointer;
   transition: 0.2s ease;
-}
-
-.tutor-availability-add {
-  margin-top: 12px;
   border: 1px solid rgba(99, 102, 241, 0.3);
   background: rgba(99, 102, 241, 0.1);
   color: #a5b4fc;
@@ -1810,16 +1835,6 @@
 
 .tutor-availability-add:hover {
   background: rgba(99, 102, 241, 0.2);
-}
-
-.tutor-availability-remove {
-  border: 1px solid rgba(239, 68, 68, 0.2);
-  background: rgba(239, 68, 68, 0.08);
-  color: #fca5a5;
-}
-
-.tutor-availability-remove:hover {
-  background: rgba(239, 68, 68, 0.16);
 }
 
 .tutor-availability-disabled {
@@ -1850,11 +1865,6 @@
 
 .tutor-availability-save:hover:not(:disabled) {
   background: #4338ca;
-}
-
-.tutor-availability-save:disabled {
-  opacity: 0.55;
-  cursor: not-allowed;
 }
 
 .tutor-availability-message {
@@ -1889,6 +1899,11 @@
   color: #475569;
 }
 
+[data-theme="light"] .tutor-availability-slot {
+  background: #ffffff;
+  border-color: #e2e8f0;
+}
+
 [data-theme="light"] .tutor-availability-time-field label {
   color: #64748b;
 }
@@ -1898,6 +1913,16 @@
   border-color: #e2e8f0;
   color: #0f172a;
   color-scheme: light;
+}
+
+[data-theme="light"] .tutor-availability-remove {
+  border-color: rgba(220, 38, 38, 0.2);
+  background: rgba(220, 38, 38, 0.06);
+  color: #dc2626;
+}
+
+[data-theme="light"] .tutor-availability-remove:hover {
+  background: rgba(220, 38, 38, 0.12);
 }
 
 [data-theme="light"] .tutor-availability-disabled {
@@ -1933,11 +1958,11 @@
     width: 100%;
   }
 }
+
 /* ============================================
    ✅ SEPARATED WEEKLY AVAILABILITY CARD
    ============================================ */
 .tutor-availability-card {
-  /* inherits .profile-card.full-width — no extra layout needed */
   margin-top: 8px;
 }
 
@@ -1950,7 +1975,6 @@
 
 /* ============================================
    ✅ TWO-CHECKBOX MODE SELECTOR
-   Unavailable / Available radio-style checkboxes
    ============================================ */
 .tutor-availability-mode {
   display: flex;
@@ -1986,7 +2010,6 @@
   cursor: pointer;
 }
 
-/* Optional: highlight the active mode */
 .tutor-availability-mode-label input:checked + span {
   color: #ffffff;
   font-weight: 600;
@@ -1999,170 +2022,4 @@
   opacity: 0.45;
   cursor: not-allowed;
   filter: grayscale(60%);
-}
-/* ============================================
-   ✅ WEEKLY AVAILABILITY — DAY CARD SPACING
-   Give each day its own breathing room.
-   ============================================ */
-
-.tutor-availability {
-  display: flex;
-  flex-direction: column;
-  gap: 14px;               /* space between intro, days, message, actions */
-}
-
-.tutor-availability-intro {
-  margin-bottom: 4px;
-}
-
-/* Each day becomes its own mini-card */
-.tutor-availability-day {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-  padding: 16px 18px;
-  background: rgba(255, 255, 255, 0.025);
-  border: 1px solid rgba(255, 255, 255, 0.06);
-  border-radius: 10px;
-  transition: border-color 0.2s ease, background 0.2s ease;
-}
-
-.tutor-availability-day:hover {
-  border-color: rgba(255, 255, 255, 0.1);
-  background: rgba(255, 255, 255, 0.035);
-}
-
-/* Header row: day name + mode checkboxes */
-.tutor-availability-day-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 16px;
-  flex-wrap: wrap;
-}
-
-.tutor-availability-day-name {
-  font-size: 15px;
-  font-weight: 600;
-  color: #ffffff;
-  letter-spacing: 0.2px;
-}
-
-/* Slots block spacing inside a day */
-.tutor-availability-slots {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-  padding-top: 4px;
-  border-top: 1px solid rgba(255, 255, 255, 0.05);
-}
-
-/* Each time range row */
-.tutor-availability-slot {
-  display: flex;
-  align-items: flex-end;
-  gap: 12px;
-  flex-wrap: wrap;
-}
-
-.tutor-availability-time-field {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-}
-
-.tutor-availability-time-field label {
-  font-size: 11px;
-  font-weight: 600;
-  color: rgba(255, 255, 255, 0.5);
-  text-transform: uppercase;
-  letter-spacing: 0.4px;
-}
-
-.tutor-availability-time-field input[type='time'] {
-  padding: 8px 10px;
-  border-radius: 8px;
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  background: #0f1524;
-  color: #ffffff;
-  font-size: 14px;
-  outline: none;
-  transition: border-color 0.2s ease;
-}
-
-.tutor-availability-time-field input[type='time']:focus {
-  border-color: #4f46e5;
-}
-
-/* Remove button */
-.tutor-availability-remove {
-  width: 32px;
-  height: 32px;
-  border-radius: 8px;
-  border: 1px solid rgba(239, 68, 68, 0.25);
-  background: rgba(239, 68, 68, 0.1);
-  color: #ef4444;
-  font-size: 18px;
-  line-height: 1;
-  cursor: pointer;
-  transition: all 0.2s ease;
-  margin-bottom: 2px;
-}
-
-.tutor-availability-remove:hover {
-  background: rgba(239, 68, 68, 0.2);
-  border-color: rgba(239, 68, 68, 0.4);
-}
-
-/* Add another time range button */
-.tutor-availability-add {
-  align-self: flex-start;
-  padding: 8px 14px;
-  border-radius: 8px;
-  border: 1px dashed rgba(79, 70, 229, 0.4);
-  background: rgba(79, 70, 229, 0.08);
-  color: #818cf8;
-  font-size: 13px;
-  font-weight: 600;
-  cursor: pointer;
-  transition: all 0.2s ease;
-}
-
-.tutor-availability-add:hover {
-  background: rgba(79, 70, 229, 0.15);
-  border-color: rgba(79, 70, 229, 0.6);
-}
-
-/* "You are not available on this day." block */
-.tutor-availability-disabled {
-  font-size: 13px;
-  color: rgba(255, 255, 255, 0.45);
-  font-style: italic;
-  padding: 6px 0 2px;
-}
-
-/* Message + actions spacing at the bottom */
-.tutor-availability-message {
-  padding: 10px 14px;
-  border-radius: 8px;
-  font-size: 13px;
-  font-weight: 500;
-}
-
-.tutor-availability-message.success {
-  background: rgba(34, 197, 94, 0.1);
-  color: #22c55e;
-  border: 1px solid rgba(34, 197, 94, 0.2);
-}
-
-.tutor-availability-message.error {
-  background: rgba(239, 68, 68, 0.1);
-  color: #ef4444;
-  border: 1px solid rgba(239, 68, 68, 0.2);
-}
-
-.tutor-availability-actions {
-  display: flex;
-  justify-content: flex-end;
-  padding-top: 6px;
 }

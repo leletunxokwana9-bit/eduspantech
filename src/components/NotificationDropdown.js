@@ -93,6 +93,21 @@ const NotificationDropdown = ({
   };
 
   // ==================================================
+  // CLEAN NOTIFICATION TITLE
+  // Remove leading ticks from titles such as
+  // "✅ Session Accepted!"
+  // ==================================================
+
+  const getCleanNotificationTitle = (title) => {
+    if (!title) return '';
+
+    return String(title).replace(
+      /^[\s]*(?:✅|✔️?|☑️?|✓)+[\s]*/u,
+      ''
+    );
+  };
+
+  // ==================================================
   // PROFILE AVATAR
   // ==================================================
 
@@ -100,8 +115,9 @@ const NotificationDropdown = ({
     const avatarUrl = notification.image_url;
     const personName = getPersonName(notification);
 
-    // System notifications have no personal actor.
-    // Never display emojis or ticks in profile circles.
+    // System notifications use a neutral avatar.
+    // No ticks or emojis are displayed in profile circles.
+
     if (!notification.actor_id) {
       return (
         <div
@@ -121,6 +137,7 @@ const NotificationDropdown = ({
             src={avatarUrl}
             alt={personName}
             className="notification-avatar-image"
+            loading="lazy"
             onError={(event) => {
               event.currentTarget.style.display = 'none';
 
@@ -207,35 +224,6 @@ const NotificationDropdown = ({
   };
 
   // ==================================================
-  // NOTIFICATION ICON
-  // Used only for notification messages if needed.
-  // Never used inside profile avatar circles.
-  // ==================================================
-
-  const getNotificationIcon = (type) => {
-    const icons = {
-      session_reminder: '📅',
-      session_started: '🟢',
-      booking_confirmed: '✅',
-      session_accepted: '✅',
-      session_booked: '📚',
-      session_cancelled: '❌',
-      new_rating: '⭐',
-      new_message: '💬',
-      subscription_alert: '🔔',
-      payment_received: '💳',
-      progress_update: '📈',
-      system_update: '🚀',
-      system: '🔔',
-      new_tutor: '🎓',
-      warning: '⚠️',
-      session_completed: '🎯'
-    };
-
-    return icons[type] || '📌';
-  };
-
-  // ==================================================
   // FORMAT TIME
   // ==================================================
 
@@ -308,7 +296,10 @@ const NotificationDropdown = ({
       }
 
     } catch (err) {
-      console.error('Failed to mark all notifications as read:', err);
+      console.error(
+        'Failed to mark all notifications as read:',
+        err
+      );
     }
   };
 
@@ -332,6 +323,7 @@ const NotificationDropdown = ({
     <div className="notification-dropdown">
 
       {/* HEADER */}
+
       <div className="dropdown-header">
 
         <div>
@@ -357,6 +349,7 @@ const NotificationDropdown = ({
       </div>
 
       {/* BODY */}
+
       <div className="dropdown-body">
 
         {loading ? (
@@ -417,14 +410,16 @@ const NotificationDropdown = ({
                 }}
               >
 
-                {/* ACTUAL ACTOR AVATAR */}
+                {/* ACTUAL ACTOR PROFILE PHOTO */}
+
                 {renderNotificationAvatar(notification)}
 
                 {/* NOTIFICATION CONTENT */}
+
                 <div className="notification-content">
 
                   <div className="notification-title">
-                    {notification.title}
+                    {getCleanNotificationTitle(notification.title)}
                   </div>
 
                   <div className="notification-message">
@@ -438,6 +433,7 @@ const NotificationDropdown = ({
                 </div>
 
                 {/* UNREAD INDICATOR */}
+
                 {!notification.is_read && (
                   <span className="unread-dot"></span>
                 )}
@@ -453,6 +449,7 @@ const NotificationDropdown = ({
       </div>
 
       {/* FOOTER */}
+
       {notifications.length > 0 && (
 
         <div className="dropdown-footer">

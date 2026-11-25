@@ -695,37 +695,7 @@ const Login = () => {
             </p>
           </div>
 
-          <div className="brand-features">
-
-            <div className="brand-feature">
-              <span className="feature-icon">▶</span>
-              <span className="feature-text">
-                Live &amp; On-Demand Lessons
-              </span>
-            </div>
-
-            <div className="brand-feature">
-              <span className="feature-icon">▥</span>
-              <span className="feature-text">
-                Track Your Progress
-              </span>
-            </div>
-
-            <div className="brand-feature">
-              <span className="feature-icon">♟</span>
-              <span className="feature-text">
-                Learn with Expert Tutors
-              </span>
-            </div>
-
-            <div className="brand-feature">
-              <span className="feature-icon">✓</span>
-              <span className="feature-text">
-                Prepare for Exams with Confidence
-              </span>
-            </div>
-
-          </div>
+          {/* Feature list removed */}
 
           <div className="brand-stats">
 
@@ -809,11 +779,6 @@ const Login = () => {
                 Tutor
               </button>
 
-              {/* IMPORTANT:
-                  Parent/Guardian goes to the public Parent Home.
-                  It must NOT go directly to /parent-login.
-                  The Parent Home has its own ParentNavbar and Login button.
-              */}
               <Link
                 to="/parent"
                 className="role-tab parent-role-tab"

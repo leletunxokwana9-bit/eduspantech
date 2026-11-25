@@ -96,6 +96,8 @@
   max-height: 420px;
   overflow-y: auto;
   padding: 4px 0;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 255, 255, 0.15) transparent;
 }
 
 .dropdown-body::-webkit-scrollbar {
@@ -109,11 +111,6 @@
 .dropdown-body::-webkit-scrollbar-thumb {
   background: rgba(255, 255, 255, 0.1);
   border-radius: 2px;
-}
-
-.dropdown-body {
-  scrollbar-width: thin;
-  scrollbar-color: rgba(255, 255, 255, 0.15) transparent;
 }
 
 /* =====================================================
@@ -208,6 +205,7 @@
   transition: background 0.15s ease;
   position: relative;
   outline: none;
+  box-sizing: border-box;
 }
 
 .notification-item:hover {
@@ -231,54 +229,95 @@
    ROUND TUTOR / STUDENT PROFILE AVATARS
 ===================================================== */
 
-.notification-avatar {
-  width: 44px;
-  height: 44px;
-  min-width: 44px;
-  min-height: 44px;
-  border-radius: 50%;
-  overflow: hidden;
-  display: flex;
+.notification-item > .notification-avatar {
+  position: relative !important;
+  display: block !important;
+
+  width: 44px !important;
+  height: 44px !important;
+  min-width: 44px !important;
+  min-height: 44px !important;
+  max-width: 44px !important;
+  max-height: 44px !important;
+
+  flex: 0 0 44px !important;
+  aspect-ratio: 1 / 1 !important;
+
+  border-radius: 50% !important;
+  overflow: hidden !important;
+  box-sizing: border-box !important;
+
+  padding: 0 !important;
+  margin: 0 !important;
+
   align-items: center;
   justify-content: center;
-  flex-shrink: 0;
-  position: relative;
+
   background: var(--bg-card, #263248);
   border: 1px solid var(--border-color, rgba(255, 255, 255, 0.1));
 }
 
 /* Actual uploaded tutor photo or student DiceBear avatar */
 
-.notification-avatar-image {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-  object-position: center;
-  border-radius: 50%;
-  display: block;
+.notification-item > .notification-avatar > img.notification-avatar-image {
+  position: absolute !important;
+  inset: 0 !important;
+
+  display: block !important;
+
+  width: 100% !important;
+  height: 100% !important;
+
+  min-width: 100% !important;
+  min-height: 100% !important;
+
+  max-width: none !important;
+  max-height: none !important;
+
+  object-fit: cover !important;
+  object-position: center !important;
+
+  border: none !important;
+  border-radius: 50% !important;
+
+  padding: 0 !important;
+  margin: 0 !important;
+
+  box-sizing: border-box !important;
 }
 
-/* Initials fallback when the actor has no avatar */
+/* Initials fallback */
 
-.notification-avatar-fallback {
-  width: 100%;
-  height: 100%;
+.notification-item > .notification-avatar > .notification-avatar-fallback {
+  position: absolute !important;
+  inset: 0 !important;
+
+  width: 100% !important;
+  height: 100% !important;
+
   display: flex;
   align-items: center;
   justify-content: center;
-  border-radius: 50%;
+
+  border-radius: 50% !important;
+
   font-size: 14px;
   font-weight: 700;
   letter-spacing: 0.3px;
+
   color: #ffffff;
   background: var(--accent-primary, #4f46e5);
+
   text-transform: uppercase;
   user-select: none;
+
+  box-sizing: border-box !important;
 }
 
-/* System notification: neutral circle, no emoji or tick */
+/* Neutral system notification avatar */
 
-.notification-system-avatar {
+.notification-item > .notification-avatar.notification-system-avatar {
+  display: flex !important;
   background: var(--bg-card, #263248);
 }
 
@@ -288,6 +327,14 @@
   display: block;
   border-radius: 50%;
   background: #8993a4;
+}
+
+/* Prevent decorative ticks or icons inside avatar */
+
+.notification-item > .notification-avatar::before,
+.notification-item > .notification-avatar::after {
+  content: none !important;
+  display: none !important;
 }
 
 /* =====================================================
@@ -456,11 +503,14 @@
     gap: 12px;
   }
 
-  .notification-avatar {
-    width: 38px;
-    height: 38px;
-    min-width: 38px;
-    min-height: 38px;
+  .notification-item > .notification-avatar {
+    width: 38px !important;
+    height: 38px !important;
+    min-width: 38px !important;
+    min-height: 38px !important;
+    max-width: 38px !important;
+    max-height: 38px !important;
+    flex-basis: 38px !important;
   }
 
   .notification-avatar-fallback {

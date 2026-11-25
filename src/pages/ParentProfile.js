@@ -1,5 +1,4 @@
-
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   UserRound,
   UserRoundPen,
@@ -41,6 +40,7 @@ import {
   AlertCircle,
   CheckCircle2
 } from 'lucide-react';
+import { API_BASE_URL } from '../services/api';
 import './ParentProfile.css';
 
 const navigation = [
@@ -79,6 +79,92 @@ const initialNotifications = {
   marketing: false
 };
 
+const formatSubscriptionDate = (dateValue) => {
+  if (!dateValue) return 'Not available';
+
+  const date = new Date(dateValue);
+
+  if (Number.isNaN(date.getTime())) {
+    return 'Not available';
+  }
+
+  return date.toLocaleDateString('en-ZA', {
+    day: 'numeric',
+    month: 'long',
+    year: 'numeric'
+  });
+};
+
+const getStudentEducationType = (student, plan) => {
+  const audience = String(plan?.audience || '').toLowerCase();
+
+  if (audience === 'school' || audience === 'highschool' || audience === 'high_school') {
+    return 'High School';
+  }
+
+  if (audience === 'tertiary' || audience === 'university') {
+    return 'Tertiary';
+  }
+
+  const studentDetails = [
+    student?.cohort,
+    student?.gradeLevel,
+    student?.grade
+  ].filter(Boolean).join(' ').toLowerCase();
+
+  if (
+    studentDetails.includes('university') ||
+    studentDetails.includes('tertiary') ||
+    studentDetails.includes('college') ||
+    studentDetails.includes('year')
+  ) {
+    return 'Tertiary';
+  }
+
+  if (
+    studentDetails.includes('grade') ||
+    studentDetails.includes('high school') ||
+    studentDetails.includes('highschool')
+  ) {
+    return 'High School';
+  }
+
+  return 'Not specified';
+};
+
+const formatSubscriptionPrice = (subscription, plan) => {
+  const currency = subscription?.currency || plan?.currency || 'ZAR';
+  const billingCycle = String(subscription?.billing_cycle || 'monthly').toLowerCase();
+
+  let amount;
+
+  if (subscription?.amount !== null && subscription?.amount !== undefined) {
+    amount = Number(subscription.amount);
+  } else if (
+    (billingCycle === 'annual' || billingCycle === 'yearly') &&
+    plan?.annualPrice
+  ) {
+    amount = Number(plan.annualPrice);
+  } else {
+    amount = Number(plan?.price || 0);
+  }
+
+  if (!Number.isFinite(amount)) {
+    return 'Price unavailable';
+  }
+
+  try {
+    return new Intl.NumberFormat('en-ZA', {
+      style: 'currency',
+      currency,
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2
+    }).format(amount);
+  } catch (error) {
+    return `${currency} ${amount.toFixed(2)}`;
+  }
+};
+
 const ParentProfile = ({
   profileData,
   linkedStudents = [],
@@ -101,11 +187,106 @@ const ParentProfile = ({
   const [saveMessage, setSaveMessage] = useState('');
   const [showPassword, setShowPassword] = useState(false);
 
+  // Subscription state is specific to the selected linked student.
+  const [activeStudentId, setActiveStudentId] = useState(
+    linkedStudents[0]?.id || ''
+  );
+  const [studentSubscription, setStudentSubscription] = useState(null);
+  const [subscriptionLoading, setSubscriptionLoading] = useState(false);
+  const [subscriptionError, setSubscriptionError] = useState('');
+
   const fullName = `${profile.firstName} ${profile.lastName}`.trim();
   const displayName = fullName || 'Parent Account';
   const initials = fullName
     ? fullName.split(' ').map(part => part[0]).join('').slice(0, 2).toUpperCase()
     : 'PA';
+
+  const activeStudent = linkedStudents.find(
+    student => String(student.id) === String(activeStudentId)
+  ) || linkedStudents[0] || null;
+
+  // Keep the selected student valid when linked students load or change.
+  useEffect(() => {
+    if (!linkedStudents.length) {
+      setActiveStudentId('');
+      setStudentSubscription(null);
+      return;
+    }
+
+    const selectedStudentExists = linkedStudents.some(
+      student => String(student.id) === String(activeStudentId)
+    );
+
+    if (!selectedStudentExists) {
+      setActiveStudentId(linkedStudents[0].id);
+    }
+  }, [linkedStudents, activeStudentId]);
+
+  // Fetch the selected student's subscription only when the Subscriptions
+  // section is opened or the selected student changes.
+  useEffect(() => {
+    if (activeSection !== 'subscriptions' || !activeStudentId) {
+      return undefined;
+    }
+
+    let cancelled = false;
+
+    const fetchStudentSubscription = async () => {
+      setSubscriptionLoading(true);
+      setSubscriptionError('');
+      setStudentSubscription(null);
+
+      try {
+        const token = localStorage.getItem('accessToken');
+
+        if (!token) {
+          throw new Error('Your session has expired. Please sign in again.');
+        }
+
+        const response = await fetch(
+          `${API_BASE_URL}/auth/parent/children/${activeStudentId}/subscription`,
+          {
+            method: 'GET',
+            headers: {
+              Authorization: `Bearer ${token}`,
+              'Content-Type': 'application/json'
+            }
+          }
+        );
+
+        const data = await response.json();
+
+        if (!response.ok) {
+          throw new Error(
+            data.error || 'Unable to retrieve this student’s subscription.'
+          );
+        }
+
+        if (!cancelled) {
+          setStudentSubscription(
+            data.hasSubscription ? data.subscription : null
+          );
+        }
+      } catch (error) {
+        if (!cancelled) {
+          console.error('Failed to fetch student subscription:', error);
+          setSubscriptionError(
+            error.message || 'Unable to load subscription information.'
+          );
+        }
+      } finally {
+        if (!cancelled) {
+          setSubscriptionLoading(false);
+        }
+      }
+    };
+
+    fetchStudentSubscription();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [activeSection, activeStudentId]);
 
   const updateProfile = (field, value) => {
     setProfile(previous => ({
@@ -190,7 +371,7 @@ const ParentProfile = ({
             <option key={option} value={option}>{option}</option>
           ))}
         </select>
-          <ChevronDown size={16} />
+        <ChevronDown size={16} />
       </div>
     </div>
   );
@@ -599,48 +780,297 @@ const ParentProfile = ({
     </>
   );
 
-  const renderSubscriptions = () => (
-    <>
-      {renderHeader(
-        'PLAN MANAGEMENT',
-        'Subscriptions',
-        'Review the plans and services associated with your account.'
-      )}
+  const renderSubscriptions = () => {
+    const subscription = studentSubscription;
+    const plan = subscription?.plan || null;
+    const features = Array.isArray(plan?.features) ? plan.features : [];
+    const billingCycle = String(
+      subscription?.billing_cycle || 'monthly'
+    ).toLowerCase();
 
-      <section className="pp-panel">
-        <div className="pp-panel-heading">
-          <div>
-            <h3>Your Subscriptions</h3>
-            <p>Subscription information will be displayed here.</p>
-          </div>
-        </div>
+    const billingCycleLabel =
+      billingCycle === 'annual' || billingCycle === 'yearly'
+        ? 'Annual'
+        : billingCycle === 'monthly'
+          ? 'Monthly'
+          : billingCycle.charAt(0).toUpperCase() + billingCycle.slice(1);
 
-        <div className="pp-empty-state">
-          <div className="pp-empty-icon"><Receipt size={28} /></div>
-          <h3>No subscription information available</h3>
-          <p>When a subscription is purchased or assigned to your account, you will be able to review its plan, billing cycle, renewal date and status here.</p>
-        </div>
-      </section>
+    const educationType = getStudentEducationType(activeStudent, plan);
+    const price = plan
+      ? formatSubscriptionPrice(subscription, plan)
+      : 'Not available';
 
-      <section className="pp-panel">
-        <h3 className="pp-panel-title">Subscription management</h3>
-        <div className="pp-detail-list">
-          <div className="pp-detail-row">
-            <span>Plan details</span>
-            <strong>Available when subscribed</strong>
-          </div>
-          <div className="pp-detail-row">
-            <span>Next billing date</span>
-            <strong>Not available</strong>
-          </div>
-          <div className="pp-detail-row">
-            <span>Renewal preferences</span>
-            <strong>Not configured</strong>
-          </div>
-        </div>
-      </section>
-    </>
-  );
+    const nextBillingDate = subscription?.next_billing_date
+      ? formatSubscriptionDate(subscription.next_billing_date)
+      : 'Not available';
+
+    const autoRenewLabel =
+      typeof subscription?.auto_renew === 'boolean'
+        ? subscription.auto_renew ? 'Enabled' : 'Disabled'
+        : 'Not configured';
+
+    const statusLabel = subscription?.status
+      ? subscription.status.charAt(0).toUpperCase() + subscription.status.slice(1)
+      : 'Not available';
+
+    return (
+      <>
+        {renderHeader(
+          'PLAN MANAGEMENT',
+          'Subscriptions',
+          'Review the plans and services associated with your linked students.'
+        )}
+
+        {linkedStudents.length === 0 ? (
+          <>
+            <section className="pp-panel">
+              <div className="pp-panel-heading">
+                <div>
+                  <h3>Your Subscriptions</h3>
+                  <p>Subscription information will be displayed here.</p>
+                </div>
+              </div>
+
+              <div className="pp-empty-state">
+                <div className="pp-empty-icon"><Receipt size={28} /></div>
+                <h3>No subscription information available</h3>
+                <p>When a subscription is purchased or assigned to your account, you will be able to review its plan, billing cycle, renewal date and status here.</p>
+              </div>
+            </section>
+
+            <section className="pp-panel">
+              <h3 className="pp-panel-title">Subscription management</h3>
+              <div className="pp-detail-list">
+                <div className="pp-detail-row">
+                  <span>Plan details</span>
+                  <strong>Available when subscribed</strong>
+                </div>
+                <div className="pp-detail-row">
+                  <span>Next billing date</span>
+                  <strong>Not available</strong>
+                </div>
+                <div className="pp-detail-row">
+                  <span>Renewal preferences</span>
+                  <strong>Not configured</strong>
+                </div>
+              </div>
+            </section>
+          </>
+        ) : (
+          <>
+            <section className="pp-panel">
+              <div className="pp-panel-heading">
+                <div>
+                  <h3>Your Subscriptions</h3>
+                  <p>Select a linked student to view their individual subscription and plan.</p>
+                </div>
+                <span className="pp-status-pill">
+                  {linkedStudents.length} {linkedStudents.length === 1 ? 'Student' : 'Students'}
+                </span>
+              </div>
+
+              <div className="pp-subscription-controls">
+                <label htmlFor="pp-subscription-student">
+                  Select student
+                </label>
+
+                <div className="pp-subscription-select-wrap">
+                  <Users size={17} />
+                  <select
+                    id="pp-subscription-student"
+                    className="pp-subscription-student-select"
+                    value={activeStudentId}
+                    onChange={event => {
+                      setActiveStudentId(event.target.value);
+                      setStudentSubscription(null);
+                      setSubscriptionError('');
+                    }}
+                  >
+                    {linkedStudents.map(student => (
+                      <option key={student.id} value={student.id}>
+                        {student.name || 'Student'}
+                        {student.grade ? ` — ${student.grade}` : ''}
+                      </option>
+                    ))}
+                  </select>
+                  <ChevronDown size={16} />
+                </div>
+
+                {activeStudent && (
+                  <div className="pp-subscription-student-summary">
+                    <div className="pp-student-avatar large">
+                      {(activeStudent.name || 'S').charAt(0).toUpperCase()}
+                    </div>
+                    <div>
+                      <strong>{activeStudent.name || 'Student'}</strong>
+                      <span>
+                        {activeStudent.gradeLevel ||
+                          activeStudent.grade ||
+                          activeStudent.cohort ||
+                          'Education level not specified'}
+                      </span>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {subscriptionLoading ? (
+                <div className="pp-subscription-loading">
+                  <div className="pp-loading-spinner" />
+                  <strong>Loading subscription details</strong>
+                  <p>Retrieving the selected student's plan and billing information.</p>
+                </div>
+              ) : subscriptionError ? (
+                <div className="pp-subscription-error">
+                  <AlertCircle size={22} />
+                  <div>
+                    <strong>Unable to load subscription</strong>
+                    <p>{subscriptionError}</p>
+                    <button
+                      type="button"
+                      className="pp-button pp-button-secondary"
+                      onClick={() => {
+                        setActiveSection('overview');
+                        window.setTimeout(() => setActiveSection('subscriptions'), 0);
+                      }}
+                    >
+                      Try Again
+                    </button>
+                  </div>
+                </div>
+              ) : !subscription ? (
+                <div className="pp-empty-state">
+                  <div className="pp-empty-icon"><Receipt size={28} /></div>
+                  <h3>No subscription information available</h3>
+                  <p>When a subscription is purchased or assigned to this student, you will be able to review its plan, billing cycle, renewal date and status here.</p>
+                </div>
+              ) : (
+                <div className="pp-subscription-content">
+                  {plan ? (
+                    <>
+                      <div className="pp-subscription-plan-card">
+                        <div className="pp-subscription-plan-top">
+                          <div>
+                            <span className="pp-account-label">ACTIVE STUDENT PLAN</span>
+                            <h2>{plan.name || plan.tier || 'Subscription Plan'}</h2>
+                            <span className="pp-subscription-audience">
+                              <GraduationCap size={15} />
+                              {educationType}
+                            </span>
+                          </div>
+
+                          <span className="pp-status-pill">
+                            {statusLabel}
+                          </span>
+                        </div>
+
+                        <div className="pp-subscription-price">
+                          <strong>{price}</strong>
+                          <span>
+                            {billingCycle === 'annual' || billingCycle === 'yearly'
+                              ? 'per year'
+                              : billingCycle === 'monthly'
+                                ? 'per month'
+                                : `per ${billingCycle}`}
+                          </span>
+                        </div>
+
+                        {plan.description && (
+                          <p className="pp-subscription-description">
+                            {plan.description}
+                          </p>
+                        )}
+
+                        {plan.badge && (
+                          <span className="pp-subscription-plan-badge">
+                            {plan.badge}
+                          </span>
+                        )}
+
+                        {features.length > 0 && (
+                          <div className="pp-subscription-features">
+                            <h4>What's included in this plan</h4>
+                            <ul>
+                              {features.map((feature, index) => (
+                                <li key={`${index}-${feature}`}>
+                                  <CheckCircle2 size={16} />
+                                  <span>{feature}</span>
+                                </li>
+                              ))}
+                            </ul>
+                          </div>
+                        )}
+
+                        {plan.note && (
+                          <div className="pp-subscription-note">
+                            {plan.note}
+                          </div>
+                        )}
+                      </div>
+
+                      <section className="pp-subscription-management">
+                        <h3 className="pp-panel-title">Subscription management</h3>
+
+                        <div className="pp-detail-list">
+                          <div className="pp-detail-row">
+                            <span><GraduationCap size={16} /> Student category</span>
+                            <strong>{educationType}</strong>
+                          </div>
+
+                          <div className="pp-detail-row">
+                            <span><Receipt size={16} /> Plan</span>
+                            <strong>{plan.name || plan.tier || 'Not available'}</strong>
+                          </div>
+
+                          <div className="pp-detail-row">
+                            <span><CreditCard size={16} /> Billing cycle</span>
+                            <strong>{billingCycleLabel}</strong>
+                          </div>
+
+                          <div className="pp-detail-row">
+                            <span><CreditCard size={16} /> Subscription amount</span>
+                            <strong>{price}</strong>
+                          </div>
+
+                          <div className="pp-detail-row">
+                            <span><CalendarDays size={16} /> Subscription start date</span>
+                            <strong>{formatSubscriptionDate(subscription.start_date)}</strong>
+                          </div>
+
+                          <div className="pp-detail-row">
+                            <span><CalendarDays size={16} /> Next billing date</span>
+                            <strong>{nextBillingDate}</strong>
+                          </div>
+
+                          <div className="pp-detail-row">
+                            <span><CheckCircle2 size={16} /> Subscription status</span>
+                            <strong>{statusLabel}</strong>
+                          </div>
+
+                          <div className="pp-detail-row">
+                            <span><Clock3 size={16} /> Automatic renewal</span>
+                            <strong>{autoRenewLabel}</strong>
+                          </div>
+                        </div>
+                      </section>
+                    </>
+                  ) : (
+                    <div className="pp-subscription-error">
+                      <AlertCircle size={22} />
+                      <div>
+                        <strong>Plan details unavailable</strong>
+                        <p>An active subscription was found for this student, but its associated pricing plan could not be retrieved.</p>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+            </section>
+          </>
+        )}
+      </>
+    );
+  };
 
   const notificationItems = [
     {

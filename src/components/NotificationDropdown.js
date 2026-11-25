@@ -47,17 +47,14 @@ const NotificationDropdown = ({
             ? data.notifications.slice(0, 10)
             : []
         );
-
       } else if (response.status === 404) {
         setNotifications([]);
       } else {
         setError('Failed to load notifications');
       }
-
     } catch (err) {
       console.error('Failed to fetch notifications:', err);
       setError('Failed to load notifications');
-
     } finally {
       setLoading(false);
     }
@@ -93,32 +90,48 @@ const NotificationDropdown = ({
   };
 
   // ==================================================
-  // CLEAN NOTIFICATION TITLE
-  // Remove leading ticks from titles such as
-  // "✅ Session Accepted!"
+  // PROFILE PHOTO
   // ==================================================
 
-  const getCleanNotificationTitle = (title) => {
-    if (!title) return '';
+  const getAvatarUrl = (notification) => {
+    const metadata = notification.metadata || {};
 
-    return String(title).replace(
-      /^[\s]*(?:✅|✔️?|☑️?|✓)+[\s]*/u,
-      ''
+    return (
+      notification.image_url ||
+      notification.actor_avatar ||
+      metadata.actor_avatar ||
+      metadata.tutor_avatar ||
+      metadata.student_avatar ||
+      metadata.image_url ||
+      null
     );
   };
 
   // ==================================================
-  // PROFILE AVATAR
+  // CLEAN NOTIFICATION TEXT
+  // ==================================================
+
+  const cleanNotificationText = (value) => {
+    if (!value) return '';
+
+    return String(value)
+      .replace(
+        /^[\s]*(?:✅|✔️?|☑️?|✓|📚|🔔|📣|▶️|⏰|❌)+[\s]*/u,
+        ''
+      )
+      .trim();
+  };
+
+  // ==================================================
+  // RENDER PROFILE AVATAR
+  // NO TICKS OR EMOJI INSIDE THE CIRCLE
   // ==================================================
 
   const renderNotificationAvatar = (notification) => {
-    const avatarUrl = notification.image_url;
+    const avatarUrl = getAvatarUrl(notification);
     const personName = getPersonName(notification);
 
-    // System notifications use a neutral avatar.
-    // No ticks or emojis are displayed in profile circles.
-
-    if (!notification.actor_id) {
+    if (!notification.actor_id && !avatarUrl) {
       return (
         <div
           className="notification-avatar notification-system-avatar"
@@ -131,7 +144,6 @@ const NotificationDropdown = ({
 
     return (
       <div className="notification-avatar">
-
         {avatarUrl && (
           <img
             src={avatarUrl}
@@ -161,7 +173,6 @@ const NotificationDropdown = ({
         >
           {getInitials(personName)}
         </div>
-
       </div>
     );
   };
@@ -200,7 +211,6 @@ const NotificationDropdown = ({
           onRead();
         }
       }
-
     } catch (err) {
       console.error(
         'Failed to mark notification as read:',
@@ -294,7 +304,6 @@ const NotificationDropdown = ({
           onMarkAllRead();
         }
       }
-
     } catch (err) {
       console.error(
         'Failed to mark all notifications as read:',
@@ -325,7 +334,6 @@ const NotificationDropdown = ({
       {/* HEADER */}
 
       <div className="dropdown-header">
-
         <div>
           <h3>Notifications</h3>
 
@@ -345,7 +353,6 @@ const NotificationDropdown = ({
             Mark all as read
           </button>
         )}
-
       </div>
 
       {/* BODY */}
@@ -410,7 +417,7 @@ const NotificationDropdown = ({
                 }}
               >
 
-                {/* ACTUAL ACTOR PROFILE PHOTO */}
+                {/* ROUND PROFILE PHOTO */}
 
                 {renderNotificationAvatar(notification)}
 
@@ -419,11 +426,11 @@ const NotificationDropdown = ({
                 <div className="notification-content">
 
                   <div className="notification-title">
-                    {getCleanNotificationTitle(notification.title)}
+                    {cleanNotificationText(notification.title)}
                   </div>
 
                   <div className="notification-message">
-                    {notification.message}
+                    {cleanNotificationText(notification.message)}
                   </div>
 
                   <div className="notification-time">
@@ -451,9 +458,7 @@ const NotificationDropdown = ({
       {/* FOOTER */}
 
       {notifications.length > 0 && (
-
         <div className="dropdown-footer">
-
           <button
             type="button"
             className="view-all-btn"
@@ -461,9 +466,7 @@ const NotificationDropdown = ({
           >
             View All Notifications →
           </button>
-
         </div>
-
       )}
 
     </div>

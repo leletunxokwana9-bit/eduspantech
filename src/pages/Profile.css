@@ -1691,3 +1691,245 @@
   border-color: rgba(0, 0, 0, 0.1);
   border-top-color: #4f46e5;
 }
+
+
+/* ============================================
+   TUTOR WEEKLY AVAILABILITY
+   ============================================ */
+
+.tutor-availability {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.tutor-availability-intro {
+  color: rgba(255, 255, 255, 0.55);
+  font-size: 13px;
+  line-height: 1.6;
+  margin: -10px 0 4px;
+}
+
+.tutor-availability-day {
+  padding: 18px;
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.025);
+}
+
+.tutor-availability-day-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 14px;
+  margin-bottom: 14px;
+}
+
+.tutor-availability-day-name {
+  color: #fff;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.tutor-availability-toggle {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  color: #94a3b8;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.tutor-availability-toggle input {
+  accent-color: #6366f1;
+  width: 16px;
+  height: 16px;
+}
+
+.tutor-availability-slots {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.tutor-availability-slot {
+  display: grid;
+  grid-template-columns: 1fr 1fr auto;
+  align-items: end;
+  gap: 12px;
+}
+
+.tutor-availability-time-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.tutor-availability-time-field label {
+  color: rgba(255, 255, 255, 0.5);
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+}
+
+.tutor-availability-time-field input {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 10px 12px;
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 0.04);
+  color: #fff;
+  font: inherit;
+  color-scheme: dark;
+}
+
+.tutor-availability-time-field input:focus {
+  outline: none;
+  border-color: #6366f1;
+  box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.12);
+}
+
+.tutor-availability-add,
+.tutor-availability-remove {
+  border-radius: 8px;
+  padding: 9px 13px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: 0.2s ease;
+}
+
+.tutor-availability-add {
+  margin-top: 12px;
+  border: 1px solid rgba(99, 102, 241, 0.3);
+  background: rgba(99, 102, 241, 0.1);
+  color: #a5b4fc;
+}
+
+.tutor-availability-add:hover {
+  background: rgba(99, 102, 241, 0.2);
+}
+
+.tutor-availability-remove {
+  border: 1px solid rgba(239, 68, 68, 0.2);
+  background: rgba(239, 68, 68, 0.08);
+  color: #fca5a5;
+}
+
+.tutor-availability-remove:hover {
+  background: rgba(239, 68, 68, 0.16);
+}
+
+.tutor-availability-disabled {
+  color: rgba(255, 255, 255, 0.35);
+  font-size: 13px;
+}
+
+.tutor-availability-actions {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 12px;
+  padding-top: 18px;
+  border-top: 1px solid rgba(255, 255, 255, 0.07);
+}
+
+.tutor-availability-save {
+  padding: 11px 24px;
+  border: 0;
+  border-radius: 9px;
+  background: #4f46e5;
+  color: #fff;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.2s ease;
+}
+
+.tutor-availability-save:hover:not(:disabled) {
+  background: #4338ca;
+}
+
+.tutor-availability-save:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.tutor-availability-message {
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.tutor-availability-message.error {
+  color: #f87171;
+}
+
+.tutor-availability-message.success {
+  color: #4ade80;
+}
+
+/* Light theme */
+
+[data-theme="light"] .tutor-availability-intro {
+  color: rgba(15, 23, 42, 0.6);
+}
+
+[data-theme="light"] .tutor-availability-day {
+  background: #f8fafc;
+  border-color: rgba(0, 0, 0, 0.07);
+}
+
+[data-theme="light"] .tutor-availability-day-name {
+  color: #0f172a;
+}
+
+[data-theme="light"] .tutor-availability-toggle {
+  color: #475569;
+}
+
+[data-theme="light"] .tutor-availability-time-field label {
+  color: #64748b;
+}
+
+[data-theme="light"] .tutor-availability-time-field input {
+  background: #fff;
+  border-color: #e2e8f0;
+  color: #0f172a;
+  color-scheme: light;
+}
+
+[data-theme="light"] .tutor-availability-disabled {
+  color: #64748b;
+}
+
+[data-theme="light"] .tutor-availability-actions {
+  border-top-color: #e2e8f0;
+}
+
+/* Responsive */
+
+@media (max-width: 600px) {
+  .tutor-availability-day {
+    padding: 14px;
+  }
+
+  .tutor-availability-slot {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .tutor-availability-remove {
+    grid-column: 1 / -1;
+    justify-self: start;
+  }
+
+  .tutor-availability-actions {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .tutor-availability-save {
+    width: 100%;
+  }
+}

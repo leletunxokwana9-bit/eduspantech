@@ -35,6 +35,18 @@ const SHIFT_LABELS = {
   AMERICAS: 'Americas'
 };
 
+// PostgreSQL EXTRACT(DOW): Sunday = 0 ... Saturday = 6
+const WEEK_DAY_ORDER = [1, 2, 3, 4, 5, 6, 0];
+const WEEK_DAY_NAMES = {
+  0: 'Sunday',
+  1: 'Monday',
+  2: 'Tuesday',
+  3: 'Wednesday',
+  4: 'Thursday',
+  5: 'Friday',
+  6: 'Saturday'
+};
+
 const getShiftKey = (shift) => String(shift?.name || '').toUpperCase().replace(/\s+/g, '_');
 
 const isFlexibleShift = (shift) => {
@@ -121,6 +133,64 @@ const getRatingCount = (tutor) => {
   return isNaN(n) ? 0 : n;
 };
 
+// ✅ Normalise a raw availability list into a grouped-by-day structure.
+// Accepts the same field names the Profile page uses (day_of_week /
+// dayOfWeek / day, start_time / startTime, end_time / endTime).
+const groupAvailabilityByDay = (slots) => {
+  const safeSlots = Array.isArray(slots) ? slots : [];
+
+  const byDay = new Map();
+
+  safeSlots.forEach((slot) => {
+    const dayValue =
+      slot.day_of_week ?? slot.dayOfWeek ?? slot.day;
+    const dayNum = Number(dayValue);
+
+    if (!Number.isFinite(dayNum)) return;
+
+    const start = String(
+      slot.start_time ?? slot.startTime ?? ''
+    ).slice(0, 5);
+    const end = String(
+      slot.end_time ?? slot.endTime ?? ''
+    ).slice(0, 5);
+
+    if (!start || !end) return;
+
+    if (!byDay.has(dayNum)) byDay.set(dayNum, []);
+    byDay.get(dayNum).push({ start, end });
+  });
+
+  // Sort ranges within each day
+  byDay.forEach((ranges) => {
+    ranges.sort((a, b) => a.start.localeCompare(b.start));
+  });
+
+  return byDay;
+};
+
+// Extract the raw slots array from any of the API response shapes.
+const extractAvailabilitySlots = (result) => {
+  if (Array.isArray(result)) return result;
+  if (Array.isArray(result?.availability)) return result.availability;
+  if (Array.isArray(result?.slots)) return result.slots;
+  if (Array.isArray(result?.data?.availability)) return result.data.availability;
+  if (Array.isArray(result?.data?.slots)) return result.data.slots;
+  return [];
+};
+
+// 09:00 -> 9:00 AM
+const formatTime12h = (time) => {
+  if (!time) return '';
+  const [hStr, mStr] = String(time).split(':');
+  const h = Number(hStr);
+  const m = Number(mStr);
+  if (!Number.isFinite(h) || !Number.isFinite(m)) return time;
+  const suffix = h >= 12 ? 'PM' : 'AM';
+  const hour12 = h % 12 === 0 ? 12 : h % 12;
+  return `${hour12}:${String(m).padStart(2, '0')} ${suffix}`;
+};
+
 // Avatar: real photo if available, otherwise initials
 const TutorAvatar = ({ tutor }) => {
   const [failed, setFailed] = useState(false);
@@ -169,6 +239,11 @@ const Tutors = () => {
   const [showVideoModal, setShowVideoModal] = useState(false);
   const [videoTutor, setVideoTutor] = useState(null);
 
+  // ===== WEEKLY AVAILABILITY STATE (for popup) =====
+  const [tutorAvailability, setTutorAvailability] = useState({});
+  const [availabilityLoading, setAvailabilityLoading] = useState(false);
+  const [availabilityFetchedFor, setAvailabilityFetchedFor] = useState(null);
+
   useEffect(() => {
     checkAuth();
     fetchTutors();
@@ -185,7 +260,7 @@ const Tutors = () => {
       setError('');
 
       if (!tutorService || !tutorService.getTutors) {
-         throw new Error("Tutor service not available");
+        throw new Error("Tutor service not available");
       }
 
       console.log('📚 Fetching tutors from API...');
@@ -206,6 +281,71 @@ const Tutors = () => {
       setTutors([]);
     } finally {
       setLoading(false);
+    }
+  };
+
+  // ============================================
+  // FETCH TUTOR WEEKLY AVAILABILITY (for popup)
+  // ============================================
+  const fetchTutorAvailability = async (tutorId) => {
+    if (!tutorId) return;
+    if (availabilityFetchedFor === tutorId && tutorAvailability[tutorId]) return;
+
+    setAvailabilityLoading(true);
+    setAvailabilityFetchedFor(tutorId);
+
+    try {
+      // Prefer a per-tutor endpoint if one exists; fall back to the
+      // public/shift-scoped variant. Both are GET and return
+      // { slots: [{ day_of_week, start_time, end_time }] }.
+      const token = localStorage.getItem('accessToken');
+      const headers = { 'Content-Type': 'application/json' };
+      if (token) headers.Authorization = `Bearer ${token}`;
+
+      const endpoints = [
+        `/tutors/availability/${tutorId}`,
+        `/tutors/${tutorId}/availability`,
+        `/tutors/availability?tutorId=${encodeURIComponent(tutorId)}`
+      ];
+
+      let rawSlots = null;
+
+      for (const path of endpoints) {
+        try {
+          const res = await fetch(
+            `${(require('../services/api')?.API_BASE_URL) || ''}${path}`,
+            { method: 'GET', headers }
+          );
+
+          if (!res.ok) continue;
+
+          const json = await res.json().catch(() => null);
+          if (!json) continue;
+
+          const slots = extractAvailabilitySlots(json);
+          if (Array.isArray(slots) && slots.length >= 0) {
+            rawSlots = slots;
+            break;
+          }
+        } catch {
+          // try the next endpoint
+        }
+      }
+
+      const grouped = groupAvailabilityByDay(rawSlots || []);
+
+      setTutorAvailability((prev) => ({
+        ...prev,
+        [tutorId]: grouped
+      }));
+    } catch (err) {
+      console.error('Failed to load tutor availability:', err);
+      setTutorAvailability((prev) => ({
+        ...prev,
+        [tutorId]: new Map()
+      }));
+    } finally {
+      setAvailabilityLoading(false);
     }
   };
 
@@ -282,10 +422,13 @@ const Tutors = () => {
     setViewingTutor(tutor);
     setShowTutorModal(true);
     setShowFullProfile(false);
+    // Lazy-load the tutor's weekly availability for the popup.
+    fetchTutorAvailability(tutor.id);
   };
 
   const handleViewFullProfile = () => {
     setShowFullProfile(true);
+    if (viewingTutor?.id) fetchTutorAvailability(viewingTutor.id);
   };
 
   const handleBookFromModal = () => {
@@ -374,6 +517,65 @@ const Tutors = () => {
   };
 
   // ============================================
+  // WEEKLY AVAILABILITY RENDERER (shared)
+  // ============================================
+  const renderWeeklyAvailability = (tutorId, { compact = false } = {}) => {
+    const grouped = tutorAvailability[tutorId];
+
+    if (availabilityLoading && !grouped) {
+      return (
+        <div className="tutor-weekly-availability">
+          <div className="twa-loading">Loading weekly availability…</div>
+        </div>
+      );
+    }
+
+    if (!grouped || grouped.size === 0) {
+      return (
+        <div className="tutor-weekly-availability">
+          <div className="twa-empty">
+            This tutor has not set any weekly availability slots yet.
+          </div>
+        </div>
+      );
+    }
+
+    return (
+      <div className={`tutor-weekly-availability${compact ? ' compact' : ''}`}>
+        <div className="twa-days">
+          {WEEK_DAY_ORDER.map((dayNum) => {
+            const ranges = grouped.get(dayNum) || [];
+            const hasRanges = ranges.length > 0;
+
+            return (
+              <div
+                key={dayNum}
+                className={`twa-day${hasRanges ? ' available' : ' unavailable'}`}
+              >
+                <div className="twa-day-name">{WEEK_DAY_NAMES[dayNum]}</div>
+
+                {hasRanges ? (
+                  <ul className="twa-ranges">
+                    {ranges.map((r, idx) => (
+                      <li key={`${dayNum}-${idx}`} className="twa-range">
+                        <span className="twa-time">{formatTime12h(r.start)}</span>
+                        <span className="twa-sep">–</span>
+                        <span className="twa-time">{formatTime12h(r.end)}</span>
+                      </li>
+                    ))}
+                  </ul>
+                ) : (
+                  <div className="twa-unavailable-text">Unavailable</div>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      </div>
+    );
+  };
+
+  // ============================================
   // VIDEO MODAL
   // ============================================
   const VideoModal = () => {
@@ -442,7 +644,7 @@ const Tutors = () => {
   };
 
   // ============================================
-  // TUTOR MODAL (with ratings)
+  // TUTOR MODAL (with ratings + weekly availability)
   // ============================================
   const TutorModal = () => {
     if (!viewingTutor) return null;
@@ -497,6 +699,13 @@ const Tutors = () => {
                   ))}
                 </div>
               )}
+
+              {/* 📅 Weekly availability (compact, inside quick view) */}
+              <div className="tutor-modal-availability">
+                <h3 className="tutor-modal-availability-title">📅 Weekly Availability</h3>
+                {renderWeeklyAvailability(viewingTutor.id, { compact: true })}
+              </div>
+
               {viewingTutor.bio && (
                 <p className="tutor-modal-bio">{viewingTutor.bio}</p>
               )}
@@ -555,10 +764,16 @@ const Tutors = () => {
                 )}
                 {shiftName && (
                   <div className="profile-section">
-                    <h3>⏰ Availability</h3>
+                    <h3>⏰ Shift</h3>
                     <p>{SHIFT_LABELS[shiftName] || shiftName}</p>
                   </div>
                 )}
+
+                {/* 📅 Weekly availability (full view) */}
+                <div className="profile-section">
+                  <h3>📅 Weekly Availability</h3>
+                  {renderWeeklyAvailability(viewingTutor.id)}
+                </div>
 
                 {/* ⭐ Ratings & Reviews */}
                 <div className="profile-section">

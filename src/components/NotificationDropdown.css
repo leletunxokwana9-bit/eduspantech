@@ -1,7 +1,6 @@
 
 /* =====================================================
    NOTIFICATION DROPDOWN
-   src/components/NotificationDropdown.css
 ===================================================== */
 
 .notification-dropdown {
@@ -17,6 +16,7 @@
   overflow: hidden;
   z-index: 10000;
   animation: dropdownSlide 0.25s ease;
+  box-sizing: border-box;
 }
 
 @keyframes dropdownSlide {
@@ -198,7 +198,7 @@
 
 .notification-item {
   display: flex;
-  align-items: flex-start;
+  align-items: center !important;
   gap: 14px;
   padding: 14px 20px;
   cursor: pointer;
@@ -206,6 +206,7 @@
   position: relative;
   outline: none;
   box-sizing: border-box;
+  min-width: 0;
 }
 
 .notification-item:hover {
@@ -226,59 +227,76 @@
 }
 
 /* =====================================================
-   ROUND TUTOR / STUDENT PROFILE AVATARS
+   PROFILE AVATAR CONTAINER
+   FIXED SIZE - ALWAYS CIRCULAR
 ===================================================== */
 
 .notification-item > .notification-avatar {
   position: relative !important;
+
   display: block !important;
 
   width: 44px !important;
   height: 44px !important;
+
   min-width: 44px !important;
   min-height: 44px !important;
+
   max-width: 44px !important;
   max-height: 44px !important;
 
   flex: 0 0 44px !important;
+
   aspect-ratio: 1 / 1 !important;
 
-  border-radius: 50% !important;
   overflow: hidden !important;
-  box-sizing: border-box !important;
+  border-radius: 50% !important;
 
   padding: 0 !important;
   margin: 0 !important;
 
-  align-items: center;
-  justify-content: center;
+  box-sizing: border-box !important;
 
   background: var(--bg-card, #263248);
   border: 1px solid var(--border-color, rgba(255, 255, 255, 0.1));
+
+  isolation: isolate !important;
 }
 
-/* Actual uploaded tutor photo or student DiceBear avatar */
+/* =====================================================
+   ACTUAL PROFILE IMAGE
+   FORCE IMAGE INTO THE CIRCLE
+===================================================== */
 
 .notification-item > .notification-avatar > img.notification-avatar-image {
   position: absolute !important;
-  inset: 0 !important;
+
+  top: 0 !important;
+  right: 0 !important;
+  bottom: 0 !important;
+  left: 0 !important;
 
   display: block !important;
 
   width: 100% !important;
   height: 100% !important;
 
-  min-width: 100% !important;
-  min-height: 100% !important;
+  min-width: 0 !important;
+  min-height: 0 !important;
 
-  max-width: none !important;
-  max-height: none !important;
+  max-width: 100% !important;
+  max-height: 100% !important;
+
+  flex: none !important;
 
   object-fit: cover !important;
   object-position: center !important;
 
-  border: none !important;
   border-radius: 50% !important;
+  overflow: hidden !important;
+
+  border: none !important;
+  outline: none !important;
 
   padding: 0 !important;
   margin: 0 !important;
@@ -286,7 +304,9 @@
   box-sizing: border-box !important;
 }
 
-/* Initials fallback */
+/* =====================================================
+   INITIALS FALLBACK
+===================================================== */
 
 .notification-item > .notification-avatar > .notification-avatar-fallback {
   position: absolute !important;
@@ -314,10 +334,14 @@
   box-sizing: border-box !important;
 }
 
-/* Neutral system notification avatar */
+/* =====================================================
+   SYSTEM NOTIFICATION AVATAR
+===================================================== */
 
 .notification-item > .notification-avatar.notification-system-avatar {
   display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
   background: var(--bg-card, #263248);
 }
 
@@ -329,7 +353,7 @@
   background: #8993a4;
 }
 
-/* Prevent decorative ticks or icons inside avatar */
+/* Remove decorative pseudo-elements */
 
 .notification-item > .notification-avatar::before,
 .notification-item > .notification-avatar::after {
@@ -342,8 +366,9 @@
 ===================================================== */
 
 .notification-content {
-  flex: 1;
+  flex: 1 1 auto;
   min-width: 0;
+  overflow: hidden;
 }
 
 .notification-title {
@@ -352,6 +377,7 @@
   color: var(--text-primary, #ffffff);
   margin-bottom: 3px;
   line-height: 1.4;
+  overflow-wrap: anywhere;
 }
 
 .notification-message {
@@ -375,10 +401,12 @@
 .unread-dot {
   width: 8px;
   height: 8px;
+  min-width: 8px;
+  height: 8px;
   background: var(--accent-primary, #4f46e5);
   border-radius: 50%;
   flex-shrink: 0;
-  margin-top: 5px;
+  margin-top: 0;
 }
 
 /* =====================================================
@@ -506,11 +534,14 @@
   .notification-item > .notification-avatar {
     width: 38px !important;
     height: 38px !important;
+
     min-width: 38px !important;
     min-height: 38px !important;
+
     max-width: 38px !important;
     max-height: 38px !important;
-    flex-basis: 38px !important;
+
+    flex: 0 0 38px !important;
   }
 
   .notification-avatar-fallback {

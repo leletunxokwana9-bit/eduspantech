@@ -1,4 +1,3 @@
-
 // src/pages/Profile.js
 // COMPLETE PROFILE PAGE
 // Includes UUID-safe tutor shift handling, tutor weekly availability,
@@ -185,6 +184,8 @@ const Profile = () => {
   const [availabilitySaving, setAvailabilitySaving] = useState(false);
   const [availabilityMessage, setAvailabilityMessage] = useState('');
   const [availabilityError, setAvailabilityError] = useState(false);
+  // ✅ NEW: tracks whether the availability form has unsaved edits.
+  const [availabilityDirty, setAvailabilityDirty] = useState(false);
 
   // SUCCESS MESSAGE TIMER
   useEffect(() => {
@@ -569,6 +570,8 @@ const Profile = () => {
         }
 
         setAvailabilityDays(mapAvailabilitySlots(slots));
+        // ✅ Reset dirty flag after a fresh load.
+        setAvailabilityDirty(false);
       } catch (err) {
         if (!cancelled) {
           console.error('Availability loading error:', err);
@@ -589,27 +592,41 @@ const Profile = () => {
     };
   }, [isTutor]);
 
-  // TOGGLE AVAILABILITY DAY
-  const toggleAvailabilityDay = (dayOfWeek, enabled) => {
+  // ✅ NEW: mark availability as dirty whenever the user edits it.
+  const markAvailabilityDirty = () => {
+    setAvailabilityDirty(true);
+    setAvailabilityMessage('');
+  };
+
+  // ✅ REPLACED: two explicit checkboxes — Unavailable / Available.
+  // Selecting "Available" enables slot editing; selecting "Unavailable"
+  // disables the day and clears its slots.
+  const setAvailabilityDayMode = (dayOfWeek, mode) => {
     setAvailabilityDays((current) =>
       current.map((day) => {
         if (day.dayOfWeek !== dayOfWeek) return day;
 
+        if (mode === 'available') {
+          return {
+            ...day,
+            enabled: true,
+            slots:
+              day.slots.length > 0
+                ? day.slots
+                : [{ startTime: '09:00', endTime: '17:00' }]
+          };
+        }
+
+        // mode === 'unavailable'
         return {
           ...day,
-          enabled,
-          slots: enabled
-            ? (
-                day.slots.length > 0
-                  ? day.slots
-                  : [{ startTime: '09:00', endTime: '17:00' }]
-              )
-            : day.slots
+          enabled: false,
+          slots: []
         };
       })
     );
 
-    setAvailabilityMessage('');
+    markAvailabilityDirty();
   };
 
   // UPDATE TIME RANGE
@@ -634,7 +651,7 @@ const Profile = () => {
       })
     );
 
-    setAvailabilityMessage('');
+    markAvailabilityDirty();
   };
 
   // ADD TIME RANGE
@@ -678,7 +695,7 @@ const Profile = () => {
       })
     );
 
-    setAvailabilityMessage('');
+    markAvailabilityDirty();
   };
 
   // REMOVE TIME RANGE
@@ -696,7 +713,7 @@ const Profile = () => {
       })
     );
 
-    setAvailabilityMessage('');
+    markAvailabilityDirty();
   };
 
   // VALIDATE AVAILABILITY
@@ -812,6 +829,8 @@ const Profile = () => {
       const slotsToDisplay = returnedSlots ?? slots;
 
       setAvailabilityDays(mapAvailabilitySlots(slotsToDisplay));
+      // ✅ Saving resets the dirty flag — button becomes inactive again.
+      setAvailabilityDirty(false);
 
       setAvailabilityMessage(
         result.message ||
@@ -2317,7 +2336,9 @@ const Profile = () => {
                 )}
               </div>
 
-              {/* INTRO VIDEO */}
+              {/* INTRO VIDEO — now a standalone visual block, no longer
+                  directly above the Weekly Availability card. The
+                  availability card is moved outside this grid entirely. */}
               <div className="tutor-field tutor-field-full tutor-video-field">
                 <div className="tutor-video-header">
                   <label
@@ -2396,155 +2417,6 @@ const Profile = () => {
               </div>
             </div>
 
-            {/* WEEKLY AVAILABILITY */}
-            <div className="tutor-availability">
-              <div className="tutor-availability-intro">
-                <div>
-                  <h3>Weekly Availability</h3>
-                  <p>
-                    Set the days and times when students can book sessions
-                    with you. You can add multiple time ranges for each day.
-                  </p>
-                </div>
-              </div>
-
-              {availabilityLoading ? (
-                <div className="tutor-availability-disabled">
-                  Loading your saved availability...
-                </div>
-              ) : (
-                <>
-                  {availabilityDays.map((day) => (
-                    <div
-                      className="tutor-availability-day"
-                      key={day.dayOfWeek}
-                    >
-                      <div className="tutor-availability-day-header">
-                        <div className="tutor-availability-day-name">
-                          {day.name}
-                        </div>
-
-                        <label className="tutor-availability-toggle">
-                          <input
-                            type="checkbox"
-                            checked={day.enabled}
-                            onChange={(event) =>
-                              toggleAvailabilityDay(
-                                day.dayOfWeek,
-                                event.target.checked
-                              )
-                            }
-                          />
-                          <span>
-                            {day.enabled ? 'Available' : 'Unavailable'}
-                          </span>
-                        </label>
-                      </div>
-
-                      {day.enabled ? (
-                        <div className="tutor-availability-slots">
-                          {day.slots.map((slot, index) => (
-                            <div
-                              className="tutor-availability-slot"
-                              key={`${day.dayOfWeek}-${index}`}
-                            >
-                              <div className="tutor-availability-time-field">
-                                <label>Start time</label>
-                                <input
-                                  type="time"
-                                  value={slot.startTime}
-                                  onChange={(event) =>
-                                    updateAvailabilityTime(
-                                      day.dayOfWeek,
-                                      index,
-                                      'startTime',
-                                      event.target.value
-                                    )
-                                  }
-                                />
-                              </div>
-
-                              <div className="tutor-availability-time-field">
-                                <label>End time</label>
-                                <input
-                                  type="time"
-                                  value={slot.endTime}
-                                  onChange={(event) =>
-                                    updateAvailabilityTime(
-                                      day.dayOfWeek,
-                                      index,
-                                      'endTime',
-                                      event.target.value
-                                    )
-                                  }
-                                />
-                              </div>
-
-                              <button
-                                type="button"
-                                className="tutor-availability-remove"
-                                onClick={() =>
-                                  removeAvailabilitySlot(
-                                    day.dayOfWeek,
-                                    index
-                                  )
-                                }
-                                aria-label={`Remove ${day.name} time range`}
-                                title="Remove time range"
-                              >
-                                ×
-                              </button>
-                            </div>
-                          ))}
-
-                          <button
-                            type="button"
-                            className="tutor-availability-add"
-                            onClick={() =>
-                              addAvailabilitySlot(day.dayOfWeek)
-                            }
-                          >
-                            + Add another time range
-                          </button>
-                        </div>
-                      ) : (
-                        <div className="tutor-availability-disabled">
-                          You are not available on this day.
-                        </div>
-                      )}
-                    </div>
-                  ))}
-
-                  {availabilityMessage && (
-                    <div
-                      className={`tutor-availability-message ${
-                        availabilityError ? 'error' : 'success'
-                      }`}
-                      role="status"
-                    >
-                      {availabilityMessage}
-                    </div>
-                  )}
-
-                  <div className="tutor-availability-actions">
-                    <button
-                      type="button"
-                      className="tutor-availability-save"
-                      onClick={saveAvailability}
-                      disabled={
-                        availabilitySaving ||
-                        availabilityLoading
-                      }
-                    >
-                      {availabilitySaving
-                        ? 'Saving availability...'
-                        : '💾 Save Weekly Availability'}
-                    </button>
-                  </div>
-                </>
-              )}
-            </div>
-
             {/* SAVE TUTOR PROFILE */}
             {isEditing && (
               <div className="profile-actions">
@@ -2557,6 +2429,170 @@ const Profile = () => {
                   {loading ? 'Saving...' : '💾 Save Changes'}
                 </button>
               </div>
+            )}
+          </div>
+        )}
+
+        {/* ===== WEEKLY AVAILABILITY — SEPARATED SECTION ===== */}
+        {isTutor && (
+          <div className="profile-card full-width tutor-availability-card">
+            <h3>📅 Weekly Availability</h3>
+            <p className="tutor-availability-subtitle">
+              Set the days and times when students can book sessions with you.
+              You can add multiple time ranges for each day.
+            </p>
+
+            {availabilityLoading ? (
+              <div className="tutor-availability-disabled">
+                Loading your saved availability...
+              </div>
+            ) : (
+              <>
+                {availabilityDays.map((day) => (
+                  <div
+                    className="tutor-availability-day"
+                    key={day.dayOfWeek}
+                  >
+                    <div className="tutor-availability-day-header">
+                      <div className="tutor-availability-day-name">
+                        {day.name}
+                      </div>
+
+                      {/* ✅ TWO EXPLICIT CHECKBOXES */}
+                      <div className="tutor-availability-mode">
+                        <label className="tutor-availability-mode-label">
+                          <input
+                            type="checkbox"
+                            checked={!day.enabled}
+                            onChange={() =>
+                              setAvailabilityDayMode(
+                                day.dayOfWeek,
+                                'unavailable'
+                              )
+                            }
+                          />
+                          <span>Unavailable</span>
+                        </label>
+
+                        <label className="tutor-availability-mode-label">
+                          <input
+                            type="checkbox"
+                            checked={day.enabled}
+                            onChange={() =>
+                              setAvailabilityDayMode(
+                                day.dayOfWeek,
+                                'available'
+                              )
+                            }
+                          />
+                          <span>Available</span>
+                        </label>
+                      </div>
+                    </div>
+
+                    {day.enabled ? (
+                      <div className="tutor-availability-slots">
+                        {day.slots.map((slot, index) => (
+                          <div
+                            className="tutor-availability-slot"
+                            key={`${day.dayOfWeek}-${index}`}
+                          >
+                            <div className="tutor-availability-time-field">
+                              <label>Start time</label>
+                              <input
+                                type="time"
+                                value={slot.startTime}
+                                onChange={(event) =>
+                                  updateAvailabilityTime(
+                                    day.dayOfWeek,
+                                    index,
+                                    'startTime',
+                                    event.target.value
+                                  )
+                                }
+                              />
+                            </div>
+
+                            <div className="tutor-availability-time-field">
+                              <label>End time</label>
+                              <input
+                                type="time"
+                                value={slot.endTime}
+                                onChange={(event) =>
+                                  updateAvailabilityTime(
+                                    day.dayOfWeek,
+                                    index,
+                                    'endTime',
+                                    event.target.value
+                                  )
+                                }
+                              />
+                            </div>
+
+                            <button
+                              type="button"
+                              className="tutor-availability-remove"
+                              onClick={() =>
+                                removeAvailabilitySlot(
+                                  day.dayOfWeek,
+                                  index
+                                )
+                              }
+                              aria-label={`Remove ${day.name} time range`}
+                              title="Remove time range"
+                            >
+                              ×
+                            </button>
+                          </div>
+                        ))}
+
+                        <button
+                          type="button"
+                          className="tutor-availability-add"
+                          onClick={() =>
+                            addAvailabilitySlot(day.dayOfWeek)
+                          }
+                        >
+                          + Add another time range
+                        </button>
+                      </div>
+                    ) : (
+                      <div className="tutor-availability-disabled">
+                        You are not available on this day.
+                      </div>
+                    )}
+                  </div>
+                ))}
+
+                {availabilityMessage && (
+                  <div
+                    className={`tutor-availability-message ${
+                      availabilityError ? 'error' : 'success'
+                    }`}
+                    role="status"
+                  >
+                    {availabilityMessage}
+                  </div>
+                )}
+
+                <div className="tutor-availability-actions">
+                  {/* ✅ DISABLED UNTIL DIRTY */}
+                  <button
+                    type="button"
+                    className="tutor-availability-save"
+                    onClick={saveAvailability}
+                    disabled={
+                      availabilitySaving ||
+                      availabilityLoading ||
+                      !availabilityDirty
+                    }
+                  >
+                    {availabilitySaving
+                      ? 'Saving availability...'
+                      : '💾 Save Weekly Availability'}
+                  </button>
+                </div>
+              </>
             )}
           </div>
         )}

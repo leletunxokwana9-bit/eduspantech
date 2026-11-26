@@ -1943,7 +1943,9 @@ html[data-theme="light"] #root {
 }
 
 /* ----- 2. Hero ----- */
-
+[data-theme="light"] .hero-section::before {
+  background: radial-gradient(circle, rgba(79, 70, 229, 0.06), transparent 70%);
+}
 
 [data-theme="light"] .hero-title,
 [data-theme="light"] .hero-title-refined {
@@ -2429,6 +2431,36 @@ html[data-theme="light"] #root {
 [data-theme="light"] .student-home-hero .stat-refined-lbl,
 [data-theme="light"] .student-home-hero .stat-label-white { color: #7b8296 !important; }
 
+/* Soft pastel circles behind the image (like the reference) */
+[data-theme="light"] .student-home-hero::before {
+  content: '';
+  position: absolute;
+  top: 50%;
+  right: clamp(3%, 8vw, 10%);
+  left: auto;
+  width: clamp(260px, 34vw, 480px);
+  max-width: none;
+  height: auto;
+  aspect-ratio: 1 / 1;
+  transform: translateY(-50%);
+  border-radius: 50%;
+  background: #f1ecff !important;
+  pointer-events: none;
+  z-index: 1;
+}
+[data-theme="light"] .student-home-hero::after {
+  content: '';
+  position: absolute;
+  right: 40%;
+  bottom: 16%;
+  width: clamp(80px, 9vw, 140px);
+  aspect-ratio: 1 / 1;
+  border-radius: 50%;
+  background: #fde8d9;
+  pointer-events: none;
+  z-index: 1;
+}
+
 /* Image: no fade mask, no overlay, sits cleanly on white */
 [data-theme="light"] .student-home-hero .home-hero-visual {
   -webkit-mask-image: none;
@@ -2449,6 +2481,14 @@ html[data-theme="light"] #root {
   .student-home-hero .hero-title br,
   .student-home-hero .hero-title-refined br { display: none; }
 
+  [data-theme="light"] .student-home-hero::before {
+    top: auto;
+    bottom: 4%;
+    right: 50%;
+    transform: translateX(50%);
+    width: clamp(240px, 60vw, 400px);
+  }
+  [data-theme="light"] .student-home-hero::after { display: none; }
 }
 
 @media (max-width: 480px) {
@@ -2465,28 +2505,3 @@ html[data-theme="light"] #root {
 [data-theme="light"] .student-home-hero .hero-title .highlight,
 [data-theme="light"] .student-home-hero .hero-title-refined .accent { color: #4f46e5 !important; }
 [data-theme="light"] .student-home-hero .hero-cta-link { color: #4f46e5 !important; }
-
-/* ============================================================
-   LIGHT MODE — hero is pure white: no circles, glows or tints
-   ============================================================ */
-[data-theme="light"] .hero-section::before,
-[data-theme="light"] .hero-section::after,
-[data-theme="light"] .student-home-hero::before,
-[data-theme="light"] .student-home-hero::after {
-  content: none !important;
-  display: none !important;
-  background: none !important;
-}
-
-/* White backgrounds (background-image is left alone so the hero photo still shows) */
-[data-theme="light"] .hero-section,
-[data-theme="light"] .student-home-hero,
-[data-theme="light"] .hero-content,
-[data-theme="light"] .hero-visual,
-[data-theme="light"] .home-hero-visual {
-  background-color: #ffffff !important;
-}
-[data-theme="light"] .hero-section,
-[data-theme="light"] .student-home-hero {
-  background-image: none !important;
-}

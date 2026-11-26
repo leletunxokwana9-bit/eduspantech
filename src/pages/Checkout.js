@@ -1,4 +1,3 @@
-
 // src/pages/Checkout.js
 
 import React, { useState, useEffect } from 'react';
@@ -11,12 +10,6 @@ import './Checkout.css';
 // =====================================================
 // API URL CONFIGURATION
 // =====================================================
-
-// Normalize the API URL so /api is never duplicated.
-// Supports:
-// https://api.example.com
-// https://api.example.com/api
-// Empty value (same-origin deployment)
 
 const API_BASE_URL = (process.env.REACT_APP_API_URL || '')
   .replace(/\/+$/, '')
@@ -57,7 +50,6 @@ const loadPaystackScript = () => {
       existingScript.addEventListener('load', handleLoad, { once: true });
       existingScript.addEventListener('error', handleError, { once: true });
 
-      // If the script has already loaded, check immediately.
       if (window.PaystackPop) {
         resolve();
       }
@@ -147,6 +139,8 @@ const Checkout = () => {
 
   const [alertTitle, setAlertTitle] = useState('');
   const [alertMessage, setAlertMessage] = useState('');
+  const [alertType, setAlertType] = useState('notice');
+  const [alertReference, setAlertReference] = useState('');
 
   // ===================================================
   // AUTHENTICATION
@@ -314,9 +308,11 @@ const Checkout = () => {
   // ALERT
   // ===================================================
 
-  const showAlert = (title, message) => {
+  const showAlert = (title, message, options = {}) => {
     setAlertTitle(title);
     setAlertMessage(message);
+    setAlertType(options.type || 'notice');
+    setAlertReference(options.reference || '');
     setShowAlertModal(true);
   };
 
@@ -378,11 +374,6 @@ const Checkout = () => {
     if (!selectedPlan?.id) {
       throw new Error('The selected plan ID is missing.');
     }
-
-    // Correct endpoint:
-    // /api/subscriptions/verify
-    //
-    // API_BASE_URL has its trailing /api removed above.
 
     const verificationUrl =
       `${API_BASE_URL}/api/subscriptions/verify`;
@@ -564,14 +555,14 @@ const Checkout = () => {
           ]
         },
 
-        // Paystack requires a function here.
         callback: function (response) {
           if (!response || !response.reference) {
             setProcessing(false);
 
             showAlert(
-              'Payment Verification Error',
-              'Paystack did not return a valid payment reference.'
+              'We couldn’t confirm your payment yet',
+              'We could not retrieve the payment details. Please contact our support team before trying to pay again.',
+              { type: 'pending' }
             );
 
             return;
@@ -599,8 +590,12 @@ const Checkout = () => {
               setProcessing(false);
 
               showAlert(
-                'Payment Verification Pending',
-                `${error.message} Your payment reference is ${response.reference}. Please do not pay again until this transaction has been checked.`
+                'We’re checking your payment',
+                'Your payment has gone through Paystack, but your subscription is taking a little longer to activate. Please do not make another payment. Keep this reference safe while we check your subscription.',
+                {
+                  type: 'pending',
+                  reference: response.reference
+                }
               );
             });
         },
@@ -609,13 +604,13 @@ const Checkout = () => {
           setProcessing(false);
 
           showAlert(
-            '⏸️ Payment Window Closed',
-            'The Paystack payment window was closed. If you completed payment, keep your transaction reference and contact support before trying again.'
+            'Payment window closed',
+            'You closed the payment window. If you completed your payment before closing it, please contact our support team so we can check it before you try again.',
+            { type: 'notice' }
           );
         }
       };
 
-      // Check callback types before initialization.
       if (
         typeof paymentConfig.callback !== 'function' ||
         typeof paymentConfig.onClose !== 'function'
@@ -647,9 +642,9 @@ const Checkout = () => {
       setProcessing(false);
 
       showAlert(
-        '❌ Payment Error',
-        error.message ||
-        'Could not initialize Paystack. Please try again.'
+        'We couldn’t open the payment window',
+        'Something went wrong while preparing your payment. Please refresh the page and try again. If the problem continues, contact our support team.',
+        { type: 'error' }
       );
     }
   };
@@ -661,37 +656,66 @@ const Checkout = () => {
   const AlertModal = () => {
     if (!showAlertModal) return null;
 
+    const alertIcon =
+      alertType === 'pending'
+        ? '⏳'
+        : alertType === 'error'
+          ? '⚠️'
+          : 'ℹ️';
+
     return (
       <div
         className="checkout-modal-overlay"
         onClick={() => setShowAlertModal(false)}
       >
         <div
-          className="checkout-modal alert-modal"
+          className={`checkout-modal alert-modal alert-modal--${alertType}`}
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="checkout-alert-title"
           onClick={(e) => e.stopPropagation()}
         >
           <button
+            type="button"
             className="checkout-modal-close"
+            aria-label="Close message"
             onClick={() => setShowAlertModal(false)}
           >
             ×
           </button>
 
-          <div className="alert-icon">⚠️</div>
+          <div className="alert-icon" aria-hidden="true">
+            {alertIcon}
+          </div>
 
-          <h2 className="alert-title">
-            {alertTitle || 'Notice'}
+          <h2 id="checkout-alert-title" className="alert-title">
+            {alertTitle || 'A quick update'}
           </h2>
 
           <p className="alert-message">
             {alertMessage}
           </p>
 
+          {alertReference && (
+            <div className="alert-reference">
+              <span className="alert-reference-label">
+                Your payment reference
+              </span>
+              <strong className="alert-reference-value">
+                {alertReference}
+              </strong>
+              <span className="alert-reference-help">
+                Keep this reference safe when contacting support.
+              </span>
+            </div>
+          )}
+
           <button
+            type="button"
             className="btn-primary alert-btn"
             onClick={() => setShowAlertModal(false)}
           >
-            Got it
+            Understood
           </button>
         </div>
       </div>

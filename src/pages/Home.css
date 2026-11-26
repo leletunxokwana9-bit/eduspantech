@@ -1957,7 +1957,7 @@ html[data-theme="light"] #root {
 [data-theme="light"] .hero-title-refined .accent {
   background: none !important;
   -webkit-text-fill-color: currentColor !important;
-  color: #ec2f6c !important;
+  color: #4f46e5 !important;
 }
 
 [data-theme="light"] .hero-subtitle,
@@ -2235,8 +2235,8 @@ html[data-theme="light"] #root {
    Change the accent colour in ONE place: --hero-accent
    ############################################################ */
 :root {
-  --hero-accent: #ec2f6c;
-  --hero-accent-dark: #d1215a;
+  --hero-accent: #4f46e5;
+  --hero-accent-dark: #4338ca;
   --hero-ink: #1e2235;
 }
 
@@ -2244,7 +2244,7 @@ html[data-theme="light"] #root {
 .home-page,
 .home-page button,
 .home-page a { -webkit-tap-highlight-color: transparent; }
-.home-page ::selection { background: rgba(236, 47, 108, 0.22); color: inherit; }
+.home-page ::selection { background: rgba(79, 70, 229, 0.22); color: inherit; }
 .home-page button:focus { outline: none; }
 .home-page button:focus-visible { outline: 2px solid var(--hero-accent); outline-offset: 3px; }
 
@@ -2343,7 +2343,7 @@ html[data-theme="light"] #root {
   background: var(--hero-accent) !important;
   border: none;
   color: #ffffff !important;
-  box-shadow: 0 10px 24px -10px rgba(236, 47, 108, 0.65);
+  box-shadow: 0 10px 24px -10px rgba(79, 70, 229, 0.6);
 }
 .student-home-hero .action-cta .label,
 .student-home-hero .action-card.learn .label { color: #ffffff !important; }
@@ -2351,7 +2351,7 @@ html[data-theme="light"] #root {
 .student-home-hero .action-card.learn:hover {
   background: var(--hero-accent-dark) !important;
   transform: translateY(-2px);
-  box-shadow: 0 14px 28px -10px rgba(236, 47, 108, 0.75);
+  box-shadow: 0 14px 28px -10px rgba(79, 70, 229, 0.7);
 }
 
 /* Secondary pill (Meet our tutors / My Profile / Find a Tutor) */
@@ -2375,7 +2375,7 @@ html[data-theme="light"] #root {
   margin: 8px 0 0 !important;
   font-size: 13px;
 }
-.student-home-hero .hero-cta-link { color: var(--hero-accent) !important; border-bottom-color: rgba(236, 47, 108, 0.4); }
+.student-home-hero .hero-cta-link { color: var(--hero-accent) !important; border-bottom-color: rgba(79, 70, 229, 0.4); }
 .student-home-hero .hero-cta-link:hover { color: var(--hero-accent-dark) !important; }
 
 /* ----- Stats: quiet and minimal ----- */
@@ -2495,3 +2495,13 @@ html[data-theme="light"] #root {
   .student-home-hero .action-cta,
   .student-home-hero .action-card { flex: 1 1 100%; }
 }
+
+/* Dark theme: lighter indigo for the accent text so it stays readable */
+.student-home-hero .hero-title .highlight,
+.student-home-hero .hero-title-refined .accent { color: #818cf8 !important; }
+.student-home-hero .hero-cta-link { color: #a5b4fc !important; }
+
+/* Light theme: brand indigo */
+[data-theme="light"] .student-home-hero .hero-title .highlight,
+[data-theme="light"] .student-home-hero .hero-title-refined .accent { color: #4f46e5 !important; }
+[data-theme="light"] .student-home-hero .hero-cta-link { color: #4f46e5 !important; }

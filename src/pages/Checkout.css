@@ -653,6 +653,7 @@
   .checkout-grid {
     grid-template-columns: 1fr;
   }
+
   .checkout-summary {
     position: static;
   }
@@ -662,22 +663,28 @@
   .checkout-page {
     padding: 20px 12px;
   }
+
   .checkout-header h1 {
     font-size: 26px;
   }
+
   .checkout-section {
     padding: 20px 16px;
   }
+
   .form-row {
     grid-template-columns: 1fr;
   }
+
   .checkbox-text {
     font-size: 13px;
   }
+
   .checkout-modal {
     padding: 28px 20px;
     max-width: 95%;
   }
+
   .terms-modal,
   .privacy-modal {
     padding: 24px 16px 20px;
@@ -690,27 +697,34 @@
     text-align: center;
     gap: 12px;
   }
+
   .plan-price-mini {
     text-align: center;
   }
+
   .checkbox-label {
     gap: 10px;
   }
+
   .custom-checkbox {
     width: 18px;
     height: 18px;
     min-width: 18px;
   }
+
   .checkbox-label input[type="checkbox"]:checked + .custom-checkbox::after {
     left: 4px;
     top: 1px;
   }
+
   .alert-modal {
     padding: 28px 20px 24px;
   }
+
   .alert-icon {
     font-size: 36px;
   }
+
   .alert-title {
     font-size: 18px;
   }
@@ -919,4 +933,76 @@
 
 .checkout-page::-webkit-scrollbar-thumb:hover {
   background: rgba(255, 255, 255, 0.25);
+}
+
+/* ============================================
+   STUDENT-FRIENDLY PAYMENT STATUS MESSAGES
+   ============================================ */
+
+.alert-modal--pending .alert-icon {
+  color: #fbbf24;
+}
+
+.alert-modal--pending .alert-title {
+  color: #fbbf24;
+}
+
+.alert-modal--error .alert-icon {
+  color: #f87171;
+}
+
+.alert-modal--error .alert-title {
+  color: #fca5a5;
+}
+
+.alert-reference {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  margin: 4px 0 20px;
+  padding: 14px 16px;
+  border: 1px solid rgba(129, 140, 248, 0.25);
+  border-radius: 12px;
+  background: rgba(79, 70, 229, 0.08);
+  text-align: left;
+}
+
+.alert-reference-label {
+  color: #a5b4fc;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+}
+
+.alert-reference-value {
+  color: #ffffff;
+  font-size: 14px;
+  font-weight: 700;
+  line-height: 1.5;
+  overflow-wrap: anywhere;
+  font-variant-numeric: tabular-nums;
+}
+
+.alert-reference-help {
+  color: rgba(255, 255, 255, 0.58);
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+[data-theme="light"] .alert-reference {
+  background: #f5f6ff;
+  border-color: rgba(79, 70, 229, 0.18);
+}
+
+[data-theme="light"] .alert-reference-label {
+  color: #4f46e5;
+}
+
+[data-theme="light"] .alert-reference-value {
+  color: #0f172a;
+}
+
+[data-theme="light"] .alert-reference-help {
+  color: rgba(15, 23, 42, 0.58);
 }

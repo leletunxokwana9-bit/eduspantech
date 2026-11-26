@@ -14,6 +14,34 @@ const getAuthToken = () =>
   localStorage.getItem('token') ||
   localStorage.getItem('authToken');
 
+const getStoredUser = () => {
+  try {
+    return JSON.parse(localStorage.getItem('user') || '{}');
+  } catch {
+    return {};
+  }
+};
+
+const updateCachedUser = (plan) => {
+  try {
+    const storedUser = getStoredUser();
+
+    storedUser.subscriptionstatus = 'active';
+
+    if (plan?.tier) {
+      storedUser.subscriptiontier = plan.tier;
+    }
+
+    if (plan?.name) {
+      storedUser.subscriptionplan = plan.name;
+    }
+
+    localStorage.setItem('user', JSON.stringify(storedUser));
+  } catch (error) {
+    console.warn('Could not update cached user details.');
+  }
+};
+
 const PaymentSuccess = () => {
   const navigate = useNavigate();
   const location = useLocation();
@@ -23,15 +51,10 @@ const PaymentSuccess = () => {
   const reference =
     location.state?.reference ||
     params.get('reference') ||
-    params.get('trxref');
+    params.get('trxref') ||
+    '';
 
-  const plan =
-    location.state?.plan ||
-    null;
-
-  const planId =
-    plan?.id ||
-    params.get('planId');
+  const plan = location.state?.plan || null;
 
   const billingCycle =
     location.state?.billingCycle ||
@@ -45,25 +68,65 @@ const PaymentSuccess = () => {
   const [showTermsModal, setShowTermsModal] = useState(false);
   const [showPrivacyModal, setShowPrivacyModal] = useState(false);
 
+  // =====================================================
+  // CONFIRM EXISTING PAYMENT VERIFICATION
+  // =====================================================
+
   useEffect(() => {
     let cancelled = false;
 
-    const verifyPayment = async () => {
-      if (!reference || !planId) {
-        setVerificationStatus('failed');
-        setVerificationError(
-          'The payment reference or selected plan is missing. Please contact support before attempting another payment.'
-        );
+    const confirmSubscription = async () => {
+      const verification = location.state?.verification;
+      const verifiedSubscription =
+        location.state?.subscription ||
+        verification?.subscription;
+
+      /*
+       * IMPORTANT:
+       * Checkout.js already calls:
+       * POST /subscriptions/verify
+       *
+       * If that request succeeded, the subscription has
+       * already been activated by the backend.
+       *
+       * Do not call POST /subscriptions again here.
+       */
+
+      if (verification?.success === true && verifiedSubscription) {
+        if (cancelled) return;
+
+        const result = {
+          ...verification,
+          subscription: verifiedSubscription,
+          plan: verification.plan || plan
+        };
+
+        setPaymentResult(result);
+        setVerificationStatus('success');
+        updateCachedUser(result.plan || plan);
+
         return;
       }
+
+      /*
+       * If the student refreshes this page, React Router
+       * navigation state may no longer be available.
+       *
+       * In that situation, retrieve the student's existing
+       * subscription using GET. This does not create another
+       * subscription or process another payment.
+       */
 
       const token = getAuthToken();
 
       if (!token) {
+        if (cancelled) return;
+
         setVerificationStatus('failed');
         setVerificationError(
-          'Your login session has expired. Please sign in and contact support with your payment reference.'
+          'Please sign in again to check your subscription. If your payment was processed, you do not need to pay again. Contact support with your payment reference.'
         );
+
         return;
       }
 
@@ -71,85 +134,114 @@ const PaymentSuccess = () => {
         setVerificationStatus('verifying');
         setVerificationError('');
 
-        const response = await fetch(`${API_BASE_URL}/subscriptions`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            Authorization: `Bearer ${token}`
-          },
-          body: JSON.stringify({
-            reference,
-            planId,
-            billingCycle
-          })
-        });
+        const response = await fetch(
+          `${API_BASE_URL}/subscriptions`,
+          {
+            method: 'GET',
+            headers: {
+              Authorization: `Bearer ${token}`,
+              'Content-Type': 'application/json'
+            }
+          }
+        );
 
         const data = await response.json();
 
-        if (!response.ok || !data.success) {
+        if (!response.ok) {
+          throw new Error('Unable to retrieve your subscription.');
+        }
+
+        const existingSubscription =
+          data.subscription ||
+          (Array.isArray(data.subscriptions)
+            ? data.subscriptions.find(
+                (item) =>
+                  String(item.status || '').toLowerCase() === 'active'
+              )
+            : null);
+
+        const isActive =
+          existingSubscription &&
+          String(existingSubscription.status || '').toLowerCase() ===
+            'active';
+
+        if (!isActive) {
           throw new Error(
-            data.error || 'We could not verify your payment.'
+            'Your subscription has not yet been confirmed. If you have already paid, please contact support before making another payment.'
           );
         }
 
         if (cancelled) return;
 
-        setPaymentResult(data);
+        const result = {
+          success: true,
+          subscription: existingSubscription,
+          plan: plan || data.plan || null,
+          payment: data.payment || null
+        };
+
+        setPaymentResult(result);
         setVerificationStatus('success');
-
-        // Update cached user details where possible.
-        const storedUser = localStorage.getItem('user');
-
-        if (storedUser) {
-          try {
-            const parsedUser = JSON.parse(storedUser);
-
-            parsedUser.subscriptiontier =
-              data.plan?.tier || parsedUser.subscriptiontier;
-
-            parsedUser.subscriptionstatus = 'active';
-
-            localStorage.setItem('user', JSON.stringify(parsedUser));
-          } catch (error) {
-            console.warn('Could not update cached user:', error);
-          }
-        }
-
+        updateCachedUser(result.plan || plan);
       } catch (error) {
-        console.error('Payment verification error:', error);
+        console.error(
+          'Could not retrieve the existing subscription:',
+          error
+        );
 
-        if (!cancelled) {
-          setVerificationStatus('failed');
-          setVerificationError(error.message);
-        }
+        if (cancelled) return;
+
+        setVerificationStatus('failed');
+        setVerificationError(
+          'We could not retrieve your subscription details right now. If you have already paid, please do not pay again. Keep your payment reference and contact our support team.'
+        );
       }
     };
 
-    verifyPayment();
+    confirmSubscription();
 
     return () => {
       cancelled = true;
     };
-  }, [reference, planId, billingCycle]);
+  }, [location.state, plan]);
+
+  // =====================================================
+  // RECEIPT DETAILS
+  // =====================================================
 
   const confirmedPlan =
-    paymentResult?.plan || plan || {};
+    paymentResult?.plan ||
+    plan ||
+    {};
 
   const confirmedSubscription =
-    paymentResult?.subscription || {};
+    paymentResult?.subscription ||
+    location.state?.subscription ||
+    {};
+
+  const confirmedPayment =
+    paymentResult?.payment ||
+    {};
 
   const confirmedAmount =
-    paymentResult?.payment?.amount ??
+    confirmedPayment.amount ??
     confirmedSubscription.amount ??
     confirmedPlan.monthly_price ??
     confirmedPlan.price ??
     0;
 
   const confirmedCurrency =
-    paymentResult?.payment?.currency ||
+    confirmedPayment.currency ||
     confirmedSubscription.currency ||
     confirmedPlan.currency ||
     'ZAR';
+
+  const student = getStoredUser();
+
+  const studentEmail =
+    confirmedPayment.email ||
+    student.email ||
+    'Signed-in student';
 
   const formatAmount = (amount, currency) => {
     try {
@@ -161,6 +253,17 @@ const PaymentSuccess = () => {
       return `${currency || 'ZAR'} ${Number(amount || 0).toFixed(2)}`;
     }
   };
+
+  const formattedEndDate = confirmedSubscription.end_date
+    ? new Date(confirmedSubscription.end_date).toLocaleDateString(
+        'en-ZA',
+        {
+          year: 'numeric',
+          month: 'long',
+          day: 'numeric'
+        }
+      )
+    : 'Not specified';
 
   // =====================================================
   // TERMS MODAL
@@ -189,7 +292,9 @@ const PaymentSuccess = () => {
             ×
           </button>
 
-          <h2 className="modal-title">📋 Terms of Service</h2>
+          <h2 className="modal-title">
+            📋 Terms of Service
+          </h2>
 
           <div className="modal-scroll-content">
             <div className="last-updated">
@@ -245,7 +350,9 @@ const PaymentSuccess = () => {
             ×
           </button>
 
-          <h2 className="modal-title">🔒 Privacy Policy</h2>
+          <h2 className="modal-title">
+            🔒 Privacy Policy
+          </h2>
 
           <div className="modal-scroll-content">
             <div className="last-updated">
@@ -287,31 +394,40 @@ const PaymentSuccess = () => {
               <div className="payment-verification-spinner" />
             </div>
 
-            <h1>Verifying Your Payment</h1>
+            <h1>Checking Your Subscription</h1>
 
             <p className="success-subtitle">
-              Please wait while we securely verify your transaction
-              with Paystack and activate your subscription.
+              Please wait while we retrieve your payment and
+              subscription details.
             </p>
 
-            <div className="receipt-box">
-              <div className="receipt-row">
-                <span className="receipt-label">Reference</span>
-                <span className="receipt-value mono">
-                  {reference}
-                </span>
-              </div>
+            {reference && (
+              <div className="receipt-box">
+                <div className="receipt-row">
+                  <span className="receipt-label">
+                    Payment Reference
+                  </span>
 
-              <div className="receipt-row">
-                <span className="receipt-label">Status</span>
-                <span className="receipt-value">
-                  Verifying transaction...
-                </span>
+                  <span className="receipt-value mono">
+                    {reference}
+                  </span>
+                </div>
+
+                <div className="receipt-row">
+                  <span className="receipt-label">
+                    Status
+                  </span>
+
+                  <span className="receipt-value">
+                    Checking subscription...
+                  </span>
+                </div>
               </div>
-            </div>
+            )}
 
             <p className="success-subtitle">
-              Do not close this page while verification is in progress.
+              Please do not make another payment while we check
+              your subscription.
             </p>
           </div>
         </div>
@@ -320,7 +436,7 @@ const PaymentSuccess = () => {
   }
 
   // =====================================================
-  // FAILED VERIFICATION
+  // PAYMENT NOT CONFIRMED
   // =====================================================
 
   if (verificationStatus === 'failed') {
@@ -332,26 +448,32 @@ const PaymentSuccess = () => {
               !
             </div>
 
-            <h1>Payment Not Yet Confirmed</h1>
+            <h1>We're Checking Your Payment</h1>
 
             <p className="success-subtitle">
-              We could not confirm and activate your subscription.
-              This does not necessarily mean that Paystack did not
-              receive your payment.
+              We haven't been able to retrieve your subscription
+              details yet. This does not necessarily mean your
+              payment was unsuccessful.
             </p>
 
             <div className="receipt-box">
               <div className="receipt-row">
-                <span className="receipt-label">Reference</span>
+                <span className="receipt-label">
+                  Payment Reference
+                </span>
+
                 <span className="receipt-value mono">
-                  {reference || 'Unavailable'}
+                  {reference || 'Not available'}
                 </span>
               </div>
 
               <div className="receipt-row">
-                <span className="receipt-label">Verification</span>
+                <span className="receipt-label">
+                  Status
+                </span>
+
                 <span className="receipt-value">
-                  Not confirmed
+                  Awaiting confirmation
                 </span>
               </div>
             </div>
@@ -365,7 +487,7 @@ const PaymentSuccess = () => {
                 className="btn-primary"
                 onClick={() => window.location.reload()}
               >
-                Retry Verification
+                Check Again
               </button>
 
               <button
@@ -377,8 +499,16 @@ const PaymentSuccess = () => {
             </div>
 
             <p className="success-subtitle">
-              If you were charged, do not pay again before contacting
-              support with your reference number.
+              <strong>
+                Please do not pay again if you have already
+                completed your payment.
+              </strong>
+              {' '}If you need assistance, contact
+              {' '}
+              <a href="mailto:support@eduspantech.com">
+                support@eduspantech.com
+              </a>
+              {' '}and provide your payment reference.
             </p>
           </div>
         </div>
@@ -396,7 +526,6 @@ const PaymentSuccess = () => {
       <PrivacyModal />
 
       <div className="success-container">
-
         <div className="success-card">
           <div className="success-icon-wrapper">
             <svg
@@ -417,82 +546,116 @@ const PaymentSuccess = () => {
           <h1>Payment Successful</h1>
 
           <p className="success-subtitle">
-            Your payment has been verified by Paystack and your
+            Your payment has been verified and your
             <strong>
-              {' '}{confirmedPlan.name || confirmedPlan.tier || 'subscription'}
+              {' '}
+              {confirmedPlan.name ||
+                confirmedPlan.tier ||
+                'subscription'}
             </strong>
             {' '}subscription is now active.
           </p>
 
           <div className="receipt-box">
-
             <div className="receipt-row">
-              <span className="receipt-label">Student</span>
+              <span className="receipt-label">
+                Student
+              </span>
+
               <span className="receipt-value">
-                {paymentResult?.payment?.email ||
-                  localStorage.getItem('user') &&
-                  JSON.parse(localStorage.getItem('user')).email ||
-                  'Signed-in student'}
+                {studentEmail}
               </span>
             </div>
 
             <div className="receipt-row">
-              <span className="receipt-label">Plan</span>
+              <span className="receipt-label">
+                Plan
+              </span>
+
               <span className="receipt-value">
-                {confirmedPlan.name || confirmedPlan.tier}
+                {confirmedPlan.name ||
+                  confirmedPlan.tier ||
+                  'Active subscription'}
               </span>
             </div>
 
             <div className="receipt-row">
-              <span className="receipt-label">Amount Paid</span>
+              <span className="receipt-label">
+                Amount Paid
+              </span>
+
               <span className="receipt-value">
-                {formatAmount(confirmedAmount, confirmedCurrency)}
+                {confirmedPayment.amount != null
+                  ? formatAmount(
+                      confirmedPayment.amount,
+                      confirmedCurrency
+                    )
+                  : confirmedSubscription.amount != null
+                    ? formatAmount(
+                        confirmedSubscription.amount,
+                        confirmedCurrency
+                      )
+                    : confirmedPlan.monthly_price != null ||
+                      confirmedPlan.price != null
+                      ? formatAmount(
+                          confirmedPlan.monthly_price ??
+                            confirmedPlan.price,
+                          confirmedCurrency
+                        )
+                      : 'See payment confirmation'}
               </span>
             </div>
 
             <div className="receipt-row">
-              <span className="receipt-label">Billing Cycle</span>
+              <span className="receipt-label">
+                Billing Cycle
+              </span>
+
               <span className="receipt-value">
-                {confirmedSubscription.billing_cycle || billingCycle}
+                {confirmedSubscription.billing_cycle ||
+                  billingCycle}
               </span>
             </div>
 
             <div className="receipt-row">
-              <span className="receipt-label">Payment Method</span>
+              <span className="receipt-label">
+                Payment Method
+              </span>
+
               <span className="receipt-value">
                 Paystack
               </span>
             </div>
 
             <div className="receipt-row">
-              <span className="receipt-label">Reference</span>
+              <span className="receipt-label">
+                Reference
+              </span>
+
               <span className="receipt-value mono">
-                {reference}
+                {reference || 'See your Paystack receipt'}
               </span>
             </div>
 
             <div className="receipt-row">
-              <span className="receipt-label">Subscription Ends</span>
+              <span className="receipt-label">
+                Subscription Ends
+              </span>
+
               <span className="receipt-value">
-                {confirmedSubscription.end_date
-                  ? new Date(
-                      confirmedSubscription.end_date
-                    ).toLocaleDateString('en-ZA', {
-                      year: 'numeric',
-                      month: 'long',
-                      day: 'numeric'
-                    })
-                  : 'Not specified'}
+                {formattedEndDate}
               </span>
             </div>
 
             <div className="receipt-row">
-              <span className="receipt-label">Auto-Renewal</span>
+              <span className="receipt-label">
+                Auto-Renewal
+              </span>
+
               <span className="receipt-value">
                 Not enabled
               </span>
             </div>
-
           </div>
 
           <div className="success-actions">
@@ -518,30 +681,36 @@ const PaymentSuccess = () => {
           <ul>
             <li>
               <div className="step-icon">🔓</div>
+
               <div>
                 <strong>Instant Access</strong>
+
                 <p>
-                  Your account has been updated and your purchased
-                  plan is now active.
+                  Your account has been updated and your
+                  purchased plan is now active.
                 </p>
               </div>
             </li>
 
             <li>
               <div className="step-icon">📅</div>
+
               <div>
                 <strong>Subscription Period</strong>
+
                 <p>
-                  Your subscription remains active until the end
-                  date shown on your receipt.
+                  Your subscription remains active until the
+                  end date shown on your receipt.
                 </p>
               </div>
             </li>
 
             <li>
               <div className="step-icon">💳</div>
+
               <div>
                 <strong>Future Payments</strong>
+
                 <p>
                   Automatic renewal is not enabled for this
                   transaction. You can renew your plan before
@@ -554,10 +723,10 @@ const PaymentSuccess = () => {
 
         <div className="disclaimer-section">
           <p>
-            <strong>Billing Disclaimer:</strong> This transaction
-            has been verified and your subscription activated.
-            Automatic recurring billing is not enabled for this
-            payment.
+            <strong>Billing Disclaimer:</strong> Your payment
+            verification was successful and your subscription
+            is active. Automatic recurring billing is not
+            enabled for this payment.
             {' '}Please review our{' '}
             <button
               type="button"
@@ -581,10 +750,9 @@ const PaymentSuccess = () => {
             <a href="mailto:support@eduspantech.com">
               support@eduspantech.com
             </a>.
-            Please retain your payment reference.
+            {' '}Please retain your payment reference.
           </p>
         </div>
-
       </div>
     </div>
   );

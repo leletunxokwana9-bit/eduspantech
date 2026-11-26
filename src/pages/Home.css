@@ -1,4 +1,4 @@
-/* Home.css - Complete, mobile-first responsive (Dark theme + light overrides) */
+/* Home.css - Complete, mobile-first responsive (Dark theme + pure white light mode) */
 
 *,
 *::before,
@@ -394,14 +394,6 @@ svg {
   margin-top: 6px;
   line-height: 1.35;
 }
-
-[data-theme="light"] .hero-title-refined { color: #0f172a !important; }
-[data-theme="light"] .hero-subtitle-refined { color: rgba(15, 23, 42, 0.65) !important; }
-[data-theme="light"] .hero-cta-note { color: rgba(15, 23, 42, 0.5) !important; }
-[data-theme="light"] .hero-stats-refined { border-top-color: rgba(15, 23, 42, 0.1); }
-[data-theme="light"] .stat-refined + .stat-refined { border-left-color: rgba(15, 23, 42, 0.1); }
-[data-theme="light"] .stat-refined-num { color: #0f172a !important; }
-[data-theme="light"] .stat-refined-lbl { color: rgba(15, 23, 42, 0.55) !important; }
 
 /* ===== Hero Visual ===== */
 .hero-visual {
@@ -1887,4 +1879,353 @@ svg {
   .action-cta .sub { font-size: .76rem; }
   .compliance-badge,
   .trust-badge { font-size: 11px; padding: 4px 10px; }
+}
+
+
+/* ############################################################
+   ############################################################
+   LIGHT MODE — PURE WHITE, FULLY READABLE
+   Must stay at the very END of this file.
+
+   Palette
+     headings / labels / button text   #0f172a
+     body / sub text                   #475569
+     muted text                        #64748b
+     accent                            #4f46e5
+     borders                           #e2e8f0
+   ############################################################
+   ############################################################ */
+
+html[data-theme="light"],
+html[data-theme="light"] body,
+html[data-theme="light"] #root {
+  background: #ffffff !important;
+  background-color: #ffffff !important;
+}
+
+/* ----- 1. Every section, wrapper and footer block = pure white ----- */
+[data-theme="light"] .home-page,
+[data-theme="light"] .home-loading,
+[data-theme="light"] .hero-section,
+[data-theme="light"] .student-home-hero,
+[data-theme="light"] .features-section,
+[data-theme="light"] .quick-actions-section,
+[data-theme="light"] .regions-map-section,
+[data-theme="light"] .pricing-section,
+[data-theme="light"] .progress-section,
+[data-theme="light"] .curriculum-section,
+[data-theme="light"] .infrastructure-section,
+[data-theme="light"] .cta-section,
+[data-theme="light"] .footer-enhanced,
+[data-theme="light"] .footer-top-bar,
+[data-theme="light"] .footer-main,
+[data-theme="light"] .footer-cta-banner,
+[data-theme="light"] .footer-bottom {
+  background: #ffffff !important;
+  background-color: #ffffff !important;
+  background-image: none !important;
+  color: #0f172a !important;
+}
+
+[data-theme="light"] .home-page a { color: inherit; }
+[data-theme="light"] .loader { color: #4f46e5 !important; }
+
+/* Thin separators between sections instead of grey fills */
+[data-theme="light"] .features-section,
+[data-theme="light"] .quick-actions-section,
+[data-theme="light"] .curriculum-section,
+[data-theme="light"] .cta-section,
+[data-theme="light"] .progress-section,
+[data-theme="light"] .infrastructure-section,
+[data-theme="light"] .regions-map-section,
+[data-theme="light"] .pricing-section {
+  border-top: 1px solid #eef2f7;
+}
+
+/* ----- 2. Hero ----- */
+[data-theme="light"] .hero-section::before {
+  background: radial-gradient(circle, rgba(79, 70, 229, 0.06), transparent 70%);
+}
+
+[data-theme="light"] .hero-title,
+[data-theme="light"] .hero-title-refined {
+  color: #0f172a !important;
+}
+
+/* Amber gradient is unreadable on white -> indigo/purple */
+[data-theme="light"] .hero-title .highlight,
+[data-theme="light"] .hero-title-refined .accent {
+  background: linear-gradient(135deg, #4f46e5, #7c3aed) !important;
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+[data-theme="light"] .hero-subtitle,
+[data-theme="light"] .hero-subtitle-refined {
+  color: #475569 !important;
+}
+
+[data-theme="light"] .hero-cta-note { color: #64748b !important; }
+[data-theme="light"] .hero-cta-link {
+  color: #4f46e5 !important;
+  border-bottom-color: rgba(79, 70, 229, 0.4);
+}
+[data-theme="light"] .hero-cta-link:hover { color: #4338ca !important; }
+
+[data-theme="light"] .stat-number { color: #0f172a !important; }
+[data-theme="light"] .stat-label-white { color: #475569 !important; opacity: 1; }
+[data-theme="light"] .stat-divider { background: #e2e8f0; }
+
+[data-theme="light"] .stat-refined-num { color: #0f172a !important; }
+[data-theme="light"] .stat-refined-lbl { color: #64748b !important; }
+[data-theme="light"] .hero-stats-refined { border-top-color: #e2e8f0; }
+[data-theme="light"] .stat-refined + .stat-refined { border-left-color: #e2e8f0; }
+
+@media (max-width: 480px) {
+  [data-theme="light"] .stat-refined + .stat-refined {
+    border-left: none;
+    border-top: 1px solid #e2e8f0;
+  }
+}
+
+/* Student hero image: no dark vignette on white */
+[data-theme="light"] .home-hero-overlay { background: transparent !important; }
+
+/* ----- 3. Action buttons ----- */
+/* Primary gradient CTA keeps white text (visible on purple) */
+[data-theme="light"] .action-cta,
+[data-theme="light"] .action-cta .label,
+[data-theme="light"] .action-cta .sub {
+  color: #ffffff !important;
+}
+[data-theme="light"] .action-cta {
+  box-shadow: 0 14px 32px -12px rgba(124, 92, 246, 0.55);
+}
+
+/* Secondary cards (Continue Learning, etc.): white card, dark text */
+[data-theme="light"] .action-card {
+  background: #ffffff !important;
+  border: 1px solid #e2e8f0;
+  color: #0f172a !important;
+  backdrop-filter: none;
+  box-shadow: 0 2px 8px rgba(15, 23, 42, 0.05);
+}
+[data-theme="light"] .action-card:hover {
+  background: #ffffff !important;
+  box-shadow: 0 14px 30px -14px color-mix(in srgb, var(--accent) 55%, transparent);
+}
+[data-theme="light"] .action-card .label { color: #0f172a !important; }
+[data-theme="light"] .action-card .sub   { color: #475569 !important; }
+[data-theme="light"] .action-card .chev  { color: #64748b; }
+[data-theme="light"] .action-card:hover .chev { color: var(--accent); }
+
+/* Deeper accents so icons read well on white */
+[data-theme="light"] .action-card.earnings { --accent: #d97706; }
+[data-theme="light"] .action-card.sessions { --accent: #0d9488; }
+[data-theme="light"] .action-card.team     { --accent: #db2777; }
+[data-theme="light"] .action-card.learn    { --accent: #4f46e5; }
+
+/* ----- 4. Section headers ----- */
+[data-theme="light"] .section-tag {
+  background: rgba(79, 70, 229, 0.08);
+  color: #4f46e5 !important;
+}
+[data-theme="light"] .section-header h2 { color: #0f172a !important; }
+[data-theme="light"] .section-header p  { color: #475569 !important; }
+
+/* ----- 5. Features ----- */
+[data-theme="light"] .feature-card {
+  background: #ffffff !important;
+  border: 1px solid #e2e8f0 !important;
+  box-shadow: 0 2px 10px rgba(15, 23, 42, 0.05);
+}
+[data-theme="light"] .feature-card:hover {
+  border-color: #4f46e5 !important;
+  box-shadow: 0 24px 60px rgba(79, 70, 229, 0.14);
+}
+[data-theme="light"] .feature-card h3 { color: #0f172a !important; }
+[data-theme="light"] .feature-card p  { color: #475569 !important; }
+[data-theme="light"] .feature-meta {
+  background: #ffffff !important;
+  color: #4f46e5 !important;
+  border: 1px solid #c7d2fe !important;
+}
+
+/* ----- 6. Progress ----- */
+[data-theme="light"] .progress-text h2 { color: #0f172a !important; }
+[data-theme="light"] .progress-text p  { color: #475569 !important; }
+[data-theme="light"] .progress-circle {
+  background: conic-gradient(#4f46e5 var(--progress), #e2e8f0 var(--progress)) !important;
+}
+[data-theme="light"] .progress-circle::before { background: #ffffff !important; }
+[data-theme="light"] .progress-circle span { color: #0f172a !important; }
+[data-theme="light"] .progress-stat p { color: #475569 !important; }
+
+/* ----- 7. Curriculum ----- */
+[data-theme="light"] .curriculum-item {
+  background: #ffffff !important;
+  border: 1px solid #e2e8f0;
+  box-shadow: 0 2px 8px rgba(15, 23, 42, 0.04);
+}
+[data-theme="light"] .curriculum-item:hover {
+  border-color: #4f46e5 !important;
+  box-shadow: 0 18px 40px rgba(79, 70, 229, 0.12);
+}
+[data-theme="light"] .curriculum-item h4 { color: #0f172a !important; }
+[data-theme="light"] .curriculum-item p  { color: #475569 !important; }
+[data-theme="light"] .curriculum-flag-img { border: 1px solid #e2e8f0 !important; }
+[data-theme="light"] .curriculum-flag-fallback {
+  background: #ffffff !important;
+  color: #64748b !important;
+  border: 1px solid #e2e8f0 !important;
+}
+[data-theme="light"] .curriculum-levels .level-tag {
+  background: rgba(79, 70, 229, 0.08);
+  color: #4f46e5 !important;
+}
+
+/* ----- 8. Infrastructure ----- */
+[data-theme="light"] .infrastructure-text h2 { color: #0f172a !important; }
+[data-theme="light"] .infrastructure-text p  { color: #475569 !important; }
+[data-theme="light"] .infrastructure-list li {
+  color: #334155 !important;
+  border-bottom: 1px solid #eef2f7 !important;
+}
+[data-theme="light"] .map-node {
+  background: #ffffff !important;
+  box-shadow: 0 4px 14px rgba(79, 70, 229, 0.18);
+}
+
+/* ----- 9. CTA section ----- */
+[data-theme="light"] .cta-content h2 { color: #0f172a !important; }
+[data-theme="light"] .cta-content p  { color: #475569 !important; }
+[data-theme="light"] .cta-small      { color: #64748b !important; }
+
+/* ----- 10. Orbit (tutor hero) readable on white ----- */
+[data-theme="light"] .orbit-node {
+  color: #ffffff;
+  text-shadow: 0 1px 2px rgba(15, 23, 42, 0.35);
+}
+[data-theme="light"] .orbit-ring-1 { border-color: rgba(79, 70, 229, 0.45); }
+[data-theme="light"] .orbit-ring-2 { border-color: rgba(124, 58, 237, 0.45); }
+[data-theme="light"] .orbit-ring-3 { border-color: rgba(79, 70, 229, 0.5); }
+[data-theme="light"] .orbit-depth-back,
+[data-theme="light"] .orbit-depth-mid { opacity: 0.5; }
+
+/* ============================================================
+   FOOTER — light
+   ============================================================ */
+[data-theme="light"] .footer-enhanced { border-top: 1px solid #e2e8f0; }
+[data-theme="light"] .footer-top-bar  { border-bottom: 1px solid #eef2f7; }
+[data-theme="light"] .top-bar-text { color: #475569; }
+[data-theme="light"] .top-bar-text strong { color: #15803d; }
+
+[data-theme="light"] .region-select {
+  background: #ffffff;
+  color: #0f172a;
+  border: 1px solid #cbd5e1;
+}
+[data-theme="light"] .region-select:hover {
+  background: #ffffff;
+  border-color: #4f46e5;
+}
+[data-theme="light"] .region-select option { background: #ffffff; color: #0f172a; }
+[data-theme="light"] .region-tag {
+  color: #475569;
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+}
+
+[data-theme="light"] .footer-col > h4,
+[data-theme="light"] .footer-newsletter h4,
+[data-theme="light"] .footer-brand .brand-name,
+[data-theme="light"] .copyright,
+[data-theme="light"] .cta-banner-text h4 { color: #0f172a; }
+
+[data-theme="light"] .footer-brand .brand-icon { color: #4f46e5; }
+[data-theme="light"] .brand-tagline { color: #b45309; }
+[data-theme="light"] .brand-subtagline,
+[data-theme="light"] .footer-newsletter p,
+[data-theme="light"] .cta-banner-text p,
+[data-theme="light"] .copyright-tagline { color: #475569; }
+[data-theme="light"] .brand-address,
+[data-theme="light"] .newsletter-form .form-note { color: #64748b; }
+
+[data-theme="light"] .contact-link { color: #334155; }
+[data-theme="light"] .contact-link:hover { color: #4f46e5; }
+
+[data-theme="light"] .footer-newsletter { border-top-color: #e2e8f0; }
+[data-theme="light"] .newsletter-form input[type="email"] {
+  background: #ffffff;
+  color: #0f172a;
+  border: 1px solid #cbd5e1;
+}
+[data-theme="light"] .newsletter-form input[type="email"]::placeholder { color: #94a3b8; }
+[data-theme="light"] .newsletter-form input[type="email"]:focus {
+  background: #ffffff;
+  border-color: #4f46e5;
+}
+
+[data-theme="light"] .spec-tag,
+[data-theme="light"] .related-tag,
+[data-theme="light"] .compliance-badge,
+[data-theme="light"] .trust-badge {
+  color: #334155;
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+}
+[data-theme="light"] .related-tag:hover {
+  color: #4f46e5;
+  background: #ffffff;
+  border-color: #4f46e5;
+}
+[data-theme="light"] .session-label { color: #b45309; }
+[data-theme="light"] .session-tag {
+  color: #4f46e5;
+  background: rgba(79, 70, 229, 0.07);
+  border-color: rgba(79, 70, 229, 0.2);
+}
+
+[data-theme="light"] .footer-social-section { border-top-color: #e2e8f0; }
+[data-theme="light"] .social-link {
+  color: #0f172a;
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+}
+[data-theme="light"] .social-link:hover {
+  background: #ffffff;
+  border-color: #4f46e5;
+  box-shadow: 0 10px 24px -12px rgba(79, 70, 229, 0.4);
+}
+
+[data-theme="light"] .footer-cta-banner {
+  border-top: 1px solid #e2e8f0;
+  border-bottom: 1px solid #e2e8f0;
+}
+[data-theme="light"] .cta-btn-primary { color: #ffffff !important; }
+[data-theme="light"] .cta-btn-secondary {
+  color: #0f172a !important;
+  background: #ffffff;
+  border: 1px solid #cbd5e1;
+}
+[data-theme="light"] .cta-btn-secondary:hover {
+  background: #ffffff;
+  border-color: #4f46e5;
+  color: #4f46e5 !important;
+}
+
+[data-theme="light"] .footer-bottom { border-top: 1px solid #eef2f7; }
+[data-theme="light"] .bottom-bar-content { border-bottom-color: #e2e8f0; }
+[data-theme="light"] .footer-legal-links a { color: #475569; }
+[data-theme="light"] .footer-legal-links a:hover { color: #4f46e5; }
+[data-theme="light"] .footer-legal-links .divider { color: #cbd5e1; }
+[data-theme="light"] .footer-legal-statement p { color: #475569; }
+[data-theme="light"] .footer-legal-statement .legal-statement-small { color: #64748b; }
+
+@media (max-width: 640px) {
+  [data-theme="light"] .footer-legal-links a {
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
+  }
 }

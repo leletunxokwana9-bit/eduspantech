@@ -1,12 +1,5 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import {
-  Sparkles, Target, BookOpen, GraduationCap, LayoutDashboard,
-  Wallet, CalendarDays, UserRound, BookMarked, TrendingUp,
-  Clock, PenTool, Globe, ShieldCheck, Mail, Phone, MapPin,
-  Lock, CheckCircle2, Shield, Send, Check, Star, BarChart3,
-  Plus, LogIn, Users, BookMarked as BookMarkedIcon,
-} from 'lucide-react';
 import { authService } from '../services/authService';
 import { supabase } from '../services/supabaseClient';
 import Pricing from '../components/home/Pricing/Pricing';
@@ -117,8 +110,7 @@ const EnhancedFooter = ({ siteConfig }) => {
             <div className="top-bar-left">
               <span className="live-dot"></span>
               <span className="top-bar-text">
-                <GraduationCap size={16} color="#22c55e" style={{ verticalAlign: 'middle', marginRight: 6 }} />
-                <strong>12 Expert Tutors</strong> online now — Ready to help you learn!
+                🎓 <strong>12 Expert Tutors</strong> online now — Ready to help you learn!
               </span>
             </div>
             <div className="top-bar-right">
@@ -127,25 +119,15 @@ const EnhancedFooter = ({ siteConfig }) => {
                 value={selectedRegion}
                 onChange={(e) => setSelectedRegion(e.target.value)}
               >
-                <option value="Global">Global</option>
-                <option value="ZA">South Africa</option>
-                <option value="US">United States</option>
-                <option value="GB">United Kingdom</option>
-                <option value="AU">Australia</option>
-                <option value="SG">Singapore</option>
+                <option value="Global">🌍 Global</option>
+                <option value="ZA">🇿🇦 South Africa</option>
+                <option value="US">🇺🇸 United States</option>
+                <option value="GB">🇬🇧 United Kingdom</option>
+                <option value="AU">🇦🇺 Australia</option>
+                <option value="SG">🇸🇬 Singapore</option>
               </select>
               <span className="region-tag">
-                {selectedRegion === 'Global' ? (
-                  <>
-                    <Globe size={13} color="#818cf8" style={{ verticalAlign: 'middle', marginRight: 4 }} />
-                    9 Regions
-                  </>
-                ) : (
-                  <>
-                    <Send size={13} color="#22c55e" style={{ verticalAlign: 'middle', marginRight: 4 }} />
-                    Live
-                  </>
-                )}
+                {selectedRegion === 'Global' ? '🌍 9 Regions' : '📡 Live'}
               </span>
             </div>
           </div>
@@ -172,30 +154,22 @@ const EnhancedFooter = ({ siteConfig }) => {
                 <div className="brand-contact">
                   {siteConfig.contact_email && (
                     <a href={`mailto:${siteConfig.contact_email}`} className="contact-link">
-                      <Mail size={15} color="#818cf8" style={{ verticalAlign: 'middle', marginRight: 6 }} />
-                      {siteConfig.contact_email}
+                      📧 {siteConfig.contact_email}
                     </a>
                   )}
                   {siteConfig.contact_phone && (
                     <a href={`tel:${siteConfig.contact_phone}`} className="contact-link">
-                      <Phone size={15} color="#22c55e" style={{ verticalAlign: 'middle', marginRight: 6 }} />
-                      {siteConfig.contact_phone}
+                      📞 {siteConfig.contact_phone}
                     </a>
                   )}
                 </div>
                 {siteConfig.contact_address && (
-                  <p className="brand-address">
-                    <MapPin size={14} color="#f472b6" style={{ verticalAlign: 'middle', marginRight: 6 }} />
-                    {siteConfig.contact_address}
-                  </p>
+                  <p className="brand-address">📍 {siteConfig.contact_address}</p>
                 )}
               </div>
 
               <div className="footer-newsletter">
-                <h4>
-                  <BookOpen size={16} color="#818cf8" style={{ verticalAlign: 'middle', marginRight: 6 }} />
-                  Get Weekly Learning Tips
-                </h4>
+                <h4>📚 Get Weekly Learning Tips</h4>
                 <p>Join 2,500+ students getting exam hacks and tutor updates</p>
                 <form className="newsletter-form" onSubmit={handleSubscribe}>
                   <div className="form-group">
@@ -206,44 +180,35 @@ const EnhancedFooter = ({ siteConfig }) => {
                       onChange={(e) => setEmail(e.target.value)}
                       required
                     />
-                    <button type="submit" aria-label={subscribed ? 'Subscribed' : 'Subscribe'}>
-                      {subscribed ? <Check size={18} color="#ffffff" /> : <Send size={18} color="#ffffff" />}
+                    <button type="submit">
+                      {subscribed ? '✅' : '📩'}
                     </button>
                   </div>
-                  <p className="form-note">
-                    No spam. Unsubscribe anytime.
-                    <Lock size={12} color="#64748b" style={{ verticalAlign: 'middle', marginLeft: 4 }} />
-                  </p>
+                  <p className="form-note">No spam. Unsubscribe anytime. 🔒</p>
                 </form>
               </div>
             </div>
 
             <div className="footer-col footer-specs">
-              <h4>
-                <Target size={16} color="#fbbf24" style={{ verticalAlign: 'middle', marginRight: 6 }} />
-                Tutor Specialties
-              </h4>
+              <h4>🎯 Tutor Specialties</h4>
               <div className="specs-grid">
-                <span className="spec-tag">Grade 8-9</span>
-                <span className="spec-tag">Grade 10-11</span>
-                <span className="spec-tag">Matric/AP</span>
-                <span className="spec-tag">University</span>
-                <span className="spec-tag">Global Curricula</span>
-                <span className="spec-tag">Expert Tutors</span>
-                <span className="spec-tag">Geometry</span>
-                <span className="spec-tag">Calculus</span>
-                <span className="spec-tag">Statistics</span>
-                <span className="spec-tag">Algebra</span>
-                <span className="spec-tag">Trigonometry</span>
-                <span className="spec-tag">Probability</span>
+                <span className="spec-tag">🎓 Grade 8-9</span>
+                <span className="spec-tag">📚 Grade 10-11</span>
+                <span className="spec-tag">🏆 Matric/AP</span>
+                <span className="spec-tag">🏛️ University</span>
+                <span className="spec-tag">🌍 Global Curricula</span>
+                <span className="spec-tag">🧑‍🏫 Expert Tutors</span>
+                <span className="spec-tag">📐 Geometry</span>
+                <span className="spec-tag">⚡ Calculus</span>
+                <span className="spec-tag">📊 Statistics</span>
+                <span className="spec-tag">🧮 Algebra</span>
+                <span className="spec-tag">🧪 Trigonometry</span>
+                <span className="spec-tag">📈 Probability</span>
               </div>
             </div>
 
             <div className="footer-col footer-sessions">
-              <h4>
-                <BookMarked size={16} color="#2dd4bf" style={{ verticalAlign: 'middle', marginRight: 6 }} />
-                What We Teach
-              </h4>
+              <h4>📖 What We Teach</h4>
               <div className="sessions-grid">
                 <div className="session-group">
                   <span className="session-label">Core Math:</span>
@@ -273,10 +238,7 @@ const EnhancedFooter = ({ siteConfig }) => {
             </div>
 
             <div className="footer-col footer-related">
-              <h4>
-                <BookOpen size={16} color="#818cf8" style={{ verticalAlign: 'middle', marginRight: 6 }} />
-                Related Subjects
-              </h4>
+              <h4>🔗 Related Subjects</h4>
               <div className="related-grid">
                 {relatedSubjects.map((subject, idx) => (
                   <a key={idx} href={subject.url} className="related-tag">
@@ -320,9 +282,7 @@ const EnhancedFooter = ({ siteConfig }) => {
         <div className="container">
           <div className="cta-banner-content">
             <div className="cta-banner-text">
-              <span className="cta-banner-icon">
-                <Target size={32} color="#fbbf24" />
-              </span>
+              <span className="cta-banner-icon">🎯</span>
               <div>
                 <h4>Ready to Excel?</h4>
                 <p>Get matched with the perfect tutor for your learning style.</p>
@@ -356,19 +316,10 @@ const EnhancedFooter = ({ siteConfig }) => {
             <div className="bottom-bar-center">
               <div className="compliance-badges">
                 {siteConfig.compliance_text && (
-                  <span className="compliance-badge">
-                    <Shield size={12} color="#818cf8" style={{ verticalAlign: 'middle', marginRight: 4 }} />
-                    {siteConfig.compliance_text}
-                  </span>
+                  <span className="compliance-badge">🛡️ {siteConfig.compliance_text}</span>
                 )}
-                <span className="compliance-badge">
-                  <Lock size={12} color="#22c55e" style={{ verticalAlign: 'middle', marginRight: 4 }} />
-                  SSL Encrypted
-                </span>
-                <span className="compliance-badge">
-                  <CheckCircle2 size={12} color="#22c55e" style={{ verticalAlign: 'middle', marginRight: 4 }} />
-                  Verified Tutors
-                </span>
+                <span className="compliance-badge">🔒 SSL Encrypted</span>
+                <span className="compliance-badge">✅ Verified Tutors</span>
               </div>
             </div>
 
@@ -380,10 +331,7 @@ const EnhancedFooter = ({ siteConfig }) => {
                 <span className="divider">|</span>
                 <a href="/cookies">Cookies</a>
                 <span className="divider">|</span>
-                <a href="/accessibility">
-                  <UserRound size={12} color="#818cf8" style={{ verticalAlign: 'middle', marginRight: 4 }} />
-                  Accessibility
-                </a>
+                <a href="/accessibility">♿ Accessibility</a>
                 <span className="divider">|</span>
                 <a href="/support">Help</a>
               </div>
@@ -401,26 +349,11 @@ const EnhancedFooter = ({ siteConfig }) => {
           </div>
 
           <div className="footer-trust-badges">
-            <span className="trust-badge">
-              <BookOpen size={12} color="#818cf8" style={{ verticalAlign: 'middle', marginRight: 4 }} />
-              Quality Education
-            </span>
-            <span className="trust-badge">
-              <GraduationCap size={12} color="#fbbf24" style={{ verticalAlign: 'middle', marginRight: 4 }} />
-              Expert Tutors
-            </span>
-            <span className="trust-badge">
-              <Lock size={12} color="#22c55e" style={{ verticalAlign: 'middle', marginRight: 4 }} />
-              Secure Platform
-            </span>
-            <span className="trust-badge">
-              <Globe size={12} color="#2dd4bf" style={{ verticalAlign: 'middle', marginRight: 4 }} />
-              Global Reach
-            </span>
-            <span className="trust-badge">
-              <Star size={12} color="#fbbf24" fill="#fbbf24" style={{ verticalAlign: 'middle', marginRight: 4 }} />
-              4.9/5 Rating
-            </span>
+            <span className="trust-badge">📚 Quality Education</span>
+            <span className="trust-badge">🎓 Expert Tutors</span>
+            <span className="trust-badge">🔒 Secure Platform</span>
+            <span className="trust-badge">🌍 Global Reach</span>
+            <span className="trust-badge">⭐ 4.9/5 Rating</span>
           </div>
         </div>
       </div>
@@ -489,6 +422,7 @@ function Home() {
 
   // ============================================
   // FETCH ACTIVE HOMEPAGE HERO IMAGE
+  // Uses the backend endpoint for the home-hero bucket.
   // ============================================
   useEffect(() => {
     const fetchHomeHeroImage = async () => {
@@ -714,6 +648,7 @@ function Home() {
 
   // ============================================
   // TUTOR HOME VIEW
+  // Existing tutor design remains unchanged.
   // ============================================
   if (isAuthenticated && isTutor) {
     return (
@@ -722,10 +657,7 @@ function Home() {
           <div className="hero-content">
             <h1 className="hero-title">
               Welcome back, <br />
-              <span className="highlight">
-                {getUserName()}!{' '}
-                <GraduationCap size={36} color="#fbbf24" style={{ verticalAlign: 'middle' }} />
-              </span>
+              <span className="highlight">{getUserName()}! 👨‍🏫</span>
             </h1>
 
             <p className="hero-subtitle">
@@ -739,7 +671,12 @@ function Home() {
               >
                 <span className="action-cta-left">
                   <span className="icon">
-                    <LayoutDashboard size={22} color="#ffffff" />
+                    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <rect x="3" y="3" width="7" height="9" rx="2"/>
+                      <rect x="14" y="3" width="7" height="5" rx="2"/>
+                      <rect x="14" y="12" width="7" height="9" rx="2"/>
+                      <rect x="3" y="16" width="7" height="5" rx="2"/>
+                    </svg>
                   </span>
                   <span>
                     <div className="label">Go to Dashboard</div>
@@ -758,7 +695,10 @@ function Home() {
                 onClick={() => navigate('/tutor/earnings')}
               >
                 <span className="tile">
-                  <TrendingUp size={22} color="#fbbf24" />
+                  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M3 17l6-6 4 4 8-8"/>
+                    <path d="M15 7h6v6"/>
+                  </svg>
                 </span>
                 <span className="text">
                   <div className="label">View Earnings</div>
@@ -774,7 +714,11 @@ function Home() {
                 onClick={() => navigate('/my-sessions')}
               >
                 <span className="tile">
-                  <CalendarDays size={22} color="#2dd4bf" />
+                  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <rect x="3" y="4" width="18" height="17" rx="3"/>
+                    <path d="M8 2v4M16 2v4M3 10h18"/>
+                    <circle cx="12" cy="15" r="1.4" fill="currentColor"/>
+                  </svg>
                 </span>
                 <span className="text">
                   <div className="label">My Sessions</div>
@@ -790,7 +734,11 @@ function Home() {
                 onClick={() => navigate('/profile')}
               >
                 <span className="tile">
-                  <Users size={22} color="#f472b6" />
+                  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <circle cx="9" cy="8" r="3.5"/>
+                    <path d="M2.5 20c0-3.6 2.9-6 6.5-6s6.5 2.4 6.5 6"/>
+                    <path d="M16 4.6a3.5 3.5 0 010 6.8M18 14.3c2.2.6 3.5 2.4 3.5 5.2"/>
+                  </svg>
                 </span>
                 <span className="text">
                   <div className="label">Update Profile</div>
@@ -819,10 +767,7 @@ function Home() {
               </div>
               <div className="stat-divider"></div>
               <div className="stat-item">
-                <span className="stat-number">
-                  {tutorStats.avgRating}
-                  <Star size={20} color="#fbbf24" fill="#fbbf24" style={{ verticalAlign: 'middle', marginLeft: 4 }} />
-                </span>
+                <span className="stat-number">{tutorStats.avgRating}⭐</span>
                 <span className="stat-label-white">Rating</span>
               </div>
             </div>
@@ -836,10 +781,7 @@ function Home() {
         <section className="quick-actions-section">
           <div className="container">
             <div className="section-header">
-              <span className="section-tag">
-                <Sparkles size={13} style={{ verticalAlign: 'middle', marginRight: 4 }} />
-                Quick Actions
-              </span>
+              <span className="section-tag">🚀 Quick Actions</span>
               <h2>Manage your tutoring</h2>
               <p>Everything you need to manage your tutoring business</p>
             </div>
@@ -847,7 +789,11 @@ function Home() {
             <div className="action-actions">
               <button className="action-card earnings" onClick={() => navigate('/tutor/students')}>
                 <span className="tile">
-                  <Users size={22} color="#fbbf24" />
+                  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/>
+                    <circle cx="9" cy="7" r="4"/>
+                    <path d="M23 21v-2a4 4 0 00-3-3.87"/>
+                  </svg>
                 </span>
                 <span className="text">
                   <div className="label">View Students</div>
@@ -860,7 +806,10 @@ function Home() {
 
               <button className="action-card sessions" onClick={() => navigate('/tutor/earnings')}>
                 <span className="tile">
-                  <TrendingUp size={22} color="#2dd4bf" />
+                  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M3 17l6-6 4 4 8-8"/>
+                    <path d="M15 7h6v6"/>
+                  </svg>
                 </span>
                 <span className="text">
                   <div className="label">Check Earnings</div>
@@ -873,7 +822,10 @@ function Home() {
 
               <button className="action-card team" onClick={() => navigate('/my-sessions')}>
                 <span className="tile">
-                  <CalendarDays size={22} color="#f472b6" />
+                  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <rect x="3" y="4" width="18" height="17" rx="3"/>
+                    <path d="M8 2v4M16 2v4M3 10h18"/>
+                  </svg>
                 </span>
                 <span className="text">
                   <div className="label">Manage Sessions</div>
@@ -886,7 +838,10 @@ function Home() {
 
               <button className="action-card earnings" onClick={() => navigate('/profile')}>
                 <span className="tile">
-                  <UserRound size={22} color="#fbbf24" />
+                  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <circle cx="12" cy="8" r="4"/>
+                    <path d="M4 21c0-4 3.6-7 8-7s8 3 8 7"/>
+                  </svg>
                 </span>
                 <span className="text">
                   <div className="label">Update Profile</div>
@@ -910,58 +865,38 @@ function Home() {
 
             <div className="features-grid">
               <div className="feature-card feature-card-1">
-                <div className="feature-icon">
-                  <Target size={40} color="#818cf8" />
-                </div>
+                <div className="feature-icon">🎯</div>
                 <h3>24/7 Global Access</h3>
                 <p>Learn anytime, anywhere. Our 9-region infrastructure ensures low-latency connections for students worldwide.</p>
                 <div className="feature-meta">
-                  <span>
-                    <Clock size={13} color="#fbbf24" style={{ verticalAlign: 'middle', marginRight: 4 }} />
-                    &lt;30ms latency
-                  </span>
+                  <span>⚡ &lt;30ms latency</span>
                 </div>
               </div>
 
               <div className="feature-card feature-card-2">
-                <div className="feature-icon">
-                  <PenTool size={40} color="#f472b6" />
-                </div>
+                <div className="feature-icon">📐</div>
                 <h3>Interactive Whiteboard</h3>
                 <p>Real-time collaborative solving with ultra-low-bandwidth vector rendering — only 15MB per hour.</p>
                 <div className="feature-meta">
-                  <span>
-                    <PenTool size={13} color="#f472b6" style={{ verticalAlign: 'middle', marginRight: 4 }} />
-                    WebGL powered
-                  </span>
+                  <span>🖊️ WebGL powered</span>
                 </div>
               </div>
 
               <div className="feature-card feature-card-3">
-                <div className="feature-icon">
-                  <Globe size={40} color="#2dd4bf" />
-                </div>
+                <div className="feature-icon">🌍</div>
                 <h3>Global Curriculum Alignment</h3>
                 <p>South Africa CAPS/IEB, US Algebra/AP Calculus, UK A-Levels, Australia, Singapore, and more.</p>
                 <div className="feature-meta">
-                  <span>
-                    <BookOpen size={13} color="#818cf8" style={{ verticalAlign: 'middle', marginRight: 4 }} />
-                    7+ curricula
-                  </span>
+                  <span>📚 7+ curricula</span>
                 </div>
               </div>
 
               <div className="feature-card feature-card-4">
-                <div className="feature-icon">
-                  <ShieldCheck size={40} color="#22c55e" />
-                </div>
+                <div className="feature-icon">🔒</div>
                 <h3>Enterprise-Grade Security</h3>
                 <p>AES-256 encryption, zero-knowledge PII masking, and compliance with POPIA &amp; GDPR standards.</p>
                 <div className="feature-meta">
-                  <span>
-                    <Shield size={13} color="#22c55e" style={{ verticalAlign: 'middle', marginRight: 4 }} />
-                    GDPR &amp; POPIA
-                  </span>
+                  <span>🛡️ GDPR &amp; POPIA</span>
                 </div>
               </div>
             </div>
@@ -1024,15 +959,15 @@ function Home() {
                 <h2>9-region global infrastructure</h2>
                 <p>Our platform spans 9 AWS regions worldwide, ensuring low-latency connections and 99.99% availability.</p>
                 <ul className="infrastructure-list">
-                  <li>Cape Town (af-south-1) — Primary</li>
-                  <li>São Paulo (sa-east-1)</li>
-                  <li>Singapore (ap-southeast-1)</li>
-                  <li>Ireland (eu-west-1)</li>
-                  <li>N. Virginia (us-east-1)</li>
-                  <li>Oregon (us-west-2)</li>
-                  <li>Tokyo (ap-northeast-1)</li>
-                  <li>Mumbai (ap-south-1)</li>
-                  <li>Sydney (ap-southeast-2)</li>
+                  <li>🇿🇦 Cape Town (af-south-1) — Primary</li>
+                  <li>🇧🇷 São Paulo (sa-east-1)</li>
+                  <li>🇸🇬 Singapore (ap-southeast-1)</li>
+                  <li>🇮🇪 Ireland (eu-west-1)</li>
+                  <li>🇺🇸 N. Virginia (us-east-1)</li>
+                  <li>🇺🇸 Oregon (us-west-2)</li>
+                  <li>🇯🇵 Tokyo (ap-northeast-1)</li>
+                  <li>🇮🇳 Mumbai (ap-south-1)</li>
+                  <li>🇦🇺 Sydney (ap-southeast-2)</li>
                 </ul>
               </div>
 
@@ -1061,7 +996,12 @@ function Home() {
               >
                 <span className="action-cta-left">
                   <span className="icon">
-                    <LayoutDashboard size={22} color="#ffffff" />
+                    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <rect x="3" y="3" width="7" height="9" rx="2"/>
+                      <rect x="14" y="3" width="7" height="5" rx="2"/>
+                      <rect x="14" y="12" width="7" height="9" rx="2"/>
+                      <rect x="3" y="16" width="7" height="5" rx="2"/>
+                    </svg>
                   </span>
                   <span>
                     <div className="label">Go to Dashboard</div>
@@ -1094,10 +1034,7 @@ function Home() {
             <>
               <h1 className="hero-title">
                 Welcome back, <br />
-                <span className="highlight">
-                  {getUserName()}!{' '}
-                  <Sparkles size={36} color="#fbbf24" style={{ verticalAlign: 'middle' }} />
-                </span>
+                <span className="highlight">{getUserName()}! 👋</span>
               </h1>
 
               <p className="hero-subtitle">
@@ -1122,9 +1059,13 @@ function Home() {
           <div className="action-actions" style={{ maxWidth: 420, marginTop: 34 }}>
             {isAuthenticated ? (
               <>
+                {/* Continue Learning — same card style as the others, no blue gradient, no arrow circle */}
                 <button className="action-card learn" onClick={() => navigate('/subjects')}>
                   <span className="tile">
-                    <BookOpen size={22} color="#818cf8" />
+                    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M4 19.5A2.5 2.5 0 016.5 17H20"/>
+                      <path d="M6.5 2H20v20H6.5A2.5 2.5 0 014 19.5v-15A2.5 2.5 0 016.5 2z"/>
+                    </svg>
                   </span>
                   <span className="text">
                     <div className="label">Continue Learning</div>
@@ -1137,7 +1078,10 @@ function Home() {
 
                 <button className="action-card earnings" onClick={() => navigate('/profile')}>
                   <span className="tile">
-                    <UserRound size={22} color="#fbbf24" />
+                    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <circle cx="12" cy="8" r="4"/>
+                      <path d="M4 21c0-4 3.6-7 8-7s8 3 8 7"/>
+                    </svg>
                   </span>
                   <span className="text">
                     <div className="label">My Profile</div>
@@ -1150,7 +1094,11 @@ function Home() {
 
                 <button className="action-card sessions" onClick={() => navigate('/tutors')}>
                   <span className="tile">
-                    <Users size={22} color="#2dd4bf" />
+                    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/>
+                      <circle cx="9" cy="7" r="4"/>
+                      <path d="M23 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75"/>
+                    </svg>
                   </span>
                   <span className="text">
                     <div className="label">Find a Tutor</div>
@@ -1169,7 +1117,9 @@ function Home() {
                 >
                   <span className="action-cta-left">
                     <span className="icon">
-                      <Plus size={22} color="#ffffff" />
+                      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M12 5v14M5 12h14"/>
+                      </svg>
                     </span>
                     <span>
                       <div className="label">Start a free trial</div>
@@ -1188,7 +1138,10 @@ function Home() {
                   onClick={() => navigate('/tutors')}
                 >
                   <span className="tile">
-                    <Users size={22} color="#f472b6" />
+                    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <circle cx="9" cy="8" r="3.5"/>
+                      <path d="M2.5 20c0-3.6 2.9-6 6.5-6s6.5 2.4 6.5 6"/>
+                    </svg>
                   </span>
                   <span className="text">
                     <div className="label">Meet our tutors</div>
@@ -1204,7 +1157,10 @@ function Home() {
                   onClick={() => navigate('/login')}
                 >
                   <span className="tile">
-                    <LogIn size={22} color="#2dd4bf" />
+                    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M15 3h4a2 2 0 012 2v14a2 2 0 01-2 2h-4"/>
+                      <path d="M10 17l5-5-5-5M15 12H3"/>
+                    </svg>
                   </span>
                   <span className="text">
                     <div className="label">Sign in</div>
@@ -1283,7 +1239,10 @@ function Home() {
             <div className="action-actions">
               <button className="action-card earnings" onClick={() => navigate('/subjects')}>
                 <span className="tile">
-                  <BookOpen size={22} color="#fbbf24" />
+                  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M4 19.5A2.5 2.5 0 016.5 17H20"/>
+                    <path d="M6.5 2H20v20H6.5A2.5 2.5 0 014 19.5v-15A2.5 2.5 0 016.5 2z"/>
+                  </svg>
                 </span>
                 <span className="text">
                   <div className="label">Browse Subjects</div>
@@ -1296,7 +1255,10 @@ function Home() {
 
               <button className="action-card team" onClick={() => navigate('/profile')}>
                 <span className="tile">
-                  <UserRound size={22} color="#f472b6" />
+                  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <circle cx="12" cy="8" r="4"/>
+                    <path d="M4 21c0-4 3.6-7 8-7s8 3 8 7"/>
+                  </svg>
                 </span>
                 <span className="text">
                   <div className="label">Account Settings</div>
@@ -1309,7 +1271,10 @@ function Home() {
 
               <button className="action-card earnings" onClick={() => navigate('/resources')}>
                 <span className="tile">
-                  <BookMarked size={22} color="#fbbf24" />
+                  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M2 3h6a4 4 0 014 4v14a3 3 0 00-3-3H2z"/>
+                    <path d="M22 3h-6a4 4 0 00-4 4v14a3 3 0 013-3h7z"/>
+                  </svg>
                 </span>
                 <span className="text">
                   <div className="label">Learning Resources</div>
@@ -1348,58 +1313,38 @@ function Home() {
 
           <div className="features-grid">
             <div className="feature-card feature-card-1">
-              <div className="feature-icon">
-                <Target size={40} color="#818cf8" />
-              </div>
+              <div className="feature-icon">🎯</div>
               <h3>24/7 Global Access</h3>
               <p>Learn anytime, anywhere. Our 9-region infrastructure ensures low-latency connections for students worldwide.</p>
               <div className="feature-meta">
-                <span>
-                  <Clock size={13} color="#fbbf24" style={{ verticalAlign: 'middle', marginRight: 4 }} />
-                  &lt;30ms latency
-                </span>
+                <span>⚡ &lt;30ms latency</span>
               </div>
             </div>
 
             <div className="feature-card feature-card-2">
-              <div className="feature-icon">
-                <PenTool size={40} color="#f472b6" />
-              </div>
+              <div className="feature-icon">📐</div>
               <h3>Interactive Whiteboard</h3>
               <p>Real-time collaborative solving with ultra-low-bandwidth vector rendering — only 15MB per hour.</p>
               <div className="feature-meta">
-                <span>
-                  <PenTool size={13} color="#f472b6" style={{ verticalAlign: 'middle', marginRight: 4 }} />
-                  WebGL powered
-                </span>
+                <span>🖊️ WebGL powered</span>
               </div>
             </div>
 
             <div className="feature-card feature-card-3">
-              <div className="feature-icon">
-                <Globe size={40} color="#2dd4bf" />
-              </div>
+              <div className="feature-icon">🌍</div>
               <h3>Global Curriculum Alignment</h3>
               <p>South Africa CAPS/IEB, US Algebra/AP Calculus, UK A-Levels, Australia, Singapore, and more.</p>
               <div className="feature-meta">
-                <span>
-                  <BookOpen size={13} color="#818cf8" style={{ verticalAlign: 'middle', marginRight: 4 }} />
-                  7+ curricula
-                </span>
+                <span>📚 7+ curricula</span>
               </div>
             </div>
 
             <div className="feature-card feature-card-4">
-              <div className="feature-icon">
-                <ShieldCheck size={40} color="#22c55e" />
-              </div>
+              <div className="feature-icon">🔒</div>
               <h3>Enterprise-Grade Security</h3>
               <p>AES-256 encryption, zero-knowledge PII masking, and compliance with POPIA &amp; GDPR standards.</p>
               <div className="feature-meta">
-                <span>
-                  <Shield size={13} color="#22c55e" style={{ verticalAlign: 'middle', marginRight: 4 }} />
-                  GDPR &amp; POPIA
-                </span>
+                <span>🛡️ GDPR &amp; POPIA</span>
               </div>
             </div>
           </div>
@@ -1419,10 +1364,7 @@ function Home() {
           <div className="container">
             <div className="progress-content">
               <div className="progress-text">
-                <span className="section-tag">
-                  <BarChart3 size={13} style={{ verticalAlign: 'middle', marginRight: 4 }} />
-                  Your Progress
-                </span>
+                <span className="section-tag">Your Progress</span>
                 <h2>Track your learning journey</h2>
                 <p>Stay motivated with real-time progress tracking and personalized learning recommendations.</p>
               </div>
@@ -1505,15 +1447,15 @@ function Home() {
               <p>Our platform spans 9 AWS regions worldwide, ensuring low-latency connections and 99.99% availability.</p>
 
               <ul className="infrastructure-list">
-                <li>Cape Town (af-south-1) — Primary</li>
-                <li>São Paulo (sa-east-1)</li>
-                <li>Singapore (ap-southeast-1)</li>
-                <li>Ireland (eu-west-1)</li>
-                <li>N. Virginia (us-east-1)</li>
-                <li>Oregon (us-west-2)</li>
-                <li>Tokyo (ap-northeast-1)</li>
-                <li>Mumbai (ap-south-1)</li>
-                <li>Sydney (ap-southeast-2)</li>
+                <li>🇿🇦 Cape Town (af-south-1) — Primary</li>
+                <li>🇧🇷 São Paulo (sa-east-1)</li>
+                <li>🇸🇬 Singapore (ap-southeast-1)</li>
+                <li>🇮🇪 Ireland (eu-west-1)</li>
+                <li>🇺🇸 N. Virginia (us-east-1)</li>
+                <li>🇺🇸 Oregon (us-west-2)</li>
+                <li>🇯🇵 Tokyo (ap-northeast-1)</li>
+                <li>🇮🇳 Mumbai (ap-south-1)</li>
+                <li>🇦🇺 Sydney (ap-southeast-2)</li>
               </ul>
             </div>
 
@@ -1540,7 +1482,10 @@ function Home() {
 
                 <button className="action-card learn" onClick={() => navigate('/subjects')}>
                   <span className="tile">
-                    <BookOpen size={22} color="#818cf8" />
+                    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M4 19.5A2.5 2.5 0 016.5 17H20"/>
+                      <path d="M6.5 2H20v20H6.5A2.5 2.5 0 014 19.5v-15A2.5 2.5 0 016.5 2z"/>
+                    </svg>
                   </span>
                   <span className="text">
                     <div className="label">Browse Subjects</div>
@@ -1562,7 +1507,9 @@ function Home() {
                 >
                   <span className="action-cta-left">
                     <span className="icon">
-                      <Plus size={22} color="#ffffff" />
+                      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M12 5v14M5 12h14"/>
+                      </svg>
                     </span>
                     <span>
                       <div className="label">Start Your Free Trial</div>

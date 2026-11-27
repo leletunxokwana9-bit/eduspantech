@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { authService } from '../services/authService';
@@ -641,11 +642,11 @@ const Login = () => {
 
   if (isCheckingSession) {
     return (
-      <div className="lg-page">
-        <div className="lg-shell">
-          <div className="lg-panel">
-            <div className="lg-card" style={{ textAlign: 'center' }}>
-              <div className="lg-loader" />
+      <div className="login-wrapper">
+        <div className="login-container">
+          <div className="login-right">
+            <div className="login-card" style={{ textAlign: 'center' }}>
+              <div className="loading-spinner" />
               <p>Checking your session...</p>
             </div>
           </div>
@@ -654,39 +655,55 @@ const Login = () => {
     );
   }
 
-  const formLocked = loading || !!bannedInfo || inactive || !!lockedInfo;
-
   // ============================================
   // LOGIN PAGE
   // ============================================
 
   return (
-    <div className="lg-page">
+    <div className="login-wrapper">
 
-      <div className="lg-shell">
+      <div className="login-bg">
+        <div className="math-symbols">
+          <span className="math-symbol">∫</span>
+          <span className="math-symbol">∑</span>
+          <span className="math-symbol">π</span>
+          <span className="math-symbol">√</span>
+          <span className="math-symbol">∞</span>
+          <span className="math-symbol">∂</span>
+          <span className="math-symbol">Δ</span>
+          <span className="math-symbol">θ</span>
+        </div>
 
-        {/* ===== HERO (left) — one shared pool, like the Home hero ===== */}
-        <section className="lg-hero">
+        <div className="gradient-orb orb-1" />
+        <div className="gradient-orb orb-2" />
+        <div className="gradient-orb orb-3" />
+      </div>
 
-          <div className="lg-copy">
-            <h1 className="lg-headline">
+      <div className="login-container login-container-new">
+
+        <section className="login-left">
+
+          <div className="hero-copy">
+            <h1 className="brand-headline">
               Learn. Practice.
-              <span className="lg-accent"> Excel.</span>
+              <span className="highlight"> Excel.</span>
             </h1>
 
-            <p className="lg-lead">
+            <p className="brand-description">
               Get expert online tutoring, revision resources and
               personalised learning — anytime, anywhere.
             </p>
           </div>
 
-          <div className="lg-stats">
+          {/* Feature list removed */}
 
-            <div className="lg-stat">
-              <span className="lg-stat-icon">🎓</span>
+          <div className="brand-stats">
+
+            <div className="stat">
+              <span className="stat-icon">🎓</span>
 
               <span
-                className="lg-stat-num"
+                className="stat-number"
                 title={
                   studentCount !== null
                     ? `${studentCount.toLocaleString()} registered students`
@@ -696,95 +713,101 @@ const Login = () => {
                 {formatStudentCount(studentCount)}
               </span>
 
-              <span className="lg-stat-label">Students</span>
+              <span className="stat-label">Students</span>
             </div>
 
-            <div className="lg-stat-sep" />
+            <div className="stat-divider" />
 
-            <div className="lg-stat">
-              <span className="lg-stat-icon">★</span>
-              <span className="lg-stat-num">4.9/5</span>
-              <span className="lg-stat-label">Satisfaction Rate</span>
+            <div className="stat">
+              <span className="stat-icon">★</span>
+              <span className="stat-number">4.9/5</span>
+              <span className="stat-label">Satisfaction Rate</span>
             </div>
 
-            <div className="lg-stat-sep" />
+            <div className="stat-divider" />
 
-            <div className="lg-stat">
-              <span className="lg-stat-icon">♜</span>
-              <span className="lg-stat-num">26</span>
-              <span className="lg-stat-label">SA Universities</span>
+            <div className="stat">
+              <span className="stat-icon">♜</span>
+              <span className="stat-number">26</span>
+              <span className="stat-label">SA Universities</span>
             </div>
 
           </div>
 
-          {!heroImageLoading && heroImage?.url && (
-            <div className="lg-visual">
+          <div className="login-hero-image">
+
+            {!heroImageLoading && heroImage?.url && (
               <img
                 src={heroImage.url}
                 alt={heroImage.alt_text || 'EduSpantech student learning'}
-                className="lg-visual-img"
+                className="hero-student-image"
               />
-            </div>
-          )}
+            )}
+
+            <div className="hero-image-overlay" />
+
+          </div>
 
         </section>
 
-        {/* ===== SIGN IN (right) ===== */}
-        <section className="lg-panel">
+        <section className="login-right">
 
-          <div className="lg-card">
+          <div className="login-card">
 
-            <div className="lg-head">
+            <div className="login-header">
               <h2>Welcome Back</h2>
               <p>Sign in to continue your learning journey</p>
             </div>
 
-            <div className="lg-tabs">
+            <div className="role-tabs">
 
               <button
                 type="button"
-                className={`lg-tab ${loginRole === 'student' ? 'is-active' : ''}`}
+                className={`role-tab ${loginRole === 'student' ? 'active' : ''}`}
                 onClick={() => handleRoleChange('student')}
               >
-                <span className="lg-tab-icon">🎓</span>
+                <span className="role-icon">🎓</span>
                 Student
               </button>
 
               <button
                 type="button"
-                className={`lg-tab ${loginRole === 'tutor' ? 'is-active' : ''}`}
+                className={`role-tab ${loginRole === 'tutor' ? 'active' : ''}`}
                 onClick={() => handleRoleChange('tutor')}
               >
-                <span className="lg-tab-icon">♟</span>
+                <span className="role-icon">♟</span>
                 Tutor
               </button>
 
               <Link
                 to="/parent"
-                className="lg-tab lg-tab--link"
+                className="role-tab parent-role-tab"
+                onClick={() => {
+                  console.log('Navigating to public Parent Home: /parent');
+                }}
               >
-                <span className="lg-tab-icon">🛡</span>
+                <span className="role-icon">🛡</span>
                 Parent/Guardian
               </Link>
 
             </div>
 
             {roleError && (
-              <div className="lg-notice lg-notice--error">
+              <div className="login-role-error">
                 <span>⚠️</span>
                 {roleError}
               </div>
             )}
 
             {bannedInfo && (
-              <div className="lg-notice lg-notice--banned">
-                <div className="lg-notice-icon">🚫</div>
+              <div className="login-banned-notice">
+                <div className="banned-icon">🚫</div>
 
-                <div className="lg-notice-body">
+                <div className="banned-content">
                   <p><strong>Account suspended</strong></p>
                   <p>{bannedInfo.message}</p>
 
-                  <p className="lg-notice-help">
+                  <p className="banned-help">
                     If you believe this is a mistake, contact{' '}
                     <a href="mailto:support@eduspantech.com">
                       support@eduspantech.com
@@ -795,10 +818,10 @@ const Login = () => {
             )}
 
             {inactive && (
-              <div className="lg-notice lg-notice--inactive">
-                <div className="lg-notice-icon">⏸️</div>
+              <div className="login-inactive-notice">
+                <div className="inactive-icon">⏸️</div>
 
-                <div className="lg-notice-body">
+                <div className="inactive-content">
                   <p><strong>Account inactive</strong></p>
 
                   <p>
@@ -806,7 +829,7 @@ const Login = () => {
                     You cannot sign in at this time.
                   </p>
 
-                  <p className="lg-notice-help">
+                  <p className="inactive-help">
                     Contact{' '}
                     <a href="mailto:support@eduspantech.com">
                       support@eduspantech.com
@@ -818,10 +841,10 @@ const Login = () => {
             )}
 
             {lockedInfo && (
-              <div className="lg-notice lg-notice--locked">
-                <div className="lg-notice-icon">🔒</div>
+              <div className="login-locked-notice">
+                <div className="locked-icon">🔒</div>
 
-                <div className="lg-notice-body">
+                <div className="locked-content">
                   <p><strong>Too many failed attempts</strong></p>
 
                   <p>
@@ -837,10 +860,10 @@ const Login = () => {
             )}
 
             {needsVerification && (
-              <div className="lg-notice lg-notice--verify">
-                <div className="lg-notice-icon">📧</div>
+              <div className="login-verification-notice">
+                <div className="verification-icon">📧</div>
 
-                <div className="lg-notice-body">
+                <div className="verification-content">
                   <p><strong>Verify your email address</strong></p>
 
                   <p>
@@ -848,12 +871,12 @@ const Login = () => {
                     <strong>{unverifiedEmail}</strong>
                   </p>
 
-                  <div className="lg-verify-actions">
+                  <div className="verification-actions">
                     <button
                       type="button"
                       onClick={handleResendVerification}
                       disabled={loading}
-                      className="lg-resend"
+                      className="resend-btn"
                     >
                       {loading
                         ? 'Sending...'
@@ -861,13 +884,13 @@ const Login = () => {
                     </button>
 
                     {resendSuccess && (
-                      <span className="lg-resend-ok">
+                      <span className="resend-success">
                         ✓ Email sent! Check your inbox.
                       </span>
                     )}
                   </div>
 
-                  <p className="lg-notice-help">
+                  <p className="verification-help">
                     💡 Check your spam folder if you don't see the email.
                   </p>
                 </div>
@@ -880,22 +903,22 @@ const Login = () => {
               !bannedInfo &&
               !inactive &&
               !lockedInfo && (
-                <div className="lg-notice lg-notice--error">
-                  <span className="lg-error-icon">✕</span>
+                <div className="login-error">
+                  <span className="error-icon">✕</span>
 
                   {error}
 
                   {attemptsLeft !== null && attemptsLeft > 0 && (
-                    <span className="lg-attempts">
+                    <span className="attempts-left">
                       {' '}({attemptsLeft} attempts left)
                     </span>
                   )}
                 </div>
               )}
 
-            <form onSubmit={handleSubmit} className="lg-form">
+            <form onSubmit={handleSubmit} className="login-form">
 
-              <div className="lg-field lg-field--rel">
+              <div className="form-group relative">
 
                 <label>Email Address</label>
 
@@ -917,33 +940,33 @@ const Login = () => {
                   placeholder="you@example.com"
                   required
                   autoComplete="username"
-                  disabled={formLocked}
+                  disabled={loading || !!bannedInfo || inactive || !!lockedInfo}
                 />
 
                 {showSavedAccounts && savedAccounts.length > 0 && (
                   <div
-                    className="lg-saved"
+                    className="saved-accounts-dropdown"
                     ref={dropdownRef}
                   >
-                    <div className="lg-saved-head">
+                    <div className="saved-accounts-header">
                       Saved Accounts
                     </div>
 
                     {savedAccounts.map((account, idx) => (
                       <div
                         key={account.email || idx}
-                        className="lg-saved-item"
+                        className="saved-account-item"
                         onMouseDown={(e) => {
                           e.preventDefault();
                           handleSelectAccount(account);
                         }}
                       >
-                        <div className="lg-avatar">
+                        <div className="account-avatar">
                           {account.avatar ? (
                             <img
                               src={account.avatar}
                               alt={account.name}
-                              className="lg-avatar-img"
+                              className="custom-modal-avatar-img"
                               onError={(e) => {
                                 e.currentTarget.style.display = 'none';
                               }}
@@ -953,12 +976,12 @@ const Login = () => {
                           )}
                         </div>
 
-                        <div className="lg-saved-info">
-                          <span className="lg-saved-email">
+                        <div className="account-info">
+                          <span className="account-email">
                             {account.email}
                           </span>
 
-                          <span className="lg-saved-name">
+                          <span className="account-name">
                             {account.name}
                           </span>
                         </div>
@@ -969,11 +992,11 @@ const Login = () => {
 
               </div>
 
-              <div className="lg-field">
+              <div className="form-group">
 
                 <label>Password</label>
 
-                <div className="lg-pass">
+                <div className="password-field">
 
                   <input
                     ref={passwordInputRef}
@@ -983,15 +1006,14 @@ const Login = () => {
                     placeholder="Enter your password"
                     required
                     autoComplete="current-password"
-                    disabled={formLocked}
+                    disabled={loading || !!bannedInfo || inactive || !!lockedInfo}
                   />
 
                   <button
                     type="button"
-                    className="lg-eye"
+                    className="toggle-password"
                     onClick={() => setShowPassword(!showPassword)}
-                    disabled={formLocked}
-                    aria-label={showPassword ? 'Hide password' : 'Show password'}
+                    disabled={loading || !!bannedInfo || inactive || !!lockedInfo}
                   >
                     {showPassword ? '🙈' : '👁️'}
                   </button>
@@ -999,20 +1021,20 @@ const Login = () => {
                 </div>
               </div>
 
-              <div className="lg-options">
+              <div className="form-options">
 
-                <label className="lg-remember">
+                <label className="remember-me">
                   <input
                     type="checkbox"
                     checked={rememberMe}
                     onChange={(e) => setRememberMe(e.target.checked)}
                   />
 
-                  <span className="lg-check" />
+                  <span className="checkmark" />
                   Remember me
                 </label>
 
-                <Link to="/forgot-password" className="lg-link">
+                <Link to="/forgot-password" className="forgot-link">
                   Forgot password?
                 </Link>
 
@@ -1020,12 +1042,17 @@ const Login = () => {
 
               <button
                 type="submit"
-                disabled={formLocked}
-                className="lg-submit"
+                disabled={
+                  loading ||
+                  !!bannedInfo ||
+                  inactive ||
+                  !!lockedInfo
+                }
+                className="login-button"
               >
                 {loading ? (
                   <>
-                    <span className="lg-spin" />
+                    <span className="spinner" />
                     Signing in...
                   </>
                 ) : lockedInfo ? (
@@ -1041,7 +1068,7 @@ const Login = () => {
 
             </form>
 
-            <div className="lg-foot">
+            <div className="login-footer">
               <p>
                 Don't have an account?{' '}
                 <Link to="/register">Create an account →</Link>
@@ -1055,8 +1082,8 @@ const Login = () => {
       </div>
 
       {showBlockedModal && (
-        <div className="lg-overlay">
-          <div className="lg-modal">
+        <div className="save-password-overlay">
+          <div className="save-password-modal">
             <div style={{ fontSize: '48px', marginBottom: '16px' }}>
               🚫
             </div>
@@ -1070,7 +1097,7 @@ const Login = () => {
 
             <button
               type="button"
-              className="lg-btn-primary"
+              className="btn-save"
               onClick={() => setShowBlockedModal(false)}
               style={{ width: '100%' }}
             >
@@ -1081,48 +1108,47 @@ const Login = () => {
       )}
 
       {showSavePrompt && (
-        <div className="lg-overlay">
+        <div className="save-password-overlay">
 
-          <div className="lg-modal">
+          <div className="save-password-modal">
 
             <button
               type="button"
-              className="lg-modal-x"
+              className="modal-close-btn"
               onClick={handleNeverSave}
-              aria-label="Close"
             >
               ×
             </button>
 
-            <div className="lg-modal-head">
-              <div className="lg-modal-icon">
-                <span className="lg-key">🔑</span>
+            <div className="save-password-header">
+              <div className="save-password-icons">
+                <span className="key-icon">🔑</span>
               </div>
 
               <h3>Save login details?</h3>
             </div>
 
-            <div className="lg-modal-body">
+            <div className="save-password-body">
 
               <p>
                 Save your email to log in faster next time on this device.
               </p>
 
-              <div className="lg-modal-row">
+              <div className="input-row">
                 <label>Username</label>
 
-                <div className="lg-modal-box">
+                <div className="input-box">
                   <span>{email}</span>
                 </div>
               </div>
 
             </div>
 
-            <div className="lg-modal-actions">
+            <div className="save-password-actions">
 
               <button
                 type="button"
-                className="lg-btn-ghost"
+                className="btn-never"
                 onClick={handleNeverSave}
               >
                 Never
@@ -1130,7 +1156,7 @@ const Login = () => {
 
               <button
                 type="button"
-                className="lg-btn-primary"
+                className="btn-save"
                 onClick={handleSavePassword}
               >
                 Save
@@ -1138,7 +1164,7 @@ const Login = () => {
 
             </div>
 
-            <p className="lg-modal-foot">
+            <p className="save-password-footer">
               Your email will be saved locally on this device
               for faster login.
             </p>

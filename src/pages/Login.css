@@ -9,7 +9,7 @@
 /* ----- Tokens: DARK (default) ----- */
 .login-wrapper {
   --lg-bg: #0a0e1a;
-  --lg-panel: #0d1222;
+  --lg-panel: #0a0e1a;
   --lg-surface: #141b2d;
   --lg-border: rgba(255, 255, 255, 0.12);
   --lg-border-soft: rgba(255, 255, 255, 0.07);
@@ -104,8 +104,9 @@ html[data-theme="light"] :has(.login-wrapper) {
   justify-content: center;
   gap: 40px;
   min-width: 0;
-  padding: clamp(32px, 6vw, 72px) clamp(24px, 5vw, 64px);
+  padding: clamp(32px, 6vw, 72px) clamp(8px, 2vw, 24px) clamp(32px, 6vw, 72px) clamp(24px, 5vw, 72px);
   background: transparent;
+  border: 0;
   overflow: visible;
 }
 
@@ -213,9 +214,9 @@ html[data-theme="light"] :has(.login-wrapper) {
   align-items: center;
   justify-content: center;
   min-width: 0;
-  padding: clamp(28px, 5vw, 64px) clamp(20px, 5vw, 64px);
-  background: var(--lg-panel);
-  border-left: 1px solid var(--lg-border-soft);
+  padding: clamp(28px, 5vw, 64px) clamp(24px, 5vw, 72px) clamp(28px, 5vw, 64px) clamp(8px, 2vw, 24px);
+  background: transparent;
+  border: 0;
 }
 
 .login-wrapper .login-card {
@@ -999,7 +1000,7 @@ html[data-theme="light"] :has(.login-wrapper) {
   .login-wrapper .login-right {
     align-items: flex-start;
     padding: 28px 24px 48px;
-    border-left: 0;
+    border: 0;
   }
 
   .login-wrapper .login-card {
@@ -1042,3 +1043,33 @@ html[data-theme="light"] :has(.login-wrapper) {
     transition: none !important;
   }
 }
+
+
+/* ============================================================
+   ONE SHARED SPACE — no divider, no separate panels
+   (hero copy, image and form sit on the same canvas, like Home)
+   ============================================================ */
+.login-wrapper .login-container,
+.login-wrapper .login-left,
+.login-wrapper .login-right,
+.login-wrapper .login-card {
+  background: transparent !important;
+  border: 0 !important;
+  box-shadow: none !important;
+}
+
+.login-wrapper .login-left::before,
+.login-wrapper .login-left::after,
+.login-wrapper .login-right::before,
+.login-wrapper .login-right::after {
+  content: none !important;
+  display: none !important;
+}
+
+.login-wrapper .login-container {
+  align-items: center;
+  column-gap: clamp(16px, 3vw, 48px);
+}
+
+.login-wrapper .login-hero-image { max-width: 560px; }
+.login-wrapper .hero-student-image { max-height: 420px; }

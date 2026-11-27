@@ -641,11 +641,11 @@ const Login = () => {
 
   if (isCheckingSession) {
     return (
-      <div className="login-wrapper">
-        <div className="login-container">
-          <div className="login-right">
-            <div className="login-card" style={{ textAlign: 'center' }}>
-              <div className="loading-spinner" />
+      <div className="lg-page">
+        <div className="lg-shell">
+          <div className="lg-panel">
+            <div className="lg-card" style={{ textAlign: 'center' }}>
+              <div className="lg-loader" />
               <p>Checking your session...</p>
             </div>
           </div>
@@ -661,32 +661,32 @@ const Login = () => {
   // ============================================
 
   return (
-    <div className="login-wrapper">
+    <div className="lg-page">
 
-      <div className="login-container">
+      <div className="lg-shell">
 
-        {/* ===== LEFT: brand + image (clean, no decoration) ===== */}
-        <section className="login-left">
+        {/* ===== HERO (left) — one shared pool, like the Home hero ===== */}
+        <section className="lg-hero">
 
-          <div className="hero-copy">
-            <h1 className="brand-headline">
+          <div className="lg-copy">
+            <h1 className="lg-headline">
               Learn. Practice.
-              <span className="highlight"> Excel.</span>
+              <span className="lg-accent"> Excel.</span>
             </h1>
 
-            <p className="brand-description">
+            <p className="lg-lead">
               Get expert online tutoring, revision resources and
               personalised learning — anytime, anywhere.
             </p>
           </div>
 
-          <div className="brand-stats">
+          <div className="lg-stats">
 
-            <div className="stat">
-              <span className="stat-icon">🎓</span>
+            <div className="lg-stat">
+              <span className="lg-stat-icon">🎓</span>
 
               <span
-                className="stat-number"
+                className="lg-stat-num"
                 title={
                   studentCount !== null
                     ? `${studentCount.toLocaleString()} registered students`
@@ -696,95 +696,95 @@ const Login = () => {
                 {formatStudentCount(studentCount)}
               </span>
 
-              <span className="stat-label">Students</span>
+              <span className="lg-stat-label">Students</span>
             </div>
 
-            <div className="stat-divider" />
+            <div className="lg-stat-sep" />
 
-            <div className="stat">
-              <span className="stat-icon">★</span>
-              <span className="stat-number">4.9/5</span>
-              <span className="stat-label">Satisfaction Rate</span>
+            <div className="lg-stat">
+              <span className="lg-stat-icon">★</span>
+              <span className="lg-stat-num">4.9/5</span>
+              <span className="lg-stat-label">Satisfaction Rate</span>
             </div>
 
-            <div className="stat-divider" />
+            <div className="lg-stat-sep" />
 
-            <div className="stat">
-              <span className="stat-icon">♜</span>
-              <span className="stat-number">26</span>
-              <span className="stat-label">SA Universities</span>
+            <div className="lg-stat">
+              <span className="lg-stat-icon">♜</span>
+              <span className="lg-stat-num">26</span>
+              <span className="lg-stat-label">SA Universities</span>
             </div>
 
           </div>
 
           {!heroImageLoading && heroImage?.url && (
-            <div className="login-hero-image">
+            <div className="lg-visual">
               <img
                 src={heroImage.url}
                 alt={heroImage.alt_text || 'EduSpantech student learning'}
-                className="hero-student-image"
+                className="lg-visual-img"
               />
             </div>
           )}
 
         </section>
 
-        {/* ===== RIGHT: sign in ===== */}
-        <section className="login-right">
+        {/* ===== SIGN IN (right) ===== */}
+        <section className="lg-panel">
 
-          <div className="login-card">
+          <div className="lg-card">
 
-            <div className="login-header">
+            <div className="lg-head">
               <h2>Welcome Back</h2>
               <p>Sign in to continue your learning journey</p>
             </div>
 
-            <div className="role-tabs">
+            <div className="lg-tabs">
 
               <button
                 type="button"
-                className={`role-tab ${loginRole === 'student' ? 'active' : ''}`}
+                className={`lg-tab ${loginRole === 'student' ? 'is-active' : ''}`}
                 onClick={() => handleRoleChange('student')}
               >
-                <span className="role-icon">🎓</span>
+                <span className="lg-tab-icon">🎓</span>
                 Student
               </button>
 
               <button
                 type="button"
-                className={`role-tab ${loginRole === 'tutor' ? 'active' : ''}`}
+                className={`lg-tab ${loginRole === 'tutor' ? 'is-active' : ''}`}
                 onClick={() => handleRoleChange('tutor')}
               >
-                <span className="role-icon">♟</span>
+                <span className="lg-tab-icon">♟</span>
                 Tutor
               </button>
 
               <Link
                 to="/parent"
-                className="role-tab parent-role-tab"
+                className="lg-tab lg-tab--link"
               >
-                <span className="role-icon">🛡</span>
+                <span className="lg-tab-icon">🛡</span>
                 Parent/Guardian
               </Link>
 
             </div>
 
             {roleError && (
-              <div className="login-role-error">
+              <div className="lg-notice lg-notice--error">
                 <span>⚠️</span>
                 {roleError}
               </div>
             )}
 
             {bannedInfo && (
-              <div className="login-banned-notice">
-                <div className="banned-icon">🚫</div>
+              <div className="lg-notice lg-notice--banned">
+                <div className="lg-notice-icon">🚫</div>
 
-                <div className="banned-content">
+                <div className="lg-notice-body">
                   <p><strong>Account suspended</strong></p>
                   <p>{bannedInfo.message}</p>
 
-                  <p className="banned-help">
+                  <p className="lg-notice-help">
                     If you believe this is a mistake, contact{' '}
                     <a href="mailto:support@eduspantech.com">
                       support@eduspantech.com
@@ -795,10 +795,10 @@ const Login = () => {
             )}
 
             {inactive && (
-              <div className="login-inactive-notice">
-                <div className="inactive-icon">⏸️</div>
+              <div className="lg-notice lg-notice--inactive">
+                <div className="lg-notice-icon">⏸️</div>
 
-                <div className="inactive-content">
+                <div className="lg-notice-body">
                   <p><strong>Account inactive</strong></p>
 
                   <p>
@@ -806,7 +806,7 @@ const Login = () => {
                     You cannot sign in at this time.
                   </p>
 
-                  <p className="inactive-help">
+                  <p className="lg-notice-help">
                     Contact{' '}
                     <a href="mailto:support@eduspantech.com">
                       support@eduspantech.com
@@ -818,10 +818,10 @@ const Login = () => {
             )}
 
             {lockedInfo && (
-              <div className="login-locked-notice">
-                <div className="locked-icon">🔒</div>
+              <div className="lg-notice lg-notice--locked">
+                <div className="lg-notice-icon">🔒</div>
 
-                <div className="locked-content">
+                <div className="lg-notice-body">
                   <p><strong>Too many failed attempts</strong></p>
 
                   <p>
@@ -837,10 +837,10 @@ const Login = () => {
             )}
 
             {needsVerification && (
-              <div className="login-verification-notice">
-                <div className="verification-icon">📧</div>
+              <div className="lg-notice lg-notice--verify">
+                <div className="lg-notice-icon">📧</div>
 
-                <div className="verification-content">
+                <div className="lg-notice-body">
                   <p><strong>Verify your email address</strong></p>
 
                   <p>
@@ -848,12 +848,12 @@ const Login = () => {
                     <strong>{unverifiedEmail}</strong>
                   </p>
 
-                  <div className="verification-actions">
+                  <div className="lg-verify-actions">
                     <button
                       type="button"
                       onClick={handleResendVerification}
                       disabled={loading}
-                      className="resend-btn"
+                      className="lg-resend"
                     >
                       {loading
                         ? 'Sending...'
@@ -861,13 +861,13 @@ const Login = () => {
                     </button>
 
                     {resendSuccess && (
-                      <span className="resend-success">
+                      <span className="lg-resend-ok">
                         ✓ Email sent! Check your inbox.
                       </span>
                     )}
                   </div>
 
-                  <p className="verification-help">
+                  <p className="lg-notice-help">
                     💡 Check your spam folder if you don't see the email.
                   </p>
                 </div>
@@ -880,22 +880,22 @@ const Login = () => {
               !bannedInfo &&
               !inactive &&
               !lockedInfo && (
-                <div className="login-error">
-                  <span className="error-icon">✕</span>
+                <div className="lg-notice lg-notice--error">
+                  <span className="lg-error-icon">✕</span>
 
                   {error}
 
                   {attemptsLeft !== null && attemptsLeft > 0 && (
-                    <span className="attempts-left">
+                    <span className="lg-attempts">
                       {' '}({attemptsLeft} attempts left)
                     </span>
                   )}
                 </div>
               )}
 
-            <form onSubmit={handleSubmit} className="login-form">
+            <form onSubmit={handleSubmit} className="lg-form">
 
-              <div className="form-group relative">
+              <div className="lg-field lg-field--rel">
 
                 <label>Email Address</label>
 
@@ -922,28 +922,28 @@ const Login = () => {
 
                 {showSavedAccounts && savedAccounts.length > 0 && (
                   <div
-                    className="saved-accounts-dropdown"
+                    className="lg-saved"
                     ref={dropdownRef}
                   >
-                    <div className="saved-accounts-header">
+                    <div className="lg-saved-head">
                       Saved Accounts
                     </div>
 
                     {savedAccounts.map((account, idx) => (
                       <div
                         key={account.email || idx}
-                        className="saved-account-item"
+                        className="lg-saved-item"
                         onMouseDown={(e) => {
                           e.preventDefault();
                           handleSelectAccount(account);
                         }}
                       >
-                        <div className="account-avatar">
+                        <div className="lg-avatar">
                           {account.avatar ? (
                             <img
                               src={account.avatar}
                               alt={account.name}
-                              className="custom-modal-avatar-img"
+                              className="lg-avatar-img"
                               onError={(e) => {
                                 e.currentTarget.style.display = 'none';
                               }}
@@ -953,12 +953,12 @@ const Login = () => {
                           )}
                         </div>
 
-                        <div className="account-info">
-                          <span className="account-email">
+                        <div className="lg-saved-info">
+                          <span className="lg-saved-email">
                             {account.email}
                           </span>
 
-                          <span className="account-name">
+                          <span className="lg-saved-name">
                             {account.name}
                           </span>
                         </div>
@@ -969,11 +969,11 @@ const Login = () => {
 
               </div>
 
-              <div className="form-group">
+              <div className="lg-field">
 
                 <label>Password</label>
 
-                <div className="password-field">
+                <div className="lg-pass">
 
                   <input
                     ref={passwordInputRef}
@@ -988,7 +988,7 @@ const Login = () => {
 
                   <button
                     type="button"
-                    className="toggle-password"
+                    className="lg-eye"
                     onClick={() => setShowPassword(!showPassword)}
                     disabled={formLocked}
                     aria-label={showPassword ? 'Hide password' : 'Show password'}
@@ -999,20 +999,20 @@ const Login = () => {
                 </div>
               </div>
 
-              <div className="form-options">
+              <div className="lg-options">
 
-                <label className="remember-me">
+                <label className="lg-remember">
                   <input
                     type="checkbox"
                     checked={rememberMe}
                     onChange={(e) => setRememberMe(e.target.checked)}
                   />
 
-                  <span className="checkmark" />
+                  <span className="lg-check" />
                   Remember me
                 </label>
 
-                <Link to="/forgot-password" className="forgot-link">
+                <Link to="/forgot-password" className="lg-link">
                   Forgot password?
                 </Link>
 
@@ -1021,11 +1021,11 @@ const Login = () => {
               <button
                 type="submit"
                 disabled={formLocked}
-                className="login-button"
+                className="lg-submit"
               >
                 {loading ? (
                   <>
-                    <span className="spinner" />
+                    <span className="lg-spin" />
                     Signing in...
                   </>
                 ) : lockedInfo ? (
@@ -1041,7 +1041,7 @@ const Login = () => {
 
             </form>
 
-            <div className="login-footer">
+            <div className="lg-foot">
               <p>
                 Don't have an account?{' '}
                 <Link to="/register">Create an account →</Link>
@@ -1055,8 +1055,8 @@ const Login = () => {
       </div>
 
       {showBlockedModal && (
-        <div className="save-password-overlay">
-          <div className="save-password-modal">
+        <div className="lg-overlay">
+          <div className="lg-modal">
             <div style={{ fontSize: '48px', marginBottom: '16px' }}>
               🚫
             </div>
@@ -1070,7 +1070,7 @@ const Login = () => {
 
             <button
               type="button"
-              className="btn-save"
+              className="lg-btn-primary"
               onClick={() => setShowBlockedModal(false)}
               style={{ width: '100%' }}
             >
@@ -1081,48 +1081,48 @@ const Login = () => {
       )}
 
       {showSavePrompt && (
-        <div className="save-password-overlay">
+        <div className="lg-overlay">
 
-          <div className="save-password-modal">
+          <div className="lg-modal">
 
             <button
               type="button"
-              className="modal-close-btn"
+              className="lg-modal-x"
               onClick={handleNeverSave}
               aria-label="Close"
             >
               ×
             </button>
 
-            <div className="save-password-header">
-              <div className="save-password-icons">
-                <span className="key-icon">🔑</span>
+            <div className="lg-modal-head">
+              <div className="lg-modal-icon">
+                <span className="lg-key">🔑</span>
               </div>
 
               <h3>Save login details?</h3>
             </div>
 
-            <div className="save-password-body">
+            <div className="lg-modal-body">
 
               <p>
                 Save your email to log in faster next time on this device.
               </p>
 
-              <div className="input-row">
+              <div className="lg-modal-row">
                 <label>Username</label>
 
-                <div className="input-box">
+                <div className="lg-modal-box">
                   <span>{email}</span>
                 </div>
               </div>
 
             </div>
 
-            <div className="save-password-actions">
+            <div className="lg-modal-actions">
 
               <button
                 type="button"
-                className="btn-never"
+                className="lg-btn-ghost"
                 onClick={handleNeverSave}
               >
                 Never
@@ -1130,7 +1130,7 @@ const Login = () => {
 
               <button
                 type="button"
-                className="btn-save"
+                className="lg-btn-primary"
                 onClick={handleSavePassword}
               >
                 Save
@@ -1138,7 +1138,7 @@ const Login = () => {
 
             </div>
 
-            <p className="save-password-footer">
+            <p className="lg-modal-foot">
               Your email will be saved locally on this device
               for faster login.
             </p>

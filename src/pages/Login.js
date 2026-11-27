@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { authService } from '../services/authService';
@@ -655,6 +654,8 @@ const Login = () => {
     );
   }
 
+  const formLocked = loading || !!bannedInfo || inactive || !!lockedInfo;
+
   // ============================================
   // LOGIN PAGE
   // ============================================
@@ -662,25 +663,9 @@ const Login = () => {
   return (
     <div className="login-wrapper">
 
-      <div className="login-bg">
-        <div className="math-symbols">
-          <span className="math-symbol">∫</span>
-          <span className="math-symbol">∑</span>
-          <span className="math-symbol">π</span>
-          <span className="math-symbol">√</span>
-          <span className="math-symbol">∞</span>
-          <span className="math-symbol">∂</span>
-          <span className="math-symbol">Δ</span>
-          <span className="math-symbol">θ</span>
-        </div>
+      <div className="login-container">
 
-        <div className="gradient-orb orb-1" />
-        <div className="gradient-orb orb-2" />
-        <div className="gradient-orb orb-3" />
-      </div>
-
-      <div className="login-container login-container-new">
-
+        {/* ===== LEFT: brand + image (clean, no decoration) ===== */}
         <section className="login-left">
 
           <div className="hero-copy">
@@ -694,8 +679,6 @@ const Login = () => {
               personalised learning — anytime, anywhere.
             </p>
           </div>
-
-          {/* Feature list removed */}
 
           <div className="brand-stats">
 
@@ -734,22 +717,19 @@ const Login = () => {
 
           </div>
 
-          <div className="login-hero-image">
-
-            {!heroImageLoading && heroImage?.url && (
+          {!heroImageLoading && heroImage?.url && (
+            <div className="login-hero-image">
               <img
                 src={heroImage.url}
                 alt={heroImage.alt_text || 'EduSpantech student learning'}
                 className="hero-student-image"
               />
-            )}
-
-            <div className="hero-image-overlay" />
-
-          </div>
+            </div>
+          )}
 
         </section>
 
+        {/* ===== RIGHT: sign in ===== */}
         <section className="login-right">
 
           <div className="login-card">
@@ -782,9 +762,6 @@ const Login = () => {
               <Link
                 to="/parent"
                 className="role-tab parent-role-tab"
-                onClick={() => {
-                  console.log('Navigating to public Parent Home: /parent');
-                }}
               >
                 <span className="role-icon">🛡</span>
                 Parent/Guardian
@@ -940,7 +917,7 @@ const Login = () => {
                   placeholder="you@example.com"
                   required
                   autoComplete="username"
-                  disabled={loading || !!bannedInfo || inactive || !!lockedInfo}
+                  disabled={formLocked}
                 />
 
                 {showSavedAccounts && savedAccounts.length > 0 && (
@@ -1006,14 +983,15 @@ const Login = () => {
                     placeholder="Enter your password"
                     required
                     autoComplete="current-password"
-                    disabled={loading || !!bannedInfo || inactive || !!lockedInfo}
+                    disabled={formLocked}
                   />
 
                   <button
                     type="button"
                     className="toggle-password"
                     onClick={() => setShowPassword(!showPassword)}
-                    disabled={loading || !!bannedInfo || inactive || !!lockedInfo}
+                    disabled={formLocked}
+                    aria-label={showPassword ? 'Hide password' : 'Show password'}
                   >
                     {showPassword ? '🙈' : '👁️'}
                   </button>
@@ -1042,12 +1020,7 @@ const Login = () => {
 
               <button
                 type="submit"
-                disabled={
-                  loading ||
-                  !!bannedInfo ||
-                  inactive ||
-                  !!lockedInfo
-                }
+                disabled={formLocked}
                 className="login-button"
               >
                 {loading ? (
@@ -1116,6 +1089,7 @@ const Login = () => {
               type="button"
               className="modal-close-btn"
               onClick={handleNeverSave}
+              aria-label="Close"
             >
               ×
             </button>

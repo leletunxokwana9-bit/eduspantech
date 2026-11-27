@@ -1,4 +1,5 @@
-/* ===== SUBJECTS PAGE — consolidated (dark, fluid, mobile-first) ===== */
+/* ===== SUBJECTS PAGE — consolidated (dark, fluid, mobile-first) =====
+   Light mode = 100% pure white (see LIGHT THEME at the bottom of this file) */
 
 .subjects-page {
   --subjects-bg: #0d0d1f;
@@ -1401,3 +1402,290 @@
     animation: none;
   }
 }
+
+
+/* ############################################################
+   LIGHT THEME — 100% PURE WHITE, FULLY READABLE
+   Kept at the very END of the file on purpose.
+
+   The page is driven by CSS variables, so flipping them turns
+   every surface white at once. Hard-coded dark colours are then
+   fixed one by one below.
+
+   Palette
+     headings / labels   #0f172a
+     body text           #334155
+     muted text          #475569
+     accent              #4f46e5
+     borders             #e2e8f0
+   Surfaces are #ffffff everywhere; separation comes from thin
+   borders and soft shadows, never from grey fills.
+   ############################################################ */
+
+/* ----- Page + every wrapper around it = white ----- */
+html[data-theme="light"],
+html[data-theme="light"] body,
+html[data-theme="light"] :has(.subjects-page) {
+  background-color: #ffffff !important;
+  background-image: none !important;
+}
+
+[data-theme="light"] .subjects-page {
+  --subjects-bg: #ffffff;
+  --surface: #ffffff;
+  --surface-2: #ffffff;
+  --border: #e2e8f0;
+  --text: #0f172a;
+  --muted: #475569;
+  --accent: #4f46e5;
+  --accent-strong: #4f46e5;
+
+  background: #ffffff !important;
+  color: #0f172a;
+  color-scheme: light;
+}
+
+/* ----- Hero ----- */
+[data-theme="light"] .subjects-hero {
+  background: #ffffff !important;
+  border-color: #e2e8f0;
+  box-shadow: 0 2px 14px rgba(15, 23, 42, 0.05);
+}
+[data-theme="light"] .subjects-hero-title { color: #0f172a; }
+
+/* Solid colour (no gradient clip) so the accent text can never turn into a block */
+[data-theme="light"] .subjects-hero-title-accent {
+  background: none !important;
+  -webkit-text-fill-color: #4f46e5;
+  color: #4f46e5;
+}
+[data-theme="light"] .subjects-hero-subtext,
+[data-theme="light"] .subjects-hero-guest-hint { color: #475569; }
+
+[data-theme="light"] .hero-book { box-shadow: 0 10px 26px rgba(79, 70, 229, 0.22); }
+[data-theme="light"] .hero-book-1 { background: linear-gradient(135deg, #c7d2fe, #a5b4fc); }
+
+/* ----- Viewing grade line ----- */
+[data-theme="light"] .subjects-viewing-line {
+  background: #ffffff;
+  border-color: #c7d2fe;
+  color: #334155;
+}
+[data-theme="light"] .subjects-viewing-line strong { color: #0f172a; }
+
+/* ----- Filter section ----- */
+[data-theme="light"] .subjects-filter-section {
+  background: #ffffff;
+  border-color: #e2e8f0;
+  box-shadow: 0 2px 14px rgba(15, 23, 42, 0.05);
+}
+[data-theme="light"] .subjects-section-title,
+[data-theme="light"] .subjects-section-header h2 { color: #0f172a; }
+
+[data-theme="light"] .subjects-clear-filters-btn {
+  background: #ffffff;
+  border-color: #c7d2fe;
+  color: #4f46e5;
+}
+[data-theme="light"] .subjects-clear-filters-btn:hover {
+  background: #ffffff;
+  border-color: #4f46e5;
+}
+[data-theme="light"] .subjects-jump-papers { background: #4f46e5; color: #ffffff; }
+[data-theme="light"] .subjects-jump-papers:hover { background: #4338ca; }
+
+/* ----- Search + sort ----- */
+[data-theme="light"] .subjects-search {
+  background: #ffffff;
+  border-color: #cbd5e1;
+  color: #64748b;
+}
+[data-theme="light"] .subjects-search:focus-within {
+  border-color: #4f46e5;
+  box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.12);
+}
+[data-theme="light"] .subjects-search input { color: #0f172a; }
+[data-theme="light"] .subjects-search input::placeholder { color: #94a3b8; }
+[data-theme="light"] .subjects-search-clear {
+  background: #ffffff;
+  border: 1px solid #cbd5e1;
+  color: #475569;
+}
+[data-theme="light"] .subjects-search-clear:hover {
+  background: #ffffff;
+  border-color: #4f46e5;
+  color: #4f46e5;
+}
+[data-theme="light"] .subjects-sort-inline select {
+  background: #ffffff;
+  border-color: #cbd5e1;
+  color: #0f172a;
+}
+
+/* ----- Filter pills ----- */
+[data-theme="light"] .filter-pill {
+  background: #ffffff;
+  border-color: #e2e8f0;
+  color: #475569;
+}
+[data-theme="light"] .filter-pill:hover {
+  border-color: #4f46e5;
+  color: #4f46e5;
+}
+[data-theme="light"] .filter-pill.active {
+  background: linear-gradient(135deg, #4f46e5, #6366f1);
+  border-color: transparent;
+  color: #ffffff;
+}
+[data-theme="light"] .filter-pill-cat .filter-pill-count {
+  background: #ffffff;
+  border: 1px solid #c7d2fe;
+  color: #4338ca;
+}
+[data-theme="light"] .filter-pill-cat.active .filter-pill-count {
+  background: rgba(255, 255, 255, 0.2);
+  border-color: rgba(255, 255, 255, 0.45);
+  color: #ffffff;
+}
+
+[data-theme="light"] .subjects-category-toggle {
+  background: #ffffff;
+  border-color: #c7d2fe;
+  color: #4f46e5;
+}
+[data-theme="light"] .subjects-category-toggle:hover {
+  background: #ffffff;
+  border-color: #4f46e5;
+  color: #4338ca;
+}
+
+/* ----- Subject cards ----- */
+[data-theme="light"] .subjects-page-card {
+  background: #ffffff;
+  border-color: #e2e8f0;
+  box-shadow: 0 2px 12px rgba(15, 23, 42, 0.05);
+}
+[data-theme="light"] .subjects-page-card:hover {
+  border-color: #4f46e5;
+  box-shadow: 0 18px 44px rgba(79, 70, 229, 0.14);
+}
+[data-theme="light"] .subjects-page-card h3 { color: #0f172a; }
+[data-theme="light"] .subjects-page-card:hover h3 { color: #4f46e5; }
+[data-theme="light"] .subjects-page-card p { color: #475569; }
+
+[data-theme="light"] .subjects-page-icon {
+  background: #ffffff;
+  border: 1px solid color-mix(in srgb, var(--subject-color) 30%, #ffffff);
+}
+[data-theme="light"] .subjects-grade-badge {
+  background: #ffffff;
+  border: 1px solid #c7d2fe;
+  color: #4338ca;
+}
+[data-theme="light"] .subjects-page-stats dt { color: #64748b; }
+[data-theme="light"] .subjects-page-stats dd { color: #0f172a; }
+[data-theme="light"] .subjects-page-range { color: #64748b; }
+
+[data-theme="light"] .subjects-page-coming-soon {
+  background: #ffffff;
+  border-color: #f59e0b;
+  color: #b45309;
+}
+[data-theme="light"] .subjects-page-locked { color: #b45309; }
+[data-theme="light"] .subjects-page-card.locked { opacity: 0.75; }
+
+[data-theme="light"] .subjects-page-card-footer { border-top-color: #e2e8f0; }
+[data-theme="light"] .subjects-view-link { color: #4f46e5; }
+[data-theme="light"] .subjects-page-arrow-btn {
+  background: #ffffff;
+  border-color: #e2e8f0;
+}
+
+/* ----- Jump back in ----- */
+[data-theme="light"] .subjects-jumpback-card {
+  background: #ffffff;
+  border-color: #e2e8f0;
+  box-shadow: 0 2px 10px rgba(15, 23, 42, 0.04);
+}
+[data-theme="light"] .subjects-jumpback-card:hover { border-color: #4f46e5; }
+[data-theme="light"] .subjects-jumpback-title { color: #0f172a; }
+[data-theme="light"] .subjects-jumpback-kind { color: #4f46e5; }
+[data-theme="light"] .subjects-jumpback-sub { color: #64748b; }
+
+/* ----- Past papers ----- */
+[data-theme="light"] .subjects-papers-filter select {
+  background: #ffffff;
+  border-color: #cbd5e1;
+  color: #0f172a;
+}
+[data-theme="light"] .subjects-papers-group-title {
+  color: #0f172a;
+  border-bottom-color: #e2e8f0;
+}
+[data-theme="light"] .subjects-paper-row {
+  background: #ffffff;
+  border-color: #e2e8f0;
+}
+[data-theme="light"] .subjects-paper-meta { color: #334155; }
+[data-theme="light"] .subjects-paper-year { color: #0f172a; }
+[data-theme="light"] .subjects-paper-number { color: #64748b; }
+[data-theme="light"] .subjects-paper-tag {
+  background: #ffffff;
+  border: 1px solid #c7d2fe;
+  color: #4338ca;
+}
+[data-theme="light"] .subjects-paper-link { color: #4f46e5; }
+[data-theme="light"] .subjects-paper-link[aria-disabled="true"] { color: #94a3b8; }
+[data-theme="light"] .subjects-paper-sep { color: #cbd5e1; }
+
+/* ----- Other levels ----- */
+[data-theme="light"] .subjects-other-levels { border-top-color: #e2e8f0; }
+[data-theme="light"] .subjects-other-levels-toggle { color: #0f172a; }
+[data-theme="light"] .subjects-other-level-pill {
+  background: #ffffff;
+  border-color: #e2e8f0;
+  color: #334155;
+}
+[data-theme="light"] .subjects-other-level-pill:hover {
+  border-color: #4f46e5;
+  color: #4f46e5;
+}
+[data-theme="light"] .subjects-other-level-pill.active {
+  background: #4f46e5;
+  border-color: #4f46e5;
+  color: #ffffff;
+}
+
+/* ----- Footer ----- */
+[data-theme="light"] .subjects-slogan-footer {
+  border-top-color: #e2e8f0;
+  color: #64748b;
+}
+
+/* ----- Empty / error / skeleton ----- */
+[data-theme="light"] .subjects-empty-block {
+  background: #ffffff;
+  border-color: #cbd5e1;
+}
+[data-theme="light"] .subjects-empty-title { color: #0f172a; }
+[data-theme="light"] .subjects-empty-hint { color: #475569; }
+[data-theme="light"] .subjects-page-error {
+  color: #dc2626;
+  background: #ffffff;
+  border-color: #fecaca;
+}
+[data-theme="light"] .subjects-retry-btn { background: #4f46e5; color: #ffffff; }
+[data-theme="light"] .subjects-retry-btn:hover { background: #4338ca; }
+
+/* Loading skeleton: white with a faint shimmer so it is still visible */
+[data-theme="light"] .subjects-skeleton {
+  background: linear-gradient(90deg, #ffffff 25%, #eef2f7 50%, #ffffff 75%);
+  background-size: 200% 100%;
+  border: 1px solid #eef2f7;
+}
+
+/* Focus ring readable on white */
+[data-theme="light"] .subjects-page button:focus-visible,
+[data-theme="light"] .subjects-page a:focus-visible,
+[data-theme="light"] .subjects-page input:focus-visible,
+[data-theme="light"] .subjects-page select:focus-visible { outline-color: #4f46e5; }
